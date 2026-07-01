@@ -1,0 +1,25 @@
+{
+  "name": "Mixmax Minimarket",
+  "short_name": "Mixmax Market",
+  "description": "Système de gestion pour minimarket",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "theme_color": "#2E7D32",
+  "background_color": "#F1F8E9",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
