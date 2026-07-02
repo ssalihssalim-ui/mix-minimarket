@@ -1,6 +1,5 @@
-// ==================== POS.JS - LOGIQUE MÉTIER (FINAL OPTIMISÉ) ====================
-// Mixmax Minimarket - Point de vente complet avec virtualisation
-// Améliorations : client = Passager par défaut, montant donné = total par défaut
+// ==================== POS.JS - LOGIQUE MÉTIER (OPTIMISÉ) ====================
+// Mixmax Minimarket - Point de vente complet avec virtualisation et cache
 
 var posCart = [];
 var posStep = 1;
@@ -43,6 +42,9 @@ var posProductOffset = 0;
 var posProductBatchSize = 50;
 var posHasMoreProducts = false;
 
+// ✅ Cache des produits filtrés
+var filteredProductsCache = {};
+
 function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
 function toDate(val) { if(!val) return null; if(val.toDate) return val.toDate(); if(val.seconds) return new Date(val.seconds*1000); if(typeof val==='string') return new Date(val); if(val instanceof Date) return val; return null; }
 
@@ -63,23 +65,28 @@ async function loadPosPage(c){
         if(cl.length){ posAllClients=cl.map(x=>({id:x.id,nom:x.nom,prenom:x.prenom,telephone:x.telephone,description:x.description||''})); posFilteredClients=[...posAllClients]; }
         if(isOnPOSPage()) renderPOS();
 
-        // 🔥 Pré-construire les index pour la reconnaissance vocale
         if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
         if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
     }catch(e){ console.error(e); }
+    
+    // ✅ Firestore en arrière-plan avec délai 500ms
     setTimeout(async function(){
         try{
-            const[cs,ps,cl]=await Promise.all([db.collection('categories').get(),db.collection('products').get(),db.collection('clients').limit(500).get()]);
+            const[cs,ps,cl]=await Promise.all([
+                db.collection('categories').get(),
+                db.collection('products').get(),
+                db.collection('clients').limit(500).get()
+            ]);
             posCategoriesList=[]; cs.forEach(d=>{ let cat={id:d.id,nom:d.data().nom,imageBase64:d.data().imageBase64,recette:d.data().recette||false}; posCategoriesList.push(cat); CacheDB.set('categories',d.id,cat); });
             posProductsList=[]; ps.forEach(d=>{ let dd=d.data(); if(dd.disponible!==false){ let prod={id:d.id,nom:dd.nom||'',description:dd.description||'',prixVente:dd.prixVente||0,prixPromo:dd.prixPromo||0,prixAchat:dd.prixAchat||0,stock:dd.stock,categorie:dd.categorie||'',imageBase64:dd.imageBase64||''}; posProductsList.push(prod); CacheDB.set('products',d.id,prod); } }); productIndexBuilt=false;
             posAllClients=[]; cl.forEach(d=>{ let data=d.data(),cli={id:d.id,nom:data.nom,prenom:data.prenom,telephone:data.telephone,description:data.description||''}; posAllClients.push(cli); CacheDB.set('clients',d.id,cli); }); posFilteredClients=[...posAllClients];
             if(isOnPOSPage()) renderPOS();
 
-            // 🔥 Pré-construire les index pour la reconnaissance vocale
             if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
             if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
         }catch(e){ console.error(e); }
-    },300);
+    }, 500); // ← 500ms au lieu de 300ms
+    
     await posChargerCommandesTables(); await posChargerCommandesEnLigneCount();
     var cmdData=localStorage.getItem('posCommandeData'),payData=localStorage.getItem('posPayerVente');
     if(cmdData){ var cmd=JSON.parse(cmdData); localStorage.removeItem('posCommandeData'); posCart=[]; if(cmd.items){ posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||item.prixUnitaire||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(cmd.clientId&&cmd.clientName) posCurrentClient={id:cmd.clientId,name:cmd.clientName}; posCurrentTable=cmd.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posCommandeId=cmd.commandeId; if(isOnPOSPage()) renderPOS(); return; }
@@ -87,28 +94,56 @@ async function loadPosPage(c){
     if(isOnPOSPage()) renderPOS();
 }
 
-function posSearchProducts(query){ clearTimeout(window._searchTimeout); window._searchTimeout=setTimeout(function(){ posProductOffset=0; posSearchQuery=query.toLowerCase().trim(); if(isOnPOSPage()) filterProductGrid(); },150); }
+// ✅ Recherche avec debounce 100ms
+function posSearchProducts(query){ 
+    clearTimeout(window._searchTimeout); 
+    window._searchTimeout=setTimeout(function(){ 
+        posProductOffset=0; 
+        posSearchQuery=query.toLowerCase().trim(); 
+        if(isOnPOSPage()) filterProductGrid(); 
+    }, 100); 
+}
 
 function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProductGrid(); }
 
+// ✅ filterProductGrid avec cache
 function filterProductGrid(){
     if(!isOnPOSPage()) return;
-    var grid=document.getElementById('posProductGrid')||document.querySelector('.pos-products-grid'); if(!grid) return;
-    var f=fastSearch(posSearchQuery); if(posSelectedCategory!=='all') f=f.filter(function(p){ return p.categorie===posSelectedCategory; }); f.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+    var grid = document.getElementById('posProductGrid') || document.querySelector('.pos-products-grid');
+    if(!grid) return;
     
-    // ✅ Virtualisation
+    var cacheKey = posSelectedCategory + '|' + posSearchQuery;
+    var cached = filteredProductsCache[cacheKey];
+    if (cached) {
+        renderProductGrid(grid, cached);
+        return;
+    }
+    
+    var f = fastSearch(posSearchQuery);
+    if(posSelectedCategory!=='all') f = f.filter(function(p){ return p.categorie===posSelectedCategory; });
+    f.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+    
+    filteredProductsCache[cacheKey] = f;
+    if (Object.keys(filteredProductsCache).length > 20) {
+        filteredProductsCache = {};
+    }
+    
+    renderProductGrid(grid, f);
+}
+
+function renderProductGrid(grid, f) {
     var totalProducts = f.length;
     var displayProducts = f.slice(0, posProductOffset + posProductBatchSize);
     posHasMoreProducts = (posProductOffset + posProductBatchSize) < totalProducts;
     
-    var html='';
+    var html = '';
     if(totalProducts===0){ html+='<div style="grid-column:1/-1;text-align:center;padding:40px 10px;"><i class="fas fa-search" style="font-size:2.5rem;color:#94a3b8;"></i><p style="color:#94a3b8;">'+(posSearchQuery?'Aucun produit pour "'+escapeHtml(posSearchQuery)+'"':'Aucun produit')+'</p>'+(posSearchQuery?'<button class="btn-add" onclick="document.getElementById(\'posSearchInput\').value=\'\';posSearchProducts(\'\');">Effacer</button>':'')+'</div>'; }
     else{
         if(posSearchQuery) html+='<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">'+totalProducts+' résultat'+(totalProducts>1?'s':'')+'</div>';
         for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>'); html+='<div class="pos-product-card '+sc+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+(p.imageBase64?'<div class="pos-product-img"><img src="'+escapeHtml(p.imageBase64)+'" loading="lazy" alt=""></div>':'<div class="pos-product-img pos-product-placeholder"><i class="fas fa-box"></i></div>')+'<div class="pos-product-info"><span class="pos-product-name">'+dn+stt+'</span><span class="pos-product-price">'+(hp?'<span class="pos-old-price">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD')+'</span></div></div>'; }
         if(posHasMoreProducts){ html+='<div style="grid-column:1/-1;text-align:center;padding:10px;"><button class="btn-add" onclick="loadMoreProducts()" style="font-size:0.8rem;">Afficher plus ('+(totalProducts-displayProducts.length)+' produits restants)</button></div>'; }
     }
-    grid.innerHTML=html;
+    grid.innerHTML = html;
 }
 
 // ==================== COMMANDES TABLES ====================
@@ -149,7 +184,10 @@ function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('fact
 // ==================== RENDU ====================
 function renderPOS(){
     if(!isOnPOSPage()) return;
-    var now=Date.now(); if(now-posLastRenderTime<100&&posCart.length>0) return; posLastRenderTime=now;
+    var now=Date.now(); 
+    // ✅ Augmenté à 300ms pour moins de rendus
+    if(now-posLastRenderTime < 300 && posCart.length > 0) return; 
+    posLastRenderTime=now;
     var c=document.getElementById('dynamicContent'); if(!c) return;
     if(posCart.length===0&&posStep===1){ buildFullPOS(c); return; }
     if(document.querySelector('.pos-container')&&posStep===1&&posCart.length>0){ updateCartOnly(); filterProductGrid(); var tr=document.querySelector('.pos-cart-total-row span:last-child'); if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } return; }
@@ -407,4 +445,4 @@ if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; docu
 
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posSearchProducts=posSearchProducts; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 
-console.log('⚡ Mixmax Minimarket - POS chargé (final optimisé avec virtualisation)');
+console.log('⚡ Mixmax Minimarket - POS chargé (optimisé avec cache)');
