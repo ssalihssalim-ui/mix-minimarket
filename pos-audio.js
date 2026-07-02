@@ -296,7 +296,7 @@ function parseVoiceCommand(transcript) {
                 if (best) return { type: 'search_product', product: best, page: 'pos' };
             }
             // commandes panier
-            if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant')) return { type: 'next' };
+            if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) return { type: 'next' };
             if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
             if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
             if (cleaned.includes('efface') || cleaned.includes('vider')) return { type: 'clear' };
