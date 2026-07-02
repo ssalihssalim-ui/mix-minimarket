@@ -1,5 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
+// ✅ LE MICRO RESTE ALLUMÉ EN CONTINU JUSQU'À CE QUE L'UTILISATEUR L'ARRÊTE
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -476,8 +477,8 @@ function posStartVoiceRecording() {
     if (!SR) { alert('❌ Reconnaissance vocale non disponible.'); return; }
     voiceRecognition = new SR();
     voiceRecognition.lang = 'fr-FR';
-    voiceRecognition.continuous = true;      // ← RESTE ALLUMÉ EN CONTINU
-    voiceRecognition.interimResults = true;   // ← AFFICHE EN TEMPS RÉEL
+    voiceRecognition.continuous = true;      // ✅ RESTE ALLUMÉ EN CONTINU
+    voiceRecognition.interimResults = true;   // ✅ AFFICHE EN TEMPS RÉEL
     voiceRecognition.maxAlternatives = 1;
 
     if (mb) {
@@ -558,8 +559,13 @@ function posStartVoiceRecording() {
 
     voiceRecognition.onend = function() {
         if (isRecording) {
+            // ✅ REDÉMARRER AUTOMATIQUEMENT LE MICRO APRÈS CHAQUE PHRASE
             setTimeout(function() {
-                try { voiceRecognition.start(); } catch (e) { posStopVoiceSearch(); }
+                try { 
+                    voiceRecognition.start(); 
+                } catch (e) { 
+                    posStopVoiceSearch(); 
+                }
             }, 8);
         }
     };
