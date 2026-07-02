@@ -476,8 +476,8 @@ function posStartVoiceRecording() {
     if (!SR) { alert('❌ Reconnaissance vocale non disponible.'); return; }
     voiceRecognition = new SR();
     voiceRecognition.lang = 'fr-FR';
-    voiceRecognition.continuous = true;
-    voiceRecognition.interimResults = true;
+    voiceRecognition.continuous = true;      // ← RESTE ALLUMÉ EN CONTINU
+    voiceRecognition.interimResults = true;   // ← AFFICHE EN TEMPS RÉEL
     voiceRecognition.maxAlternatives = 1;
 
     if (mb) {
