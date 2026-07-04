@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Support complet : Filtres de période + Recherche client combinés
+// ✅ Support complet : Filtres de période + Recherche client + Description
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -62,6 +62,7 @@ function buildClientIndex() {
     clientSearchIndex = {};
     window.posAllClients.forEach(c => {
         if (!c?.id) return;
+        // ✅ Inclure la description dans la recherche
         const allText = (c.nom + ' ' + c.prenom + ' ' + c.telephone + ' ' + (c.description || '')).toLowerCase();
         allText.split(/[\s,;.]+/).forEach(mot => {
             mot = mot.trim();
@@ -74,6 +75,17 @@ function buildClientIndex() {
         if (fullName.length >= 2) {
             if (!clientSearchIndex[fullName]) clientSearchIndex[fullName] = [];
             if (!clientSearchIndex[fullName].includes(c)) clientSearchIndex[fullName].push(c);
+        }
+        // ✅ Ajouter la description comme mot-clé
+        if (c.description) {
+            const descWords = c.description.toLowerCase().trim().split(/[\s,;.]+/);
+            descWords.forEach(mot => {
+                mot = mot.trim();
+                if (mot.length >= 2) {
+                    if (!clientSearchIndex[mot]) clientSearchIndex[mot] = [];
+                    if (!clientSearchIndex[mot].includes(c)) clientSearchIndex[mot].push(c);
+                }
+            });
         }
     });
     clientIndexBuilt = true;
@@ -401,12 +413,9 @@ function handleVoiceCommand(cmd) {
                     periodSelect.value = period;
                     window.creditsPeriod = period;
                     window.currentPages.credits = 1;
-                    // ✅ FORCER LE RECHARGEMENT DES CRÉDITS
-                    if (typeof loadCredits === 'function') {
-                        loadCredits();
-                    } else {
-                        var event = new Event('change', { bubbles: true });
-                        periodSelect.dispatchEvent(event);
+                    // ✅ APPLIQUER LE FILTRE DIRECTEMENT
+                    if (typeof applyCreditsFilters === 'function') {
+                        applyCreditsFilters();
                     }
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
@@ -418,11 +427,8 @@ function handleVoiceCommand(cmd) {
                     periodSelect.value = period;
                     window.ventesPeriod = period;
                     window.currentPages.ventes = 1;
-                    if (typeof loadVentes === 'function') {
-                        loadVentes();
-                    } else {
-                        var event = new Event('change', { bubbles: true });
-                        periodSelect.dispatchEvent(event);
+                    if (typeof applyVentesFilters === 'function') {
+                        applyVentesFilters();
                     }
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
@@ -445,11 +451,8 @@ function handleVoiceCommand(cmd) {
                     periodSelect.value = period;
                     window.commandesPeriod = period;
                     window.currentPages.commandes = 1;
-                    if (typeof loadCommandes === 'function') {
-                        loadCommandes();
-                    } else {
-                        var event = new Event('change', { bubbles: true });
-                        periodSelect.dispatchEvent(event);
+                    if (typeof applyCommandesFilters === 'function') {
+                        applyCommandesFilters();
                     }
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
@@ -474,8 +477,8 @@ function handleVoiceCommand(cmd) {
                             periodSelect.value = period;
                             window.creditsPeriod = period;
                             window.currentPages.credits = 1;
-                            if (typeof loadCredits === 'function') {
-                                loadCredits();
+                            if (typeof applyCreditsFilters === 'function') {
+                                applyCreditsFilters();
                             }
                             showVoiceResult('📅 ' + (periodLabels[period] || period));
                         }
@@ -680,12 +683,9 @@ function posStartVoiceRecording() {
                     vd.value = final;
                     window.creditsSearch = final;
                     window.currentPages.credits = 1;
-                    // ✅ APPLIQUER LES FILTRES DIRECTEMENT
+                    // ✅ APPLIQUER LES FILTRES DIRECTEMENT (inclut description)
                     if (typeof applyCreditsFilters === 'function') {
                         applyCreditsFilters();
-                    } else {
-                        var event = new Event('keyup', { bubbles: true });
-                        searchInput.dispatchEvent(event);
                     }
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
@@ -710,9 +710,6 @@ function posStartVoiceRecording() {
                     window.currentPages.ventes = 1;
                     if (typeof applyVentesFilters === 'function') {
                         applyVentesFilters();
-                    } else {
-                        var event = new Event('keyup', { bubbles: true });
-                        searchInput.dispatchEvent(event);
                     }
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
