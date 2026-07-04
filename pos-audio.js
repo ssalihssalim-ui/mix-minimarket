@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Support : POS, Produits, Crédits, Ventes, Navigation
+// ✅ Support : POS, Produits, Crédits, Ventes, Navigation + Filtres de période
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -240,6 +240,39 @@ function extractNumberFromTranscript(transcript) {
     return null;
 }
 
+// ✅ DÉTECTION DES FILTRES DE PÉRIODE
+function detectPeriodFilter(transcript) {
+    var cleaned = transcript.toLowerCase().trim();
+    if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today")) {
+        return 'today';
+    }
+    if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours")) {
+        return '30';
+    }
+    if (cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours") || cleaned.includes("semaine")) {
+        return '7';
+    }
+    if (cleaned.includes("15 jours") || cleaned.includes("15j") || cleaned.includes("quinze jours")) {
+        return '15';
+    }
+    if (cleaned.includes("30 jours") || cleaned.includes("30j") || cleaned.includes("trente jours")) {
+        return '30';
+    }
+    if (cleaned.includes("3 mois") || cleaned.includes("3mois") || cleaned.includes("trois mois") || cleaned.includes("trimestre")) {
+        return '90';
+    }
+    if (cleaned.includes("6 mois") || cleaned.includes("6mois") || cleaned.includes("six mois") || cleaned.includes("semestre")) {
+        return '180';
+    }
+    if (cleaned.includes("1 an") || cleaned.includes("1an") || cleaned.includes("un an") || cleaned.includes("annee") || cleaned.includes("année")) {
+        return '365';
+    }
+    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all")) {
+        return 'all';
+    }
+    return null;
+}
+
 function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
@@ -278,7 +311,13 @@ function parseVoiceCommand(transcript) {
         }
     }
 
-    // ========== NAVIGATION (EN DEHORS DU MODE SEARCH) ==========
+    // ========== FILTRES DE PÉRIODE (sur Crédits, Ventes, Dépenses) ==========
+    var period = detectPeriodFilter(cleaned);
+    if (period !== null) {
+        return { type: 'period_filter', period: period };
+    }
+
+    // ========== NAVIGATION ==========
     if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises') || cleaned.includes('credit')) {
         return { type: 'navigate', page: 'credits' };
     }
@@ -349,8 +388,91 @@ function detectPaymentMode(transcript) {
 function handleVoiceCommand(cmd) {
     var cp = document.getElementById('pageTitle')?.textContent || '';
     switch (cmd.type) {
+        // ✅ GESTION DES FILTRES DE PÉRIODE
+        case 'period_filter':
+            var period = cmd.period;
+            var periodLabels = {
+                'today': "Aujourd'hui",
+                '7': "7 jours",
+                '15': "15 jours",
+                '30': "30 jours",
+                '90': "3 mois",
+                '180': "6 mois",
+                '365': "1 an",
+                'all': "Tout"
+            };
+            
+            // PAGE CRÉDITS
+            if (cp === 'Crédits') {
+                var periodSelect = document.getElementById('creditsPeriodSelect');
+                if (periodSelect) {
+                    periodSelect.value = period;
+                    var event = new Event('change', { bubbles: true });
+                    periodSelect.dispatchEvent(event);
+                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                }
+            }
+            // PAGE VENTES
+            else if (cp === 'Ventes') {
+                var periodSelect = document.getElementById('ventesPeriodSelect');
+                if (periodSelect) {
+                    periodSelect.value = period;
+                    var event = new Event('change', { bubbles: true });
+                    periodSelect.dispatchEvent(event);
+                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                }
+            }
+            // PAGE DÉPENSES
+            else if (cp === 'Dépenses') {
+                var periodSelect = document.getElementById('globalPeriodSelect');
+                if (periodSelect) {
+                    periodSelect.value = period;
+                    var event = new Event('change', { bubbles: true });
+                    periodSelect.dispatchEvent(event);
+                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                }
+            }
+            // PAGE COMMANDES
+            else if (cp === 'Commandes en ligne') {
+                var periodSelect = document.getElementById('commandesPeriodSelect');
+                if (periodSelect) {
+                    periodSelect.value = period;
+                    var event = new Event('change', { bubbles: true });
+                    periodSelect.dispatchEvent(event);
+                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                }
+            }
+            // PAGE STATISTIQUES
+            else if (cp === 'Statistiques') {
+                var periodSelect = document.getElementById('statPeriodSelect');
+                if (periodSelect) {
+                    periodSelect.value = period;
+                    var event = new Event('change', { bubbles: true });
+                    periodSelect.dispatchEvent(event);
+                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                }
+            }
+            // Si on est sur POS, naviguer vers la page correspondante
+            else if (cp === 'POS' || cp === 'Dashboard') {
+                // Rediriger vers la page des crédits avec le filtre
+                if (typeof navigateTo === 'function') {
+                    navigateTo('credits');
+                    // Après navigation, appliquer le filtre
+                    setTimeout(function() {
+                        var periodSelect = document.getElementById('creditsPeriodSelect');
+                        if (periodSelect) {
+                            periodSelect.value = period;
+                            var event = new Event('change', { bubbles: true });
+                            periodSelect.dispatchEvent(event);
+                            showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                        }
+                    }, 500);
+                }
+            }
+            hideVoiceFlowIndicator();
+            break;
+
         case 'search_product':
-            // Si la commande vient de la page Produits (admin)
             if (cmd.page === 'products' || cp === 'Produits') {
                 var adminInput = document.getElementById('productSearchInput');
                 if (adminInput && cmd.product) {
@@ -361,17 +483,13 @@ function handleVoiceCommand(cmd) {
                     }
                     showVoiceResult('🔍 ' + cmd.product.nom + ' – filtré');
                 }
-            }
-            // Comportement POS (inchangé)
-            else {
+            } else {
                 var searchInput = document.getElementById('posSearchInput');
                 if (searchInput && cmd.product) {
                     searchInput.value = cmd.product.nom;
-
                     if (cmd.product.categorie && typeof window.posFilterCategory === 'function') {
                         window.posFilterCategory(cmd.product.categorie);
                     }
-
                     setTimeout(function() {
                         var cards = document.querySelectorAll('.pos-product-card');
                         for (var i = 0; i < cards.length; i++) {
@@ -385,8 +503,7 @@ function handleVoiceCommand(cmd) {
                             }
                         }
                     }, 300);
-
-                    showVoiceResult('🔍 ' + cmd.product.nom + ' – cliquez pour ajouter');
+                    showVoiceResult('🔍 ' + cmd.product.nom);
                 }
             }
             hideVoiceFlowIndicator();
@@ -548,7 +665,6 @@ function posStartVoiceRecording() {
                 if (final) {
                     searchInput.value = final;
                     vd.value = final;
-                    // ✅ Déclencher l'événement keyup pour filtrer les crédits
                     var event = new Event('keyup', { bubbles: true });
                     searchInput.dispatchEvent(event);
                     showProcessingIndicator();
@@ -570,7 +686,6 @@ function posStartVoiceRecording() {
                 if (final) {
                     searchInput.value = final;
                     vd2.value = final;
-                    // ✅ Déclencher l'événement keyup pour filtrer les ventes
                     var event = new Event('keyup', { bubbles: true });
                     searchInput.dispatchEvent(event);
                     showProcessingIndicator();
