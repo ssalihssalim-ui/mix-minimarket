@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Version stable : recherche sur POS + Produits (admin)
+// ✅ Support : POS, Produits, Crédits, Ventes, Navigation
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -25,7 +25,7 @@ window.productAdminIndex = window.productAdminIndex || {};
 window.productAdminIndexBuilt = false;
 
 // ========== PAYMENT STATE MACHINE ==========
-window.voicePaymentState = 0; // 0 = client, 1 = payment_mode, 2 = amount
+window.voicePaymentState = 0;
 
 var paymentKeywords = {
     'espece': ['espèces', 'espece', 'argent', 'cash', 'comptant', 'liquide', 'espèce'],
@@ -278,17 +278,42 @@ function parseVoiceCommand(transcript) {
         }
     }
 
-    // NAVIGATION
-    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises')) return { type: 'navigate', page: 'credits' };
-    if (cleaned.includes('ventes') || cleaned.includes('vente') || cleaned.includes('historique ventes') || cleaned.includes('recettes')) return { type: 'navigate', page: 'ventes' };
-    if (cleaned.includes('dashboard') || cleaned.includes('accueil') || cleaned.includes('home') || cleaned.includes('sommaire')) return { type: 'navigate', page: 'dashboard' };
-    if (cleaned.includes('produits') || cleaned.includes('catalogue') || cleaned.includes('liste des produits')) return { type: 'navigate', page: 'products' };
-    if (cleaned.includes('clients') || cleaned.includes('clientèle')) return { type: 'navigate', page: 'clients' };
-    if (cleaned.includes('commandes')) return { type: 'navigate', page: 'commandes' };
-    if (cleaned.includes('catégories')) return { type: 'navigate', page: 'categories' };
-    if (cleaned.includes('point de vente') || cleaned.includes('pos') || cleaned.includes('caisse') || cleaned.includes('encaissement')) return { type: 'navigate', page: 'pos' };
+    // ========== NAVIGATION (EN DEHORS DU MODE SEARCH) ==========
+    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises') || cleaned.includes('credit')) {
+        return { type: 'navigate', page: 'credits' };
+    }
+    if (cleaned.includes('ventes') || cleaned.includes('vente') || cleaned.includes('historique ventes') || cleaned.includes('recettes')) {
+        return { type: 'navigate', page: 'ventes' };
+    }
+    if (cleaned.includes('dashboard') || cleaned.includes('accueil') || cleaned.includes('home') || cleaned.includes('sommaire') || cleaned.includes('tableau de bord')) {
+        return { type: 'navigate', page: 'dashboard' };
+    }
+    if (cleaned.includes('produits') || cleaned.includes('catalogue') || cleaned.includes('liste des produits')) {
+        return { type: 'navigate', page: 'products' };
+    }
+    if (cleaned.includes('clients') || cleaned.includes('clientèle')) {
+        return { type: 'navigate', page: 'clients' };
+    }
+    if (cleaned.includes('commandes')) {
+        return { type: 'navigate', page: 'commandes' };
+    }
+    if (cleaned.includes('catégories')) {
+        return { type: 'navigate', page: 'categories' };
+    }
+    if (cleaned.includes('point de vente') || cleaned.includes('pos') || cleaned.includes('caisse') || cleaned.includes('encaissement')) {
+        return { type: 'navigate', page: 'pos' };
+    }
+    if (cleaned.includes('dépenses') || cleaned.includes('depenses')) {
+        return { type: 'navigate', page: 'depenses' };
+    }
+    if (cleaned.includes('statistiques') || cleaned.includes('stats')) {
+        return { type: 'navigate', page: 'statistiques' };
+    }
+    if (cleaned.includes('options') || cleaned.includes('paramètres') || cleaned.includes('settings')) {
+        return { type: 'navigate', page: 'options' };
+    }
 
-    // RECHERCHE PRODUIT – POS / Admin
+    // ========== RECHERCHE PRODUIT – POS ==========
     if (voiceMode === 'search') {
         if ((currentPage === 'POS' || currentPage === 'Dashboard') && (window.posStep || 0) === 1) {
             var products = window.posProductsList || [];
@@ -331,7 +356,6 @@ function handleVoiceCommand(cmd) {
                 if (adminInput && cmd.product) {
                     adminInput.value = cmd.product.nom;
                     window.productSearchQuery = cmd.product.nom.toLowerCase().trim();
-                    // ✅ Appeler renderProductsTable pour appliquer le filtre
                     if (typeof renderProductsTable === 'function') {
                         renderProductsTable();
                     }
@@ -440,9 +464,27 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             break;
         case 'navigate':
-            var pages = { 'credits': 'Crédits', 'ventes': 'Ventes', 'dashboard': 'Dashboard', 'products': 'Produits', 'clients': 'Clients', 'commandes': 'Commandes en ligne', 'categories': 'Catégories', 'pos': 'POS' };
-            if (cp === pages[cmd.page]) { showVoiceResult('✅ ' + pages[cmd.page]); return; }
-            if (typeof navigateTo === 'function') navigateTo(cmd.page);
+            var pages = { 
+                'credits': 'Crédits', 
+                'ventes': 'Ventes', 
+                'dashboard': 'Dashboard', 
+                'products': 'Produits', 
+                'clients': 'Clients', 
+                'commandes': 'Commandes en ligne', 
+                'categories': 'Catégories', 
+                'pos': 'POS',
+                'depenses': 'Dépenses',
+                'statistiques': 'Statistiques',
+                'options': 'Options'
+            };
+            if (cp === pages[cmd.page]) { 
+                showVoiceResult('✅ ' + pages[cmd.page]); 
+            } else {
+                if (typeof navigateTo === 'function') {
+                    navigateTo(cmd.page);
+                    showVoiceResult('📍 ' + pages[cmd.page]);
+                }
+            }
             hideVoiceFlowIndicator();
             break;
         default:
@@ -497,40 +539,79 @@ function posStartVoiceRecording() {
             else interim += t;
         }
         var cp = document.getElementById('pageTitle')?.textContent || '';
+        
+        // ========== PAGE CRÉDITS ==========
         if (cp === 'Crédits') {
             var vd = document.getElementById('creditsVoiceDisplay');
-            if (vd) {
+            var searchInput = document.getElementById('creditsSearchInput');
+            if (vd && searchInput) {
                 if (final) {
+                    searchInput.value = final;
                     vd.value = final;
+                    // ✅ Déclencher l'événement pour filtrer
+                    var event = new Event('input', { bubbles: true });
+                    searchInput.dispatchEvent(event);
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
                     if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
                     hideVoiceFlowIndicator();
                 } else if (interim && interim !== lastInterim) {
+                    searchInput.value = interim + ' ✍️';
                     vd.value = interim + ' ✍️';
                     lastInterim = interim;
                 }
             }
-        } else if (cp === 'Ventes') {
+        }
+        // ========== PAGE VENTES ==========
+        else if (cp === 'Ventes') {
             var vd2 = document.getElementById('ventesVoiceDisplay');
-            if (vd2) {
+            var searchInput = document.getElementById('ventesSearchInput');
+            if (vd2 && searchInput) {
                 if (final) {
+                    searchInput.value = final;
                     vd2.value = final;
+                    var event = new Event('input', { bubbles: true });
+                    searchInput.dispatchEvent(event);
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
                     if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
                     hideVoiceFlowIndicator();
                 } else if (interim && interim !== lastInterim) {
+                    searchInput.value = interim + ' ✍️';
                     vd2.value = interim + ' ✍️';
                     lastInterim = interim;
                 }
             }
-        } else {
-            // Chercher d'abord l'input du POS
+        }
+        // ========== PAGE PRODUITS (ADMIN) ==========
+        else if (cp === 'Produits') {
+            var pi = document.getElementById('productSearchInput');
+            if (pi) {
+                if (final) {
+                    pi.value = final;
+                    window.productSearchQuery = final.toLowerCase().trim();
+                    if (typeof renderProductsTable === 'function') {
+                        renderProductsTable();
+                    }
+                    showProcessingIndicator();
+                    var cmd = parseVoiceCommand(final);
+                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
+                    hideVoiceFlowIndicator();
+                    showVoiceResult('🔍 ' + final);
+                } else if (interim && interim !== lastInterim) {
+                    pi.value = interim + ' ✍️';
+                    lastInterim = interim;
+                }
+            }
+        }
+        // ========== PAGE POS ==========
+        else {
             var si = document.getElementById('posSearchInput');
             if (si) {
                 if (final) {
                     si.value = final;
+                    var event = new Event('input', { bubbles: true });
+                    si.dispatchEvent(event);
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
                     if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
@@ -538,29 +619,6 @@ function posStartVoiceRecording() {
                 } else if (interim && interim !== lastInterim) {
                     si.value = interim + ' ✍️';
                     lastInterim = interim;
-                }
-            } else {
-                // Si pas de posSearchInput, chercher l'input de la page Produits (admin)
-                var pi = document.getElementById('productSearchInput');
-                if (pi) {
-                    if (final) {
-                        pi.value = final;
-                        showProcessingIndicator();
-                        var cmd = parseVoiceCommand(final);
-                        if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                        hideVoiceFlowIndicator();
-                        // ✅ Appliquer le filtre sur la page produits
-                        if (typeof window.productSearchQuery !== 'undefined') {
-                            window.productSearchQuery = final.toLowerCase().trim();
-                        }
-                        if (typeof renderProductsTable === 'function') {
-                            renderProductsTable();
-                        }
-                        showVoiceResult('🔍 ' + final);
-                    } else if (interim && interim !== lastInterim) {
-                        pi.value = interim + ' ✍️';
-                        lastInterim = interim;
-                    }
                 }
             }
         }
@@ -613,7 +671,7 @@ function posStopVoiceSearch() {
     showVoiceResult('🎤 Micro désactivé');
 }
 
-// ========== CRÉDITS (FONCTIONS COMPLÈTES) ==========
+// ========== CRÉDITS ==========
 function activateCreditSelection() { /* code complet déjà présent */ }
 function selectCreditLine(n) { /* ... */ }
 function markCreditForPayment() { /* ... */ }
