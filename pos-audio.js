@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ CORRIGÉ : La recherche affiche le mot recherché et filtre la liste
+// ✅ CORRIGÉ : Recherche vocale fonctionnelle
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -319,16 +319,21 @@ function handleVoiceCommand(cmd) {
         case 'search_products':
             var searchInput = document.getElementById('posSearchInput');
             if (searchInput && cmd.products && cmd.products.length > 0) {
-                // ✅ ÉCRIRE LE TERME RECHERCHÉ DANS LA BARRE
                 var searchTerm = cmd.searchTerm || cmd.products[0].nom;
                 searchInput.value = searchTerm;
                 
-                // ✅ APPLIQUER LA RECHERCHE
-                if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(searchTerm);
+                // ✅ RECHERCHE DIRECTE
+                if (typeof window.posSearchQuery !== 'undefined') {
+                    window.posSearchQuery = searchTerm.toLowerCase().trim();
+                }
+                if (typeof window.posProductOffset !== 'undefined') {
+                    window.posProductOffset = 0;
+                }
+                if (typeof window.filterProductGrid === 'function') {
+                    window.filterProductGrid();
                 }
                 
-                // ✅ METTRE EN ÉVIDENCE TOUS LES PRODUITS TROUVÉS
+                // ✅ SUR LIGNAGE
                 setTimeout(function() {
                     var cards = document.querySelectorAll('.pos-product-card');
                     var foundCount = 0;
@@ -360,16 +365,21 @@ function handleVoiceCommand(cmd) {
         case 'search_product':
             var searchInput = document.getElementById('posSearchInput');
             if (searchInput && cmd.product) {
-                // ✅ ÉCRIRE LE TERME RECHERCHÉ DANS LA BARRE (PAS LE NOM DU PRODUIT)
                 var searchTerm = cmd.searchTerm || cmd.product.nom;
                 searchInput.value = searchTerm;
                 
-                // ✅ APPLIQUER LA RECHERCHE
-                if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(searchTerm);
+                // ✅ RECHERCHE DIRECTE
+                if (typeof window.posSearchQuery !== 'undefined') {
+                    window.posSearchQuery = searchTerm.toLowerCase().trim();
+                }
+                if (typeof window.posProductOffset !== 'undefined') {
+                    window.posProductOffset = 0;
+                }
+                if (typeof window.filterProductGrid === 'function') {
+                    window.filterProductGrid();
                 }
                 
-                // ✅ METTRE EN ÉVIDENCE LE PRODUIT
+                // ✅ SUR LIGNAGE
                 setTimeout(function() {
                     var cards = document.querySelectorAll('.pos-product-card');
                     for (var i = 0; i < cards.length; i++) {
