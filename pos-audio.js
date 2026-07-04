@@ -548,8 +548,8 @@ function posStartVoiceRecording() {
                 if (final) {
                     searchInput.value = final;
                     vd.value = final;
-                    // ✅ Déclencher l'événement pour filtrer
-                    var event = new Event('input', { bubbles: true });
+                    // ✅ Déclencher l'événement keyup pour filtrer les crédits
+                    var event = new Event('keyup', { bubbles: true });
                     searchInput.dispatchEvent(event);
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
@@ -570,7 +570,8 @@ function posStartVoiceRecording() {
                 if (final) {
                     searchInput.value = final;
                     vd2.value = final;
-                    var event = new Event('input', { bubbles: true });
+                    // ✅ Déclencher l'événement keyup pour filtrer les ventes
+                    var event = new Event('keyup', { bubbles: true });
                     searchInput.dispatchEvent(event);
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
