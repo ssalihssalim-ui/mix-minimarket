@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Support : POS, Produits, Crédits, Ventes, Navigation + Filtres de période
+// ✅ Support complet : Filtres de période + Recherche client combinés
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -239,28 +239,28 @@ function detectPeriodFilter(transcript) {
     if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today")) {
         return 'today';
     }
-    if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours")) {
+    if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours") || cleaned.includes("ce mois ci")) {
         return '30';
     }
-    if (cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours") || cleaned.includes("semaine")) {
+    if (cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours") || cleaned.includes("semaine") || cleaned.includes("7 jour")) {
         return '7';
     }
-    if (cleaned.includes("15 jours") || cleaned.includes("15j") || cleaned.includes("quinze jours")) {
+    if (cleaned.includes("15 jours") || cleaned.includes("15j") || cleaned.includes("quinze jours") || cleaned.includes("15 jour")) {
         return '15';
     }
-    if (cleaned.includes("30 jours") || cleaned.includes("30j") || cleaned.includes("trente jours")) {
+    if (cleaned.includes("30 jours") || cleaned.includes("30j") || cleaned.includes("trente jours") || cleaned.includes("30 jour")) {
         return '30';
     }
-    if (cleaned.includes("3 mois") || cleaned.includes("3mois") || cleaned.includes("trois mois") || cleaned.includes("trimestre")) {
+    if (cleaned.includes("3 mois") || cleaned.includes("3mois") || cleaned.includes("trois mois") || cleaned.includes("trimestre") || cleaned.includes("3 moi")) {
         return '90';
     }
-    if (cleaned.includes("6 mois") || cleaned.includes("6mois") || cleaned.includes("six mois") || cleaned.includes("semestre")) {
+    if (cleaned.includes("6 mois") || cleaned.includes("6mois") || cleaned.includes("six mois") || cleaned.includes("semestre") || cleaned.includes("6 moi")) {
         return '180';
     }
-    if (cleaned.includes("1 an") || cleaned.includes("1an") || cleaned.includes("un an") || cleaned.includes("annee") || cleaned.includes("année")) {
+    if (cleaned.includes("1 an") || cleaned.includes("1an") || cleaned.includes("un an") || cleaned.includes("annee") || cleaned.includes("année") || cleaned.includes("1 ans") || cleaned.includes("un ans")) {
         return '365';
     }
-    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all")) {
+    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous")) {
         return 'all';
     }
     return null;
@@ -399,16 +399,16 @@ function handleVoiceCommand(cmd) {
                 var periodSelect = document.getElementById('creditsPeriodSelect');
                 if (periodSelect) {
                     periodSelect.value = period;
-                    // ✅ Déclencher change ET appliquer les filtres directement
                     window.creditsPeriod = period;
                     window.currentPages.credits = 1;
-                    if (typeof applyCreditsFilters === 'function') {
-                        applyCreditsFilters();
+                    // ✅ FORCER LE RECHARGEMENT DES CRÉDITS
+                    if (typeof loadCredits === 'function') {
+                        loadCredits();
                     } else {
                         var event = new Event('change', { bubbles: true });
                         periodSelect.dispatchEvent(event);
                     }
-                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                    showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
             // ✅ PAGE VENTES
@@ -418,13 +418,13 @@ function handleVoiceCommand(cmd) {
                     periodSelect.value = period;
                     window.ventesPeriod = period;
                     window.currentPages.ventes = 1;
-                    if (typeof applyVentesFilters === 'function') {
-                        applyVentesFilters();
+                    if (typeof loadVentes === 'function') {
+                        loadVentes();
                     } else {
                         var event = new Event('change', { bubbles: true });
                         periodSelect.dispatchEvent(event);
                     }
-                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                    showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
             // ✅ PAGE DÉPENSES
@@ -435,7 +435,7 @@ function handleVoiceCommand(cmd) {
                     globalPeriod = period;
                     if (typeof loadDepenses === 'function') loadDepenses();
                     if (typeof loadPersonnel === 'function') loadPersonnel();
-                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                    showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
             // ✅ PAGE COMMANDES
@@ -445,13 +445,13 @@ function handleVoiceCommand(cmd) {
                     periodSelect.value = period;
                     window.commandesPeriod = period;
                     window.currentPages.commandes = 1;
-                    if (typeof applyCommandesFilters === 'function') {
-                        applyCommandesFilters();
+                    if (typeof loadCommandes === 'function') {
+                        loadCommandes();
                     } else {
                         var event = new Event('change', { bubbles: true });
                         periodSelect.dispatchEvent(event);
                     }
-                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                    showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
             // ✅ PAGE STATISTIQUES
@@ -461,7 +461,7 @@ function handleVoiceCommand(cmd) {
                     periodSelect.value = period;
                     var event = new Event('change', { bubbles: true });
                     periodSelect.dispatchEvent(event);
-                    showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                    showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
             // Si on est sur POS, naviguer vers la page correspondante
@@ -474,10 +474,10 @@ function handleVoiceCommand(cmd) {
                             periodSelect.value = period;
                             window.creditsPeriod = period;
                             window.currentPages.credits = 1;
-                            if (typeof applyCreditsFilters === 'function') {
-                                applyCreditsFilters();
+                            if (typeof loadCredits === 'function') {
+                                loadCredits();
                             }
-                            showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
+                            showVoiceResult('📅 ' + (periodLabels[period] || period));
                         }
                     }, 500);
                 }
@@ -680,6 +680,7 @@ function posStartVoiceRecording() {
                     vd.value = final;
                     window.creditsSearch = final;
                     window.currentPages.credits = 1;
+                    // ✅ APPLIQUER LES FILTRES DIRECTEMENT
                     if (typeof applyCreditsFilters === 'function') {
                         applyCreditsFilters();
                     } else {
