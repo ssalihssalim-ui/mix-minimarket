@@ -172,14 +172,12 @@ function buildProductAdminIndex() {
     if (window.productAdminIndexBuilt || !window.allProductsData || !window.allProductsData.length) return;
     window.productAdminIndex = {};
     window.allProductsData.forEach(function(p) {
-        // Indexer le nom
         var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         nom.split(/[\s,;.]+/).forEach(function(w) {
             if (w.length < 2) return;
             if (!window.productAdminIndex[w]) window.productAdminIndex[w] = [];
             if (!window.productAdminIndex[w].includes(p)) window.productAdminIndex[w].push(p);
         });
-        // Indexer la description
         var desc = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         desc.split(/[\s,;.]+/).forEach(function(w) {
             if (w.length < 2) return;
@@ -192,7 +190,6 @@ function buildProductAdminIndex() {
 
 function fastFindProductAdmin(query) {
     if (!window.allProductsData || !window.allProductsData.length) return [];
-    // Construire l'index si nécessaire
     if (!window.productAdminIndexBuilt) buildProductAdminIndex();
 
     var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -206,17 +203,13 @@ function fastFindProductAdmin(query) {
     var candidates = (window.productAdminIndex[firstWord] || []).slice();
     if (candidates.length === 0) return [];
 
-    // Filtrer par le searchTerm dans le nom OU la description
     var filtered = candidates.filter(function(p) {
         var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         var desc = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         return nom.indexOf(searchTerm) !== -1 || desc.indexOf(searchTerm) !== -1;
     });
 
-    if (filtered.length === 0) {
-        return [candidates[0]];
-    }
-
+    if (filtered.length === 0) return [candidates[0]];
     if (filtered.length === 1) return filtered;
 
     var exact = filtered.find(function(p) {
@@ -284,7 +277,7 @@ function parseVoiceCommand(transcript) {
         return { type: 'ignore' };
     }
 
-    // MODE PAIEMENT (étape 2) – uniquement sur POS
+    // MODE PAIEMENT
     if (voiceMode === 'payment' || (currentPage === 'POS' && (window.posStep || 0) === 2)) {
         switch (window.voicePaymentState) {
             case 0:
@@ -311,7 +304,7 @@ function parseVoiceCommand(transcript) {
         }
     }
 
-    // ========== FILTRES DE PÉRIODE (sur Crédits, Ventes, Dépenses) ==========
+    // ========== FILTRES DE PÉRIODE ==========
     var period = detectPeriodFilter(cleaned);
     if (period !== null) {
         return { type: 'period_filter', period: period };
@@ -360,7 +353,6 @@ function parseVoiceCommand(transcript) {
                 var best = fastFindProduct(cleaned)[0];
                 if (best) return { type: 'search_product', product: best, page: 'pos' };
             }
-            // commandes panier
             if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) return { type: 'next' };
             if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
             if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
@@ -402,47 +394,67 @@ function handleVoiceCommand(cmd) {
                 'all': "Tout"
             };
             
-            // PAGE CRÉDITS
+            // ✅ PAGE CRÉDITS
             if (cp === 'Crédits') {
                 var periodSelect = document.getElementById('creditsPeriodSelect');
                 if (periodSelect) {
                     periodSelect.value = period;
-                    var event = new Event('change', { bubbles: true });
-                    periodSelect.dispatchEvent(event);
+                    // ✅ Déclencher change ET appliquer les filtres directement
+                    window.creditsPeriod = period;
+                    window.currentPages.credits = 1;
+                    if (typeof applyCreditsFilters === 'function') {
+                        applyCreditsFilters();
+                    } else {
+                        var event = new Event('change', { bubbles: true });
+                        periodSelect.dispatchEvent(event);
+                    }
                     showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
                 }
             }
-            // PAGE VENTES
+            // ✅ PAGE VENTES
             else if (cp === 'Ventes') {
                 var periodSelect = document.getElementById('ventesPeriodSelect');
                 if (periodSelect) {
                     periodSelect.value = period;
-                    var event = new Event('change', { bubbles: true });
-                    periodSelect.dispatchEvent(event);
+                    window.ventesPeriod = period;
+                    window.currentPages.ventes = 1;
+                    if (typeof applyVentesFilters === 'function') {
+                        applyVentesFilters();
+                    } else {
+                        var event = new Event('change', { bubbles: true });
+                        periodSelect.dispatchEvent(event);
+                    }
                     showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
                 }
             }
-            // PAGE DÉPENSES
+            // ✅ PAGE DÉPENSES
             else if (cp === 'Dépenses') {
                 var periodSelect = document.getElementById('globalPeriodSelect');
                 if (periodSelect) {
                     periodSelect.value = period;
-                    var event = new Event('change', { bubbles: true });
-                    periodSelect.dispatchEvent(event);
+                    globalPeriod = period;
+                    if (typeof loadDepenses === 'function') loadDepenses();
+                    if (typeof loadPersonnel === 'function') loadPersonnel();
                     showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
                 }
             }
-            // PAGE COMMANDES
+            // ✅ PAGE COMMANDES
             else if (cp === 'Commandes en ligne') {
                 var periodSelect = document.getElementById('commandesPeriodSelect');
                 if (periodSelect) {
                     periodSelect.value = period;
-                    var event = new Event('change', { bubbles: true });
-                    periodSelect.dispatchEvent(event);
+                    window.commandesPeriod = period;
+                    window.currentPages.commandes = 1;
+                    if (typeof applyCommandesFilters === 'function') {
+                        applyCommandesFilters();
+                    } else {
+                        var event = new Event('change', { bubbles: true });
+                        periodSelect.dispatchEvent(event);
+                    }
                     showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
                 }
             }
-            // PAGE STATISTIQUES
+            // ✅ PAGE STATISTIQUES
             else if (cp === 'Statistiques') {
                 var periodSelect = document.getElementById('statPeriodSelect');
                 if (periodSelect) {
@@ -454,16 +466,17 @@ function handleVoiceCommand(cmd) {
             }
             // Si on est sur POS, naviguer vers la page correspondante
             else if (cp === 'POS' || cp === 'Dashboard') {
-                // Rediriger vers la page des crédits avec le filtre
                 if (typeof navigateTo === 'function') {
                     navigateTo('credits');
-                    // Après navigation, appliquer le filtre
                     setTimeout(function() {
                         var periodSelect = document.getElementById('creditsPeriodSelect');
                         if (periodSelect) {
                             periodSelect.value = period;
-                            var event = new Event('change', { bubbles: true });
-                            periodSelect.dispatchEvent(event);
+                            window.creditsPeriod = period;
+                            window.currentPages.credits = 1;
+                            if (typeof applyCreditsFilters === 'function') {
+                                applyCreditsFilters();
+                            }
                             showVoiceResult('📅 Filtre: ' + (periodLabels[period] || period));
                         }
                     }, 500);
@@ -665,8 +678,14 @@ function posStartVoiceRecording() {
                 if (final) {
                     searchInput.value = final;
                     vd.value = final;
-                    var event = new Event('keyup', { bubbles: true });
-                    searchInput.dispatchEvent(event);
+                    window.creditsSearch = final;
+                    window.currentPages.credits = 1;
+                    if (typeof applyCreditsFilters === 'function') {
+                        applyCreditsFilters();
+                    } else {
+                        var event = new Event('keyup', { bubbles: true });
+                        searchInput.dispatchEvent(event);
+                    }
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
                     if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
@@ -686,8 +705,14 @@ function posStartVoiceRecording() {
                 if (final) {
                     searchInput.value = final;
                     vd2.value = final;
-                    var event = new Event('keyup', { bubbles: true });
-                    searchInput.dispatchEvent(event);
+                    window.ventesSearch = final;
+                    window.currentPages.ventes = 1;
+                    if (typeof applyVentesFilters === 'function') {
+                        applyVentesFilters();
+                    } else {
+                        var event = new Event('keyup', { bubbles: true });
+                        searchInput.dispatchEvent(event);
+                    }
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
                     if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
