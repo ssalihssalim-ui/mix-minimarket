@@ -1,6 +1,7 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
 // ✅ Version corrigée : recherche tous les produits correspondants
+// ✅ Le micro reste allumé, permet d'enchaîner produit → quantité → produit → quantité
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -130,7 +131,7 @@ function buildProductIndex() {
     productIndexBuilt = true;
 }
 
-// ✅ NOUVELLE VERSION : RETOURNE TOUS LES PRODUITS CORRESPONDANTS
+// ✅ RETOURNE TOUS LES PRODUITS CORRESPONDANTS
 function fastFindProduct(query) {
     buildProductIndex();
     if (!query) return [];
@@ -144,22 +145,18 @@ function fastFindProduct(query) {
         searchTerm = firstWord + ' ' + mots[1];
     }
 
-    // ✅ Récupérer TOUS les produits correspondant au premier mot
     var candidates = productNameIndex[firstWord] || [];
     if (candidates.length === 0) return [];
 
-    // ✅ Filtrer par le searchTerm complet
     var filtered = candidates.filter(function(p) {
         var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         return nom.indexOf(searchTerm) !== -1;
     });
 
-    // ✅ Si pas de filtre exact, retourner tous les candidats du premier mot
     if (filtered.length === 0) {
-        return candidates; // ← RETOURNE TOUS LES PRODUITS
+        return candidates;
     }
 
-    // ✅ Retourner tous les produits filtrés (pas seulement le premier)
     return filtered;
 }
 
@@ -168,14 +165,12 @@ function buildProductAdminIndex() {
     if (window.productAdminIndexBuilt || !window.allProductsData || !window.allProductsData.length) return;
     window.productAdminIndex = {};
     window.allProductsData.forEach(function(p) {
-        // Indexer le nom
         var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         nom.split(/[\s,;.]+/).forEach(function(w) {
             if (w.length < 2) return;
             if (!window.productAdminIndex[w]) window.productAdminIndex[w] = [];
             if (!window.productAdminIndex[w].includes(p)) window.productAdminIndex[w].push(p);
         });
-        // Indexer la description
         var desc = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         desc.split(/[\s,;.]+/).forEach(function(w) {
             if (w.length < 2) return;
@@ -188,7 +183,6 @@ function buildProductAdminIndex() {
 
 function fastFindProductAdmin(query) {
     if (!window.allProductsData || !window.allProductsData.length) return [];
-    // Construire l'index si nécessaire
     if (!window.productAdminIndexBuilt) buildProductAdminIndex();
 
     var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -202,17 +196,13 @@ function fastFindProductAdmin(query) {
     var candidates = (window.productAdminIndex[firstWord] || []).slice();
     if (candidates.length === 0) return [];
 
-    // Filtrer par le searchTerm dans le nom OU la description
     var filtered = candidates.filter(function(p) {
         var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         var desc = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         return nom.indexOf(searchTerm) !== -1 || desc.indexOf(searchTerm) !== -1;
     });
 
-    if (filtered.length === 0) {
-        return [candidates[0]];
-    }
-
+    if (filtered.length === 0) return [candidates[0]];
     if (filtered.length === 1) return filtered;
 
     var exact = filtered.find(function(p) {
@@ -247,7 +237,7 @@ function parseVoiceCommand(transcript) {
         return { type: 'ignore' };
     }
 
-    // MODE PAIEMENT (étape 2) – uniquement sur POS
+    // MODE PAIEMENT
     if (voiceMode === 'payment' || (currentPage === 'POS' && (window.posStep || 0) === 2)) {
         switch (window.voicePaymentState) {
             case 0:
@@ -291,14 +281,12 @@ function parseVoiceCommand(transcript) {
             if (products.length) {
                 var results = fastFindProduct(cleaned);
                 if (results.length > 0) {
-                    // ✅ Si plusieurs produits, retourner la liste complète
                     if (results.length > 1) {
                         return { type: 'search_products', products: results, page: 'pos' };
                     }
                     return { type: 'search_product', product: results[0], page: 'pos' };
                 }
             }
-            // commandes panier
             if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) return { type: 'next' };
             if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
             if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
@@ -326,19 +314,13 @@ function detectPaymentMode(transcript) {
 function handleVoiceCommand(cmd) {
     var cp = document.getElementById('pageTitle')?.textContent || '';
     switch (cmd.type) {
-        // ✅ NOUVEAU CASE : PLUSIEURS PRODUITS TROUVÉS
         case 'search_products':
             var searchInput = document.getElementById('posSearchInput');
             if (searchInput && cmd.products && cmd.products.length > 0) {
-                // Mettre le premier nom dans l'input
                 searchInput.value = cmd.products[0].nom;
-                
-                // Filtrer la grille pour montrer tous les produits correspondants
                 if (typeof window.posSearchProducts === 'function') {
                     window.posSearchProducts(cmd.products[0].nom);
                 }
-                
-                // Mettre en évidence les produits
                 setTimeout(function() {
                     var cards = document.querySelectorAll('.pos-product-card');
                     var foundCount = 0;
@@ -367,7 +349,6 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             break;
         case 'search_product':
-            // Si la commande vient de la page Produits (admin)
             if (cmd.page === 'products' || cp === 'Produits') {
                 var adminInput = document.getElementById('productSearchInput');
                 if (adminInput && cmd.product) {
@@ -378,17 +359,13 @@ function handleVoiceCommand(cmd) {
                     }
                     showVoiceResult('🔍 ' + cmd.product.nom + ' – filtré');
                 }
-            }
-            // Comportement POS (inchangé)
-            else {
+            } else {
                 var searchInput = document.getElementById('posSearchInput');
                 if (searchInput && cmd.product) {
                     searchInput.value = cmd.product.nom;
-
                     if (cmd.product.categorie && typeof window.posFilterCategory === 'function') {
                         window.posFilterCategory(cmd.product.categorie);
                     }
-
                     setTimeout(function() {
                         var cards = document.querySelectorAll('.pos-product-card');
                         for (var i = 0; i < cards.length; i++) {
@@ -402,7 +379,6 @@ function handleVoiceCommand(cmd) {
                             }
                         }
                     }, 300);
-
                     showVoiceResult('🔍 ' + cmd.product.nom + ' – cliquez pour ajouter');
                 }
             }
@@ -414,10 +390,17 @@ function handleVoiceCommand(cmd) {
                 if (it) {
                     var p = window.posProductsList?.find(function(x) { return x.id === lastAddedProductId; });
                     if (p && p.stock !== undefined && qty > p.stock) { showVoiceResult('⚠️ Stock max: ' + p.stock); return; }
-                    it.quantite = qty; lastAddedProductId = null;
+                    it.quantite = qty;
+                    lastAddedProductId = null;
+                    
+                    // ✅ FORCER LE RETOUR EN MODE SEARCH IMMÉDIATEMENT
                     setVoiceMode('search', '🎤 Recherche vocale active', null);
                     if (typeof window.updateCartOnly === 'function') window.updateCartOnly();
                     showVoiceResult('✅ Qté: ' + qty);
+                    showVoiceFlowIndicator('product');
+                    
+                    // ✅ Nettoyer le timeout
+                    clearTimeout(window._quantityTimeout);
                 }
             } else if (voiceMode === 'payment' && window.voicePaymentState === 2) {
                 window.posAmountGiven = cmd.value;
@@ -519,8 +502,8 @@ function posStartVoiceRecording() {
     if (!SR) { alert('❌ Reconnaissance vocale non disponible.'); return; }
     voiceRecognition = new SR();
     voiceRecognition.lang = 'fr-FR';
-    voiceRecognition.continuous = true;      // ✅ RESTE ALLUMÉ EN CONTINU
-    voiceRecognition.interimResults = true;   // ✅ AFFICHE EN TEMPS RÉEL
+    voiceRecognition.continuous = true;
+    voiceRecognition.interimResults = true;
     voiceRecognition.maxAlternatives = 1;
 
     if (mb) {
@@ -567,7 +550,6 @@ function posStartVoiceRecording() {
                 }
             }
         } else {
-            // Chercher d'abord l'input du POS
             var si = document.getElementById('posSearchInput');
             if (si) {
                 if (final) {
@@ -581,7 +563,6 @@ function posStartVoiceRecording() {
                     lastInterim = interim;
                 }
             } else {
-                // Si pas de posSearchInput, chercher l'input de la page Produits (admin)
                 var pi = document.getElementById('productSearchInput');
                 if (pi) {
                     if (final) {
@@ -601,13 +582,8 @@ function posStartVoiceRecording() {
 
     voiceRecognition.onend = function() {
         if (isRecording) {
-            // ✅ REDÉMARRER AUTOMATIQUEMENT LE MICRO APRÈS CHAQUE PHRASE
             setTimeout(function() {
-                try { 
-                    voiceRecognition.start(); 
-                } catch (e) { 
-                    posStopVoiceSearch(); 
-                }
+                try { voiceRecognition.start(); } catch (e) { posStopVoiceSearch(); }
             }, 8);
         }
     };
@@ -651,7 +627,7 @@ function posStopVoiceSearch() {
     showVoiceResult('🎤 Micro désactivé');
 }
 
-// ========== CRÉDITS (FONCTIONS COMPLÈTES) ==========
+// ========== CRÉDITS ==========
 function activateCreditSelection() { /* code complet déjà présent */ }
 function selectCreditLine(n) { /* ... */ }
 function markCreditForPayment() { /* ... */ }
@@ -693,6 +669,16 @@ window.onProductAdded = function(pid) {
     showVoiceModeIndicator();
     hideVoiceFlowIndicator();
     setTimeout(function() { showVoiceFlowIndicator('quantity'); }, 100);
+    
+    // ✅ REVIENT EN MODE SEARCH APRÈS 5 SECONDES SI PAS DE QUANTITÉ
+    clearTimeout(window._quantityTimeout);
+    window._quantityTimeout = setTimeout(function() {
+        if (voiceMode === 'quantity') {
+            setVoiceMode('search', '🎤 Recherche vocale active', null);
+            showVoiceResult('⏱️ Retour en mode recherche');
+            hideVoiceFlowIndicator();
+        }
+    }, 5000);
 };
 window.selectAllCredits = selectAllCredits;
 window.deselectAllCredits = deselectAllCredits;
