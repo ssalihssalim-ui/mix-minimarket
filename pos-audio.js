@@ -1,7 +1,7 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Version corrigée : recherche tous les produits correspondants
-// ✅ Le micro reste allumé, permet d'enchaîner produit → quantité → produit → quantité
+// ✅ Le micro reste ALLUMÉ en continu
+// ✅ Enchaînement : produit → quantité → produit → quantité ...
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -26,7 +26,7 @@ window.productAdminIndex = window.productAdminIndex || {};
 window.productAdminIndexBuilt = false;
 
 // ========== PAYMENT STATE MACHINE ==========
-window.voicePaymentState = 0; // 0 = client, 1 = payment_mode, 2 = amount
+window.voicePaymentState = 0;
 
 var paymentKeywords = {
     'espece': ['espèces', 'espece', 'argent', 'cash', 'comptant', 'liquide', 'espèce'],
@@ -106,7 +106,7 @@ function fastFindClient(query) {
 
 function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
 
-// ========== INDEX PRODUIT (RAPIDE) – POUR POS ==========
+// ========== INDEX PRODUIT (RAPIDE) ==========
 function buildProductIndex() {
     if (productIndexBuilt || !window.posProductsList?.length) return;
     productNameIndex = {};
@@ -131,7 +131,6 @@ function buildProductIndex() {
     productIndexBuilt = true;
 }
 
-// ✅ RETOURNE TOUS LES PRODUITS CORRESPONDANTS
 function fastFindProduct(query) {
     buildProductIndex();
     if (!query) return [];
@@ -160,7 +159,7 @@ function fastFindProduct(query) {
     return filtered;
 }
 
-// ========== INDEX ADMIN PERMANENT – AVEC DESCRIPTION ==========
+// ========== INDEX ADMIN ==========
 function buildProductAdminIndex() {
     if (window.productAdminIndexBuilt || !window.allProductsData || !window.allProductsData.length) return;
     window.productAdminIndex = {};
@@ -230,11 +229,17 @@ function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
 
-    // MODE QUANTITÉ
-    if (voiceMode === 'quantity') {
+    // ✅ MODE QUANTITÉ : si un produit vient d'être ajouté, interpréter les nombres
+    if (lastAddedProductId !== null) {
         var num = extractNumberFromTranscript(cleaned);
-        if (num !== null && num > 0) return { type: 'number', value: num };
-        return { type: 'ignore' };
+        if (num !== null && num > 0) {
+            return { type: 'number', value: num };
+        }
+        // Si ce n'est pas un nombre, annuler le mode quantité et chercher un produit
+        lastAddedProductId = null;
+        clearTimeout(window._quantityTimeout);
+        hideVoiceFlowIndicator();
+        // Continuer pour chercher un produit
     }
 
     // MODE PAIEMENT
@@ -274,7 +279,7 @@ function parseVoiceCommand(transcript) {
     if (cleaned.includes('catégories')) return { type: 'navigate', page: 'categories' };
     if (cleaned.includes('point de vente') || cleaned.includes('pos') || cleaned.includes('caisse') || cleaned.includes('encaissement')) return { type: 'navigate', page: 'pos' };
 
-    // RECHERCHE PRODUIT – POS / Admin
+    // RECHERCHE PRODUIT
     if (voiceMode === 'search') {
         if ((currentPage === 'POS' || currentPage === 'Dashboard') && (window.posStep || 0) === 1) {
             var products = window.posProductsList || [];
@@ -385,22 +390,17 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             break;
         case 'number':
-            if (voiceMode === 'quantity' && lastAddedProductId) {
+            if (lastAddedProductId !== null) {
                 var qty = cmd.value, it = window.posCart?.find(function(x) { return x.id === lastAddedProductId; });
                 if (it) {
                     var p = window.posProductsList?.find(function(x) { return x.id === lastAddedProductId; });
                     if (p && p.stock !== undefined && qty > p.stock) { showVoiceResult('⚠️ Stock max: ' + p.stock); return; }
                     it.quantite = qty;
                     lastAddedProductId = null;
-                    
-                    // ✅ FORCER LE RETOUR EN MODE SEARCH IMMÉDIATEMENT
-                    setVoiceMode('search', '🎤 Recherche vocale active', null);
+                    clearTimeout(window._quantityTimeout);
                     if (typeof window.updateCartOnly === 'function') window.updateCartOnly();
                     showVoiceResult('✅ Qté: ' + qty);
-                    showVoiceFlowIndicator('product');
-                    
-                    // ✅ Nettoyer le timeout
-                    clearTimeout(window._quantityTimeout);
+                    hideVoiceFlowIndicator();
                 }
             } else if (voiceMode === 'payment' && window.voicePaymentState === 2) {
                 window.posAmountGiven = cmd.value;
@@ -458,7 +458,6 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             break;
         case 'cancel':
-            setVoiceMode('search', '🎤 Recherche vocale active', null);
             showVoiceResult('↩️ Recherche');
             if (typeof window.renderPOS === 'function') window.renderPOS();
             hideVoiceFlowIndicator();
@@ -665,19 +664,14 @@ window.hideVoiceFlowIndicator = hideVoiceFlowIndicator;
 window.showProcessingIndicator = showProcessingIndicator;
 window.onProductAdded = function(pid) {
     lastAddedProductId = pid;
-    setVoiceMode('quantity', '🔢 Qté', pid);
-    showVoiceModeIndicator();
-    hideVoiceFlowIndicator();
-    setTimeout(function() { showVoiceFlowIndicator('quantity'); }, 100);
+    showVoiceResult('🔢 Dites la quantité');
+    showVoiceFlowIndicator('quantity');
     
-    // ✅ REVIENT EN MODE SEARCH APRÈS 5 SECONDES SI PAS DE QUANTITÉ
     clearTimeout(window._quantityTimeout);
     window._quantityTimeout = setTimeout(function() {
-        if (voiceMode === 'quantity') {
-            setVoiceMode('search', '🎤 Recherche vocale active', null);
-            showVoiceResult('⏱️ Retour en mode recherche');
-            hideVoiceFlowIndicator();
-        }
+        lastAddedProductId = null;
+        hideVoiceFlowIndicator();
+        showVoiceResult('⏱️ Quantité annulée');
     }, 5000);
 };
 window.selectAllCredits = selectAllCredits;
