@@ -1,7 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Le micro reste ALLUMÉ en continu
-// ✅ Enchaînement : produit → quantité → produit → quantité ...
+// ✅ CORRIGÉ : La recherche affiche le mot recherché et filtre la liste
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -229,17 +228,15 @@ function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
 
-    // ✅ MODE QUANTITÉ : si un produit vient d'être ajouté, interpréter les nombres
+    // MODE QUANTITÉ
     if (lastAddedProductId !== null) {
         var num = extractNumberFromTranscript(cleaned);
         if (num !== null && num > 0) {
             return { type: 'number', value: num };
         }
-        // Si ce n'est pas un nombre, annuler le mode quantité et chercher un produit
         lastAddedProductId = null;
         clearTimeout(window._quantityTimeout);
         hideVoiceFlowIndicator();
-        // Continuer pour chercher un produit
     }
 
     // MODE PAIEMENT
@@ -287,9 +284,9 @@ function parseVoiceCommand(transcript) {
                 var results = fastFindProduct(cleaned);
                 if (results.length > 0) {
                     if (results.length > 1) {
-                        return { type: 'search_products', products: results, page: 'pos' };
+                        return { type: 'search_products', products: results, searchTerm: cleaned, page: 'pos' };
                     }
-                    return { type: 'search_product', product: results[0], page: 'pos' };
+                    return { type: 'search_product', product: results[0], searchTerm: cleaned, page: 'pos' };
                 }
             }
             if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) return { type: 'next' };
@@ -300,7 +297,7 @@ function parseVoiceCommand(transcript) {
         }
         else if (currentPage === 'Produits') {
             var bestAdmin = fastFindProductAdmin(cleaned)[0];
-            if (bestAdmin) return { type: 'search_product', product: bestAdmin, page: 'products' };
+            if (bestAdmin) return { type: 'search_product', product: bestAdmin, searchTerm: cleaned, page: 'products' };
         }
     }
 
@@ -322,10 +319,16 @@ function handleVoiceCommand(cmd) {
         case 'search_products':
             var searchInput = document.getElementById('posSearchInput');
             if (searchInput && cmd.products && cmd.products.length > 0) {
-                searchInput.value = cmd.products[0].nom;
+                // ✅ ÉCRIRE LE TERME RECHERCHÉ DANS LA BARRE
+                var searchTerm = cmd.searchTerm || cmd.products[0].nom;
+                searchInput.value = searchTerm;
+                
+                // ✅ APPLIQUER LA RECHERCHE
                 if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(cmd.products[0].nom);
+                    window.posSearchProducts(searchTerm);
                 }
+                
+                // ✅ METTRE EN ÉVIDENCE TOUS LES PRODUITS TROUVÉS
                 setTimeout(function() {
                     var cards = document.querySelectorAll('.pos-product-card');
                     var foundCount = 0;
@@ -342,7 +345,7 @@ function handleVoiceCommand(cmd) {
                             }
                         }
                     }
-                    showVoiceResult('🔍 ' + foundCount + ' produit(s) trouvé(s)');
+                    showVoiceResult('🔍 ' + foundCount + ' produit(s) trouvé(s) pour "' + searchTerm + '"');
                     setTimeout(function() {
                         cards.forEach(function(c) {
                             c.style.boxShadow = '';
@@ -353,42 +356,39 @@ function handleVoiceCommand(cmd) {
             }
             hideVoiceFlowIndicator();
             break;
+            
         case 'search_product':
-            if (cmd.page === 'products' || cp === 'Produits') {
-                var adminInput = document.getElementById('productSearchInput');
-                if (adminInput && cmd.product) {
-                    adminInput.value = cmd.product.nom;
-                    window.productSearchQuery = cmd.product.nom.toLowerCase().trim();
-                    if (typeof renderProductsTable === 'function') {
-                        renderProductsTable();
-                    }
-                    showVoiceResult('🔍 ' + cmd.product.nom + ' – filtré');
+            var searchInput = document.getElementById('posSearchInput');
+            if (searchInput && cmd.product) {
+                // ✅ ÉCRIRE LE TERME RECHERCHÉ DANS LA BARRE (PAS LE NOM DU PRODUIT)
+                var searchTerm = cmd.searchTerm || cmd.product.nom;
+                searchInput.value = searchTerm;
+                
+                // ✅ APPLIQUER LA RECHERCHE
+                if (typeof window.posSearchProducts === 'function') {
+                    window.posSearchProducts(searchTerm);
                 }
-            } else {
-                var searchInput = document.getElementById('posSearchInput');
-                if (searchInput && cmd.product) {
-                    searchInput.value = cmd.product.nom;
-                    if (cmd.product.categorie && typeof window.posFilterCategory === 'function') {
-                        window.posFilterCategory(cmd.product.categorie);
-                    }
-                    setTimeout(function() {
-                        var cards = document.querySelectorAll('.pos-product-card');
-                        for (var i = 0; i < cards.length; i++) {
-                            var card = cards[i];
-                            var nameEl = card.querySelector('.pos-product-name');
-                            if (nameEl && nameEl.textContent.trim().toLowerCase() === cmd.product.nom.toLowerCase()) {
-                                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                card.style.boxShadow = '0 0 0 3px #A67C52';
-                                setTimeout(function() { card.style.boxShadow = ''; }, 1500);
-                                break;
-                            }
+                
+                // ✅ METTRE EN ÉVIDENCE LE PRODUIT
+                setTimeout(function() {
+                    var cards = document.querySelectorAll('.pos-product-card');
+                    for (var i = 0; i < cards.length; i++) {
+                        var card = cards[i];
+                        var nameEl = card.querySelector('.pos-product-name');
+                        if (nameEl && nameEl.textContent.trim().toLowerCase() === cmd.product.nom.toLowerCase()) {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            card.style.boxShadow = '0 0 0 3px #A67C52';
+                            setTimeout(function() { card.style.boxShadow = ''; }, 1500);
+                            break;
                         }
-                    }, 300);
-                    showVoiceResult('🔍 ' + cmd.product.nom + ' – cliquez pour ajouter');
-                }
+                    }
+                }, 300);
+                
+                showVoiceResult('🔍 Recherche: ' + searchTerm);
             }
             hideVoiceFlowIndicator();
             break;
+            
         case 'number':
             if (lastAddedProductId !== null) {
                 var qty = cmd.value, it = window.posCart?.find(function(x) { return x.id === lastAddedProductId; });
@@ -417,6 +417,7 @@ function handleVoiceCommand(cmd) {
             }
             hideVoiceFlowIndicator();
             break;
+            
         case 'client':
             window.posCurrentClient = { id: cmd.client.id, name: cmd.client.nom + ' ' + cmd.client.prenom };
             window.posCurrentTable = '';
@@ -428,6 +429,7 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             setTimeout(function() { showVoiceFlowIndicator('payment_mode'); }, 100);
             break;
+            
         case 'payment_mode':
             if (typeof window.posSetPaymentMethod === 'function') {
                 window.posSetPaymentMethod(cmd.mode);
@@ -440,6 +442,7 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             setTimeout(function() { showVoiceFlowIndicator('payment_amount'); }, 100);
             break;
+            
         case 'validate': case 'finalize':
             if (window.posStep === 2 && typeof window.posFinalizeSale === 'function') {
                 window.posFinalizeSale();
@@ -449,25 +452,30 @@ function handleVoiceCommand(cmd) {
                 hideVoiceFlowIndicator();
             }
             break;
+            
         case 'clear':
             if (typeof window.posResetCart === 'function') { window.posResetCart(); showVoiceResult('🗑️ Panier vidé'); }
             hideVoiceFlowIndicator();
             break;
+            
         case 'next':
             if (window.posCart?.length > 0 && window.posStep === 1) window.posGoToStep2();
             hideVoiceFlowIndicator();
             break;
+            
         case 'cancel':
             showVoiceResult('↩️ Recherche');
             if (typeof window.renderPOS === 'function') window.renderPOS();
             hideVoiceFlowIndicator();
             break;
+            
         case 'navigate':
             var pages = { 'credits': 'Crédits', 'ventes': 'Ventes', 'dashboard': 'Dashboard', 'products': 'Produits', 'clients': 'Clients', 'commandes': 'Commandes en ligne', 'categories': 'Catégories', 'pos': 'POS' };
             if (cp === pages[cmd.page]) { showVoiceResult('✅ ' + pages[cmd.page]); return; }
             if (typeof navigateTo === 'function') navigateTo(cmd.page);
             hideVoiceFlowIndicator();
             break;
+            
         default:
             if (cmd.text && typeof window.posSearchProducts === 'function') window.posSearchProducts(cmd.text);
     }
