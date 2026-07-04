@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Support complet : Filtres de période + Recherche client + Description
+// ✅ Filtres de période → selecteur | Recherche client → barre de recherche
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -404,8 +404,6 @@ function handleVoiceCommand(cmd) {
                     periodSelect.value = period;
                     window.creditsPeriod = period;
                     window.currentPages.credits = 1;
-                    
-                    // ✅ SI LES DONNÉES SONT VIDES, CHARGER D'ABORD
                     if (window.allCreditsData.length === 0) {
                         if (typeof loadCredits === 'function') {
                             loadCredits();
@@ -418,7 +416,7 @@ function handleVoiceCommand(cmd) {
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
-            // ✅ PAGE VENTES
+            // PAGE VENTES
             else if (cp === 'Ventes') {
                 var periodSelect = document.getElementById('ventesPeriodSelect');
                 if (periodSelect) {
@@ -437,7 +435,7 @@ function handleVoiceCommand(cmd) {
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
-            // ✅ PAGE DÉPENSES
+            // PAGE DÉPENSES
             else if (cp === 'Dépenses') {
                 var periodSelect = document.getElementById('globalPeriodSelect');
                 if (periodSelect) {
@@ -448,7 +446,7 @@ function handleVoiceCommand(cmd) {
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
-            // ✅ PAGE COMMANDES
+            // PAGE COMMANDES
             else if (cp === 'Commandes en ligne') {
                 var periodSelect = document.getElementById('commandesPeriodSelect');
                 if (periodSelect) {
@@ -467,7 +465,7 @@ function handleVoiceCommand(cmd) {
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
-            // ✅ PAGE STATISTIQUES
+            // PAGE STATISTIQUES
             else if (cp === 'Statistiques') {
                 var periodSelect = document.getElementById('statPeriodSelect');
                 if (periodSelect) {
@@ -477,7 +475,6 @@ function handleVoiceCommand(cmd) {
                     showVoiceResult('📅 ' + (periodLabels[period] || period));
                 }
             }
-            // Si on est sur POS, naviguer vers la page correspondante
             else if (cp === 'POS' || cp === 'Dashboard') {
                 if (typeof navigateTo === 'function') {
                     navigateTo('credits');
@@ -689,23 +686,39 @@ function posStartVoiceRecording() {
         }
         var cp = document.getElementById('pageTitle')?.textContent || '';
         
+        // ========== PAGE CRÉDITS ==========
         if (cp === 'Crédits') {
             var vd = document.getElementById('creditsVoiceDisplay');
             var searchInput = document.getElementById('creditsSearchInput');
-            if (vd && searchInput) {
+            var periodSelect = document.getElementById('creditsPeriodSelect');
+            
+            if (vd && searchInput && periodSelect) {
                 if (final) {
-                    searchInput.value = final;
-                    vd.value = final;
-                    window.creditsSearch = final;
-                    window.currentPages.credits = 1;
-                    if (window.allCreditsData.length === 0) {
-                        if (typeof loadCredits === 'function') {
-                            loadCredits();
+                    // ✅ VÉRIFIER SI C'EST UN FILTRE DE PÉRIODE
+                    var period = detectPeriodFilter(final);
+                    if (period !== null) {
+                        // ✅ CHANGER LE SELECTEUR (pas la barre de recherche)
+                        periodSelect.value = period;
+                        window.creditsPeriod = period;
+                        window.currentPages.credits = 1;
+                        if (window.allCreditsData.length === 0) {
+                            if (typeof loadCredits === 'function') loadCredits();
+                        } else {
+                            if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
                         }
+                        showVoiceResult('📅 ' + final);
                     } else {
-                        if (typeof applyCreditsFilters === 'function') {
-                            applyCreditsFilters();
+                        // ✅ C'EST UN CLIENT → BARRE DE RECHERCHE
+                        searchInput.value = final;
+                        vd.value = final;
+                        window.creditsSearch = final;
+                        window.currentPages.credits = 1;
+                        if (window.allCreditsData.length === 0) {
+                            if (typeof loadCredits === 'function') loadCredits();
+                        } else {
+                            if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
                         }
+                        showVoiceResult('👤 ' + final);
                     }
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
@@ -718,23 +731,36 @@ function posStartVoiceRecording() {
                 }
             }
         }
+        // ========== PAGE VENTES ==========
         else if (cp === 'Ventes') {
             var vd2 = document.getElementById('ventesVoiceDisplay');
             var searchInput = document.getElementById('ventesSearchInput');
-            if (vd2 && searchInput) {
+            var periodSelect = document.getElementById('ventesPeriodSelect');
+            
+            if (vd2 && searchInput && periodSelect) {
                 if (final) {
-                    searchInput.value = final;
-                    vd2.value = final;
-                    window.ventesSearch = final;
-                    window.currentPages.ventes = 1;
-                    if (window.allVentesData.length === 0) {
-                        if (typeof loadVentes === 'function') {
-                            loadVentes();
+                    var period = detectPeriodFilter(final);
+                    if (period !== null) {
+                        periodSelect.value = period;
+                        window.ventesPeriod = period;
+                        window.currentPages.ventes = 1;
+                        if (window.allVentesData.length === 0) {
+                            if (typeof loadVentes === 'function') loadVentes();
+                        } else {
+                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
                         }
+                        showVoiceResult('📅 ' + final);
                     } else {
-                        if (typeof applyVentesFilters === 'function') {
-                            applyVentesFilters();
+                        searchInput.value = final;
+                        vd2.value = final;
+                        window.ventesSearch = final;
+                        window.currentPages.ventes = 1;
+                        if (window.allVentesData.length === 0) {
+                            if (typeof loadVentes === 'function') loadVentes();
+                        } else {
+                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
                         }
+                        showVoiceResult('👤 ' + final);
                     }
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
@@ -747,6 +773,7 @@ function posStartVoiceRecording() {
                 }
             }
         }
+        // ========== PAGE PRODUITS (ADMIN) ==========
         else if (cp === 'Produits') {
             var pi = document.getElementById('productSearchInput');
             if (pi) {
@@ -767,6 +794,7 @@ function posStartVoiceRecording() {
                 }
             }
         }
+        // ========== PAGE POS ==========
         else {
             var si = document.getElementById('posSearchInput');
             if (si) {
