@@ -1,6 +1,7 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
 // Gestion des crédits - Version corrigée
 // Compatible avec la sélection multiple vocale
+// ✅ Paiement d'un crédit → Redirection vers le POS
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
@@ -27,6 +28,60 @@ function formatCreditItems(items) {
         var total = (qty * price).toFixed(2);
         return '<strong>' + qty + 'x</strong> ' + escapeHtml(name) + ' <span style="color:#94a3b8;font-size:0.6rem;">(' + total + ' MAD)</span>';
     }).join('<br>');
+}
+
+// ✅ Fonction pour payer un crédit → Rediriger vers le POS
+function payerCreditVersPOS(creditId) {
+    console.log('🔄 Paiement du crédit:', creditId);
+    
+    // Récupérer le crédit depuis les données
+    var credit = window.allCreditsData.find(function(c) { return c.id === creditId; });
+    if (!credit) {
+        alert('Crédit introuvable');
+        return;
+    }
+    
+    // Calculer le montant restant
+    var reste = credit.remainingAmount || credit.total || 0;
+    
+    // Préparer les données pour le POS
+    var posData = {
+        venteId: creditId,
+        clientId: credit.clientId || null,
+        clientName: credit.clientName || 'Client',
+        items: credit.items || [],
+        total: reste,
+        table: credit.table || '',
+        paymentMethod: 'espece',
+        isCreditPayment: true,
+        amountGiven: reste,
+        creditData: {
+            originalTotal: credit.total || 0,
+            remainingAmount: reste,
+            amountGiven: credit.amountGiven || 0,
+            dueDate: credit.dueDate || null
+        }
+    };
+    
+    // Stocker dans localStorage pour le POS
+    localStorage.setItem('posPayerCredit', JSON.stringify(posData));
+    
+    // Rediriger vers le POS
+    if (typeof navigateTo === 'function') {
+        navigateTo('pos');
+    } else {
+        window.location.hash = '#pos';
+        setTimeout(function() {
+            if (typeof loadPosPage === 'function') {
+                var content = document.getElementById('dynamicContent');
+                if (content) loadPosPage(content);
+            }
+        }, 300);
+    }
+    
+    if (typeof showVoiceResult === 'function') {
+        showVoiceResult('💳 Paiement du crédit ' + credit.clientName + ' (' + reste.toFixed(2) + ' MAD)');
+    }
 }
 
 async function loadCreditsPage(c) {
@@ -230,7 +285,6 @@ function renderCreditsTable() {
         makeSortableHeader('credits', 'factureNum', 'Facture', 'renderCreditsTable') +
         makeSortableHeader('credits', 'createdAt', 'Date', 'renderCreditsTable') +
         makeSortableHeader('credits', 'clientName', 'Client', 'renderCreditsTable') +
-        // ✅ AJOUT DE LA COLONNE PRODUITS
         '<th>Produits</th>' +
         makeSortableHeader('credits', 'total', 'Total', 'renderCreditsTable') +
         makeSortableHeader('credits', 'amountGiven', 'Payé', 'renderCreditsTable') +
@@ -248,7 +302,6 @@ function renderCreditsTable() {
         var reste = d.remainingAmount || d.total || 0;
         if (!d.paid) tc += reste;
         
-        // ✅ DATE + HEURE
         var dt = '';
         if (d.createdAt) {
             var dateObj = d.createdAt.seconds ? new Date(d.createdAt.seconds * 1000) : new Date(d.createdAt);
@@ -262,22 +315,23 @@ function renderCreditsTable() {
             });
         }
         
-        // ✅ PRODUITS (items du crédit)
         var items = d.items || d.products || d.articles || [];
         var produitsHTML = formatCreditItems(items);
         
         var amountPaid = d.amountGiven || 0;
         var mode = d.paymentMethod || '-';
         
-        var actions = '<button class="btn-edit" onclick="printFacture(\'' + d.id + '\')"><i class="fas fa-print"></i></button> ';
-        if (!d.paid) {
-            actions += '<button class="btn-add" style="padding:4px 8px;font-size:0.65rem;" onclick="markCreditPaid(\'' + d.id + '\')">Payer</button> ';
+        var actions = '<button class="btn-edit" onclick="printFacture(\'' + d.id + '\')" title="Imprimer"><i class="fas fa-print"></i></button> ';
+        if (!d.paid && reste > 0) {
+            actions += '<button class="btn-add" style="padding:4px 8px;font-size:0.65rem;background:#A67C52;" onclick="payerCreditVersPOS(\'' + d.id + '\')" title="Payer au POS">💳 Payer</button> ';
+        } else if (!d.paid && reste <= 0) {
+            actions += '<span class="status-success">✅ Soldé</span> ';
         }
         
         var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
         if (isAdmin) {
-            actions += '<button class="btn-edit" onclick="editCredit(\'' + d.id + '\')"><i class="fas fa-edit"></i></button> ';
-            actions += '<button class="btn-delete" onclick="if(confirm(\'Supprimer définitivement ce crédit ?\')) deleteCredit(\'' + d.id + '\')"><i class="fas fa-trash"></i></button>';
+            actions += '<button class="btn-edit" onclick="editCredit(\'' + d.id + '\')" title="Modifier"><i class="fas fa-edit"></i></button> ';
+            actions += '<button class="btn-delete" onclick="if(confirm(\'Supprimer définitivement ce crédit ?\')) deleteCredit(\'' + d.id + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>';
         }
         
         var isSelected = (window.creditSelectAll) ? true : (window.creditSelectedIndex === index);
@@ -353,37 +407,7 @@ function toggleCreditCheckbox(index) {
 }
 
 function markCreditPaid(creditId) {
-    var data = window.filteredCredits || window.allCreditsData || [];
-    var index = data.findIndex(function(c) { return c.id === creditId; });
-    
-    if (index === -1) {
-        alert('Crédit introuvable');
-        return;
-    }
-    
-    window.creditSelectedIndex = index;
-    window.creditSelectAll = false;
-    window.creditPaymentStep = 'payment';
-    window.creditPaymentAmount = 0;
-    window.creditSelectionMode = true;
-    
-    var zone = document.getElementById('creditPaymentZone');
-    var info = document.getElementById('creditPaymentInfo');
-    if (zone) {
-        zone.style.display = 'block';
-        var credit = data[index];
-        var reste = credit.remainingAmount || credit.total || 0;
-        if (info) {
-            info.textContent = 'Client: ' + (credit.clientName || credit.table || 'Inconnu') + ' | Restant: ' + reste.toFixed(2) + ' MAD';
-        }
-        var input = document.getElementById('creditPaymentAmountInput');
-        if (input) {
-            input.value = '';
-            input.focus();
-            input.select();
-        }
-    }
-    renderCreditsTable();
+    payerCreditVersPOS(creditId);
 }
 
 function searchClientInCreditsDropdown(query) {
@@ -479,7 +503,7 @@ async function editCredit(id) {
             '<div class="form-group"><label>Statut</label><select id="editCreditStatut"><option value="0" ' + (!d.paid ? 'selected' : '') + '>Impayé</option><option value="1" ' + (d.paid ? 'selected' : '') + '>Payé</option></select></div>' +
             '</div>' +
             '<div class="form-row">' +
-            '<div class="form-group"><label>Produits</label><textarea id="editCreditItems" style="min-height:60px;">' + (d.items && Array.isArray(d.items) ? JSON.stringify(d.items, null, 2) : '') + '</textarea></div>' +
+            '<div class="form-group"><label>Produits (JSON)</label><textarea id="editCreditItems" style="min-height:60px;font-size:0.7rem;">' + (d.items && Array.isArray(d.items) ? JSON.stringify(d.items, null, 2) : '') + '</textarea></div>' +
             '</div>' +
             '<button class="btn-cancel" onclick="closeModal()">Annuler</button>' +
             '<button class="btn-save" onclick="saveEditCredit()">Enregistrer</button>';
@@ -499,7 +523,6 @@ async function saveEditCredit() {
     var paymentMethod = document.getElementById('editCreditMode').value.trim();
     var paid = document.getElementById('editCreditStatut').value === '1';
     
-    // Récupérer les items depuis le textarea
     var items = [];
     var itemsText = document.getElementById('editCreditItems').value.trim();
     if (itemsText) {
@@ -543,9 +566,12 @@ async function deleteCredit(id) {
     }
 }
 
+// ✅ FONCTION VALIDER LE PAIEMENT (CORRIGÉE)
 async function validateCreditPayment() {
+    console.log('💳 Validation du paiement crédit...');
+    
     if (window.creditSelectedIndex < 0) {
-        alert('Aucun crédit sélectionné');
+        alert('❌ Aucun crédit sélectionné');
         return;
     }
     
@@ -553,60 +579,61 @@ async function validateCreditPayment() {
     var amount = parseFloat(input ? input.value : window.creditPaymentAmount);
     
     if (isNaN(amount) || amount <= 0) {
-        alert('Montant invalide');
+        alert('❌ Montant invalide');
         return;
     }
     
     var data = window.filteredCredits || window.allCreditsData || [];
     var credit = data[window.creditSelectedIndex];
     if (!credit) {
-        alert('Crédit introuvable');
+        alert('❌ Crédit introuvable');
         return;
     }
     
     var reste = credit.remainingAmount || credit.total || 0;
-    if (amount > reste) {
-        if (!confirm('Le montant (' + amount.toFixed(2) + ' MAD) dépasse le reste à payer (' + reste.toFixed(2) + ' MAD). Continuer ?')) {
-            return;
+    
+    // ✅ Rediriger vers le POS pour le paiement
+    // Mettre à jour le montant à payer dans le localStorage
+    var posData = {
+        venteId: credit.id,
+        clientId: credit.clientId || null,
+        clientName: credit.clientName || 'Client',
+        items: credit.items || [],
+        total: amount, // Montant saisi
+        table: credit.table || '',
+        paymentMethod: 'espece',
+        isCreditPayment: true,
+        amountGiven: amount,
+        creditData: {
+            originalTotal: credit.total || 0,
+            remainingAmount: reste,
+            amountGiven: credit.amountGiven || 0,
+            dueDate: credit.dueDate || null,
+            isPartial: amount < reste // Paiement partiel
         }
-    }
-    
-    var newReste = Math.max(0, reste - amount);
-    var paid = newReste <= 0.01;
-    
-    var updateData = {
-        paid: paid,
-        remainingAmount: newReste,
-        amountGiven: (credit.amountGiven || 0) + amount,
-        paidAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
-    try {
-        await CacheDB.write('credits', credit.id, updateData, 'update');
-        
-        var idx = window.allCreditsData.findIndex(function(c) { return c.id === credit.id; });
-        if (idx !== -1) {
-            window.allCreditsData[idx].paid = paid;
-            window.allCreditsData[idx].remainingAmount = newReste;
-            window.allCreditsData[idx].amountGiven = (credit.amountGiven || 0) + amount;
-        }
-        
-        alert(paid ? '✅ Crédit soldé !' : '✅ Paiement enregistré. Reste: ' + newReste.toFixed(2) + ' MAD');
-        
-        window.creditPaymentStep = 'idle';
-        window.creditSelectedIndex = -1;
-        window.creditPaymentAmount = 0;
-        window.creditSelectionMode = false;
-        
-        var zone = document.getElementById('creditPaymentZone');
-        if (zone) zone.style.display = 'none';
-        
-        loadCredits();
-        CacheDB.sync();
-    } catch (e) {
-        console.error('Erreur paiement:', e);
-        alert('❌ Erreur: ' + e.message);
+    // Stocker dans localStorage
+    localStorage.setItem('posPayerCredit', JSON.stringify(posData));
+    
+    // Fermer la zone de paiement
+    closeCreditSelection();
+    
+    // Rediriger vers le POS
+    if (typeof navigateTo === 'function') {
+        navigateTo('pos');
+    } else {
+        window.location.hash = '#pos';
+        setTimeout(function() {
+            if (typeof loadPosPage === 'function') {
+                var content = document.getElementById('dynamicContent');
+                if (content) loadPosPage(content);
+            }
+        }, 300);
+    }
+    
+    if (typeof showVoiceResult === 'function') {
+        showVoiceResult('💳 Paiement crédit: ' + amount.toFixed(2) + ' MAD pour ' + credit.clientName);
     }
 }
 
@@ -658,5 +685,6 @@ window.normalize = normalize;
 window.clearCreditsSearch = clearCreditsSearch;
 window.toggleSelectAllCredits = toggleSelectAllCredits;
 window.formatCreditItems = formatCreditItems;
+window.payerCreditVersPOS = payerCreditVersPOS;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits chargé');
+console.log('🛒 Mixmax Minimarket - Admin Credits chargé (paiement POS)');
