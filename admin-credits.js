@@ -2,6 +2,7 @@
 // Gestion des crédits - Version corrigée
 // Compatible avec la sélection multiple vocale
 // ✅ Paiement d'un crédit → Redirection vers le POS
+// ✅ Affichage des produits (ou message "Aucun produit")
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
@@ -16,11 +17,26 @@ function normalize(str) {
     return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-// ✅ Fonction pour formater les produits
-function formatCreditItems(items) {
-    if (!items || !Array.isArray(items) || items.length === 0) {
-        return '-';
+// ✅ Fonction pour formater les produits (améliorée)
+function formatCreditItems(credit) {
+    // Essayer plusieurs sources possibles
+    var items = credit.items || credit.products || credit.articles || [];
+    
+    // Si pas d'items, essayer de construire depuis paymentHistory
+    if (!items || items.length === 0) {
+        // Essayer de récupérer depuis les données de la vente associée
+        if (credit.saleId) {
+            // On pourrait faire une requête Firestore ici, mais pour l'affichage rapide
+            // on va juste afficher un message
+            return '<span style="color:#94a3b8;font-size:0.6rem;">Produits non détaillés</span>';
+        }
+        return '<span style="color:#94a3b8;font-size:0.6rem;">Aucun produit</span>';
     }
+    
+    if (!Array.isArray(items) || items.length === 0) {
+        return '<span style="color:#94a3b8;font-size:0.6rem;">Aucun produit</span>';
+    }
+    
     return items.map(function(item) {
         var qty = item.quantite || item.quantity || 1;
         var name = item.nom || item.name || 'Produit';
@@ -34,17 +50,14 @@ function formatCreditItems(items) {
 function payerCreditVersPOS(creditId) {
     console.log('🔄 Paiement du crédit:', creditId);
     
-    // Récupérer le crédit depuis les données
     var credit = window.allCreditsData.find(function(c) { return c.id === creditId; });
     if (!credit) {
         alert('Crédit introuvable');
         return;
     }
     
-    // Calculer le montant restant
     var reste = credit.remainingAmount || credit.total || 0;
     
-    // Préparer les données pour le POS
     var posData = {
         venteId: creditId,
         clientId: credit.clientId || null,
@@ -63,10 +76,8 @@ function payerCreditVersPOS(creditId) {
         }
     };
     
-    // Stocker dans localStorage pour le POS
     localStorage.setItem('posPayerCredit', JSON.stringify(posData));
     
-    // Rediriger vers le POS
     if (typeof navigateTo === 'function') {
         navigateTo('pos');
     } else {
@@ -315,8 +326,8 @@ function renderCreditsTable() {
             });
         }
         
-        var items = d.items || d.products || d.articles || [];
-        var produitsHTML = formatCreditItems(items);
+        // ✅ AFFICHAGE DES PRODUITS (amélioré)
+        var produitsHTML = formatCreditItems(d);
         
         var amountPaid = d.amountGiven || 0;
         var mode = d.paymentMethod || '-';
@@ -566,7 +577,7 @@ async function deleteCredit(id) {
     }
 }
 
-// ✅ FONCTION VALIDER LE PAIEMENT (CORRIGÉE)
+// ✅ FONCTION VALIDER LE PAIEMENT (REDIRIGE VERS POS)
 async function validateCreditPayment() {
     console.log('💳 Validation du paiement crédit...');
     
@@ -592,14 +603,12 @@ async function validateCreditPayment() {
     
     var reste = credit.remainingAmount || credit.total || 0;
     
-    // ✅ Rediriger vers le POS pour le paiement
-    // Mettre à jour le montant à payer dans le localStorage
     var posData = {
         venteId: credit.id,
         clientId: credit.clientId || null,
         clientName: credit.clientName || 'Client',
         items: credit.items || [],
-        total: amount, // Montant saisi
+        total: amount,
         table: credit.table || '',
         paymentMethod: 'espece',
         isCreditPayment: true,
@@ -609,17 +618,14 @@ async function validateCreditPayment() {
             remainingAmount: reste,
             amountGiven: credit.amountGiven || 0,
             dueDate: credit.dueDate || null,
-            isPartial: amount < reste // Paiement partiel
+            isPartial: amount < reste
         }
     };
     
-    // Stocker dans localStorage
     localStorage.setItem('posPayerCredit', JSON.stringify(posData));
     
-    // Fermer la zone de paiement
     closeCreditSelection();
     
-    // Rediriger vers le POS
     if (typeof navigateTo === 'function') {
         navigateTo('pos');
     } else {
@@ -687,4 +693,4 @@ window.toggleSelectAllCredits = toggleSelectAllCredits;
 window.formatCreditItems = formatCreditItems;
 window.payerCreditVersPOS = payerCreditVersPOS;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits chargé (paiement POS)');
+console.log('🛒 Mixmax Minimarket - Admin Credits chargé');
