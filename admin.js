@@ -469,6 +469,200 @@ async function saveFideliteSettings() {
     alert('✅ Enregistré');
 }
 
+// ==================== NAVIGATION (AJOUTÉ) ====================
+function navigateTo(page) {
+    console.log('📍 Navigation vers:', page);
+    
+    var content = document.getElementById('dynamicContent');
+    if (!content) return;
+    
+    var titles = {
+        'dashboard': 'Dashboard',
+        'pos': 'POS',
+        'commandes': 'Commandes en ligne',
+        'categories': 'Catégories',
+        'products': 'Produits',
+        'clients': 'Clients',
+        'fournisseurs': 'Fournisseurs',
+        'ventes': 'Ventes',
+        'credits': 'Crédits',
+        'depenses': 'Dépenses',
+        'statistiques': 'Statistiques',
+        'options': 'Options'
+    };
+    
+    var icons = {
+        'dashboard': 'fa-chart-line',
+        'pos': 'fa-cash-register',
+        'commandes': 'fa-shopping-basket',
+        'categories': 'fa-layer-group',
+        'products': 'fa-coffee',
+        'clients': 'fa-users',
+        'fournisseurs': 'fa-truck',
+        'ventes': 'fa-shopping-cart',
+        'credits': 'fa-credit-card',
+        'depenses': 'fa-money-bill-wave',
+        'statistiques': 'fa-chart-bar',
+        'options': 'fa-cog'
+    };
+    
+    var titleEl = document.getElementById('pageTitle');
+    if (titleEl) titleEl.textContent = titles[page] || page;
+    
+    var iconEl = document.querySelector('.header-title i');
+    if (iconEl && icons[page]) iconEl.className = 'fas ' + icons[page];
+    
+    // ✅ Gestion du POS
+    if (page === 'pos') {
+        if (typeof window.loadPosPage === 'function') {
+            window.loadPosPage(content);
+        } else if (typeof loadPosPage === 'function') {
+            loadPosPage(content);
+        } else {
+            // Fallback : afficher un message
+            content.innerHTML = `
+                <div class="content-card">
+                    <p style="text-align:center;padding:40px;">
+                        <i class="fas fa-cash-register" style="font-size:3rem;display:block;color:#A67C52;margin-bottom:15px;"></i>
+                        Chargement du POS...
+                    </p>
+                </div>
+            `;
+            // Essayer de charger le POS après un délai
+            setTimeout(function() {
+                if (typeof window.loadPosPage === 'function') {
+                    window.loadPosPage(content);
+                }
+            }, 500);
+        }
+        closeSidebar();
+        return;
+    }
+    
+    // ✅ Autres pages
+    var pageFunctions = {
+        'dashboard': window.loadDashboardPage || loadDashboardPage,
+        'commandes': window.loadCommandesPage || loadCommandesPage,
+        'categories': window.loadCategoriesPage || loadCategoriesPage,
+        'products': window.loadProductsPage || loadProductsPage,
+        'clients': window.loadClientsPage || loadClientsPage,
+        'fournisseurs': window.loadFournisseursPage || loadFournisseursPage,
+        'ventes': window.loadVentesPage || loadVentesPage,
+        'credits': window.loadCreditsPage || loadCreditsPage,
+        'depenses': window.loadDepensesPage || loadDepensesPage,
+        'statistiques': window.loadStatistiquesPage || loadStatistiquesPage,
+        'options': window.loadOptionsPage || loadOptionsPage
+    };
+    
+    var fn = pageFunctions[page];
+    if (fn && typeof fn === 'function') {
+        try {
+            fn(content);
+        } catch(e) {
+            console.error('Erreur chargement page:', e);
+            content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#ef4444;">Erreur de chargement: ' + e.message + '</p></div>';
+        }
+    } else {
+        content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Page en développement</p></div>';
+    }
+    
+    // Fermer le menu
+    closeSidebar();
+}
+
+// ==================== CRÉDITS (FONCTION DIRECTE) ====================
+function loadCreditsPage(c) {
+    console.log('📋 Chargement de la page Crédits...');
+    
+    c.innerHTML = `
+        <div class="content-card">
+            <div class="card-header">
+                <h3><i class="fas fa-credit-card"></i> Crédits</h3>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher..." style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; width:200px;" onkeyup="window.creditsSearch = this.value; window.currentPages.credits=1; applyCreditsFilters();">
+                    <select id="creditsPeriodSelect" style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px;" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">
+                        ${getPeriodOptions('all')}
+                    </select>
+                    <button class="btn-add" onclick="loadCreditsData()"><i class="fas fa-sync"></i> Actualiser</button>
+                </div>
+            </div>
+            <div id="creditsTableContainer">
+                <p style="text-align:center;padding:40px;">Chargement des crédits...</p>
+            </div>
+            <div id="creditsPagination"></div>
+        </div>
+    `;
+    
+    loadCreditsData();
+}
+
+async function loadCreditsData() {
+    console.log('📋 Chargement des crédits depuis Firestore...');
+    try {
+        var snapshot = await db.collection('credits').orderBy('createdAt', 'desc').limit(100).get();
+        
+        var container = document.getElementById('creditsTableContainer');
+        if (!container) return;
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<p style="text-align:center;padding:40px;color:#94a3b8;">Aucun crédit trouvé. Créez un crédit depuis le POS.</p>';
+            return;
+        }
+        
+        var html = '<div class="table-container"><table class="data-table"><thead><tr>';
+        html += '<th>Client</th><th>Total</th><th>Payé</th><th>Restant</th><th>Mode</th><th>Date</th><th>Actions</th>';
+        html += '</thead><tbody>';
+        
+        var totalImpayes = 0;
+        var count = 0;
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            var reste = d.remainingAmount || d.total || 0;
+            var paye = d.amountGiven || 0;
+            if (reste > 0) totalImpayes += reste;
+            count++;
+            
+            html += '<tr>';
+            html += '<td><strong>' + escapeHtml(d.clientName || '-') + '</strong></td>';
+            html += '<td>' + (d.total || 0).toFixed(2) + ' MAD</td>';
+            html += '<td>' + paye.toFixed(2) + ' MAD</td>';
+            html += '<td style="color:' + (reste > 0 ? '#ef4444' : '#16a34a') + ';font-weight:700;">' + reste.toFixed(2) + ' MAD</td>';
+            html += '<td>' + escapeHtml(d.paymentMethod || '-') + '</td>';
+            html += '<td>' + (d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : '-') + '</td>';
+            html += '<td>';
+            if (reste > 0) {
+                html += '<button class="btn-add" style="padding:4px 8px;font-size:0.65rem;" onclick="payerCreditVersPOS(\'' + d.id + '\')">💳 Payer</button> ';
+            }
+            html += '<button class="btn-edit" onclick="alert(\'Voir détail\')"><i class="fas fa-eye"></i></button>';
+            html += '</td>';
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        html += '<div style="margin-top:15px;padding:15px;background:#fef2f2;border-radius:12px;text-align:center;">';
+        html += '<strong>Total crédits: ' + count + ' | Impayés: ' + totalImpayes.toFixed(2) + ' MAD</strong>';
+        html += '</div>';
+        
+        container.innerHTML = html;
+        
+        var pagination = document.getElementById('creditsPagination');
+        if (pagination) {
+            pagination.innerHTML = getPaginationHTML('credits', count);
+        }
+        
+    } catch(e) {
+        console.error('Erreur chargement crédits:', e);
+        var container = document.getElementById('creditsTableContainer');
+        if (container) {
+            container.innerHTML = '<p style="color:#ef4444;">❌ Erreur: ' + e.message + '</p>';
+        }
+    }
+}
+
+function applyCreditsFilters() {
+    loadCreditsData();
+}
+
 // ==================== EXPORTS ====================
 window.openModal = openModal;
 window.closeModal = closeModal;
@@ -503,5 +697,11 @@ window.changeAdminPassword = changeAdminPassword;
 window.toggleMarketingProgram = toggleMarketingProgram;
 window.loadFideliteSettings = loadFideliteSettings;
 window.saveFideliteSettings = saveFideliteSettings;
+
+// ==================== EXPORTS NAVIGATION & CRÉDITS ====================
+window.navigateTo = navigateTo;
+window.loadCreditsPage = loadCreditsPage;
+window.loadCreditsData = loadCreditsData;
+window.applyCreditsFilters = applyCreditsFilters;
 
 console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
