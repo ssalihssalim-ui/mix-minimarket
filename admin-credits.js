@@ -178,7 +178,20 @@ function renderCreditsTable() {
         var reste = d.remainingAmount || d.total || 0;
         if (!d.paid) tc += reste;
         
-        var dt = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : '';
+        // ✅ DATE + HEURE (corrigé)
+        var dt = '';
+        if (d.createdAt) {
+            var dateObj = d.createdAt.seconds ? new Date(d.createdAt.seconds * 1000) : new Date(d.createdAt);
+            dt = dateObj.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }) + ' ' + dateObj.toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
         var amountPaid = d.amountGiven || 0;
         var mode = d.paymentMethod || '-';
         
