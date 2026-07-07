@@ -15,6 +15,20 @@ function normalize(str) {
     return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
+// ✅ Fonction pour formater les produits
+function formatCreditItems(items) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return '-';
+    }
+    return items.map(function(item) {
+        var qty = item.quantite || item.quantity || 1;
+        var name = item.nom || item.name || 'Produit';
+        var price = item.prixVente || item.price || 0;
+        var total = (qty * price).toFixed(2);
+        return '<strong>' + qty + 'x</strong> ' + escapeHtml(name) + ' <span style="color:#94a3b8;font-size:0.6rem;">(' + total + ' MAD)</span>';
+    }).join('<br>');
+}
+
 async function loadCreditsPage(c) {
     window.creditsPeriod = 'all';
     window.creditsSearch = '';
@@ -51,13 +65,15 @@ async function loadCreditsPage(c) {
         '<div class="card-header">' +
         '<h3><i class="fas fa-credit-card"></i> Crédits</h3>' +
         '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">' +
-        '<div style="position:relative;">' +
-        '<input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher (client, description)..." style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; width:250px;" onkeyup="searchClientInCreditsDropdown(this.value)" onfocus="searchClientInCreditsDropdown(this.value)" autocomplete="off">' +
+        '<div style="position:relative; display:flex; align-items:center;">' +
+        '<input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher (client, description)..." style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; width:250px; padding-right:35px;" onkeyup="searchClientInCreditsDropdown(this.value)" onfocus="searchClientInCreditsDropdown(this.value)" autocomplete="off">' +
+        '<span id="creditsSearchClear" onclick="clearCreditsSearch()" style="position:absolute; right:10px; cursor:pointer; color:#94a3b8; font-size:1.1rem; display:none;">✕</span>' +
         '<div id="creditsClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>' +
         '</div>' +
         '<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." style="padding:8px 12px; border:2px solid #16a34a; border-radius:8px; width:180px; background:#f0fdf4; color:#14532d; font-weight:600;" readonly>' +
         '<select id="creditsPeriodSelect" style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px;" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">' + getPeriodOptions('all') + '</select>' +
         '<button class="btn-add" onclick="loadCredits()"><i class="fas fa-sync"></i> Actualiser</button>' +
+        '<button class="btn-add" onclick="toggleSelectAllCredits()" style="background:#4f46e5;"><i class="fas fa-check-double"></i> Tout cocher</button>' +
         '</div></div>' +
         '<div id="creditPaymentZone" style="display:none; background:#f0fdf4; border:2px solid #16a34a; border-radius:12px; padding:12px 16px; margin-bottom:15px;">' +
         '<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">' +
@@ -72,10 +88,62 @@ async function loadCreditsPage(c) {
         '<div id="creditsPagination" style="margin-top:10px;"></div>' +
         '</div>';
     
+    document.addEventListener('input', function(e) {
+        if (e.target.id === 'creditsSearchInput') {
+            var clearBtn = document.getElementById('creditsSearchClear');
+            if (clearBtn) {
+                clearBtn.style.display = e.target.value.length > 0 ? 'block' : 'none';
+            }
+        }
+    });
+    
     loadCredits();
 }
 
-// Fonction de chargement des crédits
+function clearCreditsSearch() {
+    var input = document.getElementById('creditsSearchInput');
+    if (input) {
+        input.value = '';
+        window.creditsSearch = '';
+        window.currentPages.credits = 1;
+        applyCreditsFilters();
+        var clearBtn = document.getElementById('creditsSearchClear');
+        if (clearBtn) clearBtn.style.display = 'none';
+        var dropdown = document.getElementById('creditsClientDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
+}
+
+function toggleSelectAllCredits() {
+    window.creditSelectAll = !window.creditSelectAll;
+    window.creditSelectionMode = true;
+    
+    if (window.creditSelectAll) {
+        window.creditSelectedIndex = 0;
+        window.creditPaymentStep = 'selection';
+    } else {
+        window.creditSelectedIndex = -1;
+        window.creditPaymentStep = 'idle';
+    }
+    
+    renderCreditsTable();
+    
+    var btn = document.querySelector('.btn-add[onclick*="toggleSelectAllCredits"]');
+    if (btn) {
+        btn.innerHTML = window.creditSelectAll ? 
+            '<i class="fas fa-times"></i> Tout décocher' : 
+            '<i class="fas fa-check-double"></i> Tout cocher';
+        btn.style.background = window.creditSelectAll ? '#ef4444' : '#4f46e5';
+    }
+    
+    if (window.creditSelectAll) {
+        if (typeof showVoiceResult === 'function') showVoiceResult('✅ Tous les crédits sélectionnés');
+    } else {
+        if (typeof showVoiceResult === 'function') showVoiceResult('❌ Sélection annulée');
+        closeCreditSelection();
+    }
+}
+
 async function loadCredits() {
     var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
     var vendeurCaissier = '';
@@ -162,6 +230,8 @@ function renderCreditsTable() {
         makeSortableHeader('credits', 'factureNum', 'Facture', 'renderCreditsTable') +
         makeSortableHeader('credits', 'createdAt', 'Date', 'renderCreditsTable') +
         makeSortableHeader('credits', 'clientName', 'Client', 'renderCreditsTable') +
+        // ✅ AJOUT DE LA COLONNE PRODUITS
+        '<th>Produits</th>' +
         makeSortableHeader('credits', 'total', 'Total', 'renderCreditsTable') +
         makeSortableHeader('credits', 'amountGiven', 'Payé', 'renderCreditsTable') +
         makeSortableHeader('credits', 'remainingAmount', 'Restant', 'renderCreditsTable') +
@@ -178,7 +248,7 @@ function renderCreditsTable() {
         var reste = d.remainingAmount || d.total || 0;
         if (!d.paid) tc += reste;
         
-        // ✅ DATE + HEURE (corrigé)
+        // ✅ DATE + HEURE
         var dt = '';
         if (d.createdAt) {
             var dateObj = d.createdAt.seconds ? new Date(d.createdAt.seconds * 1000) : new Date(d.createdAt);
@@ -191,6 +261,10 @@ function renderCreditsTable() {
                 minute: '2-digit'
             });
         }
+        
+        // ✅ PRODUITS (items du crédit)
+        var items = d.items || d.products || d.articles || [];
+        var produitsHTML = formatCreditItems(items);
         
         var amountPaid = d.amountGiven || 0;
         var mode = d.paymentMethod || '-';
@@ -213,6 +287,7 @@ function renderCreditsTable() {
             '<td>' + (d.factureNum || d.id.substring(0, 8)) + '</td>' +
             '<td>' + dt + '</td>' +
             '<td>' + escapeHtml(d.clientName || d.table || '-') + '</td>' +
+            '<td><div style="max-width:180px; max-height:60px; overflow-y:auto; font-size:0.6rem; line-height:1.4;">' + produitsHTML + '</div></td>' +
             '<td>' + d.total.toFixed(2) + '</td>' +
             '<td>' + amountPaid.toFixed(2) + '</td>' +
             '<td style="color:#ef4444;"><strong>' + reste.toFixed(2) + '</strong></td>' +
@@ -269,6 +344,12 @@ function toggleCreditCheckbox(index) {
     window.creditPaymentStep = 'selection';
     window.creditPaymentAmount = 0;
     renderCreditsTable();
+    
+    var btn = document.querySelector('.btn-add[onclick*="toggleSelectAllCredits"]');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-check-double"></i> Tout cocher';
+        btn.style.background = '#4f46e5';
+    }
 }
 
 function markCreditPaid(creditId) {
@@ -308,6 +389,11 @@ function markCreditPaid(creditId) {
 function searchClientInCreditsDropdown(query) {
     var q = query.toLowerCase().trim();
     var dropdown = document.getElementById('creditsClientDropdown');
+    var clearBtn = document.getElementById('creditsSearchClear');
+    
+    if (clearBtn) {
+        clearBtn.style.display = q.length > 0 ? 'block' : 'none';
+    }
     
     if (!q || !window.posAllClients) {
         if (dropdown) dropdown.style.display = 'none';
@@ -358,9 +444,11 @@ function searchClientInCreditsDropdown(query) {
 function selectCreditClient(clientName) {
     var searchInput = document.getElementById('creditsSearchInput');
     var dropdown = document.getElementById('creditsClientDropdown');
+    var clearBtn = document.getElementById('creditsSearchClear');
     
     if (searchInput) searchInput.value = clientName;
     if (dropdown) dropdown.style.display = 'none';
+    if (clearBtn) clearBtn.style.display = 'block';
     
     window.creditsSearch = clientName;
     window.currentPages.credits = 1;
@@ -390,6 +478,9 @@ async function editCredit(id) {
             '<div class="form-group"><label>Mode de paiement</label><input type="text" id="editCreditMode" value="' + escapeHtml(d.paymentMethod || '') + '"></div>' +
             '<div class="form-group"><label>Statut</label><select id="editCreditStatut"><option value="0" ' + (!d.paid ? 'selected' : '') + '>Impayé</option><option value="1" ' + (d.paid ? 'selected' : '') + '>Payé</option></select></div>' +
             '</div>' +
+            '<div class="form-row">' +
+            '<div class="form-group"><label>Produits</label><textarea id="editCreditItems" style="min-height:60px;">' + (d.items && Array.isArray(d.items) ? JSON.stringify(d.items, null, 2) : '') + '</textarea></div>' +
+            '</div>' +
             '<button class="btn-cancel" onclick="closeModal()">Annuler</button>' +
             '<button class="btn-save" onclick="saveEditCredit()">Enregistrer</button>';
         
@@ -408,6 +499,17 @@ async function saveEditCredit() {
     var paymentMethod = document.getElementById('editCreditMode').value.trim();
     var paid = document.getElementById('editCreditStatut').value === '1';
     
+    // Récupérer les items depuis le textarea
+    var items = [];
+    var itemsText = document.getElementById('editCreditItems').value.trim();
+    if (itemsText) {
+        try {
+            items = JSON.parse(itemsText);
+        } catch(e) {
+            console.warn('Items non valides, ignorés');
+        }
+    }
+    
     var data = {
         clientName: clientName,
         total: total,
@@ -415,6 +517,7 @@ async function saveEditCredit() {
         remainingAmount: paid ? 0 : remainingAmount,
         paymentMethod: paymentMethod,
         paid: paid,
+        items: items,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
@@ -517,6 +620,12 @@ function closeCreditSelection() {
     var zone = document.getElementById('creditPaymentZone');
     if (zone) zone.style.display = 'none';
     
+    var btn = document.querySelector('.btn-add[onclick*="toggleSelectAllCredits"]');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-check-double"></i> Tout cocher';
+        btn.style.background = '#4f46e5';
+    }
+    
     window.creditsSearch = '';
     window.currentPages.credits = 1;
     window.filteredCredits = null;
@@ -546,5 +655,8 @@ window.saveEditCredit = saveEditCredit;
 window.validateCreditPayment = validateCreditPayment;
 window.closeCreditSelection = closeCreditSelection;
 window.normalize = normalize;
+window.clearCreditsSearch = clearCreditsSearch;
+window.toggleSelectAllCredits = toggleSelectAllCredits;
+window.formatCreditItems = formatCreditItems;
 
 console.log('🛒 Mixmax Minimarket - Admin Credits chargé');
