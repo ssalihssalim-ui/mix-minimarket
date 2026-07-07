@@ -1,6 +1,6 @@
 // ==================== POS.JS - LOGIQUE MÉTIER (FINAL OPTIMISÉ) ====================
 // Mixmax Minimarket - Point de vente complet avec virtualisation
-// ✅ Ajout : Gestion du paiement de crédit depuis admin-credits.js
+// ✅ Gestion du paiement de crédit depuis admin-credits.js
 
 var posCart = [];
 var posStep = 1;
@@ -87,26 +87,26 @@ async function loadPosPage(c){
     if(cmdData){ var cmd=JSON.parse(cmdData); localStorage.removeItem('posCommandeData'); posCart=[]; if(cmd.items){ posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||item.prixUnitaire||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(cmd.clientId&&cmd.clientName) posCurrentClient={id:cmd.clientId,name:cmd.clientName}; posCurrentTable=cmd.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posCommandeId=cmd.commandeId; if(isOnPOSPage()) renderPOS(); return; }
     if(payData){ var v=JSON.parse(payData); localStorage.removeItem('posPayerVente'); posCart=[]; if(v.items){ posEnrichirItemsAvecPrixAchat(v.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||0,quantite:item.quantite||1,categorie:'',imageBase64:'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(v.clientId&&v.clientName) posCurrentClient={id:v.clientId,name:v.clientName}; posCurrentTable=v.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posVenteId=v.venteId; if(isOnPOSPage()) renderPOS(); return; }
     
-    // ✅ AJOUT : Paiement de crédit
+    // ✅ AJOUT : Paiement de crédit (doit être traité AVANT renderPOS)
     if(creditData){
         try {
             var data = JSON.parse(creditData);
             localStorage.removeItem('posPayerCredit');
             
-            console.log('💳 Paiement crédit:', data);
+            console.log('💳 Paiement crédit reçu:', data);
             
-            // Pré-remplir le POS
+            // Vider le panier
+            posCart = [];
+            
+            // 1. Définir le client
             if (data.clientName) {
                 posCurrentClient = { id: data.clientId, name: data.clientName };
-                // Mettre à jour l'input client
-                setTimeout(function() {
-                    var ci = document.getElementById('posClientSearchInput');
-                    if (ci) ci.value = data.clientName;
-                }, 300);
             }
+            
+            // 2. Ajouter les produits au panier
             if (data.items && data.items.length > 0) {
-                posCart = data.items.map(function(item) {
-                    return {
+                data.items.forEach(function(item) {
+                    posCart.push({
                         id: item.id || 'credit-' + Date.now(),
                         nom: item.nom || item.name || 'Produit',
                         prixUnitaire: item.prixVente || item.price || 0,
@@ -120,47 +120,73 @@ async function loadPosPage(c){
                         interdits: item.interdits || [],
                         epice: item.epice || 'Normal',
                         sel: item.sel || 'Normal'
-                    };
+                    });
                 });
             }
-            if (data.total) {
-                posAmountGiven = data.total;
-                // Mettre à jour le champ montant donné
-                setTimeout(function() {
-                    var input = document.getElementById('posAmountGiven');
-                    if (input) input.value = data.total.toFixed(2);
-                    if (typeof posCalculateChange === 'function') posCalculateChange();
-                }, 300);
+            
+            // 3. Définir le montant total
+            var total = data.total || 0;
+            if (total > 0) {
+                posAmountGiven = total;
+                posDiscountMAD = 0;
             }
-            if (data.isCreditPayment) {
-                posPaymentMethod = 'espece';
-                posStep = 2;
-                // Afficher un message vocal
-                if (typeof showVoiceResult === 'function') {
-                    showVoiceResult('💳 Paiement crédit: ' + data.clientName);
+            
+            // 4. Forcer le mode paiement (step 2)
+            posStep = 2;
+            window.posStep = 2;
+            posPaymentMethod = 'espece';
+            
+            // 5. Mettre à jour le mode vocal
+            if (typeof window.setVoiceMode === 'function') {
+                window.setVoiceMode('payment', '💳 Paiement crédit', null);
+                if (typeof window.showVoiceFlowIndicator === 'function') {
+                    window.showVoiceFlowIndicator('payment_mode');
+                }
+                if (typeof window.showVoiceModeIndicator === 'function') {
+                    window.showVoiceModeIndicator();
                 }
             }
             
-            // Mettre à jour les totaux
-            if (posCart.length > 0) {
-                var st = posCalculateTotal();
-                var t = st - posDiscountMAD;
-                posAmountGiven = t;
-                setTimeout(function() {
-                    var input = document.getElementById('posAmountGiven');
-                    if (input) input.value = t.toFixed(2);
-                    if (typeof posCalculateChange === 'function') posCalculateChange();
-                }, 400);
+            // 6. Afficher un message
+            if (typeof showVoiceResult === 'function') {
+                showVoiceResult('💳 Paiement crédit: ' + (data.clientName || 'Client'));
             }
             
-            if(isOnPOSPage()) renderPOS();
+            console.log('✅ POS pré-rempli pour crédit:', {
+                client: posCurrentClient,
+                items: posCart.length,
+                total: total,
+                step: posStep
+            });
             
         } catch(e) {
-            console.warn('Erreur chargement crédit:', e);
+            console.warn('❌ Erreur chargement crédit:', e);
         }
     }
     
     if(isOnPOSPage()) renderPOS();
+    
+    // ✅ Si on est en step 2, mettre à jour l'input du montant donné
+    if (posStep === 2 && posAmountGiven > 0) {
+        setTimeout(function() {
+            var input = document.getElementById('posAmountGiven');
+            if (input) {
+                input.value = posAmountGiven.toFixed(2);
+                if (typeof posCalculateChange === 'function') {
+                    posCalculateChange();
+                }
+            }
+            // Mettre à jour le champ client
+            if (posCurrentClient && posCurrentClient.name) {
+                var ci = document.getElementById('posClientSearchInput');
+                if (ci) ci.value = posCurrentClient.name;
+            }
+            // Mettre à jour les boutons de paiement
+            if (typeof window.updatePaymentButtons === 'function') {
+                window.updatePaymentButtons();
+            }
+        }, 500);
+    }
 }
 
 function posSearchProducts(query){ clearTimeout(window._searchTimeout); window._searchTimeout=setTimeout(function(){ posProductOffset=0; posSearchQuery=query.toLowerCase().trim(); if(isOnPOSPage()) filterProductGrid(); },150); }
