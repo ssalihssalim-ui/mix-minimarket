@@ -2,7 +2,7 @@
 // Gestion des crédits - Version corrigée
 // Compatible avec la sélection multiple vocale
 // ✅ Paiement d'un crédit → Redirection vers le POS
-// ✅ Affichage des produits (ou message "Aucun produit")
+// ✅ Affichage des produits depuis items, paymentHistory ou saleData
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
@@ -17,30 +17,49 @@ function normalize(str) {
     return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-// ✅ Fonction pour formater les produits (améliorée)
+// ✅ Fonction pour formater les produits (recherche dans plusieurs sources)
 function formatCreditItems(credit) {
-    // Essayer plusieurs sources possibles
-    var items = credit.items || credit.products || credit.articles || [];
+    var items = [];
     
-    // Si pas d'items, essayer de construire depuis paymentHistory
+    // 1. Essayer de récupérer depuis items
+    if (credit.items && Array.isArray(credit.items) && credit.items.length > 0) {
+        items = credit.items;
+    }
+    // 2. Essayer depuis products
+    else if (credit.products && Array.isArray(credit.products) && credit.products.length > 0) {
+        items = credit.products;
+    }
+    // 3. Essayer depuis articles
+    else if (credit.articles && Array.isArray(credit.articles) && credit.articles.length > 0) {
+        items = credit.articles;
+    }
+    // 4. Essayer depuis paymentHistory (certains crédits stockent les produits ici)
+    else if (credit.paymentHistory && Array.isArray(credit.paymentHistory) && credit.paymentHistory.length > 0) {
+        // Vérifier si paymentHistory contient des produits
+        var first = credit.paymentHistory[0];
+        if (first && (first.nom || first.name || first.product)) {
+            items = credit.paymentHistory;
+        }
+    }
+    // 5. Essayer depuis saleData
+    else if (credit.saleData && credit.saleData.items && Array.isArray(credit.saleData.items)) {
+        items = credit.saleData.items;
+    }
+    
+    // Si aucun item trouvé, afficher un message
     if (!items || items.length === 0) {
-        // Essayer de récupérer depuis les données de la vente associée
+        // Si le crédit a un saleId, on pourrait faire une requête, mais pour l'affichage rapide
         if (credit.saleId) {
-            // On pourrait faire une requête Firestore ici, mais pour l'affichage rapide
-            // on va juste afficher un message
-            return '<span style="color:#94a3b8;font-size:0.6rem;">Produits non détaillés</span>';
+            return '<span style="color:#94a3b8;font-size:0.6rem;">Produits non détaillés (saleId: ' + credit.saleId + ')</span>';
         }
         return '<span style="color:#94a3b8;font-size:0.6rem;">Aucun produit</span>';
     }
     
-    if (!Array.isArray(items) || items.length === 0) {
-        return '<span style="color:#94a3b8;font-size:0.6rem;">Aucun produit</span>';
-    }
-    
+    // Afficher les produits
     return items.map(function(item) {
         var qty = item.quantite || item.quantity || 1;
-        var name = item.nom || item.name || 'Produit';
-        var price = item.prixVente || item.price || 0;
+        var name = item.nom || item.name || item.product || 'Produit';
+        var price = item.prixVente || item.price || item.prixUnitaire || 0;
         var total = (qty * price).toFixed(2);
         return '<strong>' + qty + 'x</strong> ' + escapeHtml(name) + ' <span style="color:#94a3b8;font-size:0.6rem;">(' + total + ' MAD)</span>';
     }).join('<br>');
@@ -58,11 +77,14 @@ function payerCreditVersPOS(creditId) {
     
     var reste = credit.remainingAmount || credit.total || 0;
     
+    // Récupérer les items depuis la même fonction
+    var items = credit.items || credit.products || credit.articles || [];
+    
     var posData = {
         venteId: creditId,
         clientId: credit.clientId || null,
         clientName: credit.clientName || 'Client',
-        items: credit.items || [],
+        items: items,
         total: reste,
         table: credit.table || '',
         paymentMethod: 'espece',
@@ -223,6 +245,10 @@ async function loadCredits() {
         snapshot.forEach(function(dc) {
             var d = dc.data();
             d.id = dc.id;
+            
+            // Log pour déboguer
+            console.log('📦 Crédit:', d.id, 'Items:', d.items ? d.items.length : 'aucun');
+            
             window.allCreditsData.push(d);
         });
         
@@ -326,7 +352,7 @@ function renderCreditsTable() {
             });
         }
         
-        // ✅ AFFICHAGE DES PRODUITS (amélioré)
+        // ✅ AFFICHAGE DES PRODUITS
         var produitsHTML = formatCreditItems(d);
         
         var amountPaid = d.amountGiven || 0;
@@ -501,6 +527,13 @@ async function editCredit(id) {
         window.editingId = id;
         window.currentCollection = 'credits';
         
+        var itemsStr = '';
+        if (d.items && Array.isArray(d.items)) {
+            itemsStr = JSON.stringify(d.items, null, 2);
+        } else if (d.products && Array.isArray(d.products)) {
+            itemsStr = JSON.stringify(d.products, null, 2);
+        }
+        
         var h = '<div class="form-row">' +
             '<div class="form-group"><label>Client</label><input type="text" id="editCreditClient" value="' + escapeHtml(d.clientName || '') + '"></div>' +
             '<div class="form-group"><label>Total (MAD)</label><input type="number" id="editCreditTotal" value="' + (d.total || 0) + '" step="0.01"></div>' +
@@ -514,7 +547,7 @@ async function editCredit(id) {
             '<div class="form-group"><label>Statut</label><select id="editCreditStatut"><option value="0" ' + (!d.paid ? 'selected' : '') + '>Impayé</option><option value="1" ' + (d.paid ? 'selected' : '') + '>Payé</option></select></div>' +
             '</div>' +
             '<div class="form-row">' +
-            '<div class="form-group"><label>Produits (JSON)</label><textarea id="editCreditItems" style="min-height:60px;font-size:0.7rem;">' + (d.items && Array.isArray(d.items) ? JSON.stringify(d.items, null, 2) : '') + '</textarea></div>' +
+            '<div class="form-group"><label>Produits (JSON)</label><textarea id="editCreditItems" style="min-height:60px;font-size:0.7rem;font-family:monospace;">' + itemsStr + '</textarea></div>' +
             '</div>' +
             '<button class="btn-cancel" onclick="closeModal()">Annuler</button>' +
             '<button class="btn-save" onclick="saveEditCredit()">Enregistrer</button>';
@@ -603,11 +636,14 @@ async function validateCreditPayment() {
     
     var reste = credit.remainingAmount || credit.total || 0;
     
+    // Récupérer les items
+    var items = credit.items || credit.products || credit.articles || [];
+    
     var posData = {
         venteId: credit.id,
         clientId: credit.clientId || null,
         clientName: credit.clientName || 'Client',
-        items: credit.items || [],
+        items: items,
         total: amount,
         table: credit.table || '',
         paymentMethod: 'espece',
