@@ -1,1849 +1,504 @@
-/* ==================== MIXMAX MINIMARKET - BLACK & WHITE SPATIAL ==================== */
-:root {
-    /* 70% White / 30% Black - Style spatial */
-    --white: #FFFFFF;
-    --white-soft: #F8F9FA;
-    --white-light: #F1F3F5;
-    --gray-100: #E9ECEF;
-    --gray-200: #DEE2E6;
-    --gray-300: #CED4DA;
-    --gray-400: #ADB5BD;
-    --gray-500: #6C757D;
-    --gray-600: #495057;
-    --gray-700: #343A40;
-    --gray-800: #212529;
-    --gray-900: #14181C;
-    --black: #0A0D12;
-    --black-light: #1A1F26;
-    
-    --primary: #1A1F26;
-    --primary-dark: #0A0D12;
-    --primary-light: #343A40;
-    --accent: #4A90D9;
-    --accent-light: #6BA8E8;
-    --accent-dark: #2A6FB5;
-    
-    --bg-page: #F8F9FA;
-    --bg-card: #FFFFFF;
-    --bg-dark: #0A0D12;
-    --text-dark: #14181C;
-    --text-gray: #6C757D;
-    --text-light: #ADB5BD;
-    --border: #E9ECEF;
-    --border-dark: #343A40;
-    
-    --success: #28A745;
-    --danger: #DC3545;
-    --warning: #FFC107;
-    --info: #17A2B8;
-    
-    --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-    --shadow-md: 0 10px 30px rgba(0,0,0,0.10);
-    --shadow-lg: 0 20px 60px rgba(0,0,0,0.12);
-    --shadow-xl: 0 30px 80px rgba(0,0,0,0.15);
-    --shadow-glow: 0 0 40px rgba(74, 144, 217, 0.08);
-    
-    --radius-sm: 6px;
-    --radius: 10px;
-    --radius-lg: 14px;
-    --radius-xl: 18px;
-    --radius-2xl: 24px;
-    --radius-full: 9999px;
-    
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ==================== RESET & PLEIN ÉCRAN SAFARI ==================== */
-*,
-*::before,
-*::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    /* ⚡ BLOCAGE DE LA SÉLECTION DE TEXTE ⚡ */
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
-
-/* ⚡ Autoriser la sélection uniquement dans les champs de formulaire ⚡ */
-input,
-select,
-textarea,
-[contenteditable="true"] {
-    user-select: text !important;
-    -webkit-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-}
-
-html,
-body {
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    height: 100dvh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    background: var(--bg-page);
-    -webkit-text-size-adjust: 100%;
-}
-
-/* Forcer le plein écran sur Safari iOS */
-@supports (-webkit-touch-callout: none) {
-    html,
-    body {
-        height: 100vh !important;
-        height: 100dvh !important;
-        min-height: -webkit-fill-available !important;
-    }
-    .dashboard {
-        min-height: -webkit-fill-available !important;
-    }
-}
-
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: var(--text-dark);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-tap-highlight-color: transparent;
-    line-height: 1.6;
-    font-size: 16px;
-}
-
-/* ==================== SCROLLBAR SPATIAL ==================== */
-::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-}
-::-webkit-scrollbar-track {
-    background: var(--white-soft);
-}
-::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
-    border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-400);
-}
-
-/* ==================== LOGIN / REGISTER ==================== */
-.login-wrapper {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-dark);
-    position: relative;
-    padding: 20px;
-    overflow: hidden;
-}
-
-/* Effet étoiles spatial */
-.login-wrapper::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: 
-        radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.3), transparent),
-        radial-gradient(2px 2px at 40% 70%, rgba(255,255,255,0.2), transparent),
-        radial-gradient(1px 1px at 60% 20%, rgba(255,255,255,0.4), transparent),
-        radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.2), transparent),
-        radial-gradient(2px 2px at 10% 80%, rgba(255,255,255,0.3), transparent),
-        radial-gradient(1px 1px at 90% 90%, rgba(255,255,255,0.2), transparent),
-        radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.3), transparent);
-    background-size: 200px 200px;
-    z-index: 1;
-}
-
-.login-wrapper::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 50% 50%, rgba(74, 144, 217, 0.03), transparent 70%);
-    z-index: 1;
-}
-
-.login-container,
-.register-container {
-    position: relative;
-    z-index: 2;
-    width: 920px;
-    max-width: 100%;
-    background: var(--white);
-    border-radius: var(--radius-2xl);
-    display: flex;
-    overflow: hidden;
-    box-shadow: var(--shadow-xl), 0 0 80px rgba(0,0,0,0.1);
-    border: 1px solid rgba(255,255,255,0.05);
-    animation: fadeInUp 0.7s ease;
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(40px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-}
-
-.login-brand,
-.register-brand {
-    flex: 1;
-    background: var(--bg-dark);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 50px 30px;
-    text-align: center;
-    border-right: 1px solid rgba(255,255,255,0.05);
-    gap: 22px;
-    position: relative;
-    overflow: hidden;
-}
-
-.login-brand::before,
-.register-brand::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: 
-        radial-gradient(ellipse at 30% 20%, rgba(74, 144, 217, 0.05), transparent 60%),
-        radial-gradient(ellipse at 70% 80%, rgba(74, 144, 217, 0.03), transparent 50%);
-    z-index: 0;
-}
-
-.brand-icon {
-    width: 100px;
-    height: 100px;
-    background: linear-gradient(135deg, var(--gray-800), var(--black));
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: var(--shadow-md), 0 0 60px rgba(74, 144, 217, 0.05);
-    position: relative;
-    z-index: 1;
-    border: 1px solid rgba(255,255,255,0.05);
-    overflow: hidden;
-}
-
-.brand-icon::after {
-    content: '';
-    position: absolute;
-    inset: 2px;
-    border-radius: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
-}
-
-.brand-logo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.login-brand h1,
-.register-brand h1 {
-    font-size: clamp(1.7rem, 3.2vw, 2.3rem);
-    color: var(--white);
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    position: relative;
-    z-index: 1;
-}
-
-.login-brand h1 span,
-.register-brand h1 span {
-    color: var(--accent);
-    font-weight: 800;
-}
-
-.login-form,
-.register-form {
-    flex: 1;
-    padding: 50px 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 0;
-    background: var(--white);
-}
-
-.login-form h2,
-.register-form h2 {
-    color: var(--text-dark);
-    margin-bottom: 28px;
-    text-align: center;
-    font-size: clamp(1.25rem, 2.2vw, 1.5rem);
-    font-weight: 700;
-}
-
-.input-group {
-    display: flex;
-    align-items: center;
-    background: var(--white-soft);
-    border-radius: var(--radius);
-    margin-bottom: 14px;
-    border: 2px solid var(--border);
-    transition: var(--transition);
-    overflow: hidden;
-}
-
-.input-group:focus-within {
-    border-color: var(--black);
-    box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
-    background: var(--white);
-}
-
-.input-group i {
-    padding: 0 18px;
-    color: var(--gray-500);
-    font-size: 1rem;
-    min-width: 50px;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.input-group input,
-.input-group select {
-    flex: 1;
-    padding: 15px 18px 15px 0;
-    border: none;
-    background: transparent;
-    font-size: 0.95rem;
-    outline: none;
-    font-family: 'Inter', sans-serif;
-    color: var(--text-dark);
-    width: 100%;
-    min-width: 0;
-    user-select: text !important;
-}
-
-.input-group select {
-    cursor: pointer;
-    padding: 15px;
-}
-
-.btn-login {
-    width: 100%;
-    padding: 16px;
-    background: var(--black);
-    border: none;
-    border-radius: var(--radius);
-    color: var(--white);
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 18px;
-    transition: var(--transition);
-    position: relative;
-    overflow: hidden;
-    letter-spacing: 0.3px;
-}
-
-.btn-login:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-}
-
-.btn-login:active {
-    transform: translateY(0);
-}
-
-.btn-login:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.register-link {
-    text-align: center;
-    margin-top: 20px;
-    color: var(--text-gray);
-    font-size: 0.9rem;
-}
-
-.register-link strong {
-    color: var(--black);
-    cursor: pointer;
-    transition: var(--transition);
-    font-weight: 700;
-}
-
-.register-link strong:hover {
-    color: var(--accent);
-}
-
-/* ==================== DASHBOARD LAYOUT ==================== */
-.dashboard {
-    display: flex;
-    height: 100vh;
-    height: 100dvh;
-    background: var(--bg-page);
-    overflow: hidden;
-    position: relative;
-}
-
-/* ==================== SIDEBAR ==================== */
-.sidebar {
-    width: 280px;
-    background: var(--bg-dark);
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    height: 100vh;
-    height: 100dvh;
-    left: 0;
-    top: 0;
-    z-index: 100;
-    overflow-y: auto;
-    overflow-x: hidden;
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: var(--shadow-md);
-    border-right: 1px solid rgba(255,255,255,0.03);
-}
-
-.sidebar-header {
-    padding: 28px 20px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-.sidebar-logo {
-    width: 60px;
-    height: 60px;
-    margin: 0 auto 14px;
-    border-radius: 50%;
-    background: var(--gray-800);
-    padding: 3px;
-    overflow: hidden;
-    box-shadow: var(--shadow-md);
-    border: 1px solid rgba(255,255,255,0.05);
-}
-
-.sidebar-logo-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.sidebar-header h2 {
-    color: var(--white);
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-}
-
-.sidebar-header h2 span {
-    color: var(--accent);
-}
-
-.sidebar-subtitle {
-    color: rgba(255,255,255,0.2);
-    font-size: 0.65rem;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    font-weight: 500;
-}
-
-.sidebar-nav {
-    flex: 1;
-    padding: 16px 12px;
-}
-
-.sidebar-nav ul {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    border-radius: var(--radius);
-    cursor: pointer;
-    color: rgba(255,255,255,0.4);
-    font-size: 0.85rem;
-    transition: var(--transition);
-    font-weight: 500;
-    position: relative;
-}
-
-.nav-item i {
-    width: 22px;
-    text-align: center;
-    font-size: 0.9rem;
-}
-
-.nav-item:hover {
-    background: rgba(255,255,255,0.04);
-    color: rgba(255,255,255,0.7);
-}
-
-.nav-item.active {
-    background: rgba(255,255,255,0.06);
-    color: var(--white);
-    font-weight: 600;
-}
-
-.nav-item.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 20%;
-    height: 60%;
-    width: 3px;
-    background: var(--accent);
-    border-radius: 0 var(--radius-full) var(--radius-full) 0;
-}
-
-.logout-item {
-    margin-top: 12px;
-    border-top: 1px solid rgba(255,255,255,0.04);
-    padding-top: 12px;
-    color: rgba(239, 68, 68, 0.6) !important;
-}
-
-.logout-item:hover {
-    background: rgba(239, 68, 68, 0.08) !important;
-    color: rgba(239, 68, 68, 0.8) !important;
-}
-
-.sidebar-footer {
-    padding: 16px 20px;
-    border-top: 1px solid rgba(255,255,255,0.04);
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: rgba(255,255,255,0.6);
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.user-info i {
-    font-size: 1.3rem;
-    color: var(--accent);
-}
-
-/* ==================== MAIN CONTENT ==================== */
-.main-content {
-    flex: 1;
-    margin-left: 280px;
-    padding: 24px;
-    background: var(--bg-page);
-    height: 100vh;
-    height: 100dvh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-}
-
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.header-title {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-width: 0;
-}
-
-.header-title i {
-    font-size: 1.3rem;
-    color: var(--white);
-    background: var(--black);
-    padding: 12px;
-    border-radius: var(--radius);
-    flex-shrink: 0;
-}
-
-.header-title h2 {
-    font-size: clamp(1.2rem, 2.5vw, 1.5rem);
-    color: var(--text-dark);
-    font-weight: 700;
-    letter-spacing: -0.3px;
-}
-
-/* ==================== CARDS ==================== */
-.content-card {
-    background: var(--bg-card);
-    border-radius: var(--radius-xl);
-    padding: 20px;
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 18px;
-    border: 1px solid var(--border);
-    transition: var(--transition);
-    max-width: 100%;
-    overflow: hidden;
-}
-
-.content-card:hover {
-    box-shadow: var(--shadow);
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.card-header h3 {
-    color: var(--text-dark);
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* ==================== STATS ==================== */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
-    margin-bottom: 18px;
-}
-
-.stat-card {
-    background: var(--bg-card);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
-    border: 1px solid var(--border);
-    cursor: default;
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.stat-icon {
-    width: 44px;
-    height: 44px;
-    background: var(--white-soft);
-    border-radius: var(--radius);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border: 1px solid var(--border);
-}
-
-.stat-icon i {
-    font-size: 1.1rem;
-    color: var(--black);
-}
-
-.stat-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.stat-label {
-    font-size: 0.65rem;
-    color: var(--text-gray);
-    margin-bottom: 2px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stat-value {
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: var(--text-dark);
-    letter-spacing: -0.5px;
-}
-
-/* ==================== TABLES ==================== */
-.table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    max-width: 100%;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 600px;
-    table-layout: auto;
-}
-
-.data-table th,
-.data-table td {
-    padding: 10px 14px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.78rem;
-    white-space: nowrap;
-}
-
-.data-table th {
-    background: var(--white-soft);
-    font-weight: 700;
-    color: var(--text-dark);
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    text-transform: uppercase;
-    font-size: 0.65rem;
-    letter-spacing: 0.6px;
-    color: var(--text-gray);
-}
-
-.data-table tbody tr {
-    transition: background 0.2s;
-}
-
-.data-table tbody tr:hover {
-    background: var(--white-soft);
-}
-
-/* ==================== STATUS BADGES ==================== */
-.status-success {
-    background: #E8F5E9;
-    color: #2E7D32;
-    padding: 3px 10px;
-    border-radius: var(--radius-full);
-    font-size: 0.65rem;
-    display: inline-block;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-}
-
-.status-warning {
-    background: #FFF3E0;
-    color: #E65100;
-    padding: 3px 10px;
-    border-radius: var(--radius-full);
-    font-size: 0.65rem;
-    display: inline-block;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-}
-
-.status-danger {
-    background: #FFEBEE;
-    color: #B71C1C;
-    padding: 3px 10px;
-    border-radius: var(--radius-full);
-    font-size: 0.65rem;
-    display: inline-block;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-}
-
-/* ==================== BUTTONS ==================== */
-.btn-add {
-    background: var(--black);
-    border: none;
-    padding: 8px 16px;
-    border-radius: var(--radius);
-    color: var(--white);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: var(--transition);
-}
-
-.btn-add:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-}
-
-.btn-edit {
-    background: none;
-    border: none;
-    color: var(--gray-600);
-    cursor: pointer;
-    padding: 4px 10px;
-    font-size: 0.85rem;
-    transition: var(--transition);
-    border-radius: var(--radius);
-}
-
-.btn-edit:hover {
-    background: var(--white-soft);
-    color: var(--black);
-}
-
-.btn-delete {
-    background: none;
-    border: none;
-    color: var(--danger);
-    cursor: pointer;
-    padding: 4px 10px;
-    font-size: 0.85rem;
-    transition: var(--transition);
-    border-radius: var(--radius);
-}
-
-.btn-delete:hover {
-    background: #FFEBEE;
-    color: #B71C1C;
-}
-
-/* ==================== MODAL ==================== */
-.modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 20px;
-    animation: fadeIn 0.25s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.modal-content {
-    background: var(--bg-card);
-    border-radius: var(--radius-xl);
-    padding: 24px;
-    width: 95%;
-    max-width: 640px;
-    max-height: 85vh;
-    max-height: 85dvh;
-    overflow-y: auto;
-    box-shadow: var(--shadow-lg);
-    animation: slideUp 0.35s ease;
-    border: 1px solid var(--border);
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px) scale(0.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-}
-
-.modal-header h3 {
-    color: var(--text-dark);
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.modal-close {
-    cursor: pointer;
-    font-size: 1.6rem;
-    color: var(--text-light);
-    transition: var(--transition);
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
-
-.modal-close:hover {
-    color: var(--black);
-    background: var(--white-soft);
-}
-
-.modal-body .form-row {
-    display: flex;
-    gap: 14px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-}
-
-.modal-body .form-group {
-    flex: 1;
-    min-width: 160px;
-}
-
-.modal-body .form-group label {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-gray);
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.modal-body .form-group input,
-.modal-body .form-group select,
-.modal-body .form-group textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 0.85rem;
-    font-family: 'Inter', sans-serif;
-    transition: var(--transition);
-    background: var(--white);
-    color: var(--text-dark);
-    user-select: text !important;
-}
-
-.modal-body .form-group input:focus,
-.modal-body .form-group select:focus,
-.modal-body .form-group textarea:focus {
-    outline: none;
-    border-color: var(--black);
-    box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
-}
-
-.modal-body .form-group textarea {
-    resize: vertical;
-    min-height: 60px;
-}
-
-.btn-save {
-    background: var(--black);
-    border: none;
-    padding: 10px 24px;
-    border-radius: var(--radius);
-    color: var(--white);
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.85rem;
-    float: right;
-    margin-top: 14px;
-    transition: var(--transition);
-}
-
-.btn-save:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-}
-
-.btn-cancel {
-    background: var(--white-soft);
-    border: none;
-    padding: 10px 24px;
-    border-radius: var(--radius);
-    color: var(--text-gray);
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.85rem;
-    float: right;
-    margin-top: 14px;
-    margin-right: 10px;
-    transition: var(--transition);
-}
-
-.btn-cancel:hover {
-    background: var(--gray-200);
-}
-
-/* ==================== UTILITIES ==================== */
-.hidden {
-    display: none !important;
-}
-
-/* ==================== MOBILE MENU ==================== */
-.mobile-menu-btn {
-    display: none;
-    background: var(--black);
-    border: none;
-    color: var(--white);
-    font-size: 1.2rem;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius);
-    cursor: pointer;
-    position: fixed;
-    top: 14px;
-    left: 14px;
-    z-index: 200;
-    box-shadow: var(--shadow);
-    align-items: center;
-    justify-content: center;
-}
-
-.sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 99;
-}
-
-/* ==================== POS SYSTEM ==================== */
-.pos-container {
-    display: flex;
-    gap: 16px;
-    height: calc(100vh - 180px);
-    min-height: 450px;
-    flex-wrap: nowrap;
-}
-
-.pos-products-panel {
-    flex: 1;
-    min-width: 280px;
-    background: var(--white);
-    border-radius: var(--radius-xl);
-    padding: 16px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border);
-    max-width: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.pos-categories-bar {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    -webkit-overflow-scrolling: touch;
-    flex-wrap: nowrap;
-    scrollbar-width: thin;
-    flex-shrink: 0;
-}
-
-.pos-cat-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius-full);
-    background: var(--white);
-    color: var(--text-dark);
-    font-weight: 600;
-    font-size: 0.75rem;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: var(--transition);
-    font-family: 'Inter', sans-serif;
-    flex-shrink: 0;
-}
-
-.pos-cat-btn img {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    object-fit: cover;
-}
-
-.pos-cat-btn:hover {
-    border-color: var(--black);
-    color: var(--black);
-    background: var(--white-soft);
-}
-
-.pos-cat-btn.active {
-    background: var(--black);
-    color: var(--white);
-    border-color: var(--black);
-}
-
-.pos-products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 4px;
-    padding-bottom: 4px;
-    min-height: 0;
-}
-
-.pos-product-card {
-    background: var(--white-soft);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 10px;
-    cursor: pointer;
-    transition: var(--transition);
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.pos-product-card:hover {
-    border-color: var(--black);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-    background: var(--white);
-}
-
-.pos-product-card:active {
-    transform: scale(0.97);
-}
-
-.pos-product-card.pos-out-of-stock {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
-.pos-product-img {
-    width: 100%;
-    height: 80px;
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 6px;
-    background: var(--gray-200);
-    flex-shrink: 0;
-}
-
-.pos-product-img img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.pos-product-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: var(--gray-400);
-    height: 80px;
-}
-
-.pos-product-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    width: 100%;
-    flex: 1;
-    justify-content: center;
-}
-
-.pos-product-name {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-dark);
-    line-height: 1.2;
-}
-
-.pos-product-price {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--black);
-}
-
-.pos-old-price {
-    text-decoration: line-through;
-    color: var(--text-light);
-    font-size: 0.6rem;
-    font-weight: 400;
-}
-
-.pos-promo-price {
-    color: var(--danger);
-}
-
-/* ==================== POS CART (RÉDUIT) ==================== */
-.pos-cart-panel {
-    width: 340px;
-    min-width: 300px;
-    background: var(--white);
-    border-radius: var(--radius-xl);
-    padding: 16px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden;
-}
-
-.pos-cart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
-.pos-cart-header h3 {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-dark);
-    font-size: 1rem;
-    margin: 0;
-}
-
-.pos-cart-badge {
-    background: var(--black);
-    color: var(--white);
-    padding: 1px 8px;
-    border-radius: var(--radius-full);
-    font-size: 0.65rem;
-    font-weight: 700;
-}
-
-.pos-clear-btn,
-.pos-back-btn {
-    background: none;
-    border: none;
-    color: var(--text-gray);
-    cursor: pointer;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: var(--radius);
-    transition: var(--transition);
-    font-family: 'Inter', sans-serif;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.pos-clear-btn:hover {
-    color: var(--danger);
-    background: #FFEBEE;
-}
-
-.pos-back-btn:hover {
-    color: var(--black);
-    background: var(--white-soft);
-}
-
-.pos-cart-items {
-    flex: 1;
-    overflow-y: auto;
-    margin-bottom: 8px;
-    min-height: 0;
-}
-
-.pos-cart-empty {
-    text-align: center;
-    padding: 30px 15px;
-    color: var(--text-light);
-}
-
-.pos-cart-empty i {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    display: block;
-}
-
-.pos-cart-empty p {
-    font-weight: 500;
-    color: var(--text-gray);
-    font-size: 0.85rem;
-}
-
-.pos-cart-item {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    gap: 6px;
-}
-
-.pos-cart-item-info {
-    flex: 1;
-    min-width: 100px;
-}
-
-.pos-cart-item-name {
-    display: block;
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: var(--text-dark);
-}
-
-.pos-cart-item-price {
-    font-size: 0.65rem;
-    color: var(--text-gray);
-}
-
-.pos-cart-item-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.pos-qty-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--white);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-dark);
-    transition: var(--transition);
-    font-size: 0.65rem;
-}
-
-.pos-qty-btn:hover {
-    background: var(--white-soft);
-    border-color: var(--black);
-}
-
-.pos-qty-value {
-    font-weight: 700;
-    font-size: 0.8rem;
-    min-width: 24px;
-    text-align: center;
-}
-
-.pos-remove-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: none;
-    background: #FFEBEE;
-    cursor: pointer;
-    color: var(--danger);
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.65rem;
-}
-
-.pos-remove-btn:hover {
-    background: #FFCDD2;
-}
-
-.pos-cart-item-total {
-    width: 100%;
-    text-align: right;
-    font-weight: 700;
-    color: var(--black);
-    font-size: 0.75rem;
-}
-
-.pos-cart-footer {
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
-    flex-shrink: 0;
-}
-
-.pos-cart-total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-}
-
-.pos-cart-total-row span:last-child {
-    color: var(--black);
-    font-size: 1.2rem;
-}
-
-.pos-validate-btn,
-.pos-finalize-btn {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: var(--radius);
-    font-weight: 700;
-    font-size: 0.9rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: var(--transition);
-    font-family: 'Inter', sans-serif;
-}
-
-.pos-validate-btn {
-    background: var(--black);
-    color: var(--white);
-}
-
-.pos-validate-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-}
-
-.pos-validate-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.pos-finalize-btn {
-    background: var(--black);
-    color: var(--white);
-    margin-top: 8px;
-}
-
-.pos-finalize-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-}
-
-/* ==================== PAIEMENT ==================== */
-.pos-payment-form {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-}
-
-.pos-payment-section {
-    margin-bottom: 14px;
-}
-
-.pos-payment-section label {
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 4px;
-    display: block;
-    font-size: 0.8rem;
-}
-
-.pos-payment-section input[type="text"],
-.pos-payment-section input[type="number"],
-.pos-payment-section select {
-    width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 0.9rem;
-    font-family: 'Inter', sans-serif;
-    transition: var(--transition);
-    background: var(--white);
-    user-select: text !important;
-}
-
-.pos-payment-section input:focus,
-.pos-payment-section select:focus {
-    outline: none;
-    border-color: var(--black);
-    box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
-}
-
-.pos-or-divider {
-    text-align: center;
-    margin: 12px 0;
-    color: var(--text-light);
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.pos-summary-box {
-    background: var(--white-soft);
-    padding: 14px;
-    border-radius: var(--radius);
-}
-
-.pos-summary-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-    color: var(--text-gray);
-}
-
-.pos-summary-total {
-    display: flex;
-    justify-content: space-between;
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text-dark);
-}
-
-.pos-summary-total span:last-child {
-    color: var(--black);
-}
-
-.pos-payment-methods {
-    display: flex;
-    gap: 8px;
-}
-
-.pos-payment-btn {
-    flex: 1;
-    padding: 10px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--white);
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: var(--transition);
-    font-family: 'Inter', sans-serif;
-}
-
-.pos-payment-btn:hover {
-    border-color: var(--black);
-    color: var(--black);
-    background: var(--white-soft);
-}
-
-.pos-payment-btn.active {
-    background: var(--black);
-    color: var(--white);
-    border-color: var(--black);
-}
-
-.pos-change-positive {
-    background: #E8F5E9;
-    color: #2E7D32;
-    padding: 10px 16px;
-    border-radius: var(--radius);
-    margin-top: 10px;
-    font-weight: 700;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.1rem;
-}
-
-.pos-change-negative {
-    background: #FFEBEE;
-    color: #B71C1C;
-    padding: 10px 16px;
-    border-radius: var(--radius);
-    margin-top: 10px;
-    font-weight: 700;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.1rem;
-}
-
-/* ==================== OPTIONS ==================== */
-#changePasswordForm {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-}
-
-#changePasswordForm .form-row {
-    display: flex;
-    gap: 14px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-}
-
-#changePasswordForm .form-group {
-    flex: 1;
-    min-width: 180px;
-}
-
-#changePasswordForm label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 4px;
-}
-
-#changePasswordForm input {
-    width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 0.9rem;
-    font-family: 'Inter', sans-serif;
-    background: var(--white);
-    transition: var(--transition);
-    user-select: text !important;
-}
-
-#changePasswordForm input:focus {
-    border-color: var(--black);
-    box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
-    outline: none;
-}
-
-#marketingProgramContent {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-}
-
-#marketingProgramContent .form-group {
-    margin-right: 12px;
-    margin-bottom: 8px;
-}
-
-#marketingProgramContent label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 4px;
-}
-
-#marketingProgramContent select,
-#marketingProgramContent input[type="number"] {
-    padding: 8px 12px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 0.9rem;
-    background: var(--white);
-    font-family: 'Inter', sans-serif;
-    transition: var(--transition);
-    user-select: text !important;
-}
-
-#marketingProgramContent select:focus,
-#marketingProgramContent input[type="number"]:focus {
-    border-color: var(--black);
-    box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
-    outline: none;
-}
-
-.content-card .card-header .btn-add {
-    margin-left: auto;
-}
-
-.modal-wide .modal-content {
-    max-width: 1050px;
-}
-
-/* ==================== RESPONSIVE ==================== */
-@media(max-width:1024px) {
-    .sidebar {
-        transform: translateX(-100%);
-        width: 280px;
-        z-index: 150;
-    }
-    .sidebar.open {
-        transform: translateX(0);
-    }
-    .main-content {
-        margin-left: 0 !important;
-        padding: 16px 12px;
-    }
-    .mobile-menu-btn {
-        display: flex !important;
-    }
-    .sidebar-overlay.active {
-        display: block;
-    }
-    .pos-container {
-        flex-direction: column;
-        height: auto;
-        min-height: calc(100vh - 160px);
-    }
-    .pos-cart-panel {
-        width: 100%;
-        min-width: 100%;
-        max-height: 400px;
-        height: auto;
-    }
-    .pos-products-panel {
-        height: auto;
-        max-height: 500px;
-    }
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    .modal-content {
-        width: 98%;
-        padding: 18px;
-        max-height: 92vh;
-    }
-    .btn-save,
-    .btn-cancel {
-        width: 100%;
-        margin-right: 0;
-        margin-bottom: 6px;
-        float: none;
-        text-align: center;
-    }
-}
-
-@media(max-width:768px) {
-    .login-container,
-    .register-container {
-        flex-direction: column;
-        width: 100%;
-        max-width: 400px;
-        border-radius: var(--radius-xl);
-    }
-    .login-brand,
-    .register-brand {
-        padding: 24px 16px 16px;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-    }
-    .brand-icon {
-        width: 70px;
-        height: 70px;
-    }
-    .login-form,
-    .register-form {
-        padding: 24px 16px 28px;
-    }
-    .main-content {
-        padding: 12px 8px;
-    }
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    .stat-card {
-        padding: 14px;
-    }
-    .pos-products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    }
-    .pos-product-img {
-        height: 60px;
-    }
-    .content-card {
-        padding: 14px;
-    }
-    .header-title i {
-        font-size: 1rem;
-        padding: 10px;
-    }
-    .header-title h2 {
-        font-size: 0.95rem;
-    }
-    .pos-cart-panel {
-        max-height: 350px;
-    }
-    .pos-products-panel {
-        max-height: 400px;
-    }
-}
-
-@media(max-width:480px) {
-    .login-container,
-    .register-container {
-        border-radius: var(--radius-lg);
-    }
-    .login-brand,
-    .register-brand {
-        padding: 20px 12px 12px;
-    }
-    .brand-icon {
-        width: 60px;
-        height: 60px;
-    }
-    .login-form,
-    .register-form {
-        padding: 20px 12px 24px;
-    }
-    .main-content {
-        padding: 8px 4px;
-    }
-    .content-card {
-        padding: 10px;
-        border-radius: var(--radius-lg);
-        margin-bottom: 10px;
-    }
-    .modal-content {
-        padding: 14px;
-    }
-    .pos-products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 6px;
-    }
-    .pos-product-img {
-        height: 50px;
-    }
-    .pos-cart-panel {
-        padding: 12px;
-        max-height: 300px;
-    }
-    .pos-products-panel {
-        padding: 12px;
-        max-height: 350px;
-    }
-    .stat-value {
-        font-size: 0.9rem !important;
-    }
-    .stat-icon {
-        width: 36px;
-        height: 36px;
-    }
-    .stat-icon i {
-        font-size: 0.9rem;
-    }
-    .pos-cat-btn {
-        font-size: 0.65rem;
-        padding: 6px 12px;
-    }
-    .pos-product-name {
-        font-size: 0.65rem;
-    }
-    .pos-product-price {
-        font-size: 0.7rem;
-    }
-}
-
-/* ==================== SAFE AREA ==================== */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .pos-cart-panel {
-        padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    }
-    .sidebar-footer {
-        padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    }
+// ==================== POS.JS - LOGIQUE MÉTIER (FINAL OPTIMISÉ) ====================
+// Mixmax Minimarket - Point de vente complet avec virtualisation
+// ✅ Gestion du paiement de crédit depuis admin-credits.js
+
+var posCart = [];
+var posStep = 1;
+var posCategoriesList = [];
+var posProductsList = [];
+var posSelectedCategory = 'all';
+var posCurrentClient = null;
+var posCurrentTable = '';
+var posPaymentMethod = 'espece';
+var posAmountGiven = 0;
+var posDiscountMAD = 0;
+var posAllClients = [];
+var posFilteredClients = [];
+var posCurrentProductId = null;
+var posSearchQuery = '';
+
+var productNameIndex = {};
+var productIndexBuilt = false;
+var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
+var fideliteSettingsCache = null;
+
+var posCommandesTables = [];
+var posCommandesTablesCount = 0;
+var posCommandesEnLigneCount = 0;
+var posCommandesFilterText = '';
+var posCommandesSortField = 'createdAt';
+var posCommandesSortOrder = 'desc';
+
+var posEpicesList = ['Normal', 'Moins épicé', 'Très épicé', 'Sans épice'];
+var posSelList = ['Normal', 'Moins de sel', 'Sans sel'];
+var posCurrentProductIngredients = [];
+var allStockData = [];
+
+var posIsRendering = false;
+var posLastRenderTime = 0;
+var isFinalizing = false;
+
+// Virtualisation
+var posProductOffset = 0;
+var posProductBatchSize = 50;
+var posHasMoreProducts = false;
+
+function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
+function toDate(val) { if(!val) return null; if(val.toDate) return val.toDate(); if(val.seconds) return new Date(val.seconds*1000); if(typeof val==='string') return new Date(val); if(val instanceof Date) return val; return null; }
+
+function buildProductIndex() { if(productIndexBuilt) return; productNameIndex={}; posProductsList.forEach(function(p){ if(!p.nom) return; p.nom.toLowerCase().split(' ').forEach(function(w){ if(w.length<2) return; if(!productNameIndex[w]) productNameIndex[w]=[]; productNameIndex[w].push(p); }); }); productIndexBuilt=true; }
+function fastSearch(query) { if(!query) return posProductsList; buildProductIndex(); var words=query.toLowerCase().split(' '),results=[],seen={}; words.forEach(function(w){ if(w.length<2) return; (productNameIndex[w]||[]).forEach(function(p){ if(!seen[p.id]){ seen[p.id]=true; results.push(p); } }); }); if(results.length===0) return posProductsList.filter(function(p){ return (p.nom||'').toLowerCase().indexOf(query)!==-1||(p.categorie||'').toLowerCase().indexOf(query)!==-1||(p.description||'').toLowerCase().indexOf(query)!==-1; }); return results; }
+function posEnrichirItemsAvecPrixAchat(items){ return items.map(function(item){ var produit=posProductsList.find(function(p){ return p.id===item.id; }); var prixAchat=(produit&&produit.prixAchat!=null)?produit.prixAchat:(item.prixAchat||0); return Object.assign({},item,{prixAchat:prixAchat}); }); }
+function isOnPOSPage(){ var pt=document.getElementById('pageTitle')?.textContent||''; return pt==='POS'||pt==='Dashboard'; }
+
+// ==================== CHARGEMENT ====================
+async function loadPosPage(c){
+posResetCart(); posStep=1; posCommandesFilterText=''; posCommandesSortField='createdAt'; posCommandesSortOrder='desc'; posSearchQuery=''; productIndexBuilt=false; posProductOffset=0;
+posCategoriesList=[]; posProductsList=[]; posAllClients=[]; posFilteredClients=[];
+c.innerHTML='<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#2E7D32;"></i><p style="margin-top:15px;color:#64748b;">Chargement du POS...</p></div>';
+try{
+let cc=await CacheDB.getAll('categories'),cp=await CacheDB.getAll('products'),cl=await CacheDB.getAll('clients');
+if(cc.length){ posCategoriesList=cc.map(x=>({id:x.id,nom:x.nom,imageBase64:x.imageBase64,recette:x.recette||false})); }
+if(cp.length){ posProductsList=cp.filter(x=>x.disponible!==false).map(x=>({...x,description:x.description||''})); productIndexBuilt=false; }
+if(cl.length){ posAllClients=cl.map(x=>({id:x.id,nom:x.nom,prenom:x.prenom,telephone:x.telephone,description:x.description||''})); posFilteredClients=[...posAllClients]; }
+if(isOnPOSPage()) renderPOS();
+
+if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
+if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
+}catch(e){ console.error(e); }
+setTimeout(async function(){
+try{
+const[cs,ps,cl]=await Promise.all([db.collection('categories').get(),db.collection('products').get(),db.collection('clients').limit(500).get()]);
+posCategoriesList=[]; cs.forEach(d=>{ let cat={id:d.id,nom:d.data().nom,imageBase64:d.data().imageBase64,recette:d.data().recette||false}; posCategoriesList.push(cat); CacheDB.set('categories',d.id,cat); });
+posProductsList=[]; ps.forEach(d=>{ let dd=d.data(); if(dd.disponible!==false){ let prod={id:d.id,nom:dd.nom||'',description:dd.description||'',prixVente:dd.prixVente||0,prixPromo:dd.prixPromo||0,prixAchat:dd.prixAchat||0,stock:dd.stock,categorie:dd.categorie||'',imageBase64:dd.imageBase64||''}; posProductsList.push(prod); CacheDB.set('products',d.id,prod); } }); productIndexBuilt=false;
+posAllClients=[]; cl.forEach(d=>{ let data=d.data(),cli={id:d.id,nom:data.nom,prenom:data.prenom,telephone:data.telephone,description:data.description||''}; posAllClients.push(cli); CacheDB.set('clients',d.id,cli); }); posFilteredClients=[...posAllClients];
+if(isOnPOSPage()) renderPOS();
+
+if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
+if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
+}catch(e){ console.error(e); }
+},300);
+await posChargerCommandesTables(); await posChargerCommandesEnLigneCount();
+var cmdData=localStorage.getItem('posCommandeData'),payData=localStorage.getItem('posPayerVente');
+
+// ✅ AJOUT : Récupération du paiement de crédit
+var creditData = localStorage.getItem('posPayerCredit');
+
+if(cmdData){ var cmd=JSON.parse(cmdData); localStorage.removeItem('posCommandeData'); posCart=[]; if(cmd.items){ posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||item.prixUnitaire||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(cmd.clientId&&cmd.clientName) posCurrentClient={id:cmd.clientId,name:cmd.clientName}; posCurrentTable=cmd.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posCommandeId=cmd.commandeId; if(isOnPOSPage()) renderPOS(); return; }
+if(payData){ var v=JSON.parse(payData); localStorage.removeItem('posPayerVente'); posCart=[]; if(v.items){ posEnrichirItemsAvecPrixAchat(v.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||0,quantite:item.quantite||1,categorie:'',imageBase64:'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(v.clientId&&v.clientName) posCurrentClient={id:v.clientId,name:v.clientName}; posCurrentTable=v.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posVenteId=v.venteId; if(isOnPOSPage()) renderPOS(); return; }
+
+// ✅ AJOUT : Paiement de crédit (doit être traité AVANT renderPOS)
+if(creditData){
+try {
+var data = JSON.parse(creditData);
+localStorage.removeItem('posPayerCredit');
+
+console.log('💳 Paiement crédit reçu:', data);
+
+// Vider le panier
+posCart = [];
+
+// 1. Définir le client
+if (data.clientName) {
+posCurrentClient = { id: data.clientId, name: data.clientName };
 }
+
+// 2. Ajouter les produits au panier
+if (data.items && data.items.length > 0) {
+data.items.forEach(function(item) {
+posCart.push({
+id: item.id || 'credit-' + Date.now(),
+nom: item.nom || item.name || 'Produit',
+prixUnitaire: item.prixVente || item.price || 0,
+quantite: item.quantite || 1,
+prixAchat: item.prixAchat || 0,
+prixPromo: item.prixPromo || 0,
+prixVente: item.prixVente || item.price || 0,
+categorie: item.categorie || '',
+imageBase64: item.imageBase64 || '',
+sauces: item.sauces || [],
+interdits: item.interdits || [],
+epice: item.epice || 'Normal',
+sel: item.sel || 'Normal'
+});
+});
+}
+
+// 3. Définir le montant total
+var total = data.total || 0;
+if (total > 0) {
+posAmountGiven = total;
+posDiscountMAD = 0;
+}
+
+// 4. Forcer le mode paiement (step 2)
+posStep = 2;
+window.posStep = 2;
+posPaymentMethod = 'espece';
+
+// 5. Mettre à jour le mode vocal
+if (typeof window.setVoiceMode === 'function') {
+window.setVoiceMode('payment', '💳 Paiement crédit', null);
+if (typeof window.showVoiceFlowIndicator === 'function') {
+window.showVoiceFlowIndicator('payment_mode');
+}
+if (typeof window.showVoiceModeIndicator === 'function') {
+window.showVoiceModeIndicator();
+}
+}
+
+// 6. Afficher un message
+if (typeof showVoiceResult === 'function') {
+showVoiceResult('💳 Paiement crédit: ' + (data.clientName || 'Client'));
+}
+
+console.log('✅ POS pré-rempli pour crédit:', {
+client: posCurrentClient,
+items: posCart.length,
+total: total,
+step: posStep
+});
+
+} catch(e) {
+console.warn('❌ Erreur chargement crédit:', e);
+}
+}
+
+if(isOnPOSPage()) renderPOS();
+
+// ✅ Si on est en step 2, mettre à jour l'input du montant donné
+if (posStep === 2 && posAmountGiven > 0) {
+setTimeout(function() {
+var input = document.getElementById('posAmountGiven');
+if (input) {
+input.value = posAmountGiven.toFixed(2);
+if (typeof posCalculateChange === 'function') {
+posCalculateChange();
+}
+}
+// Mettre à jour le champ client
+if (posCurrentClient && posCurrentClient.name) {
+var ci = document.getElementById('posClientSearchInput');
+if (ci) ci.value = posCurrentClient.name;
+}
+// Mettre à jour les boutons de paiement
+if (typeof window.updatePaymentButtons === 'function') {
+window.updatePaymentButtons();
+}
+}, 500);
+}
+}
+
+function posSearchProducts(query){ clearTimeout(window._searchTimeout); window._searchTimeout=setTimeout(function(){ posProductOffset=0; posSearchQuery=query.toLowerCase().trim(); if(isOnPOSPage()) filterProductGrid(); },150); }
+
+function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProductGrid(); }
+
+function filterProductGrid(){
+if(!isOnPOSPage()) return;
+var grid=document.getElementById('posProductGrid')||document.querySelector('.pos-products-grid'); if(!grid) return;
+var f=fastSearch(posSearchQuery); if(posSelectedCategory!=='all') f=f.filter(function(p){ return p.categorie===posSelectedCategory; }); f.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+
+var totalProducts = f.length;
+var displayProducts = f.slice(0, posProductOffset + posProductBatchSize);
+posHasMoreProducts = (posProductOffset + posProductBatchSize) < totalProducts;
+
+var html='';
+if(totalProducts===0){ html+='<div style="grid-column:1/-1;text-align:center;padding:40px 10px;"><i class="fas fa-search" style="font-size:2.5rem;color:#94a3b8;"></i><p style="color:#94a3b8;">'+(posSearchQuery?'Aucun produit pour "'+escapeHtml(posSearchQuery)+'"':'Aucun produit')+'</p>'+(posSearchQuery?'<button class="btn-add" onclick="document.getElementById(\'posSearchInput\').value=\'\';posSearchProducts(\'\');">Effacer</button>':'')+'</div>'; }
+else{
+if(posSearchQuery) html+='<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">'+totalProducts+' résultat'+(totalProducts>1?'s':'')+'</div>';
+for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>'); html+='<div class="pos-product-card '+sc+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+(p.imageBase64?'<div class="pos-product-img"><img src="'+escapeHtml(p.imageBase64)+'" loading="lazy" alt=""></div>':'<div class="pos-product-img pos-product-placeholder"><i class="fas fa-box"></i></div>')+'<div class="pos-product-info"><span class="pos-product-name">'+dn+stt+'</span><span class="pos-product-price">'+(hp?'<span class="pos-old-price">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD')+'</span></div></div>'; }
+if(posHasMoreProducts){ html+='<div style="grid-column:1/-1;text-align:center;padding:10px;"><button class="btn-add" onclick="loadMoreProducts()" style="font-size:0.8rem;">Afficher plus ('+(totalProducts-displayProducts.length)+' produits restants)</button></div>'; }
+}
+grid.innerHTML=html;
+}
+
+// ==================== COMMANDES TABLES ====================
+async function posChargerCommandesTables(){ try{ var snap=await db.collection('commandes').where('statut','==','en_attente').where('source','==','menu_tactile').get(); posCommandesTables=[]; snap.forEach(function(doc){ var d=doc.data();d.id=doc.id;posCommandesTables.push(d); }); posCommandesTables.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); posCommandesTablesCount=posCommandesTables.length; }catch(e){ posCommandesTablesCount=0; } }
+async function posChargerCommandesEnLigneCount(){ try{ var snap=await db.collection('commandes').where('statut','==','en_attente').where('source','==','client').get(); posCommandesEnLigneCount=snap.size; }catch(e){ posCommandesEnLigneCount=0; } }
+function posTriCommandesTables(field){ posCommandesSortOrder=(posCommandesSortField===field)?(posCommandesSortOrder==='asc'?'desc':'asc'):'asc'; posCommandesSortField=field; posAfficherCommandesTables(); }
+function posApplyCommandesFilter(value){ posCommandesFilterText=value; posAfficherCommandesTables(); }
+
+function posAfficherCommandesTables(){
+if(posCommandesTables.length===0){ alert('Aucune commande table en attente.'); return; }
+var fd=posCommandesTables.slice(); if(posCommandesFilterText.trim()){ var q=posCommandesFilterText.toLowerCase().trim(); fd=fd.filter(function(cmd){ if((cmd.table||'').toLowerCase().includes(q)) return true; if(cmd.items&&cmd.items.some(function(it){ return (it.nom||'').toLowerCase().includes(q)||((it.interdits||[]).concat(it.epice!=='Normal'?[it.epice]:[],it.sel!=='Normal'?[it.sel]:[])).some(function(o){ return o.toLowerCase().includes(q); }); })) return true; return false; }); }
+fd.sort(function(a,b){ var va,vb; switch(posCommandesSortField){ case'table':va=(a.table||'').toLowerCase();vb=(b.table||'').toLowerCase();break; case'total':va=a.total||0;vb=b.total||0;break; case'createdAt':va=a.createdAt?.seconds||0;vb=b.createdAt?.seconds||0;break; default:va=0;vb=0; } return (va<vb)?(posCommandesSortOrder==='asc'?-1:1):(va>vb)?(posCommandesSortOrder==='asc'?1:-1):0; });
+function rsh(label,field){ var icon=''; if(posCommandesSortField===field) icon=posCommandesSortOrder==='asc'?' ▲':' ▼'; return '<th style="cursor:pointer;" onclick="posTriCommandesTables(\''+field+'\')">'+label+icon+'</th>'; }
+var html='<div style="margin-bottom:12px;display:flex;gap:8px;"><input type="text" id="posCmdFilterInput" placeholder="🔍 Filtrer..." style="flex:1;padding:8px 12px;border:2px solid #e2e8f0;border-radius:30px;font-size:0.8rem;" value="'+escapeHtml(posCommandesFilterText)+'" onkeyup="posApplyCommandesFilter(this.value)"><button class="btn-add" onclick="posApplyCommandesFilter(\'\')">❌</button></div><div style="max-height:60vh;overflow-y:auto;"><table class="data-table" style="width:100%;font-size:0.7rem;"><thead><tr>'+rsh('Table','table')+'<th>Produits</th><th>Options</th>'+rsh('Total','total')+rsh('Date','createdAt')+'<th>Actions</th></thead><tbody>';
+if(fd.length===0) html+='<tr><td colspan="6" style="text-align:center;padding:20px;">Aucune</td></tr>';
+else fd.forEach(function(cmd){ var table=cmd.table||'?',dh=cmd.createdAt?new Date(cmd.createdAt.seconds*1000).toLocaleString('fr-FR'):'N/A',prod=cmd.items?cmd.items.map(function(it){ return '<strong>'+it.quantite+'x</strong> '+escapeHtml(it.nom); }).join('<br>'):'-',opts=cmd.items?cmd.items.map(function(it){ var o=[]; if(it.interdits&&it.interdits.length) o.push('<span style="color:#ef4444;">🚫 '+escapeHtml(it.interdits.join(', '))+'</span>'); if(it.epice&&it.epice!=='Normal') o.push('<span style="color:#d97706;">🌶️ '+escapeHtml(it.epice)+'</span>'); if(it.sel&&it.sel!=='Normal') o.push('<span style="color:#4f46e5;">🧂 '+escapeHtml(it.sel)+'</span>'); return o.length?o.join(' | '):'<span style="color:#94a3b8;">-</span>'; }).join('<br>'):'-'; html+='<tr><td><strong>🍽️ '+escapeHtml(table)+'</strong></td><td>'+prod+'</td><td><small>'+opts+'</small></td><td><strong style="color:#2E7D32;">'+cmd.total.toFixed(2)+' MAD</strong></td><td><small>'+dh+'</small></td><td><button class="btn-add" style="padding:3px 6px;font-size:0.65rem;" onclick="posChargerCommandeTable(\''+cmd.id+'\')">Accepter</button> <button class="btn-save" style="padding:3px 6px;font-size:0.65rem;" onclick="posPayerCommandeTable(\''+cmd.id+'\')">Payé</button></td></tr>'; });
+html+='</tbody></table></div>'; openModal('🛎️ Commandes tables ('+fd.length+')',html);
+}
+function posChargerCommandeTable(cid){ var cmd=posCommandesTables.find(function(c){ return c.id===cid; }); if(!cmd) return; posCart=[]; posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixUnitaire||item.prixVente||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); posCurrentTable='Table '+(cmd.table||'?'); posCurrentClient=null; posPaymentMethod='espece'; posDiscountMAD=0; window.posCommandeId=cid; closeModal(); posStep=2; if(isOnPOSPage()) renderPOS(); }
+async function posPayerCommandeTable(cid){ if(!confirm('Marquer comme payée ?')) return; try{ await CacheDB.write('commandes',cid,{statut:'payé',paidAt:firebase.firestore.FieldValue.serverTimestamp()},'update'); alert('✅ Payée !'); await posChargerCommandesTables(); closeModal(); if(isOnPOSPage()) renderPOS(); CacheDB.sync(); }catch(e){ alert('❌ '+e.message); } }
+
+// ==================== PANIER ====================
+function posResetCart(){ posCart=[]; posStep=1; posSelectedCategory='all'; posCurrentClient=null; posCurrentTable=''; posPaymentMethod='espece'; posAmountGiven=0; posDiscountMAD=0; posSearchQuery=''; posProductOffset=0; posFilteredClients=posAllClients.slice(); delete window.posCommandeId; delete window.posVenteId; var si=document.getElementById('posSearchInput'); if(si) si.value=''; if(isOnPOSPage()) renderPOS(); }
+
+function posSearchClient(query){ var q=query.toLowerCase().trim(); posCurrentClient=null; if(!q){ posFilteredClients=posAllClients.slice(); var d=document.getElementById('posClientDropdown'); if(d) d.style.display='none'; }else{ posFilteredClients=posAllClients.filter(function(c){ return (c.nom||'').toLowerCase().indexOf(q)!==-1||(c.prenom||'').toLowerCase().indexOf(q)!==-1||(c.telephone||'').toLowerCase().indexOf(q)!==-1||(c.description||'').toLowerCase().indexOf(q)!==-1; }); renderClientDropdown(); } }
+function renderClientDropdown(){ var d=document.getElementById('posClientDropdown'); if(!d) return; var h=''; if(posFilteredClients.length===0) h='<div style="padding:8px;color:#94a3b8;text-align:center;">Aucun</div>'; else posFilteredClients.forEach(function(c){ h+='<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #f1f5f9;">'+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+' <span style="color:#94a3b8;font-size:0.65rem;">('+(c.telephone||'')+')</span></div>'; }); d.innerHTML=h; d.style.display='block'; }
+function posSelectClientFromDropdown(cid,cn){ posCurrentClient={id:cid,name:cn}; posCurrentTable=''; var s=document.getElementById('posClientSearchInput'),t=document.getElementById('posTableNum'),d=document.getElementById('posClientDropdown'); if(s) s.value=cn; if(t) t.value=''; if(d) d.style.display='none'; updatePaymentButtons(); if(isOnPOSPage()) renderPOS(); }
+document.addEventListener('click',function(e){ var d=document.getElementById('posClientDropdown'),s=document.getElementById('posClientSearchInput'); if(d&&s&&!s.contains(e.target)&&!d.contains(e.target)) d.style.display='none'; });
+function updatePaymentButtons(){ setTimeout(function(){ var cb=document.getElementById('posCreditBtn'),pb=document.getElementById('posPartielBtn'),cc=posCurrentClient&&posCurrentClient.id; if(cb){ cb.disabled=!cc; cb.style.opacity=cc?'1':'0.4'; } if(pb){ pb.disabled=!cc; pb.style.opacity=cc?'1':'0.4'; } },300); }
+function posSetTable(v){ posCurrentTable=v.trim(); if(posCurrentTable){ posCurrentClient=null; posPaymentMethod='espece'; var s=document.getElementById('posClientSearchInput'); if(s) s.value=''; } }
+
+function posAddToCartOrOpenOptions(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } var cat=posCategoriesList.find(function(c){ return c.nom===p.categorie; }),isRecette=cat&&cat.recette===true; if(isRecette){ posCurrentProductId=pid; posOpenOptionsModal(pid); }else{ var ex=posCart.find(function(x){ return x.id===pid; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:[],epice:'Normal',sel:'Normal'}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); updateCartOnly(); } }
+async function posOpenOptionsModal(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } if(typeof allStockData==='undefined'||allStockData.length===0){ try{ var snap=await db.collection('stock').orderBy('nom').get(); allStockData=[]; snap.forEach(function(d){ var dd=d.data();dd.id=d.id;allStockData.push(dd); }); }catch(e){} } try{ var doc=await db.collection('products').doc(pid).get(); posCurrentProductIngredients=doc.exists?(doc.data().ingredients||[]):[]; }catch(e){ posCurrentProductIngredients=[]; } var grouped={}; posCurrentProductIngredients.forEach(function(ing){ var si=allStockData.find(function(s){ return s.id===ing.idStock; }),cat=si?si.categorie:'Autre'; if(!grouped[cat]) grouped[cat]=[]; grouped[cat].push(ing.nom); }); var order=['Sauces','Légumes','Fruits','Viande','Poulet','Poisson'],sortedCats=Object.keys(grouped).sort(function(a,b){ var ia=order.indexOf(a),ib=order.indexOf(b); if(ia!==-1&&ib!==-1) return ia-ib; if(ia!==-1) return -1; if(ib!==-1) return 1; return a.localeCompare(b); }); posCurrentProductId=pid; var h='<h4>'+escapeHtml(p.nom)+'</h4>'; if(sortedCats.length===0) h+='<div style="color:#94a3b8;">Aucun ingrédient</div>'; else sortedCats.forEach(function(cat){ h+='<div style="margin-bottom:10px;"><label style="font-weight:600;">🥫 '+escapeHtml(cat)+'</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; grouped[cat].forEach(function(ing){ h+='<label style="display:flex;align-items:center;gap:3px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="checkbox" class="pos-interdit-check" value="'+escapeHtml(ing)+'"> '+escapeHtml(ing)+'</label>'; }); h+='</div></div>'; }); h+='<div><label>🌶️ Épices:</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; posEpicesList.forEach(function(s,idx){ h+='<label style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="radio" name="pos-epice" value="'+s+'" '+(idx===0?'checked':'')+'> '+s+'</label>'; }); h+='</div></div><div><label>🧂 Sel:</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; posSelList.forEach(function(s,idx){ h+='<label style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="radio" name="pos-sel" value="'+s+'" '+(idx===0?'checked':'')+'> '+s+'</label>'; }); h+='</div></div>'; h+='<div style="text-align:right;margin-top:15px;"><button class="btn-cancel" onclick="closeModal()">Annuler</button> <button class="btn-save" onclick="posConfirmOptions()">Ajouter</button></div>'; openModal('Personnaliser',h); }
+function posConfirmOptions(){ var interdits=[]; document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb){ interdits.push(cb.value); }); var epice=(document.querySelector('input[name="pos-epice"]:checked')||{}).value||'Normal',sel=(document.querySelector('input[name="pos-sel"]:checked')||{}).value||'Normal',p=posProductsList.find(function(x){ return x.id===posCurrentProductId; }); if(!p){ closeModal(); return; } var ex=posCart.find(function(x){ return x.id===posCurrentProductId; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); closeModal(); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:interdits,epice:epice,sel:sel}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); closeModal(); updateCartOnly(); }
+function updateCartOnly(){ if(!isOnPOSPage()) return; var ci=document.querySelector('.pos-cart-items'); if(!ci) return; var html=''; if(posCart.length===0) html='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>'; else for(var k=0;k<posCart.length;k++){ var it=posCart[k],opts=''; if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>'; if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>'; html+='<div class="pos-cart-item"><div class="pos-cart-item-info"><span class="pos-cart-item-name">'+escapeHtml(it.nom)+opts+'</span><span class="pos-cart-item-price">'+it.prixUnitaire.toFixed(2)+' MAD/u</span></div><div class="pos-cart-item-actions"><button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)"><i class="fas fa-minus"></i></button><span class="pos-qty-value">'+it.quantite+'</span><button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)"><i class="fas fa-plus"></i></button><button class="pos-remove-btn" onclick="posRemoveItem('+k+')"><i class="fas fa-times"></i></button></div><span class="pos-cart-item-total">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span></div>'; } ci.innerHTML=html; var badge=document.querySelector('.pos-cart-badge'); if(badge) badge.textContent=posCart.length; var tr=document.querySelector('.pos-cart-total-row span:last-child'); if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } var vb=document.querySelector('.pos-validate-btn'); if(vb) vb.disabled=posCart.length===0; }
+function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('factureCounter'))||0; factureCounter++; localStorage.setItem('factureCounter',factureCounter); return 'FACT-'+new Date().getFullYear()+'-'+String(factureCounter).padStart(5,'0'); }
+
+// ==================== RENDU ====================
+function renderPOS(){
+if(!isOnPOSPage()) return;
+var now=Date.now(); if(now-posLastRenderTime<100&&posCart.length>0) return; posLastRenderTime=now;
+var c=document.getElementById('dynamicContent'); if(!c) return;
+if(posCart.length===0&&posStep===1){ buildFullPOS(c); return; }
+if(document.querySelector('.pos-container')&&posStep===1&&posCart.length>0){ updateCartOnly(); filterProductGrid(); var tr=document.querySelector('.pos-cart-total-row span:last-child'); if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } return; }
+buildFullPOS(c);
+}
+function buildFullPOS(c){
+if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#2E7D32;"></i><p>Chargement...</p></div>'; return; }
+var st=posCalculateTotal(),t=st-posDiscountMAD,h='<div class="pos-container"><div class="pos-products-panel"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;"><i class="fas fa-search" style="color:#94a3b8;margin-right:6px;"></i><input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value)" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;">'+(posSearchQuery?'<button onclick="document.getElementById(\'posSearchInput\').value=\'\';posSearchProducts(\'\');"><i class="fas fa-times-circle"></i></button>':'')+'</div><button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:46px;height:46px;cursor:pointer;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button><div style="display:flex;gap:4px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesEnLigneCount+'</span></button></div></div><div class="pos-categories-bar"><button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')"><i class="fas fa-th-large"></i> Tous</button>';
+for(var i=0;i<posCategoriesList.length;i++){ var ca=posCategoriesList[i],ac=posSelectedCategory===ca.nom?'active':'',ih=ca.imageBase64?'<img src="'+escapeHtml(ca.imageBase64)+'" loading="lazy">':'<i class="fas fa-folder"></i>'; h+='<button class="pos-cat-btn '+ac+'" onclick="posFilterCategory(\''+escapeHtml(ca.nom).replace(/'/g,"\\'")+'\')">'+ih+' '+escapeHtml(ca.nom)+'</button>'; }
+h+='</div></div><div class="pos-products-grid" id="posProductGrid"></div></div><div class="pos-cart-panel">';
+if(posStep===1){
+h+='<div class="pos-cart-header"><h3><i class="fas fa-shopping-cart"></i> Panier <span class="pos-cart-badge">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()"><i class="fas fa-trash-alt"></i> Vider</button></div><div class="pos-cart-items">';
+if(posCart.length===0){ h+='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>'; }
+else{ for(var k=0;k<posCart.length;k++){ var it=posCart[k],opts=''; if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;">🌶️'+escapeHtml(it.epice)+'</span>'; if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;">🧂'+escapeHtml(it.sel)+'</span>'; h+='<div class="pos-cart-item"><div class="pos-cart-item-info"><span class="pos-cart-item-name">'+escapeHtml(it.nom)+opts+'</span><span class="pos-cart-item-price">'+it.prixUnitaire.toFixed(2)+' MAD/u</span></div><div class="pos-cart-item-actions"><button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)"><i class="fas fa-minus"></i></button><span class="pos-qty-value">'+it.quantite+'</span><button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)"><i class="fas fa-plus"></i></button><button class="pos-remove-btn" onclick="posRemoveItem('+k+')"><i class="fas fa-times"></i></button></div><span class="pos-cart-item-total">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span></div>'; } }
+h+='</div><div style="padding:8px 0;display:flex;gap:8px;"><label>Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:4px 8px;border:2px solid #e2e8f0;border-radius:6px;"></div><div class="pos-cart-footer">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div><button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+'><i class="fas fa-check-circle"></i> Valider</button></div>';
+}else{
+var canCredit=posCurrentClient&&posCurrentClient.id;
+h+='<div class="pos-cart-header"><h3><i class="fas fa-credit-card"></i> Paiement</h3><button class="pos-back-btn" onclick="posGoToStep1()"><i class="fas fa-arrow-left"></i> Retour</button></div><div class="pos-payment-form"><div style="margin-bottom:4px;"><label>Client</label><div style="position:relative;"><input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"><div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:150px;overflow-y:auto;z-index:50;"></div></div></div><div style="margin:2px 0;font-size:0.7rem;text-align:center;">— OU —</div><div style="margin-bottom:4px;"><label>Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="padding:8px;background:#f8fafc;border-radius:8px;"><div>Articles: '+posCart.length+'</div>'+(posDiscountMAD>0?'<div style="color:#ef4444;">Remise: -'+posDiscountMAD.toFixed(2)+'</div>':'')+'<div style="font-size:1.1rem;font-weight:700;">Total: '+t.toFixed(2)+' MAD</div></div></div><div style="margin-bottom:4px;"><label>Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="display:flex;gap:6px;"><button class="pos-payment-btn '+(posPaymentMethod==='espece'?'active':'')+'" onclick="posSetPaymentMethod(\'espece\')"><i class="fas fa-money-bill-wave"></i> Espèces</button><button class="pos-payment-btn '+(posPaymentMethod==='credit'?'active':'')+'" onclick="posSetPaymentMethod(\'credit\')" id="posCreditBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+'><i class="fas fa-credit-card"></i> Crédit</button><button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+'><i class="fas fa-hand-holding-usd"></i> Partiel</button></div></div>';
+if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') h+='<div style="margin-bottom:4px;"><label>Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"><div id="posChangeDisplay"></div></div>';
+h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()" style="width:100%;padding:12px;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-weight:700;"><i class="fas fa-check-circle"></i> Finaliser</button></div>';
+}
+h+='</div></div>'; c.innerHTML=h; filterProductGrid(); if(posStep===2) setTimeout(posCalculateChange,200);
+}
+
+// ==================== MÉTIER ====================
+function posFilterCategory(ca){ posSelectedCategory=ca; posProductOffset=0; var si=document.getElementById('posSearchInput'); if(si) posSearchQuery=si.value.toLowerCase().trim(); if(isOnPOSPage()) filterProductGrid(); }
+function posUpdateDiscountMAD(v){ posDiscountMAD=parseFloat(v)||0; if(posDiscountMAD<0) posDiscountMAD=0; if(isOnPOSPage()) renderPOS(); }
+function posUpdateQty(i,ch){ var it=posCart[i]; if(!it) return; var p=posProductsList.find(function(x){ return x.id===it.id; }),nq=it.quantite+ch; if(nq<=0) posCart.splice(i,1); else{ if(p&&p.stock!==undefined&&nq>p.stock){ alert('Max: '+p.stock); return; } it.quantite=nq; } updateCartOnly(); }
+function posRemoveItem(i){ posCart.splice(i,1); updateCartOnly(); }
+function posCalculateTotal(){ var t=0; for(var i=0;i<posCart.length;i++) t+=posCart[i].prixUnitaire*posCart[i].quantite; return t; }
+
+function posGoToStep2(){
+if(posCart.length===0){ alert('Panier vide'); return; }
+posStep = 2;
+window.posStep = 2;
+
+if (typeof window.setVoiceMode === 'function') {
+if (typeof window.lastAddedProductId !== 'undefined') {
+window.lastAddedProductId = null;
+}
+window.setVoiceMode('payment', '🎤 Mode paiement', null);
+if (typeof window.showVoiceFlowIndicator === 'function') {
+window.showVoiceFlowIndicator('payment_mode');
+}
+if (typeof window.showVoiceModeIndicator === 'function') {
+window.showVoiceModeIndicator();
+}
+}
+
+if(isOnPOSPage()) renderPOS();
+}
+
+function posGoToStep1(){
+posStep = 1;
+window.posStep = 1;
+delete window.posCommandeId; delete window.posVenteId;
+
+var micBtn = document.getElementById('posMicBtn');
+if (micBtn && micBtn.classList.contains('recording')) {
+if (typeof window.setVoiceMode === 'function') {
+window.setVoiceMode('search', '🎤 Recherche vocale active', null);
+}
+if (typeof window.showVoiceFlowIndicator === 'function') {
+window.showVoiceFlowIndicator('product');
+}
+}
+
+if(isOnPOSPage()) renderPOS();
+}
+
+function posSetPaymentMethod(m){ if((m==='credit'||m==='partiel')&&(!posCurrentClient||!posCurrentClient.id)){ alert('Client requis'); return; } posPaymentMethod=m; posAmountGiven=0; if(isOnPOSPage()) renderPOS(); }
+function posCalculateChange(){ var ai=document.getElementById('posAmountGiven'),cd=document.getElementById('posChangeDisplay'); if(!ai||!cd) return; var st=posCalculateTotal(),t=st-posDiscountMAD; posAmountGiven=parseFloat(ai.value)||0; var c=posAmountGiven-t; if(posAmountGiven>0) cd.innerHTML=c>=0?'<div class="pos-change-positive"><span>Rendu</span><span>'+c.toFixed(2)+' MAD</span></div>':'<div class="pos-change-negative"><span>Manquant</span><span>'+Math.abs(c).toFixed(2)+' MAD</span></div>'; else cd.innerHTML=''; }
+
+async function updateClientFidelityAsync(clientId,total,profitTotal){ try{ if(!fideliteSettingsCache){ var fDoc=await db.collection('settings').doc('fidelite').get(); fideliteSettingsCache=fDoc.exists?fDoc.data():{active:true,pointsParVente:1}; } if(!fideliteSettingsCache.active) return; var cr=await db.collection('clients').doc(clientId).get(); if(!cr.exists) return; var cd=cr.data(),points=parseInt(fideliteSettingsCache.pointsParVente)||1; await CacheDB.write('clients',clientId,{ca:(cd.ca||0)+total,profit:(cd.profit||0)+profitTotal,pointsFidelite:(cd.pointsFidelite||0)+points,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},'update'); }catch(e){ console.warn(e); } }
+
+async function posFinalizeSale(){
+if(isFinalizing) return;
+var st=posCalculateTotal(), t=st-posDiscountMAD;
+
+if(!posCurrentClient && !posCurrentTable){
+posCurrentClient = { id: null, name: 'Passager' };
+}
+
+if(posCurrentTable && (posPaymentMethod==='credit'||posPaymentMethod==='partiel')){
+alert('Table = espèces uniquement.'); return;
+}
+if((posPaymentMethod==='credit'||posPaymentMethod==='partiel') && !posCurrentClient){
+alert('Client requis pour crédit/partiel.'); return;
+}
+
+if(posPaymentMethod==='espece' || posPaymentMethod==='partiel'){
+var amountInput = document.getElementById('posAmountGiven');
+var givenAmount = parseFloat(amountInput ? amountInput.value : 0) || 0;
+if (givenAmount <= 0) {
+posAmountGiven = t;
+if (amountInput) amountInput.value = t.toFixed(2);
+} else {
+posAmountGiven = givenAmount;
+}
+if(posPaymentMethod==='espece' && posAmountGiven < t){
+alert('Montant insuffisant.'); return;
+}
+}
+
+isFinalizing=true;
+var fb=document.querySelector('.pos-finalize-btn');
+if(fb){ fb.disabled=true; fb.textContent='⏳...'; }
+
+var vendeur=document.getElementById('posVendeur').value.trim()||(window.currentUserData?window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom:'');
+
+try{
+var fn=getNextFactureNum(), remaining=0, paid=true, statutPaiement='payé', change=0;
+
+if(posPaymentMethod==='credit'){
+paid=false; remaining=t; statutPaiement='crédit';
+} else if(posPaymentMethod==='partiel'){
+remaining = t - posAmountGiven;
+paid = false;
+statutPaiement='partiel';
+change = Math.max(0, posAmountGiven - t);
+} else {
+change = posAmountGiven - t;
+}
+
+if(posCurrentTable && !posCurrentClient){
+paid=false; statutPaiement='en_attente'; remaining=t;
+}
+
+var profitTotal=0, itemsDetail=posCart.map(function(it){
+var pa=it.prixAchat||0, pvn=it.prixVente||0, pp=it.prixPromo||0,
+pvr=pp>0?pp:pvn, prof=(pvr-pa)*it.quantite;
+profitTotal+=prof;
+return {
+id:it.id, nom:it.nom, quantite:it.quantite,
+prixVente:pvr, prixAchat:pa, prixPromo:pp, profit:prof,
+sauces:[], interdits:it.interdits||[],
+epice:it.epice||'Normal', sel:it.sel||'Normal'
+};
+});
+
+var sd={
+factureNum:fn, items:itemsDetail, subtotal:st,
+discountMAD:posDiscountMAD, total:t,
+clientId:posCurrentClient ? posCurrentClient.id : null,
+clientName:posCurrentClient ? posCurrentClient.name : 'Passager',
+table:posCurrentTable || null,
+vendeur:vendeur, paymentMethod:posPaymentMethod,
+statutPaiement:statutPaiement,
+amountGiven:posAmountGiven, change:change,
+paid:paid, remainingAmount:remaining,
+profitTotal:profitTotal,
+createdAt:firebase.firestore.FieldValue.serverTimestamp()
+};
+
+var batch=db.batch(), ventesRef=db.collection('ventes').doc();
+batch.set(ventesRef,sd);
+if(!paid){ var creditsRef=db.collection('credits').doc(); batch.set(creditsRef,sd); }
+if(window.posCommandeId){
+batch.update(db.collection('commandes').doc(window.posCommandeId), {
+statut:'payé',
+paidAt:firebase.firestore.FieldValue.serverTimestamp(),
+factureNum:fn
+});
+delete window.posCommandeId;
+}
+if(window.posVenteId){
+batch.update(db.collection('ventes').doc(window.posVenteId), {
+paid:true, statutPaiement:'payé', remainingAmount:0,
+paidAt:firebase.firestore.FieldValue.serverTimestamp()
+});
+delete window.posVenteId;
+}
+for(var i=0;i<posCart.length;i++){
+var it=posCart[i];
+batch.update(db.collection('products').doc(it.id), {
+stock:firebase.firestore.FieldValue.increment(-it.quantite),
+vendues:firebase.firestore.FieldValue.increment(it.quantite),
+ca:firebase.firestore.FieldValue.increment(it.prixUnitaire*it.quantite)
+});
+}
+await batch.commit();
+if(posCurrentClient && posCurrentClient.id && paid)
+updateClientFidelityAsync(posCurrentClient.id, t, profitTotal);
+
+var venteId = ventesRef.id;
+
+if (typeof window.sendWhatsApp === 'function') {
+var originalCloseModal = window.closeModal;
+window.closeModal = function() {
+posResetCart();
+if(isOnPOSPage()) renderPOS();
+if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
+window.closeModal = originalCloseModal;
+var o = document.getElementById('modalOverlay');
+if (o) o.classList.add('hidden');
+window.editingId = null;
+};
+var modalHtml = '<p style="text-align:center;">Voulez-vous envoyer la facture par WhatsApp ?</p>';
+modalHtml += '<div style="display:flex;justify-content:center;gap:10px;margin-top:15px;">';
+modalHtml += '<button class="btn-save" id="whatsappYesBtn">✅ Oui</button>';
+modalHtml += '<button class="btn-cancel" id="whatsappNoBtn">❌ Non</button>';
+modalHtml += '</div>';
+openModal('📱 Envoyer la facture WhatsApp', modalHtml);
+
+setTimeout(function() {
+var yesBtn = document.getElementById('whatsappYesBtn');
+var noBtn = document.getElementById('whatsappNoBtn');
+if (yesBtn) {
+yesBtn.addEventListener('click', function() {
+window.closeModal = originalCloseModal;
+closeModal();
+if (typeof window.posStopVoiceSearch === 'function') {
+window.posStopVoiceSearch();
+}
+window.sendWhatsApp(venteId);
+setTimeout(function() {
+posResetCart();
+if(isOnPOSPage()) renderPOS();
+if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
+}, 500);
+});
+}
+if (noBtn) {
+noBtn.addEventListener('click', function() {
+window.closeModal = originalCloseModal;
+closeModal();
+posResetCart();
+if(isOnPOSPage()) renderPOS();
+if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
+});
+}
+}, 100);
+} else {
+posResetCart();
+if(isOnPOSPage()) renderPOS();
+if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
+}
+}catch(e){
+alert('Erreur: '+e.message);
+} finally {
+isFinalizing=false;
+if(fb){ fb.disabled=false; fb.innerHTML='<i class="fas fa-check-circle"></i> Finaliser'; }
+}
+}
+
+function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userData.role==='caissier'||window.currentUserData.userData.role==='admin')){ if(posCart.length>0&&posStep===1){ if(!confirm('⚠️ '+posCart.length+' article(s) dans le panier. Garder ?')) posResetCart(); } navigateTo('pos'); } }
+if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; document.addEventListener('keydown',function(event){ if(event.key==='Escape'){ var cp=document.getElementById('pageTitle')?.textContent||''; if(cp!=='POS'&&cp!=='Dashboard'&&cp!=='') goBackToPOS(); } if(event.ctrlKey&&(event.key==='p'||event.key==='P')){ event.preventDefault(); if((document.getElementById('pageTitle')?.textContent||'')!=='POS') navigateTo('pos'); } }); }
+
+window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posSearchProducts=posSearchProducts; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
+
+console.log('⚡ Mixmax Minimarket - POS chargé (final optimisé avec virtualisation)');
