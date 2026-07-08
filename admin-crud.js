@@ -1,17 +1,18 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
-// Contient : Catégories, Produits (catégories multiples), Clients, Fournisseurs
+// Contient : Catégories (avec ordre), Produits (catégories multiples), Clients, Fournisseurs
 // Dépend de : admin.js (variables globales, fonctions utilitaires)
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
 
-// ==================== CATÉGORIES ====================
+// ==================== CATÉGORIES (AVEC ORDRE) ====================
 function loadCategoriesPage(c) {
     c.innerHTML = '<div class="content-card">' +
         '<div class="card-header"><h3><i class="fas fa-layer-group"></i> Catégories</h3><button class="btn-add" onclick="openCategoryForm()"><i class="fas fa-plus"></i> Nouvelle</button></div>' +
         '<div class="table-container"><table class="data-table" id="categoriesTable"><thead><tr><th>Image</th>' +
         makeSortableHeader('categories', 'nom', 'Nom', 'loadCategories') +
         makeSortableHeader('categories', 'description', 'Description', 'loadCategories') +
+        makeSortableHeader('categories', 'ordre', 'Ordre', 'loadCategories') +
         makeSortableHeader('categories', 'ca', 'CA', 'loadCategories') +
         makeSortableHeader('categories', 'profit', 'Profit', 'loadCategories') +
         '<th>Nb Produits</th><th>Recette</th><th>Actions</th>' +
@@ -36,7 +37,7 @@ async function renderCategoriesTable() {
     var pageData = getPageData('categories', data);
     tb.innerHTML = '';
     if (pageData.length === 0) {
-        tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;">Aucune catégorie</td></tr>';
+        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;">Aucune catégorie</td></tr>';
         document.getElementById('categoriesPagination').innerHTML = ''; return;
     }
     for (var i = 0; i < pageData.length; i++) {
@@ -45,7 +46,7 @@ async function renderCategoriesTable() {
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:35px;height:35px;object-fit:cover;border-radius:6px;">' : '<i class="fas fa-folder fa-2x" style="color:#2E7D32;"></i>';
         var pcol = (d.profit || 0) >= 0 ? '#2E7D32' : '#dc2626';
         var recetteBadge = d.recette ? '<span class="status-success">✅ Oui</span>' : '<span class="status-warning">❌ Non</span>';
-        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(d.description || '-') + '</td><td>' + (d.ca || 0).toFixed(2) + ' MAD</td><td style="color:' + pcol + ';">' + (d.profit || 0).toFixed(2) + ' MAD</td><td>' + pc + '</td><td>' + recetteBadge + '</td><td><button class="btn-edit" onclick="editDocument(\'categories\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'categories\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(d.description || '-') + '</td><td>' + (d.ordre || 0) + '</td><td>' + (d.ca || 0).toFixed(2) + ' MAD</td><td style="color:' + pcol + ';">' + (d.profit || 0).toFixed(2) + ' MAD</td><td>' + pc + '</td><td>' + recetteBadge + '</td><td><button class="btn-edit" onclick="editDocument(\'categories\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'categories\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
     }
     document.getElementById('categoriesPagination').innerHTML = getPaginationHTML('categories', data.length);
 }
@@ -54,9 +55,9 @@ function openCategoryForm(data) {
     data = data || {}; editCategoryData = data;
     var recetteChecked = data.recette ? 'checked' : '';
     var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="catImage" onchange="previewImage(this,\'catPreview\')"><div id="catPreview">' + (data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:100px;">' : '') + '</div></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="catNom" value="' + escapeHtml(data.nom || '') + '" required></div><div class="form-group"><label>Description</label><textarea id="catDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>CA</label><input type="number" id="catCA" value="' + (data.ca || 0) + '" step="0.01"></div><div class="form-group"><label>Profit</label><input type="number" id="catProfit" value="' + (data.profit || 0) + '" step="0.01"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Recette</label><div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="catRecette" ' + recetteChecked + ' style="width:20px; height:20px;"><span>Activer la personnalisation</span></div></div></div>' +
+        '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="catNom" value="' + escapeHtml(data.nom || '') + '" required></div><div class="form-group"><label>Ordre d\'affichage</label><input type="number" id="catOrdre" value="' + (data.ordre || 0) + '" min="0" step="1" placeholder="0 = fin de liste"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label>Description</label><textarea id="catDesc">' + escapeHtml(data.description || '') + '</textarea></div><div class="form-group"><label>CA</label><input type="number" id="catCA" value="' + (data.ca || 0) + '" step="0.01"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label>Profit</label><input type="number" id="catProfit" value="' + (data.profit || 0) + '" step="0.01"></div><div class="form-group"><label>Recette</label><div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="catRecette" ' + recetteChecked + ' style="width:20px; height:20px;"><span>Activer la personnalisation</span></div></div></div>' +
         '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveCategory()">Enregistrer</button>';
     currentCollection = 'categories';
     openModal(editingId ? 'Modifier Catégorie' : 'Nouvelle Catégorie', h);
@@ -69,7 +70,14 @@ function saveCategory() {
     var recette = document.getElementById('catRecette').checked;
     var existingImage = (editingId && editCategoryData) ? editCategoryData.imageBase64 : null;
     var sf = function(img) {
-        var d = { nom: n, description: document.getElementById('catDesc').value, ca: parseFloat(document.getElementById('catCA').value) || 0, profit: parseFloat(document.getElementById('catProfit').value) || 0, recette: recette };
+        var d = {
+            nom: n,
+            description: document.getElementById('catDesc').value,
+            ca: parseFloat(document.getElementById('catCA').value) || 0,
+            profit: parseFloat(document.getElementById('catProfit').value) || 0,
+            recette: recette,
+            ordre: parseInt(document.getElementById('catOrdre').value) || 0
+        };
         d.imageBase64 = img || existingImage;
         saveDocument('categories', d, function() { closeModal(); refreshCurrentPage(); });
     };
@@ -138,21 +146,16 @@ async function loadProducts() {
 function renderProductsTable() {
     var tb = document.querySelector('#productsTable tbody'); if (!tb) return;
     var data = window.allProductsData.slice();
-    // Filtre par catégorie (gère categories multiples + ancien champ categorie)
     if (selectedCategoryFilter) {
         data = data.filter(function(d) {
-            if (d.categories && d.categories.length > 0) {
-                return d.categories.includes(selectedCategoryFilter);
-            }
+            if (d.categories && d.categories.length > 0) return d.categories.includes(selectedCategoryFilter);
             return d.categorie === selectedCategoryFilter;
         });
     }
-    // Filtre de recherche
     if (window.productSearchQuery) {
         var q = window.productSearchQuery;
         data = data.filter(function(d) {
-            return (d.nom || '').toLowerCase().indexOf(q) !== -1 ||
-                   (d.description || '').toLowerCase().indexOf(q) !== -1;
+            return (d.nom || '').toLowerCase().indexOf(q) !== -1 || (d.description || '').toLowerCase().indexOf(q) !== -1;
         });
     }
     data = applySort('products', data, 'nom'); var pageData = getPageData('products', data);
@@ -163,7 +166,6 @@ function renderProductsTable() {
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:30px;height:30px;object-fit:cover;border-radius:4px;">' : '<i class="fas fa-box" style="color:#94a3b8;"></i>';
         var disp = d.disponible !== false ? '<span class="status-success">Oui</span>' : '<span class="status-danger">Non</span>';
         var profitVal = (d.profit !== undefined && !isNaN(d.profit)) ? d.profit : 0; var pc = profitVal >= 0 ? '#2E7D32' : '#dc2626';
-        // Affichage des catégories multiples
         var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories.join(', ') : (d.categorie || '-');
         tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(categoriesDisplay) + '</td><td>' + ((d.prixAchat || 0).toFixed(2)) + '</td><td>' + ((d.prixVente || 0).toFixed(2)) + '</td><td>' + ((d.prixPromo || 0).toFixed(2)) + '</td><td style="color:' + pc + ';">' + profitVal.toFixed(2) + '</td><td>' + (d.stock || 0) + '</td><td>' + (d.vendues || 0) + '</td><td>' + ((d.ca || 0).toFixed(2)) + '</td><td>' + disp + '</td><td>' + (d.tempsPrep || '-') + '</td><td>' + (d.description || '-') + '</td><td><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
     }
@@ -172,13 +174,11 @@ function renderProductsTable() {
 
 async function openProductForm(data) {
     data = data || {}; await loadStockForProductForm();
-    // Construction des cases à cocher pour les catégories (multi-sélection)
     var categoriesCheckboxes = '';
     try {
         var cs = await db.collection('categories').get();
         cs.forEach(function(d) {
             var catName = d.data().nom;
-            // Coche si la catégorie est présente dans data.categories (tableau) ou data.categorie (ancien champ)
             var checked = '';
             if (data.categories && data.categories.includes(catName)) checked = 'checked';
             else if (!data.categories && data.categorie === catName) checked = 'checked';
@@ -190,7 +190,6 @@ async function openProductForm(data) {
     var dy = data.disponible !== false ? 'selected' : '', dn = data.disponible === false ? 'selected' : '';
     var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="prodImage" onchange="previewImage(this,\'prodPreview\')"><div id="prodPreview">' + ip + '</div></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required></div></div>' +
-        // Catégories multiples (checkboxes)
         '<div class="form-row"><div class="form-group" style="min-width:100%;"><label>Catégories</label><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;" id="prodCategories">' + categoriesCheckboxes + '</div></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Prix Achat</label><input type="number" id="prodPA" value="' + (data.prixAchat || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div></div>' +
@@ -214,13 +213,12 @@ function saveProduct() {
             ingredients.push({ idStock: stockId, nom: stockItem ? stockItem.nom : '', quantite: parseFloat(qtyInput.value), unite: stockItem ? stockItem.unite : '' });
         }
     });
-    // Récupérer les catégories cochées
     var selectedCategories = Array.from(document.querySelectorAll('.prod-cat-check:checked')).map(function(cb) { return cb.value; });
     var sf = function(img) {
         var d = {
             nom: n,
-            categories: selectedCategories,               // tableau des catégories
-            categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',  // rétrocompatibilité
+            categories: selectedCategories,
+            categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',
             prixAchat: parseFloat(document.getElementById('prodPA').value) || 0,
             prixVente: parseFloat(document.getElementById('prodPV').value) || 0,
             prixPromo: parseFloat(document.getElementById('prodPromo').value) || 0,
@@ -380,4 +378,4 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre)');
