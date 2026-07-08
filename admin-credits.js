@@ -1,6 +1,5 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
-// Gestion des crédits – Articles visibles + Paiement redirigé vers le POS
-// Sélection multiple + Tout sélectionner + Hors ligne
+// Gestion des crédits – Recherche étendue, articles, redirection POS, hors ligne
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
@@ -56,7 +55,6 @@ async function loadCreditsPage(c) {
         }
     }
 
-    // Interface – la zone de paiement intégrée est supprimée
     c.innerHTML = '<div class="content-card">' +
         '<div class="card-header">' +
         '<h3><i class="fas fa-credit-card"></i> Crédits</h3>' +
@@ -133,6 +131,7 @@ async function loadCredits() {
     applyCreditsFilters();
 }
 
+// ========== FILTRES (RECHERCHE ÉTENDUE) ==========
 function applyCreditsFilters() {
     var filtered = filterByPeriod(window.allCreditsData, window.creditsPeriod);
 
@@ -140,7 +139,12 @@ function applyCreditsFilters() {
         var q = normalize(window.creditsSearch.trim());
         filtered = filtered.filter(function(credit) {
             var creditName = normalize(credit.clientName || '');
-            return creditName.indexOf(q) !== -1;
+            var creditDesc = normalize(credit.description || '');
+            var creditTable = normalize(credit.table || '');
+            // Recherche dans le nom du client, la description du crédit, le numéro de table
+            return creditName.indexOf(q) !== -1 ||
+                   creditDesc.indexOf(q) !== -1 ||
+                   creditTable.indexOf(q) !== -1;
         });
     }
 
@@ -187,7 +191,7 @@ function renderCreditsTable() {
         makeSortableHeader('credits', 'factureNum', 'Facture', 'renderCreditsTable') +
         makeSortableHeader('credits', 'createdAt', 'Date', 'renderCreditsTable') +
         makeSortableHeader('credits', 'clientName', 'Client', 'renderCreditsTable') +
-        '<th>Articles</th>' +                                                               // Nouvelle colonne
+        '<th>Articles</th>' +
         makeSortableHeader('credits', 'total', 'Total', 'renderCreditsTable') +
         makeSortableHeader('credits', 'amountGiven', 'Payé', 'renderCreditsTable') +
         makeSortableHeader('credits', 'remainingAmount', 'Restant', 'renderCreditsTable') +
@@ -208,7 +212,6 @@ function renderCreditsTable() {
         var amountPaid = d.amountGiven || 0;
         var mode = d.paymentMethod || '-';
 
-        // Construction de la colonne Articles
         var articlesHtml = '';
         if (d.items && d.items.length > 0) {
             articlesHtml = d.items.map(function(it) {
@@ -220,7 +223,6 @@ function renderCreditsTable() {
 
         var actions = '<button class="btn-edit" onclick="printFacture(\'' + d.id + '\')"><i class="fas fa-print"></i></button> ';
         if (!d.paid) {
-            // Nouveau bouton Payer : redirige vers le POS
             actions += '<button class="btn-add" style="padding:4px 8px;font-size:0.65rem;" onclick="payerCredit(\'' + d.id + '\')">Payer</button> ';
         }
 
@@ -389,7 +391,6 @@ async function payerCredit(creditId) {
         return;
     }
 
-    // Stocker les données du crédit dans localStorage, comme pour les commandes/ventes
     localStorage.setItem('posPayerCredit', JSON.stringify({
         creditId: credit.id,
         clientId: credit.clientId || null,
@@ -402,15 +403,14 @@ async function payerCredit(creditId) {
         factureNum: credit.factureNum || ''
     }));
 
-    // Redirection vers le POS
     if (typeof navigateTo === 'function') {
         navigateTo('pos');
     } else {
-        window.location.href = '#'; // fallback
+        window.location.href = '#';
     }
 }
 
-// ---------- RECHERCHE CLIENT ----------
+// ---------- RECHERCHE CLIENT (DROPDOWN) ----------
 function searchClientInCreditsDropdown(query) {
     var q = query.toLowerCase().trim();
     var dropdown = document.getElementById('creditsClientDropdown');
@@ -547,7 +547,7 @@ async function deleteCredit(id) {
     }
 }
 
-// Fonction de fermeture de la sélection (appelée par Annuler)
+// Fonction de fermeture de la sélection
 function closeCreditSelection() {
     window.creditSelectionMode = false;
     window.creditSelectedIds = [];
@@ -583,7 +583,6 @@ window.deleteCredit = deleteCredit;
 window.saveEditCredit = saveEditCredit;
 window.normalize = normalize;
 
-// Nouvelles fonctions
 window.toggleCreditSelectionMode = toggleCreditSelectionMode;
 window.toggleCreditSelection = toggleCreditSelection;
 window.deleteSelectedCredits = deleteSelectedCredits;
@@ -594,4 +593,4 @@ window.deselectAllVisibleCredits = deselectAllVisibleCredits;
 window.payerCredit = payerCredit;
 window.closeCreditSelection = closeCreditSelection;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits chargé (articles + redirection POS)');
+console.log('🛒 Mixmax Minimarket - Admin Credits chargé (recherche étendue, articles, POS)');
