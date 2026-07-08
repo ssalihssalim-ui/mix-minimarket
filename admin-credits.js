@@ -1,11 +1,15 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
-// Gestion des crédits – Recherche étendue, articles, redirection POS, hors ligne
+// Gestion des crédits – Final : sélection multiple, recherche client avancée, POS, hors ligne
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
 window.creditSelectionMode = false;
 window.creditSelectedIds = [];
 window.allCreditsData = window.allCreditsData || [];
+
+// Index pour la recherche dans la description des clients
+window.clientDescriptionIndex = {};
+window.clientDescriptionWordIndex = {};
 
 function normalize(str) {
     return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -20,7 +24,7 @@ async function loadCreditsPage(c) {
     if (!window.sortOrders.credits) window.sortOrders.credits = {};
     if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
 
-    // Chargement des clients pour le dropdown (ne bloque pas l'affichage)
+    // Chargement des clients pour le dropdown et pour l'index de recherche
     if (!window.posAllClients || window.posAllClients.length === 0) {
         const cachedClients = await CacheDB.getAll('clients');
         if (cachedClients.length) {
@@ -55,6 +59,9 @@ async function loadCreditsPage(c) {
         }
     }
 
+    // Construire l'index des descriptions clients
+    buildClientDescriptionIndex();
+
     c.innerHTML = '<div class="content-card">' +
         '<div class="card-header">' +
         '<h3><i class="fas fa-credit-card"></i> Crédits</h3>' +
@@ -75,6 +82,34 @@ async function loadCreditsPage(c) {
         '</div>';
 
     loadCredits();
+}
+
+function buildClientDescriptionIndex() {
+    window.clientDescriptionIndex = {};
+    window.clientDescriptionWordIndex = {};
+    if (window.posAllClients && window.posAllClients.length) {
+        window.posAllClients.forEach(c => {
+            if (c.id && c.description) {
+                window.clientDescriptionIndex[c.id] = c.description.toLowerCase().trim();
+            }
+        });
+        // Index inversé mot → [clientId, ...]
+        window.posAllClients.forEach(c => {
+            if (c.description) {
+                var desc = c.description.toLowerCase().trim();
+                desc.split(/[\s,;.]+/).forEach(word => {
+                    if (word.length >= 2) {
+                        if (!window.clientDescriptionWordIndex[word]) {
+                            window.clientDescriptionWordIndex[word] = [];
+                        }
+                        if (!window.clientDescriptionWordIndex[word].includes(c.id)) {
+                            window.clientDescriptionWordIndex[word].push(c.id);
+                        }
+                    }
+                });
+            }
+        });
+    }
 }
 
 async function loadCredits() {
@@ -131,20 +166,48 @@ async function loadCredits() {
     applyCreditsFilters();
 }
 
-// ========== FILTRES (RECHERCHE ÉTENDUE) ==========
+// ========== FILTRES (RECHERCHE ÉTENDUE AUX DESCRIPTIONS CLIENTS) ==========
 function applyCreditsFilters() {
     var filtered = filterByPeriod(window.allCreditsData, window.creditsPeriod);
 
     if (window.creditsSearch && window.creditsSearch.trim() !== '') {
         var q = normalize(window.creditsSearch.trim());
         filtered = filtered.filter(function(credit) {
+            // Champs directs du crédit
             var creditName = normalize(credit.clientName || '');
             var creditDesc = normalize(credit.description || '');
             var creditTable = normalize(credit.table || '');
-            // Recherche dans le nom du client, la description du crédit, le numéro de table
-            return creditName.indexOf(q) !== -1 ||
-                   creditDesc.indexOf(q) !== -1 ||
-                   creditTable.indexOf(q) !== -1;
+            if (creditName.indexOf(q) !== -1 || creditDesc.indexOf(q) !== -1 || creditTable.indexOf(q) !== -1) {
+                return true;
+            }
+
+            // Recherche dans la description du client associé (par clientId)
+            var clientId = credit.clientId;
+            if (clientId && window.clientDescriptionIndex && window.clientDescriptionIndex[clientId]) {
+                if (normalize(window.clientDescriptionIndex[clientId]).indexOf(q) !== -1) {
+                    return true;
+                }
+            }
+
+            // Recherche via l'index inversé des descriptions clients
+            if (clientId && window.clientDescriptionWordIndex && window.clientDescriptionWordIndex[q]) {
+                if (window.clientDescriptionWordIndex[q].includes(clientId)) {
+                    return true;
+                }
+            }
+
+            // Fallback : si pas de clientId, chercher par nom/prénom du client et vérifier sa description
+            if (!clientId && credit.clientName && window.posAllClients) {
+                var matchingClient = window.posAllClients.find(c => {
+                    var full = (c.nom + ' ' + c.prenom).toLowerCase().trim();
+                    return full === normalize(credit.clientName);
+                });
+                if (matchingClient && normalize(matchingClient.description || '').indexOf(q) !== -1) {
+                    return true;
+                }
+            }
+
+            return false;
         });
     }
 
@@ -268,7 +331,7 @@ function renderCreditsTable() {
 function toggleCreditSelectionMode() {
     window.creditSelectionMode = !window.creditSelectionMode;
     window.creditSelectedIds = [];
-    // Reset bouton "Tout sélectionner"
+    // Réinitialiser le bouton "Tout sélectionner"
     var selectAllBtn = document.getElementById('selectAllBtn');
     if (selectAllBtn) {
         selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
@@ -547,7 +610,6 @@ async function deleteCredit(id) {
     }
 }
 
-// Fonction de fermeture de la sélection
 function closeCreditSelection() {
     window.creditSelectionMode = false;
     window.creditSelectedIds = [];
@@ -592,5 +654,6 @@ window.selectAllVisibleCredits = selectAllVisibleCredits;
 window.deselectAllVisibleCredits = deselectAllVisibleCredits;
 window.payerCredit = payerCredit;
 window.closeCreditSelection = closeCreditSelection;
+window.buildClientDescriptionIndex = buildClientDescriptionIndex;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits chargé (recherche étendue, articles, POS)');
+console.log('🛒 Mixmax Minimarket - Admin Credits chargé (recherche client avancée, POS, hors ligne)');
