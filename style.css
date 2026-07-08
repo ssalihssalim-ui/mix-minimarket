@@ -437,12 +437,14 @@ body {
     transition: var(--transition);
 }
 .pos-cat-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
-/* 🔥 Images des catégories légèrement réduites */
+/* 🔥 Images des catégories limitées à 50x50px */
 .pos-cat-btn img {
-    width: 16px;
-    height: 16px;
+    width: auto;
+    height: auto;
+    max-width: 50px;
+    max-height: 50px;
     border-radius: 4px;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .pos-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
