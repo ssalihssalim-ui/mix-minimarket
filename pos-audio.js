@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Filtres de période → selecteur | Recherche client → barre de recherche
+// ✅ Navigation prioritaire sur le paiement | Filtres de période → selecteur | Recherche client → barre
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -275,48 +275,13 @@ function detectPeriodFilter(transcript) {
     return null;
 }
 
+// ========== PARSE VOICE COMMAND (NAVIGATION PRIORITAIRE) ==========
 function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
 
-    if (voiceMode === 'quantity') {
-        var num = extractNumberFromTranscript(cleaned);
-        if (num !== null && num > 0) return { type: 'number', value: num };
-        return { type: 'ignore' };
-    }
-
-    if (voiceMode === 'payment' || (currentPage === 'POS' && (window.posStep || 0) === 2)) {
-        switch (window.voicePaymentState) {
-            case 0:
-                if (window.posAllClients) {
-                    var clients = fastFindClient(cleaned);
-                    if (clients.length === 1) return { type: 'client', client: clients[0] };
-                    if (clients.length > 1) {
-                        var best = clients.find(function(c) { return (c.nom + ' ' + c.prenom).toLowerCase().indexOf(cleaned) !== -1; }) || clients[0];
-                        return { type: 'client', client: best };
-                    }
-                }
-                var pm0 = detectPaymentMode(cleaned);
-                if (pm0) return { type: 'payment_mode', mode: pm0 };
-                return { type: 'ignore' };
-            case 1:
-                var pm = detectPaymentMode(cleaned);
-                if (pm) return { type: 'payment_mode', mode: pm };
-                return { type: 'ignore' };
-            case 2:
-                var n = extractNumberFromTranscript(cleaned);
-                if (n !== null && n > 0) return { type: 'number', value: n };
-                if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
-                return { type: 'ignore' };
-        }
-    }
-
-    var period = detectPeriodFilter(cleaned);
-    if (period !== null) {
-        return { type: 'period_filter', period: period };
-    }
-
-    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises') || cleaned.includes('credit')) {
+    // ⚡ NAVIGATION EN PREMIER (prioritaire même en mode paiement)
+    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises')) {
         return { type: 'navigate', page: 'credits' };
     }
     if (cleaned.includes('ventes') || cleaned.includes('vente') || cleaned.includes('historique ventes') || cleaned.includes('recettes')) {
@@ -350,6 +315,47 @@ function parseVoiceCommand(transcript) {
         return { type: 'navigate', page: 'options' };
     }
 
+    // Période (après navigation, car "crédits" pourrait être ambigu)
+    var period = detectPeriodFilter(cleaned);
+    if (period !== null) {
+        return { type: 'period_filter', period: period };
+    }
+
+    // MODE QUANTITÉ
+    if (voiceMode === 'quantity') {
+        var num = extractNumberFromTranscript(cleaned);
+        if (num !== null && num > 0) return { type: 'number', value: num };
+        return { type: 'ignore' };
+    }
+
+    // MODE PAIEMENT (uniquement si pas déjà une navigation)
+    if (voiceMode === 'payment' || (currentPage === 'POS' && (window.posStep || 0) === 2)) {
+        switch (window.voicePaymentState) {
+            case 0:
+                if (window.posAllClients) {
+                    var clients = fastFindClient(cleaned);
+                    if (clients.length === 1) return { type: 'client', client: clients[0] };
+                    if (clients.length > 1) {
+                        var best = clients.find(function(c) { return (c.nom + ' ' + c.prenom).toLowerCase().indexOf(cleaned) !== -1; }) || clients[0];
+                        return { type: 'client', client: best };
+                    }
+                }
+                var pm0 = detectPaymentMode(cleaned);
+                if (pm0) return { type: 'payment_mode', mode: pm0 };
+                return { type: 'ignore' };
+            case 1:
+                var pm = detectPaymentMode(cleaned);
+                if (pm) return { type: 'payment_mode', mode: pm };
+                return { type: 'ignore' };
+            case 2:
+                var n = extractNumberFromTranscript(cleaned);
+                if (n !== null && n > 0) return { type: 'number', value: n };
+                if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
+                return { type: 'ignore' };
+        }
+    }
+
+    // RECHERCHE PRODUIT (POS / Admin)
     if (voiceMode === 'search') {
         if ((currentPage === 'POS' || currentPage === 'Dashboard') && (window.posStep || 0) === 1) {
             var products = window.posProductsList || [];
@@ -396,7 +402,7 @@ function handleVoiceCommand(cmd) {
                 '365': "1 an",
                 'all': "Tout"
             };
-            
+
             if (cp === 'Crédits') {
                 var periodSelect = document.getElementById('creditsPeriodSelect');
                 if (periodSelect) {
@@ -657,12 +663,12 @@ function posStartVoiceRecording() {
             else interim += t;
         }
         var cp = document.getElementById('pageTitle')?.textContent || '';
-        
+
         if (cp === 'Crédits') {
             var vd = document.getElementById('creditsVoiceDisplay');
             var searchInput = document.getElementById('creditsSearchInput');
             var periodSelect = document.getElementById('creditsPeriodSelect');
-            
+
             if (vd && searchInput && periodSelect) {
                 if (final) {
                     var period = detectPeriodFilter(final);
@@ -702,7 +708,7 @@ function posStartVoiceRecording() {
             var vd2 = document.getElementById('ventesVoiceDisplay');
             var searchInput = document.getElementById('ventesSearchInput');
             var periodSelect = document.getElementById('ventesPeriodSelect');
-            
+
             if (vd2 && searchInput && periodSelect) {
                 if (final) {
                     var period = detectPeriodFilter(final);
@@ -844,4 +850,4 @@ window.buildProductIndex = buildProductIndex;
 window.buildProductAdminIndex = buildProductAdminIndex;
 window.fastFindProductAdmin = fastFindProductAdmin;
 
-console.log('🎤 Module vocal – recherche produit instantanée (POS + Admin, index permanent) OK');
+console.log('🎤 Module vocal – recherche produit instantanée (POS + Admin, navigation prioritaire) OK');
