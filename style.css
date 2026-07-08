@@ -1771,6 +1771,49 @@ body {
     .pos-products-panel {
         max-height: 400px;
     }
+    /* 🆕 Améliorations pour le panier et le paiement sur téléphone */
+    .pos-cart-item {
+        padding: 10px 0;
+    }
+    .pos-cart-item-name {
+        font-size: 0.9rem;
+    }
+    .pos-cart-item-price {
+        font-size: 0.7rem;
+    }
+    .pos-cart-item-total {
+        font-size: 0.85rem;
+    }
+    .pos-cart-footer {
+        padding-top: 12px;
+    }
+    .pos-validate-btn,
+    .pos-finalize-btn {
+        padding: 14px;
+        font-size: 1rem;
+    }
+    /* 🆕 Paiement : champs plus grands */
+    .pos-payment-section input[type="text"],
+    .pos-payment-section input[type="number"],
+    .pos-payment-section select {
+        padding: 12px 14px;
+        font-size: 1rem;
+    }
+    /* 🆕 Menu mobile : icônes plus grosses et espacement */
+    .nav-item {
+        padding: 14px 18px;
+        font-size: 0.9rem;
+    }
+    .nav-item i {
+        font-size: 1.1rem;
+        width: 28px;
+    }
+    /* 🆕 Listes (tables) : scroll horizontal déjà présent, on améliore la lisibilité */
+    .data-table th,
+    .data-table td {
+        padding: 8px 10px;
+        font-size: 0.7rem;
+    }
 }
 
 @media(max-width:480px) {
@@ -1835,6 +1878,32 @@ body {
     }
     .pos-product-price {
         font-size: 0.7rem;
+    }
+    /* 🆕 Améliorations supplémentaires pour très petits écrans */
+    .pos-cart-item-name {
+        font-size: 0.8rem;
+    }
+    .pos-cart-item-actions {
+        gap: 2px;
+    }
+    .pos-qty-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+    }
+    .pos-qty-value {
+        font-size: 0.9rem;
+    }
+    .pos-cart-total-row span:last-child {
+        font-size: 1rem;
+    }
+    .pos-validate-btn,
+    .pos-finalize-btn {
+        padding: 16px;
+        font-size: 0.9rem;
+    }
+    .nav-item {
+        padding: 12px 16px;
     }
 }
 
