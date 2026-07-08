@@ -1,5 +1,5 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
-// Gestion des crédits – Recherche étendue aux descriptions clients, sélection multiple, POS, hors ligne
+// Gestion des crédits – Complet, sans erreur
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
@@ -24,7 +24,7 @@ async function loadCreditsPage(c) {
     if (!window.sortOrders.credits) window.sortOrders.credits = {};
     if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
 
-    // Chargement des clients pour le dropdown et pour l'index de recherche
+    // Chargement des clients
     if (!window.posAllClients || window.posAllClients.length === 0) {
         const cachedClients = await CacheDB.getAll('clients');
         if (cachedClients.length) {
@@ -59,7 +59,6 @@ async function loadCreditsPage(c) {
         }
     }
 
-    // Construire l'index des descriptions clients
     buildClientDescriptionIndex();
 
     c.innerHTML = '<div class="content-card">' +
@@ -118,7 +117,7 @@ async function loadCredits() {
         vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
     }
 
-    // 1. Afficher le cache immédiatement
+    // 1. Cache
     const cached = await CacheDB.getAll('credits');
     if (cached.length) {
         window.allCreditsData = cached;
@@ -133,7 +132,7 @@ async function loadCredits() {
         applyCreditsFilters();
     }
 
-    // 2. Si en ligne, synchroniser avec Firestore
+    // 2. En ligne
     if (navigator.onLine) {
         try {
             const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').limit(2000).get();
@@ -165,14 +164,12 @@ async function loadCredits() {
     applyCreditsFilters();
 }
 
-// ========== FILTRES (RECHERCHE ÉTENDUE AUX DESCRIPTIONS CLIENTS) ==========
 function applyCreditsFilters() {
     var filtered = filterByPeriod(window.allCreditsData, window.creditsPeriod);
 
     if (window.creditsSearch && window.creditsSearch.trim() !== '') {
         var q = normalize(window.creditsSearch.trim());
         filtered = filtered.filter(function(credit) {
-            // Champs directs du crédit
             var creditName = normalize(credit.clientName || '');
             var creditDesc = normalize(credit.description || '');
             var creditTable = normalize(credit.table || '');
@@ -180,7 +177,6 @@ function applyCreditsFilters() {
                 return true;
             }
 
-            // Recherche dans la description du client associé (par clientId)
             var clientId = credit.clientId;
             if (clientId && window.clientDescriptionIndex && window.clientDescriptionIndex[clientId]) {
                 if (normalize(window.clientDescriptionIndex[clientId]).indexOf(q) !== -1) {
@@ -188,14 +184,12 @@ function applyCreditsFilters() {
                 }
             }
 
-            // Recherche via l'index inversé des descriptions clients
             if (clientId && window.clientDescriptionWordIndex && window.clientDescriptionWordIndex[q]) {
                 if (window.clientDescriptionWordIndex[q].includes(clientId)) {
                     return true;
                 }
             }
 
-            // Fallback : si pas de clientId, chercher par nom/prénom du client et vérifier sa description
             if (!clientId && credit.clientName && window.posAllClients) {
                 var matchingClient = window.posAllClients.find(c => {
                     var full = (c.nom + ' ' + c.prenom).toLowerCase().trim();
@@ -654,4 +648,4 @@ window.payerCredit = payerCredit;
 window.closeCreditSelection = closeCreditSelection;
 window.buildClientDescriptionIndex = buildClientDescriptionIndex;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits chargé (recherche client avancée, POS, hors ligne)');
+console.log('🛒 Mixmax Minimarket - Admin Credits chargé');
