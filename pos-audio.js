@@ -1,6 +1,6 @@
 // ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
 // Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Navigation prioritaire sur le paiement | Filtres de période → selecteur | Recherche client → barre
+// ✅ Redirection prioritaire vers les crédits depuis n'importe quelle page
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -275,7 +275,6 @@ function detectPeriodFilter(transcript) {
     return null;
 }
 
-// ========== PARSE VOICE COMMAND (NAVIGATION PRIORITAIRE) ==========
 function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
@@ -315,7 +314,7 @@ function parseVoiceCommand(transcript) {
         return { type: 'navigate', page: 'options' };
     }
 
-    // Période (après navigation, car "crédits" pourrait être ambigu)
+    // Période
     var period = detectPeriodFilter(cleaned);
     if (period !== null) {
         return { type: 'period_filter', period: period };
@@ -762,9 +761,28 @@ function posStartVoiceRecording() {
                 }
             }
         } else {
+            // 🔥 BLOC MODIFIÉ : redirection forcée vers les crédits avant toute autre action
             var si = document.getElementById('posSearchInput');
             if (si) {
                 if (final) {
+                    var lowerFinal = final.toLowerCase().trim();
+                    // Si l'utilisateur dit "crédits", "impayés", etc., on redirige immédiatement
+                    if (lowerFinal.includes('crédits') || lowerFinal.includes('impayés') || 
+                        lowerFinal.includes('dettes') || lowerFinal.includes('ardoises') ||
+                        lowerFinal.includes('liste des crédits')) {
+                        if (typeof navigateTo === 'function') {
+                            navigateTo('credits');
+                        }
+                        if (typeof showVoiceResult === 'function') {
+                            showVoiceResult('📍 Crédits');
+                        }
+                        lastInterim = '';
+                        // On nettoie le champ de recherche pour ne pas laisser de trace
+                        si.value = '';
+                        return;
+                    }
+                    
+                    // Sinon, comportement normal
                     si.value = final;
                     var event = new Event('input', { bubbles: true });
                     si.dispatchEvent(event);
@@ -850,4 +868,4 @@ window.buildProductIndex = buildProductIndex;
 window.buildProductAdminIndex = buildProductAdminIndex;
 window.fastFindProductAdmin = fastFindProductAdmin;
 
-console.log('🎤 Module vocal – recherche produit instantanée (POS + Admin, navigation prioritaire) OK');
+console.log('🎤 Module vocal – redirection crédits prioritaire OK');
