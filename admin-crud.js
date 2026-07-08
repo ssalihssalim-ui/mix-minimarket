@@ -1,5 +1,5 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
-// Contient : Catégories, Produits (avec Favori), Clients, Fournisseurs
+// Contient : Catégories, Produits (catégories multiples), Clients, Fournisseurs
 // Dépend de : admin.js (variables globales, fonctions utilitaires)
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
@@ -76,7 +76,7 @@ function saveCategory() {
     if (f) fileToBase64(f, sf); else sf(null);
 }
 
-// ==================== PRODUITS (AVEC FAVORI) ====================
+// ==================== PRODUITS (CATÉGORIES MULTIPLES) ====================
 async function loadStockForProductForm() {
     if (typeof allStockData === 'undefined' || allStockData.length === 0) {
         try { const snap = await db.collection('stock').orderBy('nom').get(); allStockData = []; snap.forEach(d => { let dd = d.data(); dd.id = d.id; allStockData.push(dd); }); } catch (e) { console.error(e); }
@@ -108,12 +108,12 @@ function loadProductsPage(c) {
         '<select id="categoryFilter" onchange="filterProducts()"><option value="">Toutes catégories</option></select>' +
         '<button class="btn-add" onclick="openProductForm()"><i class="fas fa-plus"></i> Nouveau</button></div></div>' +
         '<div class="table-container"><table class="data-table" id="productsTable" style="font-size:0.7rem;"><thead><tr><th>Img</th>' +
-        makeSortableHeader('products', 'nom', 'Nom', 'loadProducts') + makeSortableHeader('products', 'categorie', 'Catégorie', 'loadProducts') +
+        makeSortableHeader('products', 'nom', 'Nom', 'loadProducts') + '<th>Catégories</th>' +
         makeSortableHeader('products', 'prixAchat', 'Achat', 'loadProducts') + makeSortableHeader('products', 'prixVente', 'Vente', 'loadProducts') +
         makeSortableHeader('products', 'prixPromo', 'Promo', 'loadProducts') + makeSortableHeader('products', 'profit', 'Profit', 'loadProducts') +
         makeSortableHeader('products', 'stock', 'Stock', 'loadProducts') + makeSortableHeader('products', 'vendues', 'Vendues', 'loadProducts') +
         makeSortableHeader('products', 'ca', 'CA', 'loadProducts') + makeSortableHeader('products', 'disponible', 'Dispo', 'loadProducts') +
-        '<th>⭐ Favori</th><th>Temps</th><th>Desc</th><th>Actions</th></thead><tbody></tbody></div><div id="productsPagination"></div></div>';
+        '<th>Temps</th><th>Desc</th><th>Actions</th></thead><tbody></tbody></div><div id="productsPagination"></div></div>';
     loadCategoriesInFilter(); loadProducts();
 }
 
@@ -138,7 +138,16 @@ async function loadProducts() {
 function renderProductsTable() {
     var tb = document.querySelector('#productsTable tbody'); if (!tb) return;
     var data = window.allProductsData.slice();
-    if (selectedCategoryFilter) data = data.filter(function(d) { return d.categorie === selectedCategoryFilter; });
+    // Filtre par catégorie (gère categories multiples + ancien champ categorie)
+    if (selectedCategoryFilter) {
+        data = data.filter(function(d) {
+            if (d.categories && d.categories.length > 0) {
+                return d.categories.includes(selectedCategoryFilter);
+            }
+            return d.categorie === selectedCategoryFilter;
+        });
+    }
+    // Filtre de recherche
     if (window.productSearchQuery) {
         var q = window.productSearchQuery;
         data = data.filter(function(d) {
@@ -148,30 +157,44 @@ function renderProductsTable() {
     }
     data = applySort('products', data, 'nom'); var pageData = getPageData('products', data);
     tb.innerHTML = '';
-    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
+    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:30px;height:30px;object-fit:cover;border-radius:4px;">' : '<i class="fas fa-box" style="color:#94a3b8;"></i>';
         var disp = d.disponible !== false ? '<span class="status-success">Oui</span>' : '<span class="status-danger">Non</span>';
         var profitVal = (d.profit !== undefined && !isNaN(d.profit)) ? d.profit : 0; var pc = profitVal >= 0 ? '#2E7D32' : '#dc2626';
-        var favoriBadge = d.favori ? '<span style="color:#f59e0b;">⭐ Oui</span>' : '<span style="color:#9ca3af;">Non</span>';
-        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(d.categorie || '-') + '</td><td>' + ((d.prixAchat || 0).toFixed(2)) + '</td><td>' + ((d.prixVente || 0).toFixed(2)) + '</td><td>' + ((d.prixPromo || 0).toFixed(2)) + '</td><td style="color:' + pc + ';">' + profitVal.toFixed(2) + '</td><td>' + (d.stock || 0) + '</td><td>' + (d.vendues || 0) + '</td><td>' + ((d.ca || 0).toFixed(2)) + '</td><td>' + disp + '</td><td>' + favoriBadge + '</td><td>' + (d.tempsPrep || '-') + '</td><td>' + (d.description || '-') + '</td><td><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        // Affichage des catégories multiples
+        var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories.join(', ') : (d.categorie || '-');
+        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(categoriesDisplay) + '</td><td>' + ((d.prixAchat || 0).toFixed(2)) + '</td><td>' + ((d.prixVente || 0).toFixed(2)) + '</td><td>' + ((d.prixPromo || 0).toFixed(2)) + '</td><td style="color:' + pc + ';">' + profitVal.toFixed(2) + '</td><td>' + (d.stock || 0) + '</td><td>' + (d.vendues || 0) + '</td><td>' + ((d.ca || 0).toFixed(2)) + '</td><td>' + disp + '</td><td>' + (d.tempsPrep || '-') + '</td><td>' + (d.description || '-') + '</td><td><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
     }
     document.getElementById('productsPagination').innerHTML = getPaginationHTML('products', data.length);
 }
 
 async function openProductForm(data) {
     data = data || {}; await loadStockForProductForm();
-    var co = ''; try { var cs = await db.collection('categories').get(); cs.forEach(function(d) { var sel = data.categorie === d.data().nom ? 'selected' : ''; co += '<option value="' + escapeHtml(d.data().nom) + '" ' + sel + '>' + escapeHtml(d.data().nom) + '</option>'; }); } catch (e) { }
+    // Construction des cases à cocher pour les catégories (multi-sélection)
+    var categoriesCheckboxes = '';
+    try {
+        var cs = await db.collection('categories').get();
+        cs.forEach(function(d) {
+            var catName = d.data().nom;
+            // Coche si la catégorie est présente dans data.categories (tableau) ou data.categorie (ancien champ)
+            var checked = '';
+            if (data.categories && data.categories.includes(catName)) checked = 'checked';
+            else if (!data.categories && data.categorie === catName) checked = 'checked';
+            categoriesCheckboxes += '<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.8rem;margin-right:4px;margin-bottom:4px;">' +
+                '<input type="checkbox" class="prod-cat-check" value="' + escapeHtml(catName) + '" ' + checked + '> ' + escapeHtml(catName) + '</label>';
+        });
+    } catch (e) { }
     var ip = data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:100px;">' : '';
     var dy = data.disponible !== false ? 'selected' : '', dn = data.disponible === false ? 'selected' : '';
     var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="prodImage" onchange="previewImage(this,\'prodPreview\')"><div id="prodPreview">' + ip + '</div></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required></div><div class="form-group"><label>Catégorie</label><select id="prodCat"><option value="">-</option>' + co + '</select></div></div>' +
+        '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required></div></div>' +
+        // Catégories multiples (checkboxes)
+        '<div class="form-row"><div class="form-group" style="min-width:100%;"><label>Catégories</label><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;" id="prodCategories">' + categoriesCheckboxes + '</div></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Prix Achat</label><input type="number" id="prodPA" value="' + (data.prixAchat || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min"></div><div class="form-group"><label>Disponible</label><select id="prodDispo"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div></div>' +
-        // ✅ Champ Favori
-        '<div class="form-row"><div class="form-group"><label>⭐ Favori</label><div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="prodFavori" ' + (data.favori ? 'checked' : '') + ' style="width:20px; height:20px;"><span>Mettre en favori</span></div></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Description</label><textarea id="prodDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>';
     h += '<div class="form-row" style="flex-direction:column;"><label style="font-weight:600; margin-bottom:10px;">🧾 Recette (ingrédients du stock)</label><div id="productIngredientsList" style="display:flex; flex-direction:column; gap:8px;">';
     if (data.ingredients && data.ingredients.length > 0) { data.ingredients.forEach(function(ing, idx) { h += renderIngredientRow(idx, ing); }); }
@@ -191,10 +214,13 @@ function saveProduct() {
             ingredients.push({ idStock: stockId, nom: stockItem ? stockItem.nom : '', quantite: parseFloat(qtyInput.value), unite: stockItem ? stockItem.unite : '' });
         }
     });
+    // Récupérer les catégories cochées
+    var selectedCategories = Array.from(document.querySelectorAll('.prod-cat-check:checked')).map(function(cb) { return cb.value; });
     var sf = function(img) {
         var d = {
             nom: n,
-            categorie: document.getElementById('prodCat').value,
+            categories: selectedCategories,               // tableau des catégories
+            categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',  // rétrocompatibilité
             prixAchat: parseFloat(document.getElementById('prodPA').value) || 0,
             prixVente: parseFloat(document.getElementById('prodPV').value) || 0,
             prixPromo: parseFloat(document.getElementById('prodPromo').value) || 0,
@@ -204,8 +230,7 @@ function saveProduct() {
             tempsPrep: document.getElementById('prodTemps').value,
             disponible: document.getElementById('prodDispo').value === '1',
             description: document.getElementById('prodDesc').value,
-            ingredients: ingredients,
-            favori: document.getElementById('prodFavori').checked   // ✅ champ favori
+            ingredients: ingredients
         };
         if (img) d.imageBase64 = img;
         if (editingId) { 
@@ -355,4 +380,4 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (allProductsData global + Favori)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples)');
