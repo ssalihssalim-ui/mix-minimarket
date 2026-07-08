@@ -471,25 +471,32 @@ body {
     .login-brand, .register-brand { padding: 24px 16px 16px; }
     .main-content { padding: 12px 8px; }
     .pos-container { gap: 10px; }
-    .pos-products-panel { padding: 10px; max-height: 45vh; min-height: 350px !important; }
+    /* 🔥 Plus de hauteur pour la zone des produits */
+    .pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
     .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
     .pos-product-card { padding: 8px; }
     .pos-product-img { height: 70px; }
-    .pos-cart-panel { max-height: 40vh; padding: 10px; }
-    .pos-cart-item-name { font-size: 0.9rem; }
-    .pos-cart-item-total { font-size: 0.85rem; }
-    .pos-validate-btn, .pos-finalize-btn { padding: 14px; font-size: 0.95rem; }
-    .pos-payment-btn { padding: 12px 8px; font-size: 0.88rem; }
-    .pos-payment-section input, .pos-payment-form input { padding: 12px 14px !important; font-size: 1rem !important; }
+    /* Panier et paiement plus grands */
+    .pos-cart-panel { max-height: 35vh; padding: 12px; }
+    .pos-cart-item-name { font-size: 0.95rem; }
+    .pos-cart-item-price { font-size: 0.75rem; }
+    .pos-cart-item-total { font-size: 0.9rem; }
+    .pos-validate-btn, .pos-finalize-btn { padding: 15px; font-size: 1rem; }
+    .pos-payment-btn { padding: 14px 10px; font-size: 0.95rem; }
+    .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
+        padding: 14px !important;
+        font-size: 1rem !important;
+    }
 }
 
 @media(max-width:480px) {
     .main-content { padding: 8px 4px; }
     .pos-container { gap: 8px; }
+    /* 🔥 ENCORE PLUS DE HAUTEUR POUR LE CONTENEUR PRODUITS */
     .pos-products-panel {
         height: auto !important;
-        min-height: 380px !important;
-        max-height: 55vh !important;
+        min-height: 430px !important;
+        max-height: 60vh !important;
         flex: 1 1 auto;
         padding: 8px;
     }
@@ -498,16 +505,29 @@ body {
         gap: 6px;
         flex: 1;
         overflow-y: auto;
-        min-height: 220px;
+        min-height: 280px;
     }
     .pos-product-card { padding: 6px; min-height: 110px; }
     .pos-product-img { height: 60px; }
     .pos-product-name { font-size: 0.7rem; }
     .pos-product-price { font-size: 0.75rem; }
-    .pos-cart-panel { max-height: 30vh !important; min-height: 160px; padding: 8px; }
-    .pos-cart-item-name { font-size: 0.85rem; }
-    .pos-validate-btn, .pos-finalize-btn { padding: 16px; font-size: 0.9rem; }
-    .pos-payment-methods { flex-direction: column; gap: 5px; }
-    .pos-payment-btn { padding: 14px; font-size: 0.9rem; }
-    .pos-payment-section input, .pos-payment-form input { padding: 14px !important; font-size: 1rem !important; }
+    /* 🔥 PANIER ET PAIEMENT : BOUTONS ET CHAMPS MAXIMISÉS */
+    .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
+    .pos-cart-item-name { font-size: 0.9rem; }
+    .pos-cart-item-price { font-size: 0.8rem; }
+    .pos-cart-item-total { font-size: 0.9rem; }
+    .pos-cart-total-row { font-size: 1.1rem; }
+    .pos-qty-btn { width: 30px; height: 30px; font-size: 0.75rem; }
+    .pos-qty-value { font-size: 0.9rem; }
+    .pos-validate-btn, .pos-finalize-btn { padding: 18px; font-size: 0.95rem; }
+    .pos-payment-methods { flex-direction: column; gap: 6px; }
+    .pos-payment-btn { padding: 16px; font-size: 0.95rem; }
+    .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
+        padding: 16px !important;
+        font-size: 1.05rem !important;
+    }
+    .pos-payment-section label, .pos-payment-form label {
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+    }
 }
