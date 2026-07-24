@@ -552,3 +552,86 @@ body {
     }
     .pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
 }
+
+/* ==================== AJUSTEMENTS POS MOBILE / TABLETTE ==================== */
+
+/* --- Catégories plus compactes --- */
+@media (max-width: 1024px) {
+    .pos-cat-btn {
+        padding: 6px 12px !important;
+        font-size: 0.75rem !important;
+        gap: 6px !important;
+    }
+    .pos-cat-btn img {
+        max-width: 40px !important;
+        max-height: 40px !important;
+    }
+}
+
+/* --- Panier plus lisible et boutons agrandis --- */
+@media (max-width: 768px) {
+    /* Police des noms d'articles */
+    .pos-cart-item-name {
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+    }
+    /* Prix unitaire */
+    .pos-cart-item-price {
+        font-size: 0.85rem !important;
+    }
+    /* Total par article */
+    .pos-cart-item-total {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+    }
+    /* Boutons +/- */
+    .pos-qty-btn {
+        width: 34px !important;
+        height: 34px !important;
+        font-size: 0.85rem !important;
+    }
+    /* Quantité */
+    .pos-qty-value {
+        font-size: 1rem !important;
+    }
+    /* Total général */
+    .pos-cart-total-row {
+        font-size: 1.3rem !important;
+    }
+    /* Boutons Valider / Finaliser */
+    .pos-validate-btn,
+    .pos-finalize-btn {
+        padding: 14px 18px !important;
+        font-size: 1.1rem !important;
+    }
+    /* Boutons de paiement (espèces, crédit...) */
+    .pos-payment-btn {
+        padding: 12px 14px !important;
+        font-size: 1rem !important;
+    }
+    /* Champ montant donné */
+    .pos-payment-form input,
+    .pos-payment-section input {
+        padding: 12px !important;
+        font-size: 1rem !important;
+    }
+}
+
+/* Sur très petits écrans (480px) on augmente encore légèrement */
+@media (max-width: 480px) {
+    .pos-cart-item-name {
+        font-size: 1.1rem !important;
+    }
+    .pos-cart-item-total {
+        font-size: 1.05rem !important;
+    }
+    .pos-qty-btn {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    .pos-validate-btn,
+    .pos-finalize-btn {
+        padding: 16px 20px !important;
+        font-size: 1.15rem !important;
+    }
+}
