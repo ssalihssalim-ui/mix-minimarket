@@ -490,6 +490,55 @@ body {
     .pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
     .pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
     .pos-products-panel { height: auto; max-height: 50vh; }
+    
+    /* --- Catégories plus compactes (dès 1024px) --- */
+    .pos-cat-btn {
+        padding: 6px 12px !important;
+        font-size: 0.75rem !important;
+        gap: 6px !important;
+    }
+    .pos-cat-btn img {
+        max-width: 40px !important;
+        max-height: 40px !important;
+    }
+    
+    /* --- Panier plus lisible (dès 1024px) --- */
+    .pos-cart-item-name {
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+    }
+    .pos-cart-item-price {
+        font-size: 0.85rem !important;
+    }
+    .pos-cart-item-total {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+    }
+    .pos-qty-btn {
+        width: 34px !important;
+        height: 34px !important;
+        font-size: 0.85rem !important;
+    }
+    .pos-qty-value {
+        font-size: 1rem !important;
+    }
+    .pos-cart-total-row {
+        font-size: 1.3rem !important;
+    }
+    .pos-validate-btn,
+    .pos-finalize-btn {
+        padding: 14px 18px !important;
+        font-size: 1.1rem !important;
+    }
+    .pos-payment-btn {
+        padding: 12px 14px !important;
+        font-size: 1rem !important;
+    }
+    .pos-payment-form input,
+    .pos-payment-section input {
+        padding: 12px !important;
+        font-size: 1rem !important;
+    }
 }
 
 @media(max-width:768px) {
@@ -501,13 +550,8 @@ body {
     .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
     .pos-product-card { padding: 8px; }
     .pos-product-img { height: 70px; }
-    .pos-cat-btn { padding: 14px 26px; font-size: 0.95rem; }
+    /* Les règles du panier étant déjà définies pour 1024px, elles s'appliquent ici aussi */
     .pos-cart-panel { max-height: 35vh; padding: 12px; }
-    .pos-cart-item-name { font-size: 0.95rem; }
-    .pos-cart-item-price { font-size: 0.75rem; }
-    .pos-cart-item-total { font-size: 0.9rem; }
-    .pos-validate-btn, .pos-finalize-btn { padding: 15px; font-size: 1rem; }
-    .pos-payment-btn { padding: 14px 10px; font-size: 0.95rem; }
     .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
         padding: 14px !important;
         font-size: 1rem !important;
@@ -535,15 +579,12 @@ body {
     .pos-product-img { height: 60px; }
     .pos-product-name { font-size: 0.7rem; }
     .pos-product-price { font-size: 0.75rem; }
-    .pos-cat-btn { padding: 16px 24px; font-size: 0.95rem; }
     .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
-    .pos-cart-item-name { font-size: 0.9rem; }
-    .pos-cart-item-price { font-size: 0.8rem; }
-    .pos-cart-item-total { font-size: 0.9rem; }
-    .pos-cart-total-row { font-size: 1.1rem; }
-    .pos-qty-btn { width: 30px; height: 30px; font-size: 0.75rem; }
-    .pos-qty-value { font-size: 0.9rem; }
-    .pos-validate-btn, .pos-finalize-btn { padding: 18px; font-size: 0.95rem; }
+    /* Accentuation supplémentaire pour très petits écrans */
+    .pos-cart-item-name { font-size: 1.1rem !important; }
+    .pos-cart-item-total { font-size: 1.05rem !important; }
+    .pos-qty-btn { width: 36px !important; height: 36px !important; }
+    .pos-validate-btn, .pos-finalize-btn { padding: 16px 20px !important; font-size: 1.15rem !important; }
     .pos-payment-methods { flex-direction: column; gap: 6px; }
     .pos-payment-btn { padding: 16px; font-size: 0.95rem; }
     .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
@@ -551,87 +592,4 @@ body {
         font-size: 1.05rem !important;
     }
     .pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
-}
-
-/* ==================== AJUSTEMENTS POS MOBILE / TABLETTE ==================== */
-
-/* --- Catégories plus compactes --- */
-@media (max-width: 1024px) {
-    .pos-cat-btn {
-        padding: 6px 12px !important;
-        font-size: 0.75rem !important;
-        gap: 6px !important;
-    }
-    .pos-cat-btn img {
-        max-width: 40px !important;
-        max-height: 40px !important;
-    }
-}
-
-/* --- Panier plus lisible et boutons agrandis --- */
-@media (max-width: 768px) {
-    /* Police des noms d'articles */
-    .pos-cart-item-name {
-        font-size: 1.05rem !important;
-        font-weight: 700 !important;
-    }
-    /* Prix unitaire */
-    .pos-cart-item-price {
-        font-size: 0.85rem !important;
-    }
-    /* Total par article */
-    .pos-cart-item-total {
-        font-size: 1rem !important;
-        font-weight: 700 !important;
-    }
-    /* Boutons +/- */
-    .pos-qty-btn {
-        width: 34px !important;
-        height: 34px !important;
-        font-size: 0.85rem !important;
-    }
-    /* Quantité */
-    .pos-qty-value {
-        font-size: 1rem !important;
-    }
-    /* Total général */
-    .pos-cart-total-row {
-        font-size: 1.3rem !important;
-    }
-    /* Boutons Valider / Finaliser */
-    .pos-validate-btn,
-    .pos-finalize-btn {
-        padding: 14px 18px !important;
-        font-size: 1.1rem !important;
-    }
-    /* Boutons de paiement (espèces, crédit...) */
-    .pos-payment-btn {
-        padding: 12px 14px !important;
-        font-size: 1rem !important;
-    }
-    /* Champ montant donné */
-    .pos-payment-form input,
-    .pos-payment-section input {
-        padding: 12px !important;
-        font-size: 1rem !important;
-    }
-}
-
-/* Sur très petits écrans (480px) on augmente encore légèrement */
-@media (max-width: 480px) {
-    .pos-cart-item-name {
-        font-size: 1.1rem !important;
-    }
-    .pos-cart-item-total {
-        font-size: 1.05rem !important;
-    }
-    .pos-qty-btn {
-        width: 36px !important;
-        height: 36px !important;
-    }
-    .pos-validate-btn,
-    .pos-finalize-btn {
-        padding: 16px 20px !important;
-        font-size: 1.15rem !important;
-    }
 }
