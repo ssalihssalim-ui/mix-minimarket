@@ -2,6 +2,7 @@
 // Mixmax Minimarket - Point de vente complet avec virtualisation
 // ✅ Gestion du paiement de crédit depuis admin-credits.js
 // ✅ Tri des catégories par ordre
+// ✅ Bouton Retour réparé (ajout window.posGoToStep1)
 
 var posCart = [];
 var posStep = 1;
@@ -306,6 +307,28 @@ finally { isFinalizing=false; if(fb){ fb.disabled=false; fb.innerHTML='<i class=
 function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userData.role==='caissier'||window.currentUserData.userData.role==='admin')){ if(posCart.length>0&&posStep===1){ if(!confirm('⚠️ '+posCart.length+' article(s) dans le panier. Garder ?')) posResetCart(); } navigateTo('pos'); } }
 if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; document.addEventListener('keydown',function(event){ if(event.key==='Escape'){ var cp=document.getElementById('pageTitle')?.textContent||''; if(cp!=='POS'&&cp!=='Dashboard'&&cp!=='') goBackToPOS(); } if(event.ctrlKey&&(event.key==='p'||event.key==='P')){ event.preventDefault(); if((document.getElementById('pageTitle')?.textContent||'')!=='POS') navigateTo('pos'); } }); }
 
-window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posSearchProducts=posSearchProducts; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
+// ==================== EXPORTS (ajout de posGoToStep1 pour le bouton Retour) ====================
+window.posCart=posCart;
+window.posStep=posStep;
+window.posProductsList=posProductsList;
+window.posAllClients=posAllClients;
+window.posCurrentClient=posCurrentClient;
+window.posCurrentTable=posCurrentTable;
+window.posDiscountMAD=posDiscountMAD;
+window.posAmountGiven=posAmountGiven;
+window.posPaymentMethod=posPaymentMethod;
+window.posResetCart=posResetCart;
+window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions;
+window.posSetPaymentMethod=posSetPaymentMethod;
+window.posCalculateTotal=posCalculateTotal;
+window.posFinalizeSale=posFinalizeSale;
+window.posGoToStep2=posGoToStep2;
+window.posGoToStep1=posGoToStep1;   // ✅ Correction : le bouton Retour fonctionne désormais
+window.posSearchProducts=posSearchProducts;
+window.updateCartOnly=updateCartOnly;
+window.renderPOS=renderPOS;
+window.updatePaymentButtons=updatePaymentButtons;
+window.loadMoreProducts=loadMoreProducts;
+window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 
-console.log('⚡ Mixmax Minimarket - POS chargé (final optimisé avec virtualisation + tri catégories par ordre)');
+console.log('⚡ Mixmax Minimarket - POS chargé (final optimisé avec virtualisation + tri catégories par ordre + bouton Retour OK)');
