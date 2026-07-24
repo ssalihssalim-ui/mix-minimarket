@@ -1,4 +1,4 @@
-==================== POS.JS - LOGIQUE MÉTIER (FINAL OPTIMISÉ) ====================
+// ==================== POS.JS - LOGIQUE MÉTIER (FINAL OPTIMISÉ) ====================
 // Mixmax Minimarket - Point de vente complet avec virtualisation
 // ✅ Gestion du paiement de crédit depuis admin-credits.js
 // ✅ Tri des catégories par ordre
