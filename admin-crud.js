@@ -1,9 +1,40 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
 // Contient : Catégories (avec ordre), Produits (catégories multiples), Clients, Fournisseurs
 // Dépend de : admin.js (variables globales, fonctions utilitaires)
+// ✅ Sélection des catégories produits par liste déroulante multiple + badges
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
+
+// ========== FONCTIONS UTILITAIRES POUR LA SÉLECTION DE CATÉGORIES ==========
+function updateSelectedCategories() {
+    var select = document.getElementById('prodCategoriesSelect');
+    var display = document.getElementById('selectedCategoriesDisplay');
+    if (!select || !display) return;
+    var selected = Array.from(select.selectedOptions).map(opt => opt.value);
+    display.innerHTML = selected.map(function(cat) {
+        return '<span style="background:#111827; color:#fff; padding:4px 10px; border-radius:20px; font-size:0.75rem; display:inline-flex; align-items:center; gap:6px;">' +
+            escapeHtml(cat) +
+            '<span onclick="event.stopPropagation(); this.parentElement.remove(); deselectCategory(\'' + escapeHtml(cat.replace(/'/g, "\\'")) + '\')" style="cursor:pointer; font-weight:bold; margin-left:4px;">×</span>' +
+            '</span>';
+    }).join('');
+}
+
+function deselectCategory(catName) {
+    var select = document.getElementById('prodCategoriesSelect');
+    if (!select) return;
+    for (var i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === catName) {
+            select.options[i].selected = false;
+            break;
+        }
+    }
+    updateSelectedCategories();
+}
+
+// Rendre les fonctions accessibles globalement
+window.updateSelectedCategories = updateSelectedCategories;
+window.deselectCategory = deselectCategory;
 
 // ==================== CATÉGORIES (AVEC ORDRE) ====================
 function loadCategoriesPage(c) {
@@ -174,23 +205,34 @@ function renderProductsTable() {
 
 async function openProductForm(data) {
     data = data || {}; await loadStockForProductForm();
-    var categoriesCheckboxes = '';
+
+    // --- NOUVELLE GESTION DES CATÉGORIES (liste multiple + badges) ---
+    var selectOptions = '';
+    var preselected = data.categories || (data.categorie ? [data.categorie] : []);
     try {
         var cs = await db.collection('categories').get();
         cs.forEach(function(d) {
             var catName = d.data().nom;
-            var checked = '';
-            if (data.categories && data.categories.includes(catName)) checked = 'checked';
-            else if (!data.categories && data.categorie === catName) checked = 'checked';
-            categoriesCheckboxes += '<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.8rem;margin-right:4px;margin-bottom:4px;">' +
-                '<input type="checkbox" class="prod-cat-check" value="' + escapeHtml(catName) + '" ' + checked + '> ' + escapeHtml(catName) + '</label>';
+            var selected = preselected.includes(catName) ? 'selected' : '';
+            selectOptions += '<option value="' + escapeHtml(catName) + '" ' + selected + '>' + escapeHtml(catName) + '</option>';
         });
     } catch (e) { }
+
+    var categoriesHtml = 
+        '<div class="form-group" style="min-width:100%;">' +
+            '<label>Catégories</label>' +
+            '<select id="prodCategoriesSelect" multiple size="5" style="width:100%; padding:8px; border:2px solid #e2e8f0; border-radius:8px; font-size:0.9rem;" onchange="updateSelectedCategories()">' +
+                selectOptions +
+            '</select>' +
+            '<div id="selectedCategoriesDisplay" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>' +
+        '</div>';
+
     var ip = data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:100px;">' : '';
     var dy = data.disponible !== false ? 'selected' : '', dn = data.disponible === false ? 'selected' : '';
+
     var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="prodImage" onchange="previewImage(this,\'prodPreview\')"><div id="prodPreview">' + ip + '</div></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required></div></div>' +
-        '<div class="form-row"><div class="form-group" style="min-width:100%;"><label>Catégories</label><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;" id="prodCategories">' + categoriesCheckboxes + '</div></div></div>' +
+        categoriesHtml +   // <--- remplace l'ancien bloc de catégories
         '<div class="form-row"><div class="form-group"><label>Prix Achat</label><input type="number" id="prodPA" value="' + (data.prixAchat || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min"></div><div class="form-group"><label>Disponible</label><select id="prodDispo"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div></div>' +
@@ -199,7 +241,13 @@ async function openProductForm(data) {
     if (data.ingredients && data.ingredients.length > 0) { data.ingredients.forEach(function(ing, idx) { h += renderIngredientRow(idx, ing); }); }
     h += '</div><button type="button" class="btn-add" onclick="addIngredientRow()" style="margin-top:10px; width:auto;"><i class="fas fa-plus"></i> Ajouter un ingrédient</button></div>';
     h += '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveProduct()">Enregistrer</button>';
-    currentCollection = 'products'; openModal(editingId ? 'Modifier Produit' : 'Nouveau Produit', h);
+    currentCollection = 'products';
+    openModal(editingId ? 'Modifier Produit' : 'Nouveau Produit', h);
+
+    // Afficher les badges des catégories déjà sélectionnées après l'ouverture du modal
+    setTimeout(function() {
+        if (typeof updateSelectedCategories === 'function') updateSelectedCategories();
+    }, 50);
 }
 
 function saveProduct() {
@@ -213,7 +261,11 @@ function saveProduct() {
             ingredients.push({ idStock: stockId, nom: stockItem ? stockItem.nom : '', quantite: parseFloat(qtyInput.value), unite: stockItem ? stockItem.unite : '' });
         }
     });
-    var selectedCategories = Array.from(document.querySelectorAll('.prod-cat-check:checked')).map(function(cb) { return cb.value; });
+
+    // Récupération des catégories depuis le nouveau sélecteur multiple
+    var select = document.getElementById('prodCategoriesSelect');
+    var selectedCategories = select ? Array.from(select.selectedOptions).map(opt => opt.value) : [];
+
     var sf = function(img) {
         var d = {
             nom: n,
@@ -378,4 +430,4 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré)');
