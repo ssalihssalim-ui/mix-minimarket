@@ -440,8 +440,8 @@ body {
 .pos-cat-btn img {
     width: auto;
     height: auto;
-    max-width: 100px;
-    max-height: 100px;
+    max-width: 80px;
+    max-height: 80px;
     border-radius: 6px;
     object-fit: contain;
 }
