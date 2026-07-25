@@ -1,28 +1,20 @@
-// ==================== POS-AUDIO.JS v9.5 – RECHERCHE PRODUIT INSTANTANÉE (POS + ADMIN) ====================
-// Mixmax Minimarket – Reconnaissance vocale optimisée
-// ✅ Redirection prioritaire vers les crédits depuis n'importe quelle page
+// ==================== POS-AUDIO.JS v10 – COMPATIBLE AVEC LE NOUVEAU POS ====================
+// Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
 
 var voiceRecognition = null;
 var isRecording = false;
 var voiceMode = 'search';
 var lastAddedProductId = null;
 var voiceModeMessage = '🎤 Recherche vocale active';
-var lastVoiceCommandTime = 0;
-var voiceFlowPhase = 'idle';
-var voiceFlowIndicator = null;
 var micPermissionGranted = false;
 
 // ========== INDEX CLIENT ==========
 var clientSearchIndex = {};
 var clientIndexBuilt = false;
 
-// ========== INDEX PRODUIT (RAPIDE) ==========
+// ========== INDEX PRODUIT (RAPIDE) – POUR POS ==========
 var productNameIndex = {};
 var productIndexBuilt = false;
-
-// ========== INDEX ADMIN PERMANENT ==========
-window.productAdminIndex = window.productAdminIndex || {};
-window.productAdminIndexBuilt = false;
 
 // ========== PAYMENT STATE MACHINE ==========
 window.voicePaymentState = 0;
@@ -45,16 +37,62 @@ var numberMap = {
     'cinquante': 50, 'soixante': 60, 'cent': 100
 };
 
+// ========== FONCTIONS D'AFFICHAGE VOCAL (MANQUANTES AUPARAVANT) ==========
+
+// Création d'un conteneur pour les messages vocaux s'il n'existe pas
+function ensureVoiceDisplay() {
+    if (!document.getElementById('voiceDisplay')) {
+        var div = document.createElement('div');
+        div.id = 'voiceDisplay';
+        div.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 24px; border-radius:40px; z-index:9999; font-weight:600; display:none; white-space:nowrap;';
+        document.body.appendChild(div);
+    }
+}
+
+function showVoiceResult(msg) {
+    ensureVoiceDisplay();
+    var el = document.getElementById('voiceDisplay');
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(window._voiceTimeout);
+    window._voiceTimeout = setTimeout(function() {
+        el.style.display = 'none';
+    }, 2000);
+}
+
+function showVoiceModeIndicator() {
+    // On pourrait changer l'apparence du bouton micro, mais on garde le comportement du bouton
+    var mb = document.getElementById('posMicBtn');
+    if (mb && isRecording) {
+        mb.style.background = '#fee2e2';
+        mb.style.borderColor = '#ef4444';
+    }
+}
+
+function hideVoiceFlowIndicator() {
+    // Pas d'indicateur visuel supplémentaire pour le moment
+}
+
+function showVoiceFlowIndicator(phase) {
+    // Affiche une petite bulle contextuelle (optionnel)
+    var labels = {
+        'product': 'Dites le nom du produit',
+        'quantity': 'Dites la quantité',
+        'payment_mode': 'Mode de paiement ?',
+        'payment_amount': 'Montant donné ?'
+    };
+    if (labels[phase]) showVoiceResult(labels[phase]);
+}
+
+function showProcessingIndicator() {
+    // Rien de spécial
+}
+
 // ========== UTILITAIRES ==========
 function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
 function isIOSStandalone() { return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream && (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches); }
 function checkVoiceSupport() { var i = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (i && isIOSStandalone()) return { supported: false, reason: 'Ouvrez dans Safari' }; if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return { supported: false, reason: 'Non supporté' }; return { supported: true }; }
 async function requestMicrophonePermission() { if (micPermissionGranted) return true; try { if (!navigator.mediaDevices?.getUserMedia) return false; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach(t => t.stop()); micPermissionGranted = true; return true; } catch (e) { return false; } }
-function showVoiceModeIndicator() { /* conservé */ }
-function showVoiceResult(msg) { /* conservé */ }
-function showVoiceFlowIndicator(phase) { /* conservé */ }
-function hideVoiceFlowIndicator() { /* conservé */ }
-function showProcessingIndicator() { /* conservé */ }
 
 // ========== CONSTRUCTION INDEX CLIENT ==========
 function buildClientIndex() {
@@ -115,7 +153,7 @@ function fastFindClient(query) {
 
 function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
 
-// ========== INDEX PRODUIT (RAPIDE) – POUR POS ==========
+// ========== INDEX PRODUIT (RAPIDE) ==========
 function buildProductIndex() {
     if (productIndexBuilt || !window.posProductsList?.length) return;
     productNameIndex = {};
@@ -177,61 +215,6 @@ function fastFindProduct(query) {
     return [filtered[0]];
 }
 
-// ========== INDEX ADMIN PERMANENT – AVEC DESCRIPTION ==========
-function buildProductAdminIndex() {
-    if (window.productAdminIndexBuilt || !window.allProductsData || !window.allProductsData.length) return;
-    window.productAdminIndex = {};
-    window.allProductsData.forEach(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        nom.split(/[\s,;.]+/).forEach(function(w) {
-            if (w.length < 2) return;
-            if (!window.productAdminIndex[w]) window.productAdminIndex[w] = [];
-            if (!window.productAdminIndex[w].includes(p)) window.productAdminIndex[w].push(p);
-        });
-        var desc = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        desc.split(/[\s,;.]+/).forEach(function(w) {
-            if (w.length < 2) return;
-            if (!window.productAdminIndex[w]) window.productAdminIndex[w] = [];
-            if (!window.productAdminIndex[w].includes(p)) window.productAdminIndex[w].push(p);
-        });
-    });
-    window.productAdminIndexBuilt = true;
-}
-
-function fastFindProductAdmin(query) {
-    if (!window.allProductsData || !window.allProductsData.length) return [];
-    if (!window.productAdminIndexBuilt) buildProductAdminIndex();
-
-    var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    var mots = cleaned.split(/[\s,;.]+/);
-    if (mots.length === 0) return [];
-
-    var firstWord = mots[0];
-    var searchTerm = firstWord;
-    if (mots.length >= 2) searchTerm = firstWord + ' ' + mots[1];
-
-    var candidates = (window.productAdminIndex[firstWord] || []).slice();
-    if (candidates.length === 0) return [];
-
-    var filtered = candidates.filter(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        var desc = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom.indexOf(searchTerm) !== -1 || desc.indexOf(searchTerm) !== -1;
-    });
-
-    if (filtered.length === 0) return [candidates[0]];
-    if (filtered.length === 1) return filtered;
-
-    var exact = filtered.find(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom === searchTerm;
-    });
-    if (exact) return [exact];
-
-    filtered.sort(function(a, b) { return (a.nom||'').length - (b.nom||'').length; });
-    return [filtered[0]];
-}
-
 // ========== COMMANDES ==========
 function extractNumberFromTranscript(transcript) {
     const cleaned = transcript.toLowerCase().trim();
@@ -279,7 +262,7 @@ function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
 
-    // ⚡ NAVIGATION EN PREMIER (prioritaire même en mode paiement)
+    // ⚡ NAVIGATION EN PREMIER
     if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises')) {
         return { type: 'navigate', page: 'credits' };
     }
@@ -327,7 +310,7 @@ function parseVoiceCommand(transcript) {
         return { type: 'ignore' };
     }
 
-    // MODE PAIEMENT (uniquement si pas déjà une navigation)
+    // MODE PAIEMENT
     if (voiceMode === 'payment' || (currentPage === 'POS' && (window.posStep || 0) === 2)) {
         switch (window.voicePaymentState) {
             case 0:
@@ -354,7 +337,7 @@ function parseVoiceCommand(transcript) {
         }
     }
 
-    // RECHERCHE PRODUIT (POS / Admin)
+    // RECHERCHE PRODUIT (POS)
     if (voiceMode === 'search') {
         if ((currentPage === 'POS' || currentPage === 'Dashboard') && (window.posStep || 0) === 1) {
             var products = window.posProductsList || [];
@@ -503,7 +486,7 @@ function handleVoiceCommand(cmd) {
                             var nameEl = card.querySelector('.pos-product-name');
                             if (nameEl && nameEl.textContent.trim().toLowerCase() === cmd.product.nom.toLowerCase()) {
                                 card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                card.style.boxShadow = '0 0 0 3px #A67C52';
+                                card.style.boxShadow = '0 0 0 3px #14B8A6';
                                 setTimeout(function() { card.style.boxShadow = ''; }, 1500);
                                 break;
                             }
@@ -761,12 +744,10 @@ function posStartVoiceRecording() {
                 }
             }
         } else {
-            // 🔥 BLOC MODIFIÉ : redirection forcée vers les crédits avant toute autre action
             var si = document.getElementById('posSearchInput');
             if (si) {
                 if (final) {
                     var lowerFinal = final.toLowerCase().trim();
-                    // Si l'utilisateur dit "crédits", "impayés", etc., on redirige immédiatement
                     if (lowerFinal.includes('crédits') || lowerFinal.includes('impayés') || 
                         lowerFinal.includes('dettes') || lowerFinal.includes('ardoises') ||
                         lowerFinal.includes('liste des crédits')) {
@@ -777,12 +758,10 @@ function posStartVoiceRecording() {
                             showVoiceResult('📍 Crédits');
                         }
                         lastInterim = '';
-                        // On nettoie le champ de recherche pour ne pas laisser de trace
                         si.value = '';
                         return;
                     }
                     
-                    // Sinon, comportement normal
                     si.value = final;
                     var event = new Event('input', { bubbles: true });
                     si.dispatchEvent(event);
@@ -868,4 +847,4 @@ window.buildProductIndex = buildProductIndex;
 window.buildProductAdminIndex = buildProductAdminIndex;
 window.fastFindProductAdmin = fastFindProductAdmin;
 
-console.log('🎤 Module vocal – redirection crédits prioritaire OK');
+console.log('🎤 Module vocal – prêt avec retour visuel');
