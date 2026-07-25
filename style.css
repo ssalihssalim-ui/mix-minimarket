@@ -509,7 +509,7 @@ body {
     }
     .pos-cart-item-price {
         font-size: 20px !important;
-        margin-left: 10px;
+        padding-left: 10px;
     }
     .pos-cart-item-total {
         font-size: 25px !important;
