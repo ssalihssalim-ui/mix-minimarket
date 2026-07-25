@@ -492,13 +492,13 @@ body {
     
     /* --- Catégories plus compactes (dès 1024px) --- */
     .pos-cat-btn {
-        padding: 6px 12px !important;
-        font-size: 0.75rem !important;
-        gap: 6px !important;
+        padding: 4px 8px !important;
+        font-size: 0.65rem !important;
+        gap: 4px !important;
     }
     .pos-cat-btn img {
-        max-width: 40px !important;
-        max-height: 40px !important;
+        max-width: 30px !important;
+        max-height: 30px !important;
     }
     
     /* --- Panier plus lisible (dès 1024px) --- */
