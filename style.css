@@ -497,8 +497,8 @@ body {
         gap: 4px !important;
     }
     .pos-cat-btn img {
-        max-width: 20px !important;
-        max-height: 20px !important;
+        max-width: 40px !important;
+        max-height: 40px !important;
     }
     
     /* --- Panier plus lisible (dès 1024px) --- */
