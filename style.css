@@ -507,16 +507,16 @@ body {
         font-weight: 700 !important;
     }
     .pos-cart-item-price {
-        font-size: 0.85rem !important;
+        font-size: 20px !important;
     }
     .pos-cart-item-total {
-        font-size: 1rem !important;
+        font-size: 25px !important;
         font-weight: 700 !important;
     }
     .pos-qty-btn {
         width: 34px !important;
         height: 34px !important;
-        font-size: 0.85rem !important;
+        font-size: 20px !important;
     }
     .pos-qty-value {
         font-size: 1rem !important;
