@@ -429,8 +429,8 @@ body {
     border-radius: var(--radius-full);
     background: var(--white);
     color: var(--text-primary);
-    font-weight: 700;
-    font-size: 0.9rem;
+    font-weight: 600;
+    font-size: 20px;
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition);
@@ -440,8 +440,8 @@ body {
 .pos-cat-btn img {
     width: auto;
     height: auto;
-    max-width: 100px;
-    max-height: 100px;
+    max-width: 50px;
+    max-height: 50px;
     border-radius: 6px;
     object-fit: contain;
 }
@@ -497,8 +497,8 @@ body {
         gap: 4px !important;
     }
     .pos-cat-btn img {
-        max-width: 40px !important;
-        max-height: 40px !important;
+        max-width: 50px !important;
+        max-height: 50px !important;
     }
     
     /* --- Panier plus lisible (dès 1024px) --- */
