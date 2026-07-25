@@ -540,22 +540,7 @@ body {
     }
 }
 
-@media(max-width:768px) {
-    .login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
-    .login-brand, .register-brand { padding: 24px 16px 16px; }
-    .main-content { padding: 12px 8px; }
-    .pos-container { gap: 10px; }
-    .pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
-    .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-    .pos-product-card { padding: 8px; }
-    .pos-product-img { height: 70px; }
-    /* Les règles du panier étant déjà définies pour 1024px, elles s'appliquent ici aussi */
-    .pos-cart-panel { max-height: 35vh; padding: 12px; }
-    .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
-        padding: 14px !important;
-        font-size: 1rem !important;
-    }
-}
+
 
 @media(max-width:480px) {
     .main-content { padding: 8px 4px; }
