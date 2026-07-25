@@ -430,8 +430,8 @@ body {
     border-radius: var(--radius-full);
     background: var(--white);
     color: var(--text-primary);
-    font-weight: 700;
-    font-size: 0.9rem;
+    font-weight: 500;
+    font-size: 0.8rem;
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition);
