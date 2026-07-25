@@ -16,7 +16,7 @@
     
     --primary: #111827;
     --primary-hover: #1F2937;
-    --accent: #14B8A6;          /* turquoise */
+    --accent: #14B8A6;
     --accent-light: #99F6E4;
     
     --success: #10B981;
@@ -429,8 +429,8 @@ body {
     border-radius: var(--radius-full);
     background: var(--white);
     color: var(--text-primary);
-    font-weight: 600;
-    font-size: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition);
@@ -440,8 +440,8 @@ body {
 .pos-cat-btn img {
     width: auto;
     height: auto;
-    max-width: 50px;
-    max-height: 50px;
+    max-width: 100px;
+    max-height: 100px;
     border-radius: 6px;
     object-fit: contain;
 }
@@ -474,10 +474,84 @@ body {
 .pos-validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .pos-finalize-btn { background: var(--success); color: var(--white); margin-top: 8px; }
 
-/* ==================== PAIEMENT ==================== */
+/* ==================== PAIEMENT (AGRANDI) ==================== */
 .pos-payment-form { flex: 1; overflow-y: auto; }
-.pos-payment-btn { flex: 1; padding: 10px; border: 2px solid var(--border); border-radius: var(--radius); background: var(--white); cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px; transition: var(--transition); }
+.pos-payment-form label {
+    font-size: 0.9rem;       /* labels plus grands */
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+}
+.pos-payment-form input,
+.pos-payment-form select {
+    width: 100%;
+    padding: 12px 14px;       /* champs plus grands */
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;          /* police plus grande */
+    font-family: 'Inter', sans-serif;
+    background: var(--white);
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+.pos-payment-form input:focus,
+.pos-payment-form select:focus {
+    border-color: var(--black);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+}
+.pos-payment-btn {
+    flex: 1;
+    padding: 14px 16px;       /* boutons plus épais */
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--white);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;          /* police plus grande */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: var(--transition);
+}
 .pos-payment-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
+
+/* Bouton finaliser agrandi */
+.pos-finalize-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--success);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    transition: var(--transition);
+}
+.pos-validate-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--black);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+.pos-validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ==================== RESPONSIVE ==================== */
 @media(max-width:1024px) {
@@ -493,38 +567,36 @@ body {
     /* --- Catégories plus compactes (dès 1024px) --- */
     .pos-cat-btn {
         padding: 4px 8px !important;
-        font-size: 20px !important;
+        font-size: 0.65rem !important;
         gap: 4px !important;
     }
     .pos-cat-btn img {
-        max-width: 50px !important;
-        max-height: 50px !important;
+        max-width: 30px !important;
+        max-height: 30px !important;
     }
     
     /* --- Panier plus lisible (dès 1024px) --- */
     .pos-cart-item-name {
-        font-size: 25px !important;
+        font-size: 1.05rem !important;
         font-weight: 700 !important;
-        
     }
     .pos-cart-item-price {
-        font-size: 20px !important;
-        padding-left: 10px;
+        font-size: 0.85rem !important;
     }
     .pos-cart-item-total {
-        font-size: 25px !important;
+        font-size: 1rem !important;
         font-weight: 700 !important;
     }
     .pos-qty-btn {
-        width: 40px !important;
-        height: 40px !important;
-        font-size: 20px !important;
+        width: 34px !important;
+        height: 34px !important;
+        font-size: 0.85rem !important;
     }
     .pos-qty-value {
         font-size: 1rem !important;
     }
     .pos-cart-total-row {
-        font-size: 30px !important;
+        font-size: 1.3rem !important;
     }
     .pos-validate-btn,
     .pos-finalize-btn {
@@ -558,7 +630,6 @@ body {
         font-size: 1rem !important;
     }
 }
-
 
 @media(max-width:480px) {
     .main-content { padding: 8px 4px; }
