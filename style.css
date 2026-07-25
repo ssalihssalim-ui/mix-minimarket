@@ -1,6 +1,5 @@
 /* ==================== MIXMAX MINIMARKET – DESIGN SYSTEM PRO ==================== */
 :root {
-    /* Palette monochrome élégante */
     --white: #FFFFFF;
     --white-soft: #F8F9FA;
     --gray-50: #F9FAFB;
@@ -420,7 +419,7 @@ body {
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
-/* 🔥 BOUTONS DE CATÉGORIES AGRANDIS */
+/* Boutons de catégories (taille par défaut pour grands écrans) */
 .pos-cat-btn {
     display: flex;
     align-items: center;
@@ -437,7 +436,6 @@ body {
     transition: var(--transition);
 }
 .pos-cat-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
-/* 🔥 Images des catégories limitées à 100x100px */
 .pos-cat-btn img {
     width: auto;
     height: auto;
@@ -497,18 +495,18 @@ body {
     .pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
     .pos-products-panel { height: auto; max-height: 50vh; }
     
-    /* --- Catégories plus compactes (dès 1024px) --- */
+    /* --- Catégories très compactes --- */
     .pos-cat-btn {
-        padding: 6px 12px !important;
-        font-size: 0.75rem !important;
-        gap: 6px !important;
+        padding: 5px 10px !important;
+        font-size: 0.7rem !important;
+        gap: 5px !important;
     }
     .pos-cat-btn img {
-        max-width: 40px !important;
-        max-height: 40px !important;
+        max-width: 35px !important;
+        max-height: 35px !important;
     }
     
-    /* --- Panier plus lisible (dès 1024px) --- */
+    /* --- Panier plus lisible --- */
     .pos-cart-item-name {
         font-size: 1.05rem !important;
         font-weight: 700 !important;
@@ -546,7 +544,6 @@ body {
         font-size: 1rem !important;
     }
     
-    /* En mode paiement sur tablette, le panneau doit occuper toute la largeur */
     .pos-payment-full {
         width: 100% !important;
         max-width: 100% !important;
@@ -602,4 +599,15 @@ body {
         font-size: 1.05rem !important;
     }
     .pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
+    
+    /* --- Catégories encore plus petites sur téléphone --- */
+    .pos-cat-btn {
+        padding: 4px 8px !important;
+        font-size: 0.65rem !important;
+        gap: 4px !important;
+    }
+    .pos-cat-btn img {
+        max-width: 30px !important;
+        max-height: 30px !important;
+    }
 }
