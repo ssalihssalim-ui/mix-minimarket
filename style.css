@@ -1,6 +1,5 @@
 /* ==================== MIXMAX MINIMARKET – DESIGN SYSTEM PRO ==================== */
 :root {
-    /* Palette monochrome élégante */
     --white: #FFFFFF;
     --white-soft: #F8F9FA;
     --gray-50: #F9FAFB;
@@ -496,16 +495,15 @@ body {
     .pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
     .pos-products-panel { height: auto; max-height: 50vh; }
     
-    /* --- Catégories encore plus petites --- */
+    /* --- Catégories très compactes --- */
     .pos-cat-btn {
-        padding: 2px 4px !important;
-        font-size: 0.45rem !important;
-        gap: 2px !important;
-        border-radius: 6px !important;
+        padding: 5px 10px !important;
+        font-size: 0.7rem !important;
+        gap: 5px !important;
     }
     .pos-cat-btn img {
-        max-width: 20px !important;
-        max-height: 20px !important;
+        max-width: 35px !important;
+        max-height: 35px !important;
     }
     
     /* --- Panier plus lisible --- */
@@ -602,15 +600,14 @@ body {
     }
     .pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
     
-    /* --- Catégories un peu plus grandes que sur 1024px (mais toujours petites) --- */
+    /* --- Catégories encore plus petites sur téléphone --- */
     .pos-cat-btn {
-        padding: 3px 6px !important;
-        font-size: 0.55rem !important;
-        gap: 3px !important;
-        border-radius: 8px !important;
+        padding: 4px 8px !important;
+        font-size: 0.65rem !important;
+        gap: 4px !important;
     }
     .pos-cat-btn img {
-        max-width: 25px !important;
-        max-height: 25px !important;
+        max-width: 30px !important;
+        max-height: 30px !important;
     }
 }
