@@ -1,4 +1,4 @@
-/* ==================== MIXMAX MINIMARKET – UI REDESIGN ==================== */
+/* ==================== MIXMAX MINIMARKET – UI REDESIGN (SIDEBAR CLAIRE) ==================== */
 :root {
     /* Nouvelle palette */
     --white: #FFFFFF;
@@ -28,12 +28,12 @@
     
     --bg-page: #F8FAFC;
     --bg-card: #FFFFFF;
-    --bg-sidebar: #0F172A;       /* sidebar toujours sombre mais plus élégante */
+    --bg-sidebar: #FFFFFF;        /* fond blanc pour la sidebar */
     --text-primary: #1E293B;
     --text-secondary: #64748B;
     --text-muted: #94A3B8;
     --border: #E2E8F0;
-    --border-dark: #334155;
+    --border-dark: #CBD5E1;       /* ajusté pour la sidebar claire */
     
     /* Ombres plus modernes */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -227,10 +227,10 @@ input, select, textarea, [contenteditable="true"] {
 /* ==================== DASHBOARD LAYOUT ==================== */
 .dashboard { display: flex; height: 100vh; height: 100dvh; background: var(--bg-page); overflow: hidden; position: relative; }
 
-/* ==================== SIDEBAR ==================== */
+/* ==================== SIDEBAR (BLANCHE) ==================== */
 .sidebar {
     width: 280px;
-    background: var(--bg-sidebar);
+    background: var(--bg-sidebar);          /* blanc */
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -241,16 +241,34 @@ input, select, textarea, [contenteditable="true"] {
     z-index: 100;
     overflow-y: auto;
     transition: transform 0.3s ease;
-    box-shadow: var(--shadow-md);
-    border-right: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05);   /* ombre légère à droite */
+    border-right: 1px solid var(--border);
 }
 
-.sidebar-header { padding: 28px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.sidebar-header {
+    padding: 28px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+
 .sidebar-logo { width: 60px; height: 60px; margin: 0 auto 12px; border-radius: 50%; overflow: hidden; }
 .sidebar-logo-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.sidebar-header h2 { color: white; font-size: 1.15rem; font-weight: 700; }
-.sidebar-header h2 span { color: var(--accent); }
-.sidebar-subtitle { color: rgba(255,255,255,0.3); font-size: 0.65rem; margin-top: 4px; text-transform: uppercase; letter-spacing: 3px; }
+
+.sidebar-header h2 {
+    color: var(--text-primary);              /* noir */
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.sidebar-header h2 span { color: var(--primary); }   /* accent bleu pour "Market" */
+
+.sidebar-subtitle {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
 
 .sidebar-nav { flex: 1; padding: 14px 12px; }
 .sidebar-nav ul { list-style: none; display: flex; flex-direction: column; gap: 2px; }
@@ -262,22 +280,49 @@ input, select, textarea, [contenteditable="true"] {
     padding: 12px 16px;
     border-radius: var(--radius);
     cursor: pointer;
-    color: rgba(255,255,255,0.55);
+    color: var(--text-secondary);            /* gris foncé */
     font-size: 0.9rem;
     font-weight: 500;
     transition: var(--transition);
 }
 
-.nav-item i { width: 22px; text-align: center; font-size: 1rem; }
-.nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
-.nav-item.active { background: rgba(37,99,235,0.15); color: white; font-weight: 600; }
+.nav-item i { width: 22px; text-align: center; font-size: 1rem; color: var(--text-muted); }
 
-.logout-item { margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; color: rgba(239,68,68,0.6) !important; }
-.logout-item:hover { background: rgba(239,68,68,0.1) !important; }
+.nav-item:hover {
+    background: var(--gray-100);
+    color: var(--text-primary);
+}
 
-.sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-.user-info { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 500; }
-.user-info i { font-size: 1.4rem; color: var(--accent); }
+.nav-item.active {
+    background: var(--primary-light);        /* bleu très pâle */
+    color: var(--primary);
+    font-weight: 600;
+}
+.nav-item.active i { color: var(--primary); }
+
+.logout-item {
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    color: var(--danger) !important;
+}
+.logout-item:hover { background: #FEE2E2 !important; }
+
+.sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.user-info i { font-size: 1.4rem; color: var(--primary); }
 
 /* ==================== MAIN CONTENT ==================== */
 .main-content {
