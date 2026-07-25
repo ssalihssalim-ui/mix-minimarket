@@ -1,4 +1,4 @@
-/* ==================== MIXMAX MINIMARKET – DESIGN SYSTEM PRO ==================== */
+ //  /// /* ==================== MIXMAX MINIMARKET – DESIGN SYSTEM PRO ==================== */
 :root {
     /* Palette monochrome élégante */
     --white: #FFFFFF;
@@ -420,29 +420,29 @@ body {
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
-/* 🔥 BOUTONS DE CATÉGORIES – TAILLE RÉDUITE (par défaut) */
+/* 🔥 BOUTONS DE CATÉGORIES AGRANDIS */
 .pos-cat-btn {
     display: flex;
     align-items: center;
-    gap: 6px;                 /* espace réduit entre l'icône et le texte */
-    padding: 6px 14px;        /* bouton plus compact */
+    gap: 10px;
+    padding: 12px 24px;
     border: 2px solid var(--border);
     border-radius: var(--radius-full);
     background: var(--white);
     color: var(--text-primary);
-    font-weight: 600;
-    font-size: 0.7rem;        /* texte plus petit */
+    font-weight: 700;
+    font-size: 0.9rem;
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition);
 }
 .pos-cat-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
-/* Images des catégories réduites à 50x50px max */
+/* 🔥 Images des catégories limitées à 100x100px */
 .pos-cat-btn img {
     width: auto;
     height: auto;
-    max-width: 50px;
-    max-height: 50px;
+    max-width: 100px;
+    max-height: 100px;
     border-radius: 6px;
     object-fit: contain;
 }
@@ -493,13 +493,13 @@ body {
     
     /* --- Catégories plus compactes (dès 1024px) --- */
     .pos-cat-btn {
-        padding: 4px 8px !important;
-        font-size: 0.6rem !important;
-        gap: 4px !important;
+        padding: 6px 12px !important;
+        font-size: 0.75rem !important;
+        gap: 6px !important;
     }
     .pos-cat-btn img {
-        max-width: 30px !important;
-        max-height: 30px !important;
+        max-width: 40px !important;
+        max-height: 40px !important;
     }
     
     /* --- Panier plus lisible (dès 1024px) --- */
@@ -550,6 +550,7 @@ body {
     .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
     .pos-product-card { padding: 8px; }
     .pos-product-img { height: 70px; }
+    /* Les règles du panier étant déjà définies pour 1024px, elles s'appliquent ici aussi */
     .pos-cart-panel { max-height: 35vh; padding: 12px; }
     .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
         padding: 14px !important;
@@ -579,6 +580,7 @@ body {
     .pos-product-name { font-size: 0.7rem; }
     .pos-product-price { font-size: 0.75rem; }
     .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
+    /* Accentuation supplémentaire pour très petits écrans */
     .pos-cart-item-name { font-size: 1.1rem !important; }
     .pos-cart-item-total { font-size: 1.05rem !important; }
     .pos-qty-btn { width: 36px !important; height: 36px !important; }
