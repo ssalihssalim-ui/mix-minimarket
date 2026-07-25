@@ -477,12 +477,12 @@ body {
 /* ==================== PAIEMENT (AGRANDI) ==================== */
 /* Pleine hauteur pour l'étape 2 */
 .pos-container-full {
-    height: calc(100vh - 60px) !important;   /* prend quasiment toute la hauteur */
+    height: calc(100vh - 60px) !important;
 }
 .pos-container-full .pos-cart-panel {
     height: 100% !important;
-    max-height: none !important;          /* annule toute restriction de hauteur */
-    overflow: visible !important;        /* plus de scroll interne, le contenu s’étire */
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 .pos-payment-form { flex: 1; overflow-y: auto; }
@@ -510,6 +510,27 @@ body {
     outline: none;
     box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
 }
+
+/* --- Réglages spécifiques pour la zone de paiement --- */
+/* Champ "Montant donné" très grand */
+#posAmountGiven {
+    font-size: 25px !important;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Affichage du rendu / manquant */
+.pos-change-positive span:last-child {
+    font-size: 30px !important;
+    font-weight: 700;
+    color: #10B981 !important; /* vert */
+}
+.pos-change-negative span:last-child {
+    font-size: 30px !important;
+    font-weight: 700;
+    /* couleur rouge par défaut conservée */
+}
+
 .pos-payment-btn {
     flex: 1;
     padding: 14px 16px;
@@ -623,6 +644,13 @@ body {
         padding: 12px !important;
         font-size: 1rem !important;
     }
+    #posAmountGiven {
+        font-size: 22px !important;   /* un peu plus petit sur tablette */
+    }
+    .pos-change-positive span:last-child,
+    .pos-change-negative span:last-child {
+        font-size: 26px !important;
+    }
     
     .pos-container-full {
         height: calc(100vh - 60px) !important;
@@ -677,5 +705,11 @@ body {
         padding: 16px !important;
         font-size: 1.05rem !important;
     }
-    .pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
+    #posAmountGiven {
+        font-size: 22px !important;
+    }
+    .pos-change-positive span:last-child,
+    .pos-change-negative span:last-child {
+        font-size: 26px !important;
+    }
 }
