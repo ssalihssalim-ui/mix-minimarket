@@ -1,6 +1,5 @@
- /* ==================== MIXMAX MINIMARKET – DESIGN SYSTEM PRO ==================== */
+/* ==================== MIXMAX MINIMARKET – DESIGN SYSTEM PRO ==================== */
 :root {
-    /* Palette monochrome élégante */
     --white: #FFFFFF;
     --white-soft: #F8F9FA;
     --gray-50: #F9FAFB;
@@ -17,13 +16,13 @@
     
     --primary: #111827;
     --primary-hover: #1F2937;
-    --accent: #3B82F6;
-    --accent-light: #60A5FA;
+    --accent: #14B8A6;          /* turquoise */
+    --accent-light: #99F6E4;
     
     --success: #10B981;
     --danger: #EF4444;
     --warning: #F59E0B;
-    --info: #3B82F6;
+    --info: #14B8A6;
     
     --bg-page: #F9FAFB;
     --bg-card: #FFFFFF;
@@ -125,7 +124,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 50% 50%, rgba(59,130,246,0.04), transparent 70%);
+    background: radial-gradient(ellipse at 50% 50%, rgba(20,184,166,0.06), transparent 70%);
     z-index: 1;
 }
 
