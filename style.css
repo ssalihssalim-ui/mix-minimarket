@@ -475,8 +475,14 @@ body {
 .pos-finalize-btn { background: var(--success); color: var(--white); margin-top: 8px; }
 
 /* ==================== PAIEMENT (AGRANDI) ==================== */
+/* Pleine hauteur pour l'étape 2 */
 .pos-container-full {
-    height: calc(100vh - 80px) !important;   /* pleine hauteur pour l'étape 2 */
+    height: calc(100vh - 60px) !important;   /* prend quasiment toute la hauteur */
+}
+.pos-container-full .pos-cart-panel {
+    height: 100% !important;
+    max-height: none !important;          /* annule toute restriction de hauteur */
+    overflow: visible !important;        /* plus de scroll interne, le contenu s’étire */
 }
 
 .pos-payment-form { flex: 1; overflow-y: auto; }
