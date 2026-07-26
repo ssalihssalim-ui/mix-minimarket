@@ -481,7 +481,7 @@ body {
 
 .pos-cart-item-name {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 20px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
