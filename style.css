@@ -419,7 +419,7 @@ body {
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
-/* 🔥 BOUTONS DE CATÉGORIES AGRANDIS */
+/* 🔥 BOUTONS DE CATÉGORIES AGRANDIS (PAR DÉFAUT) */
 .pos-cat-btn {
     display: flex;
     align-items: center;
@@ -430,13 +430,12 @@ body {
     background: var(--white);
     color: var(--text-primary);
     font-weight: 700;
-    font-size: 30px;
+    font-size: 30px;           /* volontairement grand, comme vous l'avez choisi */
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition);
 }
 .pos-cat-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
-/* 🔥 Images des catégories limitées à 100x100px */
 .pos-cat-btn img {
     width: auto;
     height: auto;
@@ -475,7 +474,6 @@ body {
 .pos-finalize-btn { background: var(--success); color: var(--white); margin-top: 8px; }
 
 /* ==================== PAIEMENT (AGRANDI) ==================== */
-/* Pleine hauteur pour l'étape 2 */
 .pos-container-full {
     height: calc(100vh - 60px) !important;
 }
@@ -518,7 +516,7 @@ body {
     text-align: center;
 }
 
-/* Affichage du rendu / manquant */
+/* Affichage du rendu */
 .pos-change-positive span:last-child {
     font-size: 40px !important;
     font-weight: 700;
@@ -546,7 +544,6 @@ body {
 }
 .pos-payment-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
 
-/* Boutons Valider / Finaliser agrandis */
 .pos-validate-btn {
     width: 100%;
     padding: 14px;
@@ -593,20 +590,10 @@ body {
     .pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
     .pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
     .pos-products-panel { height: auto; max-height: 50vh; }
-    
-    /* Catégories plus compactes */
-    .pos-cat-btn {
-        padding: 4px 8px !important;
-        font-size: 0.65rem !important;
-        gap: 4px !important;
-    }
-    .pos-cat-btn img {
-        max-width: 50px !important;
-        max-height: 50px !important;
-    }
-    
+
+    /* Panier plus lisible (commun à tous les écrans ≤1024) */
     .pos-cart-item-name {
-        font-size: 20px !important;
+        font-size: 20px !important;       /* vous aviez mis 20px, on garde */
         font-weight: 700 !important;
     }
     .pos-cart-item-price { font-size: 0.85rem !important; }
@@ -622,19 +609,20 @@ body {
     .pos-container-full { height: calc(100vh - 60px) !important; }
 }
 
-@media(max-width:768px) {
-    .login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
-    .login-brand, .register-brand { padding: 24px 16px 16px; }
-    .main-content { padding: 12px 8px; }
-    .pos-container { gap: 10px; }
-    .pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
-    .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-    .pos-product-card { padding: 8px; }
-    .pos-product-img { height: 70px; }
-    .pos-cart-panel { max-height: 35vh; padding: 12px; }
-    .pos-payment-section input, .pos-payment-form input, .pos-payment-form select { padding: 14px !important; font-size: 1rem !important; }
+/* --- Téléphone horizontal (481px à 1024px) : catégories un peu plus grandes --- */
+@media (min-width: 481px) and (max-width: 1024px) {
+    .pos-cat-btn {
+        padding: 6px 14px !important;
+        font-size: 0.8rem !important;
+        gap: 6px !important;
+    }
+    .pos-cat-btn img {
+        max-width: 60px !important;
+        max-height: 60px !important;
+    }
 }
 
+/* --- Téléphone vertical (max 480px) : catégories restent très compactes --- */
 @media(max-width:480px) {
     .main-content { padding: 8px 4px; }
     .pos-container { gap: 8px; }
@@ -666,4 +654,28 @@ body {
     .pos-payment-section input, .pos-payment-form input, .pos-payment-form select { padding: 16px !important; font-size: 1.05rem !important; }
     #posAmountGiven { font-size: 24px !important; }
     .pos-change-positive span:last-child, .pos-change-negative span:last-child { font-size: 32px !important; }
+
+    /* Catégories très petites pour le téléphone vertical */
+    .pos-cat-btn {
+        padding: 4px 8px !important;
+        font-size: 0.65rem !important;
+        gap: 4px !important;
+    }
+    .pos-cat-btn img {
+        max-width: 50px !important;
+        max-height: 50px !important;
+    }
+}
+
+@media(max-width:768px) {
+    .login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
+    .login-brand, .register-brand { padding: 24px 16px 16px; }
+    .main-content { padding: 12px 8px; }
+    .pos-container { gap: 10px; }
+    .pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
+    .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+    .pos-product-card { padding: 8px; }
+    .pos-product-img { height: 70px; }
+    .pos-cart-panel { max-height: 35vh; padding: 12px; }
+    .pos-payment-section input, .pos-payment-form input, .pos-payment-form select { padding: 14px !important; font-size: 1rem !important; }
 }
