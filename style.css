@@ -450,8 +450,8 @@ body {
 .pos-product-card:hover { border-color: var(--black); box-shadow: var(--shadow); background: var(--white); }
 .pos-product-img { width: 100%; height: 80px; border-radius: var(--radius); overflow: hidden; margin-bottom: 6px; background: var(--gray-200); }
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
-.pos-product-name { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
-.pos-product-price { font-size: 0.82rem; font-weight: 700; color: var(--black); }
+.pos-product-name { font-size: 20px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+.pos-product-price { padding-left: 10px; font-size: 25px; font-weight: 700; color: var(--black); }
 
 /* ==================== POS CART (DISPOSITION EN DEUX LIGNES) ==================== */
 .pos-cart-panel { width: 340px; min-width: 300px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
