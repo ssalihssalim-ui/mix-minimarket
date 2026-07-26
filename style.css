@@ -596,13 +596,13 @@ body {
         font-size: 20px !important;       /* vous aviez mis 20px, on garde */
         font-weight: 700 !important;
     }
-    .pos-cart-item-price { padding-left: 10px ; font-size: 20px ;!important; }
-    .pos-cart-item-total { font-size: 20px; !important; font-weight: 700 !important; }
+    .pos-cart-item-price { padding-left: 10px ; font-size: 25px ;!important; }
+    .pos-cart-item-total { font-size: 25px; !important; font-weight: 700 !important; }
     .pos-qty-btn { width: 45px !important; height: 45px !important; font-size: 20px !important; }
     .pos-qty-value { font-size: 20px !important; }
     .pos-cart-total-row { font-size: 25px !important; }
     .pos-validate-btn, .pos-finalize-btn { padding: 14px 18px !important; font-size: 1.1rem !important; }
-    .pos-payment-btn { padding: 12px 14px !important; font-size: 1rem !important; }
+    .pos-payment-btn { padding: 15px 18px !important; font-size: 1rem !important; }
     .pos-payment-form input, .pos-payment-section input { padding: 12px !important; font-size: 1rem !important; }
     #posAmountGiven { font-size: 26px !important; }
     .pos-change-positive span:last-child, .pos-change-negative span:last-child { font-size: 36px !important; }
