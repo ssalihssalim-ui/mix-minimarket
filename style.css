@@ -601,12 +601,12 @@ body {
         gap: 4px !important;
     }
     .pos-cat-btn img {
-        max-width: 30px !important;
-        max-height: 30px !important;
+        max-width: 50px !important;
+        max-height: 50px !important;
     }
     
     .pos-cart-item-name {
-        font-size: 1.05rem !important;
+        font-size: 20px !important;
         font-weight: 700 !important;
     }
     .pos-cart-item-price { font-size: 0.85rem !important; }
