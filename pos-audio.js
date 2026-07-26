@@ -1,5 +1,5 @@
-// ==================== POS-AUDIO.JS v10 – COMPATIBLE AVEC LE NOUVEAU POS ====================
-// Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
+// ==================== POS-AUDIO.JS v10 – DARIJA MAROCAIN ====================
+// Mixmax Minimarket – Reconnaissance vocale en darija
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -19,27 +19,27 @@ var productIndexBuilt = false;
 // ========== PAYMENT STATE MACHINE ==========
 window.voicePaymentState = 0;
 
+// Mots‑clés de paiement en darija
 var paymentKeywords = {
-    'espece': ['espèces', 'espece', 'argent', 'cash', 'comptant', 'liquide', 'espèce'],
-    'credit': ['crédit', 'credit', 'à crédit', 'acredit', 'dette', 'avance', 'crédit'],
-    'partiel': ['partiel', 'partielle', 'acompte', 'moitié', 'partial', 'part', 'partiel']
+    'espece': ['espèces', 'espece', 'argent', 'cash', 'comptant', 'liquide', 'flous', 'kharda', 'nagd'],
+    'credit': ['crédit', 'credit', 'dette', 'dayn', 'b dyn', 'à crédit', 'bittaqa'],
+    'partiel': ['partiel', 'partielle', 'acompte', 'moitié', 'ns', 'noç', 'chwiya', 'chwiya dyal flous']
 };
 
+// Chiffres en darija (reconnaissance vocale approximative)
 var numberMap = {
-    'wahed': 1, 'ouais': 1, 'wad': 1, 'un': 1, 'une': 1,
-    'juge': 2, 'joue': 2, 'george': 2, 'souche': 2, 'deux': 2,
-    'claud': 3, 'cl': 3, 'trois': 3, 'clé': 3, 'clea': 3, 'play': 3,
-    'rabah': 4, 'quatre': 4, 'arba': 4, 'abba': 4, 'rabat': 4, 'rabats': 4, 'alba': 4,
-    'cinq': 5, 'hamza': 5, 'rama': 5, 'comme ça': 5,
-    'six': 6, 'sept': 7, 'huit': 8, 'neuf': 9, 'dix': 10,
-    'onze': 11, 'douze': 12, 'douz': 12, 'treize': 13, 'quatorze': 14,
-    'quinze': 15, 'seize': 16, 'vingt': 20, 'trente': 30, 'quarante': 40,
-    'cinquante': 50, 'soixante': 60, 'cent': 100
+    'wahd': 1, 'wahed': 1, 'wahad': 1, 'jouj': 2, 'jouje': 2, 'juj': 2,
+    'tlata': 3, 'tleta': 3, 'rbaa': 4, 'rba3': 4, 'rab3a': 4,
+    'khamsa': 5, 'khams': 5, 'stta': 6, 'setta': 6, 'seb3a': 7, 'sebaa': 7,
+    'tmnya': 8, 'tamanya': 8, 'ts3oud': 9, 'ts3a': 9, 'tsaoud': 9,
+    '3chra': 10, '7dach': 11, 'tna3ch': 12, 'tna3che': 12, 'tlata3ch': 13,
+    'rb3a3ch': 14, 'khamsta3ch': 15, 'stta3ch': 16, 'sb3a3ch': 17,
+    'tmnya3ch': 18, 'ts3a3ch': 19, '3chrin': 20, 'tlatin': 30,
+    'rb3in': 40, 'khamsin': 50, 'sittin': 60, 'sb3in': 70, 'tmanin': 80,
+    'ts3in': 90, 'mya': 100
 };
 
-// ========== FONCTIONS D'AFFICHAGE VOCAL (MANQUANTES AUPARAVANT) ==========
-
-// Création d'un conteneur pour les messages vocaux s'il n'existe pas
+// ========== FONCTIONS D'AFFICHAGE VOCAL ==========
 function ensureVoiceDisplay() {
     if (!document.getElementById('voiceDisplay')) {
         var div = document.createElement('div');
@@ -61,7 +61,6 @@ function showVoiceResult(msg) {
 }
 
 function showVoiceModeIndicator() {
-    // On pourrait changer l'apparence du bouton micro, mais on garde le comportement du bouton
     var mb = document.getElementById('posMicBtn');
     if (mb && isRecording) {
         mb.style.background = '#fee2e2';
@@ -69,30 +68,35 @@ function showVoiceModeIndicator() {
     }
 }
 
-function hideVoiceFlowIndicator() {
-    // Pas d'indicateur visuel supplémentaire pour le moment
-}
-
+function hideVoiceFlowIndicator() {}
 function showVoiceFlowIndicator(phase) {
-    // Affiche une petite bulle contextuelle (optionnel)
     var labels = {
-        'product': 'Dites le nom du produit',
-        'quantity': 'Dites la quantité',
-        'payment_mode': 'Mode de paiement ?',
-        'payment_amount': 'Montant donné ?'
+        'product': 'Goul smiya dyal produit',
+        'quantity': 'Ch7al kayn ?',
+        'payment_mode': 'Kifash bghiti tkhalles ?',
+        'payment_amount': 'Ch7al 3titih ?'
     };
     if (labels[phase]) showVoiceResult(labels[phase]);
 }
-
-function showProcessingIndicator() {
-    // Rien de spécial
-}
+function showProcessingIndicator() {}
 
 // ========== UTILITAIRES ==========
 function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
-function isIOSStandalone() { return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream && (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches); }
-function checkVoiceSupport() { var i = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (i && isIOSStandalone()) return { supported: false, reason: 'Ouvrez dans Safari' }; if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return { supported: false, reason: 'Non supporté' }; return { supported: true }; }
-async function requestMicrophonePermission() { if (micPermissionGranted) return true; try { if (!navigator.mediaDevices?.getUserMedia) return false; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach(t => t.stop()); micPermissionGranted = true; return true; } catch (e) { return false; } }
+function checkVoiceSupport() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window))
+        return { supported: false, reason: 'Makaynch had lkhedma f had lehna' };
+    return { supported: true };
+}
+async function requestMicrophonePermission() {
+    if (micPermissionGranted) return true;
+    try {
+        if (!navigator.mediaDevices?.getUserMedia) return false;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop());
+        micPermissionGranted = true;
+        return true;
+    } catch (e) { return false; }
+}
 
 // ========== CONSTRUCTION INDEX CLIENT ==========
 function buildClientIndex() {
@@ -113,16 +117,6 @@ function buildClientIndex() {
             if (!clientSearchIndex[fullName]) clientSearchIndex[fullName] = [];
             if (!clientSearchIndex[fullName].includes(c)) clientSearchIndex[fullName].push(c);
         }
-        if (c.description) {
-            const descWords = c.description.toLowerCase().trim().split(/[\s,;.]+/);
-            descWords.forEach(mot => {
-                mot = mot.trim();
-                if (mot.length >= 2) {
-                    if (!clientSearchIndex[mot]) clientSearchIndex[mot] = [];
-                    if (!clientSearchIndex[mot].includes(c)) clientSearchIndex[mot].push(c);
-                }
-            });
-        }
     });
     clientIndexBuilt = true;
 }
@@ -139,21 +133,14 @@ function fastFindClient(query) {
         if (!mot) return;
         (clientSearchIndex[mot] || []).forEach(c => { if (!seen[c.id]) { seen[c.id] = true; results.push(c); } });
     });
-    if (results.length === 0 && window.posAllClients) {
-        results.push(...window.posAllClients.filter(c => {
-            const nom = (c.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const prenom = (c.prenom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const desc = (c.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const tel = (c.telephone || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return nom.includes(normalized) || prenom.includes(normalized) || desc.includes(normalized) || tel.includes(normalized);
-        }));
-    }
-    return results;
+    return results.length ? results : window.posAllClients.filter(c => {
+        const nom = (c.nom || '').toLowerCase();
+        const prenom = (c.prenom || '').toLowerCase();
+        return nom.includes(normalized) || prenom.includes(normalized);
+    });
 }
 
-function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
-
-// ========== INDEX PRODUIT (RAPIDE) ==========
+// ========== INDEX PRODUIT ==========
 function buildProductIndex() {
     if (productIndexBuilt || !window.posProductsList?.length) return;
     productNameIndex = {};
@@ -162,13 +149,6 @@ function buildProductIndex() {
         var nomNormalized = p.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         var mots = nomNormalized.split(/[\s,;.]+/);
         mots.forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 2) return;
-            if (!productNameIndex[mot]) productNameIndex[mot] = [];
-            if (!productNameIndex[mot].includes(p)) productNameIndex[mot].push(p);
-        });
-        var descNormalized = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        descNormalized.split(/[\s,;.]+/).forEach(function(mot) {
             mot = mot.trim();
             if (mot.length < 2) return;
             if (!productNameIndex[mot]) productNameIndex[mot] = [];
@@ -184,38 +164,17 @@ function fastFindProduct(query) {
     var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     var mots = cleaned.split(/[\s,;.]+/);
     if (mots.length === 0) return [];
-
-    var firstWord = mots[0];
-    var searchTerm = firstWord;
-    if (mots.length >= 2) {
-        searchTerm = firstWord + ' ' + mots[1];
-    }
-
-    var candidates = productNameIndex[firstWord] || [];
+    var candidates = productNameIndex[mots[0]] || [];
     if (candidates.length === 0) return [];
-
     var filtered = candidates.filter(function(p) {
         var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom.indexOf(searchTerm) !== -1;
+        return nom.indexOf(cleaned) !== -1;
     });
-
-    if (filtered.length === 0) {
-        return [candidates[0]];
-    }
-
-    if (filtered.length === 1) return filtered;
-
-    var exact = filtered.find(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom === searchTerm;
-    });
-    if (exact) return [exact];
-
-    filtered.sort(function(a, b) { return (a.nom||'').length - (b.nom||'').length; });
-    return [filtered[0]];
+    if (filtered.length === 0) return [candidates[0]];
+    return filtered.sort((a,b) => (a.nom||'').length - (b.nom||'').length);
 }
 
-// ========== COMMANDES ==========
+// ========== COMMANDES EN DARIJA ==========
 function extractNumberFromTranscript(transcript) {
     const cleaned = transcript.toLowerCase().trim();
     const digits = cleaned.match(/\b\d+\b/);
@@ -227,91 +186,50 @@ function extractNumberFromTranscript(transcript) {
 }
 
 function detectPeriodFilter(transcript) {
-    var cleaned = transcript.toLowerCase().trim();
-    if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today")) {
-        return 'today';
-    }
-    if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours") || cleaned.includes("ce mois ci")) {
-        return '30';
-    }
-    if (cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours") || cleaned.includes("semaine") || cleaned.includes("7 jour")) {
-        return '7';
-    }
-    if (cleaned.includes("15 jours") || cleaned.includes("15j") || cleaned.includes("quinze jours") || cleaned.includes("15 jour")) {
-        return '15';
-    }
-    if (cleaned.includes("30 jours") || cleaned.includes("30j") || cleaned.includes("trente jours") || cleaned.includes("30 jour")) {
-        return '30';
-    }
-    if (cleaned.includes("3 mois") || cleaned.includes("3mois") || cleaned.includes("trois mois") || cleaned.includes("trimestre") || cleaned.includes("3 moi")) {
-        return '90';
-    }
-    if (cleaned.includes("6 mois") || cleaned.includes("6mois") || cleaned.includes("six mois") || cleaned.includes("semestre") || cleaned.includes("6 moi")) {
-        return '180';
-    }
-    if (cleaned.includes("1 an") || cleaned.includes("1an") || cleaned.includes("un an") || cleaned.includes("annee") || cleaned.includes("année") || cleaned.includes("1 ans") || cleaned.includes("un ans")) {
-        return '365';
-    }
-    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous")) {
-        return 'all';
-    }
+    var c = transcript.toLowerCase().trim();
+    if (c.includes("lyoum") || c.includes("el youm") || c.includes("today")) return 'today';
+    if (c.includes("had chhar") || c.includes("chhar hada") || c.includes("ce mois")) return '30';
+    if (c.includes("7 ayam") || c.includes("sb3a ayam") || c.includes("simana")) return '7';
+    if (c.includes("15 yom") || c.includes("khamstach yom")) return '15';
+    if (c.includes("30 yom") || c.includes("tlatin yom") || c.includes("chhar")) return '30';
+    if (c.includes("3 chhour") || c.includes("tlata chhour")) return '90';
+    if (c.includes("6 chhour") || c.includes("stta chhour")) return '180';
+    if (c.includes("3am") || c.includes("am") || c.includes("sanat") || c.includes("1 an")) return '365';
+    if (c.includes("kolchi") || c.includes("kamlin") || c.includes("tout")) return 'all';
     return null;
 }
 
+// Navigation et commandes en darija
 function parseVoiceCommand(transcript) {
-    var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    var currentPage = document.getElementById('pageTitle')?.textContent || '';
+    var cleaned = transcript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    var cp = document.getElementById('pageTitle')?.textContent || '';
 
-    // ⚡ NAVIGATION EN PREMIER
-    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises')) {
-        return { type: 'navigate', page: 'credits' };
-    }
-    if (cleaned.includes('ventes') || cleaned.includes('vente') || cleaned.includes('historique ventes') || cleaned.includes('recettes')) {
-        return { type: 'navigate', page: 'ventes' };
-    }
-    if (cleaned.includes('dashboard') || cleaned.includes('accueil') || cleaned.includes('home') || cleaned.includes('sommaire') || cleaned.includes('tableau de bord')) {
-        return { type: 'navigate', page: 'dashboard' };
-    }
-    if (cleaned.includes('produits') || cleaned.includes('catalogue') || cleaned.includes('liste des produits')) {
-        return { type: 'navigate', page: 'products' };
-    }
-    if (cleaned.includes('clients') || cleaned.includes('clientèle')) {
-        return { type: 'navigate', page: 'clients' };
-    }
-    if (cleaned.includes('commandes')) {
-        return { type: 'navigate', page: 'commandes' };
-    }
-    if (cleaned.includes('catégories')) {
-        return { type: 'navigate', page: 'categories' };
-    }
-    if (cleaned.includes('point de vente') || cleaned.includes('pos') || cleaned.includes('caisse') || cleaned.includes('encaissement')) {
-        return { type: 'navigate', page: 'pos' };
-    }
-    if (cleaned.includes('dépenses') || cleaned.includes('depenses')) {
-        return { type: 'navigate', page: 'depenses' };
-    }
-    if (cleaned.includes('statistiques') || cleaned.includes('stats')) {
-        return { type: 'navigate', page: 'statistiques' };
-    }
-    if (cleaned.includes('options') || cleaned.includes('paramètres') || cleaned.includes('settings')) {
-        return { type: 'navigate', page: 'options' };
-    }
+    // Navigation
+    if (cleaned.includes('crédit') || cleaned.includes('dette') || cleaned.includes('dayn') || cleaned.includes('impayés')) return { type: 'navigate', page: 'credits' };
+    if (cleaned.includes('ventes') || cleaned.includes('mabyaat') || cleaned.includes('bai3')) return { type: 'navigate', page: 'ventes' };
+    if (cleaned.includes('accueil') || cleaned.includes('sfa7a lkbira') || cleaned.includes('tableau de bord') || cleaned.includes('dashboard')) return { type: 'navigate', page: 'dashboard' };
+    if (cleaned.includes('produits') || cleaned.includes('produit') || cleaned.includes('muntajat') || cleaned.includes('catalogue')) return { type: 'navigate', page: 'products' };
+    if (cleaned.includes('clients') || cleaned.includes('zabayin') || cleaned.includes('zaboun')) return { type: 'navigate', page: 'clients' };
+    if (cleaned.includes('commandes') || cleaned.includes('talabat')) return { type: 'navigate', page: 'commandes' };
+    if (cleaned.includes('catégories') || cleaned.includes('anwaa') || cleaned.includes('categories')) return { type: 'navigate', page: 'categories' };
+    if (cleaned.includes('pos') || cleaned.includes('caisse') || cleaned.includes('kissa') || cleaned.includes('point de vente')) return { type: 'navigate', page: 'pos' };
+    if (cleaned.includes('dépenses') || cleaned.includes('depenses') || cleaned.includes('masarif')) return { type: 'navigate', page: 'depenses' };
+    if (cleaned.includes('statistiques') || cleaned.includes('ihsae') || cleaned.includes('stats')) return { type: 'navigate', page: 'statistiques' };
+    if (cleaned.includes('options') || cleaned.includes('khtiyarat') || cleaned.includes('paramètres')) return { type: 'navigate', page: 'options' };
 
     // Période
     var period = detectPeriodFilter(cleaned);
-    if (period !== null) {
-        return { type: 'period_filter', period: period };
-    }
+    if (period !== null) return { type: 'period_filter', period: period };
 
-    // MODE QUANTITÉ
+    // Mode quantité
     if (voiceMode === 'quantity') {
         var num = extractNumberFromTranscript(cleaned);
         if (num !== null && num > 0) return { type: 'number', value: num };
         return { type: 'ignore' };
     }
 
-    // MODE PAIEMENT
-    if (voiceMode === 'payment' || (currentPage === 'POS' && (window.posStep || 0) === 2)) {
+    // Mode paiement
+    if (voiceMode === 'payment' || (cp === 'POS' && (window.posStep || 0) === 2)) {
         switch (window.voicePaymentState) {
             case 0:
                 if (window.posAllClients) {
@@ -332,29 +250,23 @@ function parseVoiceCommand(transcript) {
             case 2:
                 var n = extractNumberFromTranscript(cleaned);
                 if (n !== null && n > 0) return { type: 'number', value: n };
-                if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
+                if (cleaned.includes('valide') || cleaned.includes('sahih') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
                 return { type: 'ignore' };
         }
     }
 
-    // RECHERCHE PRODUIT (POS)
-    if (voiceMode === 'search') {
-        if ((currentPage === 'POS' || currentPage === 'Dashboard') && (window.posStep || 0) === 1) {
-            var products = window.posProductsList || [];
-            if (products.length) {
-                var best = fastFindProduct(cleaned)[0];
-                if (best) return { type: 'search_product', product: best, page: 'pos' };
-            }
-            if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) return { type: 'next' };
-            if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
-            if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
-            if (cleaned.includes('efface') || cleaned.includes('vider')) return { type: 'clear' };
-            if (cleaned.includes('termine') || cleaned.includes('terminer') || cleaned.includes('fin')) return { type: 'finalize' };
+    // Recherche produit (étape 1)
+    if (voiceMode === 'search' && (cp === 'POS' || cp === 'Dashboard') && (window.posStep || 0) === 1) {
+        var products = window.posProductsList || [];
+        if (products.length) {
+            var best = fastFindProduct(cleaned)[0];
+            if (best) return { type: 'search_product', product: best, page: 'pos' };
         }
-        else if (currentPage === 'Produits') {
-            var bestAdmin = fastFindProductAdmin(cleaned)[0];
-            if (bestAdmin) return { type: 'search_product', product: bestAdmin, page: 'products' };
-        }
+        if (cleaned.includes('dwez') || cleaned.includes('passer') || cleaned.includes('zid') || cleaned.includes('mzyan')) return { type: 'next' };
+        if (cleaned.includes('sahih') || cleaned.includes('valide') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
+        if (cleaned.includes('annuler') || cleaned.includes('rja3') || cleaned.includes('bla')) return { type: 'cancel' };
+        if (cleaned.includes('msa7') || cleaned.includes('effacer') || cleaned.includes('vide')) return { type: 'clear' };
+        if (cleaned.includes('sali') || cleaned.includes('terminer') || cleaned.includes('kammel')) return { type: 'finalize' };
     }
 
     return { type: 'ignore' };
@@ -375,135 +287,48 @@ function handleVoiceCommand(cmd) {
         case 'period_filter':
             var period = cmd.period;
             var periodLabels = {
-                'today': "Aujourd'hui",
-                '7': "7 jours",
-                '15': "15 jours",
-                '30': "30 jours",
-                '90': "3 mois",
-                '180': "6 mois",
-                '365': "1 an",
-                'all': "Tout"
+                'today': "Lyoum",
+                '7': "7 ayam",
+                '15': "15 yom",
+                '30': "30 yom",
+                '90': "3 chhour",
+                '180': "6 chhour",
+                '365': "3am",
+                'all': "Kolchi"
             };
-
-            if (cp === 'Crédits') {
-                var periodSelect = document.getElementById('creditsPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.creditsPeriod = period;
-                    window.currentPages.credits = 1;
-                    if (window.allCreditsData.length === 0) {
-                        if (typeof loadCredits === 'function') loadCredits();
-                    } else {
-                        if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                    }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Ventes') {
-                var periodSelect = document.getElementById('ventesPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.ventesPeriod = period;
-                    window.currentPages.ventes = 1;
-                    if (window.allVentesData.length === 0) {
-                        if (typeof loadVentes === 'function') loadVentes();
-                    } else {
-                        if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                    }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Dépenses') {
-                var periodSelect = document.getElementById('globalPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    globalPeriod = period;
-                    if (typeof loadDepenses === 'function') loadDepenses();
-                    if (typeof loadPersonnel === 'function') loadPersonnel();
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Commandes en ligne') {
-                var periodSelect = document.getElementById('commandesPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.commandesPeriod = period;
-                    window.currentPages.commandes = 1;
-                    if (window.allCommandesData.length === 0) {
-                        if (typeof loadCommandes === 'function') loadCommandes();
-                    } else {
-                        if (typeof applyCommandesFilters === 'function') applyCommandesFilters();
-                    }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Statistiques') {
-                var periodSelect = document.getElementById('statPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    var event = new Event('change', { bubbles: true });
-                    periodSelect.dispatchEvent(event);
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'POS' || cp === 'Dashboard') {
-                if (typeof navigateTo === 'function') {
-                    navigateTo('credits');
-                    setTimeout(function() {
-                        var periodSelect = document.getElementById('creditsPeriodSelect');
-                        if (periodSelect) {
-                            periodSelect.value = period;
-                            window.creditsPeriod = period;
-                            window.currentPages.credits = 1;
-                            if (window.allCreditsData.length === 0) {
-                                if (typeof loadCredits === 'function') loadCredits();
-                            } else {
-                                if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                            }
-                            showVoiceResult('📅 ' + (periodLabels[period] || period));
-                        }
-                    }, 500);
-                }
+            // Appliquer selon la page
+            var periodSelect = null;
+            if (cp === 'Crédits') periodSelect = document.getElementById('creditsPeriodSelect');
+            else if (cp === 'Ventes') periodSelect = document.getElementById('ventesPeriodSelect');
+            else if (cp === 'Dépenses') periodSelect = document.getElementById('globalPeriodSelect');
+            else if (cp === 'Commandes en ligne') periodSelect = document.getElementById('commandesPeriodSelect');
+            else if (cp === 'Statistiques') periodSelect = document.getElementById('statPeriodSelect');
+            if (periodSelect) {
+                periodSelect.value = period;
+                var event = new Event('change', { bubbles: true });
+                periodSelect.dispatchEvent(event);
+                showVoiceResult('📅 ' + (periodLabels[period] || period));
             }
             hideVoiceFlowIndicator();
             break;
-
         case 'search_product':
-            if (cmd.page === 'products' || cp === 'Produits') {
-                var adminInput = document.getElementById('productSearchInput');
-                if (adminInput && cmd.product) {
-                    adminInput.value = cmd.product.nom;
-                    window.productSearchQuery = cmd.product.nom.toLowerCase().trim();
-                    if (typeof renderProductsTable === 'function') renderProductsTable();
-                    showVoiceResult('🔍 ' + cmd.product.nom + ' – filtré');
+            var searchInput = document.getElementById('posSearchInput');
+            if (searchInput && cmd.product) {
+                searchInput.value = cmd.product.nom;
+                if (cmd.product.categorie && typeof window.posFilterCategory === 'function') {
+                    window.posFilterCategory(cmd.product.categorie);
                 }
-            } else {
-                var searchInput = document.getElementById('posSearchInput');
-                if (searchInput && cmd.product) {
-                    searchInput.value = cmd.product.nom;
-                    if (cmd.product.categorie && typeof window.posFilterCategory === 'function') {
-                        window.posFilterCategory(cmd.product.categorie);
-                    }
-                    setTimeout(function() {
-                        var cards = document.querySelectorAll('.pos-product-card');
-                        for (var i = 0; i < cards.length; i++) {
-                            var card = cards[i];
-                            var nameEl = card.querySelector('.pos-product-name');
-                            if (nameEl && nameEl.textContent.trim().toLowerCase() === cmd.product.nom.toLowerCase()) {
-                                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                card.style.boxShadow = '0 0 0 3px #14B8A6';
-                                setTimeout(function() { card.style.boxShadow = ''; }, 1500);
-                                break;
-                            }
-                        }
-                    }, 300);
-                    showVoiceResult('🔍 ' + cmd.product.nom);
-                }
+                showVoiceResult('🔍 ' + cmd.product.nom);
             }
             hideVoiceFlowIndicator();
             break;
         case 'number':
             if (voiceMode === 'quantity' && lastAddedProductId) {
-                var qty = cmd.value, it = window.posCart?.find(function(x) { return x.id === lastAddedProductId; });
+                var qty = cmd.value;
+                var it = window.posCart?.find(function(x) { return x.id === lastAddedProductId; });
                 if (it) {
-                    var p = window.posProductsList?.find(function(x) { return x.id === lastAddedProductId; });
-                    if (p && p.stock !== undefined && qty > p.stock) { showVoiceResult('⚠️ Stock max: ' + p.stock); return; }
-                    it.quantite = qty; lastAddedProductId = null;
+                    it.quantite = qty;
+                    lastAddedProductId = null;
                     setVoiceMode('search', '🎤 Recherche vocale active', null);
                     if (typeof window.updateCartOnly === 'function') window.updateCartOnly();
                     showVoiceResult('✅ Qté: ' + qty);
@@ -519,7 +344,7 @@ function handleVoiceCommand(cmd) {
                 }
                 var ai = document.getElementById('posAmountGiven');
                 if (ai) ai.value = window.posAmountGiven;
-                showVoiceResult('💰 ' + window.posAmountGiven.toFixed(2) + ' MAD');
+                showVoiceResult('💰 ' + window.posAmountGiven.toFixed(2) + ' DH');
             }
             hideVoiceFlowIndicator();
             break;
@@ -528,7 +353,6 @@ function handleVoiceCommand(cmd) {
             window.posCurrentTable = '';
             var ci = document.getElementById('posClientSearchInput');
             if (ci) ci.value = window.posCurrentClient.name;
-            if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButtons();
             window.voicePaymentState = 1;
             showVoiceResult('👤 ' + window.posCurrentClient.name);
             hideVoiceFlowIndicator();
@@ -547,16 +371,12 @@ function handleVoiceCommand(cmd) {
             setTimeout(function() { showVoiceFlowIndicator('payment_amount'); }, 100);
             break;
         case 'validate': case 'finalize':
-            if (window.posStep === 2 && typeof window.posFinalizeSale === 'function') {
-                window.posFinalizeSale();
-                hideVoiceFlowIndicator();
-            } else if (window.posCart?.length > 0 && window.posStep === 1) {
-                window.posGoToStep2();
-                hideVoiceFlowIndicator();
-            }
+            if (window.posStep === 2 && typeof window.posFinalizeSale === 'function') window.posFinalizeSale();
+            else if (window.posCart?.length > 0 && window.posStep === 1) window.posGoToStep2();
+            hideVoiceFlowIndicator();
             break;
         case 'clear':
-            if (typeof window.posResetCart === 'function') { window.posResetCart(); showVoiceResult('🗑️ Panier vidé'); }
+            if (typeof window.posResetCart === 'function') { window.posResetCart(); showVoiceResult('🗑️ Panier msa7'); }
             hideVoiceFlowIndicator();
             break;
         case 'next':
@@ -565,36 +385,23 @@ function handleVoiceCommand(cmd) {
             break;
         case 'cancel':
             setVoiceMode('search', '🎤 Recherche vocale active', null);
-            showVoiceResult('↩️ Recherche');
             if (typeof window.renderPOS === 'function') window.renderPOS();
+            showVoiceResult('↩️ Rja3');
             hideVoiceFlowIndicator();
             break;
         case 'navigate':
             var pages = { 
-                'credits': 'Crédits', 
-                'ventes': 'Ventes', 
-                'dashboard': 'Dashboard', 
-                'products': 'Produits', 
-                'clients': 'Clients', 
-                'commandes': 'Commandes en ligne', 
-                'categories': 'Catégories', 
-                'pos': 'POS',
-                'depenses': 'Dépenses',
-                'statistiques': 'Statistiques',
-                'options': 'Options'
+                'credits': 'Crédits', 'ventes': 'Ventes', 'dashboard': 'Dashboard',
+                'products': 'Produits', 'clients': 'Clients', 'commandes': 'Commandes',
+                'categories': 'Catégories', 'pos': 'POS', 'depenses': 'Dépenses',
+                'statistiques': 'Statistiques', 'options': 'Options'
             };
-            if (cp === pages[cmd.page]) { 
-                showVoiceResult('✅ ' + pages[cmd.page]); 
-            } else {
-                if (typeof navigateTo === 'function') {
-                    navigateTo(cmd.page);
-                    showVoiceResult('📍 ' + pages[cmd.page]);
-                }
+            if (typeof navigateTo === 'function') {
+                navigateTo(cmd.page);
+                showVoiceResult('📍 ' + (pages[cmd.page] || cmd.page));
             }
             hideVoiceFlowIndicator();
             break;
-        default:
-            if (cmd.text && typeof window.posSearchProducts === 'function') window.posSearchProducts(cmd.text);
     }
 }
 
@@ -611,10 +418,10 @@ function setVoiceMode(mode, msg, productId) {
 function posToggleVoiceSearch() {
     var s = checkVoiceSupport();
     if (!s.supported) { alert('⚠️ ' + s.reason); return; }
-    if (!navigator.onLine) { alert('⚠️ Connexion internet requise.'); return; }
+    if (!navigator.onLine) { alert('⚠️ Khassek internet'); return; }
     if (isRecording) { posStopVoiceSearch(); return; }
     requestMicrophonePermission().then(function(p) {
-        if (!p) { alert('❌ Micro refusé.'); return; }
+        if (!p) { alert('❌ Micro mamounch'); return; }
         posStartVoiceRecording();
     });
 }
@@ -623,9 +430,9 @@ function posStartVoiceRecording() {
     var mb = document.getElementById('posMicBtn');
     if (voiceRecognition) { try { voiceRecognition.abort(); } catch (e) {} voiceRecognition = null; }
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert('❌ Reconnaissance vocale non disponible.'); return; }
+    if (!SR) { alert('❌ Makaynch reconnaissance vocale'); return; }
     voiceRecognition = new SR();
-    voiceRecognition.lang = 'fr-FR';
+    voiceRecognition.lang = 'ar-MA';                // Arabe marocain
     voiceRecognition.continuous = true;
     voiceRecognition.interimResults = true;
     voiceRecognition.maxAlternatives = 1;
@@ -646,11 +453,11 @@ function posStartVoiceRecording() {
         }
         var cp = document.getElementById('pageTitle')?.textContent || '';
 
+        // Crédits
         if (cp === 'Crédits') {
             var vd = document.getElementById('creditsVoiceDisplay');
             var searchInput = document.getElementById('creditsSearchInput');
             var periodSelect = document.getElementById('creditsPeriodSelect');
-
             if (vd && searchInput && periodSelect) {
                 if (final) {
                     var period = detectPeriodFilter(final);
@@ -658,22 +465,16 @@ function posStartVoiceRecording() {
                         periodSelect.value = period;
                         window.creditsPeriod = period;
                         window.currentPages.credits = 1;
-                        if (window.allCreditsData.length === 0) {
-                            if (typeof loadCredits === 'function') loadCredits();
-                        } else {
-                            if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                        }
+                        if (typeof loadCredits === 'function') loadCredits();
+                        else if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
                         showVoiceResult('📅 ' + final);
                     } else {
                         searchInput.value = final;
                         vd.value = final;
                         window.creditsSearch = final;
                         window.currentPages.credits = 1;
-                        if (window.allCreditsData.length === 0) {
-                            if (typeof loadCredits === 'function') loadCredits();
-                        } else {
-                            if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                        }
+                        if (typeof loadCredits === 'function') loadCredits();
+                        else if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
                         showVoiceResult('👤 ' + final);
                     }
                     showProcessingIndicator();
@@ -686,11 +487,12 @@ function posStartVoiceRecording() {
                     lastInterim = interim;
                 }
             }
-        } else if (cp === 'Ventes') {
+        }
+        // Ventes
+        else if (cp === 'Ventes') {
             var vd2 = document.getElementById('ventesVoiceDisplay');
             var searchInput = document.getElementById('ventesSearchInput');
             var periodSelect = document.getElementById('ventesPeriodSelect');
-
             if (vd2 && searchInput && periodSelect) {
                 if (final) {
                     var period = detectPeriodFilter(final);
@@ -698,22 +500,16 @@ function posStartVoiceRecording() {
                         periodSelect.value = period;
                         window.ventesPeriod = period;
                         window.currentPages.ventes = 1;
-                        if (window.allVentesData.length === 0) {
-                            if (typeof loadVentes === 'function') loadVentes();
-                        } else {
-                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                        }
+                        if (typeof loadVentes === 'function') loadVentes();
+                        else if (typeof applyVentesFilters === 'function') applyVentesFilters();
                         showVoiceResult('📅 ' + final);
                     } else {
                         searchInput.value = final;
                         vd2.value = final;
                         window.ventesSearch = final;
                         window.currentPages.ventes = 1;
-                        if (window.allVentesData.length === 0) {
-                            if (typeof loadVentes === 'function') loadVentes();
-                        } else {
-                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                        }
+                        if (typeof loadVentes === 'function') loadVentes();
+                        else if (typeof applyVentesFilters === 'function') applyVentesFilters();
                         showVoiceResult('👤 ' + final);
                     }
                     showProcessingIndicator();
@@ -726,14 +522,15 @@ function posStartVoiceRecording() {
                     lastInterim = interim;
                 }
             }
-        } else if (cp === 'Produits') {
+        }
+        // Produits (admin)
+        else if (cp === 'Produits') {
             var pi = document.getElementById('productSearchInput');
             if (pi) {
                 if (final) {
                     pi.value = final;
                     window.productSearchQuery = final.toLowerCase().trim();
                     if (typeof renderProductsTable === 'function') renderProductsTable();
-                    showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
                     if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
                     hideVoiceFlowIndicator();
@@ -743,25 +540,23 @@ function posStartVoiceRecording() {
                     lastInterim = interim;
                 }
             }
-        } else {
+        }
+        // POS
+        else {
             var si = document.getElementById('posSearchInput');
             if (si) {
                 if (final) {
                     var lowerFinal = final.toLowerCase().trim();
-                    if (lowerFinal.includes('crédits') || lowerFinal.includes('impayés') || 
-                        lowerFinal.includes('dettes') || lowerFinal.includes('ardoises') ||
-                        lowerFinal.includes('liste des crédits')) {
+                    // Redirection crédits si mentionné
+                    if (lowerFinal.includes('crédit') || lowerFinal.includes('dette') || lowerFinal.includes('dayn') || lowerFinal.includes('impayés')) {
                         if (typeof navigateTo === 'function') {
                             navigateTo('credits');
                         }
-                        if (typeof showVoiceResult === 'function') {
-                            showVoiceResult('📍 Crédits');
-                        }
+                        showVoiceResult('📍 Crédits');
                         lastInterim = '';
                         si.value = '';
                         return;
                     }
-                    
                     si.value = final;
                     var event = new Event('input', { bubbles: true });
                     si.dispatchEvent(event);
@@ -786,7 +581,7 @@ function posStartVoiceRecording() {
     };
     voiceRecognition.onerror = function(e) {
         if (e.error === 'aborted' || e.error === 'no-speech') return;
-        if (e.error === 'network') showVoiceResult('❌ Réseau');
+        if (e.error === 'network') showVoiceResult('❌ Problème réseau');
         posStopVoiceSearch();
     };
 
@@ -794,7 +589,7 @@ function posStartVoiceRecording() {
         voiceRecognition.start();
         isRecording = true;
         showVoiceModeIndicator();
-        showVoiceResult('🎤 Écoute...');
+        showVoiceResult('🎤 Sma3...');
         showVoiceFlowIndicator('product');
     } catch (e) {
         isRecording = false;
@@ -816,12 +611,12 @@ function posStopVoiceSearch() {
         mb.style.background = '#dcfce7'; mb.style.borderColor = '#16a34a';
     }
     if (si) {
-        si.placeholder = '🔍 Rechercher...';
+        si.placeholder = '🔍 Qelleb...';
         si.style.background = '#fff';
         si.style.borderColor = '#e2e8f0';
     }
     hideVoiceFlowIndicator();
-    showVoiceResult('🎤 Micro désactivé');
+    showVoiceResult('🎤 Micro tfi');
 }
 
 // ========== EXPORTS ==========
@@ -844,7 +639,7 @@ window.onProductAdded = function(pid) {
 };
 window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
-window.buildProductAdminIndex = buildProductAdminIndex;
-window.fastFindProductAdmin = fastFindProductAdmin;
+window.buildProductAdminIndex = function() {}; // non utilisé en POS
+window.fastFindProductAdmin = function() { return []; };
 
-console.log('🎤 Module vocal – prêt avec retour visuel');
+console.log('🎤 Module vocal darija – prêt');
