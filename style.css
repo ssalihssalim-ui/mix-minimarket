@@ -453,56 +453,83 @@ body {
 .pos-product-name { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
 .pos-product-price { font-size: 0.82rem; font-weight: 700; color: var(--black); }
 
-/* ==================== POS CART (AVEC BOUTONS À DROITE) ==================== */
+/* ==================== POS CART (CORRIGÉ – BOUTONS À DROITE) ==================== */
 .pos-cart-panel { width: 340px; min-width: 300px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .pos-cart-header h3 { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .pos-cart-badge { background: var(--black); color: var(--white); padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 700; }
 .pos-cart-items { flex: 1; overflow-y: auto; margin-bottom: 8px; }
 
-/* ✅ Ligne d'article : tout reste sur une ligne */
+/* ✅ Ligne d'article : tout sur une ligne */
 .pos-cart-item {
     display: flex;
-    flex-wrap: nowrap;            /* empêche le retour à la ligne */
-    align-items: center;          /* centré verticalement */
+    flex-wrap: nowrap;
+    align-items: center;
     padding: 10px 0;
     border-bottom: 1px solid var(--border);
     gap: 8px;
 }
 
-/* ✅ Conteneur du nom et du prix – se place à gauche */
+/* ✅ Partie gauche (nom + prix) */
 .pos-cart-item-info {
-    flex: 1;                      /* prend tout l'espace disponible */
-    min-width: 0;                 /* permet la réduction du texte */
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-/* ✅ Nom du produit – peut être coupé s'il est trop long */
 .pos-cart-item-name {
     font-weight: 600;
     font-size: 0.85rem;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;      /* ajoute "..." si le texte dépasse */
+    text-overflow: ellipsis;
 }
 
-/* ✅ Prix unitaire */
 .pos-cart-item-price {
     font-size: 20px;
     color: var(--text-secondary);
 }
 
-/* ✅ Boutons quantité et suppression – calés à droite */
+/* ✅ Partie droite (boutons) */
 .pos-cart-item-actions {
     display: flex;
     align-items: center;
     gap: 4px;
-    flex-shrink: 0;               /* les boutons ne se réduisent jamais */
+    flex-shrink: 0;
 }
 
-/* ✅ Total de l'article – toujours en dessous, aligné à droite */
+/* ✅ Tous les boutons du panier (moins, plus, suppression) */
+.pos-qty-btn,
+.pos-remove-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--white);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.pos-remove-btn {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.pos-qty-value {
+    font-weight: 700;
+    font-size: 0.85rem;
+    min-width: 24px;
+    text-align: center;
+}
+
+/* Total de l'article */
 .pos-cart-item-total {
     width: 100%;
     text-align: right;
@@ -510,9 +537,6 @@ body {
     font-size: 25px;
 }
 
-/* Boutons quantité / suppression */
-.pos-qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
-.pos-qty-value { font-weight: 700; font-size: 0.85rem; min-width: 24px; text-align: center; }
 .pos-cart-footer { border-top: 1px solid var(--border); padding-top: 10px; flex-shrink: 0; }
 .pos-cart-total-row { display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin-bottom: 10px; }
 .pos-validate-btn, .pos-finalize-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); font-weight: 700; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition); }
@@ -638,14 +662,19 @@ body {
     .pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
     .pos-products-panel { height: auto; max-height: 50vh; }
 
-    /* Panier plus lisible (commun à tous les écrans ≤1024) */
+    /* Panier plus lisible */
     .pos-cart-item-name {
         font-size: 20px !important;
         font-weight: 700 !important;
     }
     .pos-cart-item-price { font-size: 25px !important; }
     .pos-cart-item-total { font-size: 25px !important; font-weight: 700 !important; }
-    .pos-qty-btn { width: 45px !important; height: 45px !important; font-size: 20px !important; }
+    .pos-qty-btn,
+    .pos-remove-btn {
+        width: 45px !important;
+        height: 45px !important;
+        font-size: 20px !important;
+    }
     .pos-qty-value { font-size: 20px !important; }
     .pos-cart-total-row { font-size: 25px !important; }
     .pos-validate-btn, .pos-finalize-btn { padding: 14px 18px !important; font-size: 1.1rem !important; }
@@ -656,7 +685,7 @@ body {
     .pos-container-full { height: calc(100vh - 60px) !important; }
 }
 
-/* --- Téléphone horizontal (481px à 1024px) : catégories un peu plus grandes --- */
+/* --- Téléphone horizontal (481px à 1024px) --- */
 @media (min-width: 481px) and (max-width: 1024px) {
     .pos-cat-btn {
         padding: 6px 14px !important;
@@ -669,7 +698,7 @@ body {
     }
 }
 
-/* --- Téléphone vertical (max 480px) : catégories restent très compactes --- */
+/* --- Téléphone vertical (max 480px) --- */
 @media(max-width:480px) {
     .main-content { padding: 8px 4px; }
     .pos-container { gap: 8px; }
@@ -694,7 +723,11 @@ body {
     .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
     .pos-cart-item-name { font-size: 20px !important; }
     .pos-cart-item-total { font-size: 30px !important; }
-    .pos-qty-btn { width: 55px !important; height: 55px !important; }
+    .pos-qty-btn,
+    .pos-remove-btn {
+        width: 55px !important;
+        height: 55px !important;
+    }
     .pos-validate-btn, .pos-finalize-btn { padding: 16px 20px !important; font-size: 1.15rem !important; }
     .pos-payment-methods { flex-direction: column; gap: 6px; }
     .pos-payment-btn { padding: 16px; font-size: 0.95rem; }
@@ -702,7 +735,6 @@ body {
     #posAmountGiven { font-size: 24px !important; }
     .pos-change-positive span:last-child, .pos-change-negative span:last-child { font-size: 32px !important; }
 
-    /* Catégories très petites pour le téléphone vertical */
     .pos-cat-btn {
         padding: 4px 8px !important;
         font-size: 0.65rem !important;
