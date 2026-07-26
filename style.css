@@ -430,7 +430,7 @@ body {
     background: var(--white);
     color: var(--text-primary);
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 20px;
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition);
@@ -440,8 +440,8 @@ body {
 .pos-cat-btn img {
     width: auto;
     height: auto;
-    max-width: 100px;
-    max-height: 100px;
+    max-width: 120px;
+    max-height: 120px;
     border-radius: 6px;
     object-fit: contain;
 }
