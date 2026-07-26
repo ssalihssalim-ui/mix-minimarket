@@ -708,17 +708,17 @@ body {
     }
     .pos-product-card { padding: 6px; min-height: 110px; }
     .pos-product-img { height: 60px; }
-    .pos-product-name { font-size: 20px; }
-    .pos-product-price { font-size: 20px; }
+    .pos-product-name { font-size: 25px; }
+    .pos-product-price { font-size: 25px; }
     .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
     .pos-cart-item-name { font-size: 20px !important; }
     .pos-cart-item-total { font-size: 30px !important; }
-    .pos-qty-btn, .pos-remove-btn { width: 55px !important; height: 55px !important; }
+    .pos-qty-btn, .pos-remove-btn { width: 60px !important; height: 60px !important; }
     .pos-validate-btn, .pos-finalize-btn { padding: 16px 20px !important; font-size: 1.15rem !important; }
     .pos-payment-methods { flex-direction: column; gap: 6px; }
     .pos-payment-btn { padding: 16px; font-size: 0.95rem; }
     .pos-payment-section input, .pos-payment-form input, .pos-payment-form select { padding: 16px !important; font-size: 20px !important; }
-    #posAmountGiven { font-size: 24px !important; }
+    #posAmountGiven { font-size: 40px !important; }
     .pos-change-positive span:last-child, .pos-change-negative span:last-child { font-size: 32px !important; }
 
     .pos-cat-btn {
