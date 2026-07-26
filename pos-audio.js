@@ -1,5 +1,5 @@
-// ==================== POS-AUDIO.JS v10 – DARIJA MAROCAIN ====================
-// Mixmax Minimarket – Reconnaissance vocale en darija
+// ==================== POS-AUDIO.JS v10 – DARIJA ÉCRIT EN FRANÇAIS ====================
+// Mixmax Minimarket – Commandes vocales en darija (transcription française)
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -12,21 +12,21 @@ var micPermissionGranted = false;
 var clientSearchIndex = {};
 var clientIndexBuilt = false;
 
-// ========== INDEX PRODUIT (RAPIDE) – POUR POS ==========
+// ========== INDEX PRODUIT (RAPIDE) ==========
 var productNameIndex = {};
 var productIndexBuilt = false;
 
 // ========== PAYMENT STATE MACHINE ==========
 window.voicePaymentState = 0;
 
-// Mots‑clés de paiement en darija
+// Mots‑clés de paiement (darija écrit en français)
 var paymentKeywords = {
-    'espece': ['espèces', 'espece', 'argent', 'cash', 'comptant', 'liquide', 'flous', 'kharda', 'nagd'],
-    'credit': ['crédit', 'credit', 'dette', 'dayn', 'b dyn', 'à crédit', 'bittaqa'],
-    'partiel': ['partiel', 'partielle', 'acompte', 'moitié', 'ns', 'noç', 'chwiya', 'chwiya dyal flous']
+    'espece': ['espece', 'argent', 'cash', 'flous', 'kharda', 'nagd', 'liquide'],
+    'credit': ['credit', 'crédit', 'dette', 'dayn', 'b dyn', 'bittaqa'],
+    'partiel': ['partiel', 'partielle', 'acompte', 'chwiya', 'chwiya dyal flous', 'ns', 'noç']
 };
 
-// Chiffres en darija (reconnaissance vocale approximative)
+// Chiffres en darija (reconnaissance approximative)
 var numberMap = {
     'wahd': 1, 'wahed': 1, 'wahad': 1, 'jouj': 2, 'jouje': 2, 'juj': 2,
     'tlata': 3, 'tleta': 3, 'rbaa': 4, 'rba3': 4, 'rab3a': 4,
@@ -39,7 +39,7 @@ var numberMap = {
     'ts3in': 90, 'mya': 100
 };
 
-// ========== FONCTIONS D'AFFICHAGE VOCAL ==========
+// ========== AFFICHAGE VOCAL ==========
 function ensureVoiceDisplay() {
     if (!document.getElementById('voiceDisplay')) {
         var div = document.createElement('div');
@@ -55,9 +55,7 @@ function showVoiceResult(msg) {
     el.textContent = msg;
     el.style.display = 'block';
     clearTimeout(window._voiceTimeout);
-    window._voiceTimeout = setTimeout(function() {
-        el.style.display = 'none';
-    }, 2000);
+    window._voiceTimeout = setTimeout(function() { el.style.display = 'none'; }, 2000);
 }
 
 function showVoiceModeIndicator() {
@@ -98,7 +96,7 @@ async function requestMicrophonePermission() {
     } catch (e) { return false; }
 }
 
-// ========== CONSTRUCTION INDEX CLIENT ==========
+// ========== INDEX CLIENT ==========
 function buildClientIndex() {
     if (clientIndexBuilt || !window.posAllClients?.length) return;
     clientSearchIndex = {};
@@ -170,11 +168,10 @@ function fastFindProduct(query) {
         var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         return nom.indexOf(cleaned) !== -1;
     });
-    if (filtered.length === 0) return [candidates[0]];
-    return filtered.sort((a,b) => (a.nom||'').length - (b.nom||'').length);
+    return filtered.length ? filtered.sort((a,b) => (a.nom||'').length - (b.nom||'').length) : [candidates[0]];
 }
 
-// ========== COMMANDES EN DARIJA ==========
+// ========== COMMANDES (DARIJA EN FRANÇAIS) ==========
 function extractNumberFromTranscript(transcript) {
     const cleaned = transcript.toLowerCase().trim();
     const digits = cleaned.match(/\b\d+\b/);
@@ -199,13 +196,12 @@ function detectPeriodFilter(transcript) {
     return null;
 }
 
-// Navigation et commandes en darija
 function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var cp = document.getElementById('pageTitle')?.textContent || '';
 
-    // Navigation
-    if (cleaned.includes('crédit') || cleaned.includes('dette') || cleaned.includes('dayn') || cleaned.includes('impayés')) return { type: 'navigate', page: 'credits' };
+    // Navigation en darija
+    if (cleaned.includes('credit') || cleaned.includes('crédit') || cleaned.includes('dette') || cleaned.includes('dayn') || cleaned.includes('impayés')) return { type: 'navigate', page: 'credits' };
     if (cleaned.includes('ventes') || cleaned.includes('mabyaat') || cleaned.includes('bai3')) return { type: 'navigate', page: 'ventes' };
     if (cleaned.includes('accueil') || cleaned.includes('sfa7a lkbira') || cleaned.includes('tableau de bord') || cleaned.includes('dashboard')) return { type: 'navigate', page: 'dashboard' };
     if (cleaned.includes('produits') || cleaned.includes('produit') || cleaned.includes('muntajat') || cleaned.includes('catalogue')) return { type: 'navigate', page: 'products' };
@@ -296,7 +292,6 @@ function handleVoiceCommand(cmd) {
                 '365': "3am",
                 'all': "Kolchi"
             };
-            // Appliquer selon la page
             var periodSelect = null;
             if (cp === 'Crédits') periodSelect = document.getElementById('creditsPeriodSelect');
             else if (cp === 'Ventes') periodSelect = document.getElementById('ventesPeriodSelect');
@@ -432,7 +427,7 @@ function posStartVoiceRecording() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert('❌ Makaynch reconnaissance vocale'); return; }
     voiceRecognition = new SR();
-    voiceRecognition.lang = 'ar-MA';                // Arabe marocain
+    voiceRecognition.lang = 'ar-MA';                // Arabe marocain (comprend la darija)
     voiceRecognition.continuous = true;
     voiceRecognition.interimResults = true;
     voiceRecognition.maxAlternatives = 1;
@@ -547,11 +542,8 @@ function posStartVoiceRecording() {
             if (si) {
                 if (final) {
                     var lowerFinal = final.toLowerCase().trim();
-                    // Redirection crédits si mentionné
-                    if (lowerFinal.includes('crédit') || lowerFinal.includes('dette') || lowerFinal.includes('dayn') || lowerFinal.includes('impayés')) {
-                        if (typeof navigateTo === 'function') {
-                            navigateTo('credits');
-                        }
+                    if (lowerFinal.includes('credit') || lowerFinal.includes('crédit') || lowerFinal.includes('dette') || lowerFinal.includes('dayn') || lowerFinal.includes('impayés')) {
+                        if (typeof navigateTo === 'function') navigateTo('credits');
                         showVoiceResult('📍 Crédits');
                         lastInterim = '';
                         si.value = '';
@@ -639,7 +631,7 @@ window.onProductAdded = function(pid) {
 };
 window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
-window.buildProductAdminIndex = function() {}; // non utilisé en POS
+window.buildProductAdminIndex = function() {};
 window.fastFindProductAdmin = function() { return []; };
 
-console.log('🎤 Module vocal darija – prêt');
+console.log('🎤 Module vocal darija (écrit en français) – prêt');
