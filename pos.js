@@ -1,5 +1,8 @@
-// ==================== POS.JS - BOUTON RETOUR FLOTTANT (DEBUG) ====================
-// Mixmax Minimarket – Point de vente complet
+// ==================== POS.JS - LOGIQUE MÉTIER (FINAL – bouton statique) ====================
+// Mixmax Minimarket – Point de vente complet avec virtualisation
+// ✅ Gestion du paiement de crédit depuis admin-credits.js
+// ✅ Tri des catégories par ordre
+// ✅ Bouton Retour 100% fonctionnel via #posStaticBackBtn (HTML)
 
 var posCart = [];
 var posStep = 1;
@@ -41,9 +44,6 @@ var posProductOffset = 0;
 var posProductBatchSize = 50;
 var posHasMoreProducts = false;
 
-// 🔧 Bouton flottant créé une seule fois
-var posFloatingBackBtn = null;
-
 function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
 function toDate(val) { if(!val) return null; if(val.toDate) return val.toDate(); if(val.seconds) return new Date(val.seconds*1000); if(typeof val==='string') return new Date(val); if(val instanceof Date) return val; return null; }
 
@@ -52,43 +52,15 @@ function fastSearch(query) { if(!query) return posProductsList; buildProductInde
 function posEnrichirItemsAvecPrixAchat(items){ return items.map(function(item){ var produit=posProductsList.find(function(p){ return p.id===item.id; }); var prixAchat=(produit&&produit.prixAchat!=null)?produit.prixAchat:(item.prixAchat||0); return Object.assign({},item,{prixAchat:prixAchat}); }); }
 function isOnPOSPage(){ var pt=document.getElementById('pageTitle')?.textContent||''; return pt==='POS'||pt==='Dashboard'; }
 
-// ✅ Créer le bouton flottant une fois pour toutes
-function ensureFloatingBackBtn() {
-    if (posFloatingBackBtn) return;
-    posFloatingBackBtn = document.createElement('button');
-    posFloatingBackBtn.id = 'posFloatingBackBtn';
-    posFloatingBackBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Retour';
-    posFloatingBackBtn.style.cssText =
-        'display:none; position:fixed; bottom:30px; right:30px; z-index:99999;' +
-        'padding:14px 24px; background:#111827; color:#fff; border:3px solid #fff;' +
-        'border-radius:30px; font-weight:700; font-size:18px; cursor:pointer;' +
-        'box-shadow:0 6px 20px rgba(0,0,0,0.4); pointer-events:auto;';
-
-    var handler = function(e) {
-        console.log('🔄 Bouton Retour cliqué !');   // 👈 Apparaîtra dans la console
-        e.preventDefault();
-        if (typeof window.posGoToStep1 === 'function') {
-            window.posGoToStep1();
-        } else {
-            console.error('❌ window.posGoToStep1 introuvable');
-        }
-    };
-
-    posFloatingBackBtn.addEventListener('pointerdown', handler);
-    posFloatingBackBtn.addEventListener('click', handler);
-    document.body.appendChild(posFloatingBackBtn);
-    console.log('✅ Bouton flottant créé et attaché au body');
-}
-
 // ==================== CHARGEMENT ====================
 async function loadPosPage(c){
 posResetCart(); posStep=1; posCommandesFilterText=''; posCommandesSortField='createdAt'; posCommandesSortOrder='desc'; posSearchQuery=''; productIndexBuilt=false; posProductOffset=0;
 posCategoriesList=[]; posProductsList=[]; posAllClients=[]; posFilteredClients=[];
 c.innerHTML='<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#2E7D32;"></i><p style="margin-top:15px;color:#64748b;">Chargement du POS...</p></div>';
 
-// ✅ Créer le bouton flottant
-ensureFloatingBackBtn();
-if (posFloatingBackBtn) posFloatingBackBtn.style.display = 'none';
+// ✅ Masquer le bouton statique au chargement du POS
+var backBtn = document.getElementById('posStaticBackBtn');
+if (backBtn) backBtn.style.display = 'none';
 
 try{
 let cc=await CacheDB.getAll('categories'),cp=await CacheDB.getAll('products'),cl=await CacheDB.getAll('clients');
@@ -252,10 +224,10 @@ h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()" style="width:10
 }
 h+='</div></div>'; c.innerHTML=h;
 
-// ✅ Afficher/masquer le bouton flottant (bas droite)
-ensureFloatingBackBtn();
-if (posFloatingBackBtn) {
-    posFloatingBackBtn.style.display = (posStep === 2) ? 'block' : 'none';
+// ✅ Afficher / masquer le bouton statique en fonction de l'étape
+var backBtn = document.getElementById('posStaticBackBtn');
+if (backBtn) {
+    backBtn.style.display = (posStep === 2) ? 'block' : 'none';
 }
 
 if(posStep===1) filterProductGrid();
@@ -287,8 +259,9 @@ var micBtn = document.getElementById('posMicBtn');
 if (micBtn && micBtn.classList.contains('recording')) {
 if (typeof window.setVoiceMode === 'function') { window.setVoiceMode('search', '🎤 Recherche vocale active', null); }
 }
-// ✅ Cacher le bouton flottant quand on revient au panier
-if (posFloatingBackBtn) posFloatingBackBtn.style.display = 'none';
+// ✅ Cacher le bouton statique quand on revient au panier
+var backBtn = document.getElementById('posStaticBackBtn');
+if (backBtn) backBtn.style.display = 'none';
 if(isOnPOSPage()) renderPOS();
 }
 
@@ -356,4 +329,4 @@ if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; docu
 // Exports
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 
-console.log('⚡ POS chargé – Bouton Retour flottant en bas à droite');
+console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour 100% OK)');
