@@ -461,13 +461,13 @@ body {
 .pos-cart-items { flex: 1; overflow-y: auto; margin-bottom: 8px; }
 .pos-cart-item { display: flex; flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 8px; }
 .pos-cart-item-name { flex: 1; font-weight: 600; font-size: 0.85rem; }
-.pos-cart-item-price { font-size: 0.7rem; color: var(--text-secondary); }
+.pos-cart-item-price { padding-left: 10px; font-size: 20px; color: var(--text-secondary); }
 .pos-cart-item-actions { display: flex; align-items: center; gap: 4px; }
 .pos-qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
 .pos-qty-value { font-weight: 700; font-size: 0.85rem; min-width: 24px; text-align: center; }
-.pos-cart-item-total { width: 100%; text-align: right; font-weight: 700; font-size: 0.8rem; }
+.pos-cart-item-total { width: 100%; text-align: right; font-weight: 700; font-size: 25px; }
 .pos-cart-footer { border-top: 1px solid var(--border); padding-top: 10px; flex-shrink: 0; }
-.pos-cart-total-row { display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
+.pos-cart-total-row { display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin-bottom: 10px; }
 .pos-validate-btn, .pos-finalize-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); font-weight: 700; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition); }
 .pos-validate-btn { background: var(--black); color: var(--white); }
 .pos-validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -646,8 +646,8 @@ body {
     .pos-product-price { padding-left: 10px ;font-size: 20px; }
     .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
     .pos-cart-item-name { font-size: 20px !important; }
-    .pos-cart-item-total { font-size: 20px !important; }
-    .pos-qty-btn { width: 55px !important; height: 55px !important; }
+    .pos-cart-item-total { font-size: 30px !important; }
+    .pos-qty-btn { padding-left: 10px; width: 55px !important; height: 55px !important; }
     .pos-validate-btn, .pos-finalize-btn { padding: 16px 20px !important; font-size: 1.15rem !important; }
     .pos-payment-methods { flex-direction: column; gap: 6px; }
     .pos-payment-btn { padding: 16px; font-size: 0.95rem; }
