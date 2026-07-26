@@ -1,8 +1,8 @@
-// ==================== POS.JS - LOGIQUE MÉTIER (FINAL – bouton statique) ====================
+// ==================== POS.JS - LOGIQUE MÉTIER (CORRECTION BOUTON RETOUR) ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ Gestion du paiement de crédit depuis admin-credits.js
 // ✅ Tri des catégories par ordre
-// ✅ Bouton Retour 100% fonctionnel via #posStaticBackBtn (HTML)
+// ✅ Bouton Retour GARANTI via #posStaticBackBtn
 
 var posCart = [];
 var posStep = 1;
@@ -52,15 +52,22 @@ function fastSearch(query) { if(!query) return posProductsList; buildProductInde
 function posEnrichirItemsAvecPrixAchat(items){ return items.map(function(item){ var produit=posProductsList.find(function(p){ return p.id===item.id; }); var prixAchat=(produit&&produit.prixAchat!=null)?produit.prixAchat:(item.prixAchat||0); return Object.assign({},item,{prixAchat:prixAchat}); }); }
 function isOnPOSPage(){ var pt=document.getElementById('pageTitle')?.textContent||''; return pt==='POS'||pt==='Dashboard'; }
 
+// ✅ Afficher / masquer le bouton statique
+function setStaticBackButtonVisibility(visible) {
+    var btn = document.getElementById('posStaticBackBtn');
+    if (btn) {
+        btn.style.display = visible ? 'block' : 'none';
+    }
+}
+
 // ==================== CHARGEMENT ====================
 async function loadPosPage(c){
 posResetCart(); posStep=1; posCommandesFilterText=''; posCommandesSortField='createdAt'; posCommandesSortOrder='desc'; posSearchQuery=''; productIndexBuilt=false; posProductOffset=0;
 posCategoriesList=[]; posProductsList=[]; posAllClients=[]; posFilteredClients=[];
 c.innerHTML='<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#2E7D32;"></i><p style="margin-top:15px;color:#64748b;">Chargement du POS...</p></div>';
 
-// ✅ Masquer le bouton statique au chargement du POS
-var backBtn = document.getElementById('posStaticBackBtn');
-if (backBtn) backBtn.style.display = 'none';
+// ✅ Masquer le bouton au chargement du POS
+setStaticBackButtonVisibility(false);
 
 try{
 let cc=await CacheDB.getAll('categories'),cp=await CacheDB.getAll('products'),cl=await CacheDB.getAll('clients');
@@ -217,18 +224,15 @@ else{ for(var k=0;k<posCart.length;k++){ var it=posCart[k],opts=''; if(it.interd
 h+='</div><div style="padding:8px 0;display:flex;gap:8px;"><label>Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:4px 8px;border:2px solid #e2e8f0;border-radius:6px;"></div><div class="pos-cart-footer">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div><button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+'><i class="fas fa-check-circle"></i> Valider</button></div>';
 }else{
 var canCredit=posCurrentClient&&posCurrentClient.id;
-// ✅ Le bouton de retour n'est plus dans le HTML dynamique
+// ✅ Aucun bouton Retour ici, il est géré par le HTML statique
 h+='<div class="pos-cart-header"><h3><i class="fas fa-credit-card"></i> Paiement</h3></div><div class="pos-payment-form"><div style="margin-bottom:4px;"><label>Client</label><div style="position:relative;"><input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"><div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:150px;overflow-y:auto;z-index:50;"></div></div></div><div style="margin:2px 0;font-size:0.7rem;text-align:center;">— OU —</div><div style="margin-bottom:4px;"><label>Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="padding:8px;background:#f8fafc;border-radius:8px;"><div>Articles: '+posCart.length+'</div>'+(posDiscountMAD>0?'<div style="color:#ef4444;">Remise: -'+posDiscountMAD.toFixed(2)+'</div>':'')+'<div style="font-size:1.1rem;font-weight:700;">Total: '+t.toFixed(2)+' MAD</div></div></div><div style="margin-bottom:4px;"><label>Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="display:flex;gap:6px;"><button class="pos-payment-btn '+(posPaymentMethod==='espece'?'active':'')+'" onclick="posSetPaymentMethod(\'espece\')"><i class="fas fa-money-bill-wave"></i> Espèces</button><button class="pos-payment-btn '+(posPaymentMethod==='credit'?'active':'')+'" onclick="posSetPaymentMethod(\'credit\')" id="posCreditBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+'><i class="fas fa-credit-card"></i> Crédit</button><button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+'><i class="fas fa-hand-holding-usd"></i> Partiel</button></div></div>';
 if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') h+='<div style="margin-bottom:4px;"><label>Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"><div id="posChangeDisplay"></div></div>';
 h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()" style="width:100%;padding:12px;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-weight:700;"><i class="fas fa-check-circle"></i> Finaliser</button></div>';
 }
 h+='</div></div>'; c.innerHTML=h;
 
-// ✅ Afficher / masquer le bouton statique en fonction de l'étape
-var backBtn = document.getElementById('posStaticBackBtn');
-if (backBtn) {
-    backBtn.style.display = (posStep === 2) ? 'block' : 'none';
-}
+// ✅ Gérer le bouton statique
+setStaticBackButtonVisibility(posStep === 2);
 
 if(posStep===1) filterProductGrid();
 if(posStep===2) setTimeout(posCalculateChange,200);
@@ -253,15 +257,16 @@ if(isOnPOSPage()) renderPOS();
 }
 
 function posGoToStep1(){
+alert('Retour cliqué !');  // 👈 ALERTE VISUELLE – à supprimer après test
+console.log('✅ posGoToStep1 exécutée');
 posStep = 1; window.posStep = 1;
 delete window.posCommandeId; delete window.posVenteId;
 var micBtn = document.getElementById('posMicBtn');
 if (micBtn && micBtn.classList.contains('recording')) {
 if (typeof window.setVoiceMode === 'function') { window.setVoiceMode('search', '🎤 Recherche vocale active', null); }
 }
-// ✅ Cacher le bouton statique quand on revient au panier
-var backBtn = document.getElementById('posStaticBackBtn');
-if (backBtn) backBtn.style.display = 'none';
+// ✅ Cacher le bouton statique
+setStaticBackButtonVisibility(false);
 if(isOnPOSPage()) renderPOS();
 }
 
