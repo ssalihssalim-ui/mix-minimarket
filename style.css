@@ -666,3 +666,68 @@ font-size: 1.05rem !important;
 }
 .pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
 }
+
+/* ============================================================
+   FORCER L'AFFICHAGE MOBILE SUR TOUS LES ÉCRANS (ORDINATEUR INCLUS)
+   TAILLES IDENTIQUES À CELLES UTILISÉES SUR TABLETTE/MOBILE
+   ============================================================ */
+
+/* --- BOUTONS DE CATÉGORIES --- */
+.pos-cat-btn {
+  padding: 4px 8px !important;
+  font-size: 20px !important;
+  gap: 4px !important;
+}
+.pos-cat-btn img {
+  max-width: 50px !important;
+  max-height: 50px !important;
+}
+
+/* --- NOMS DES PRODUITS DANS LE PANIER --- */
+.pos-cart-item-name {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+.pos-cart-item-price {
+  font-size: 20px !important;
+}
+.pos-cart-item-total {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+/* --- BOUTONS + / - (quantité) --- */
+.pos-qty-btn {
+  width: 34px !important;
+  height: 34px !important;
+  font-size: 0.85rem !important;
+}
+.pos-qty-value {
+  font-size: 20px !important;
+}
+
+/* --- TOTAL DU PANIER --- */
+.pos-cart-total-row {
+  font-size: 25px !important;
+}
+
+/* --- BOUTONS VALIDER / FINALISER --- */
+.pos-validate-btn,
+.pos-finalize-btn {
+  padding: 14px 18px !important;
+  font-size: 1.1rem !important;
+}
+
+/* --- BOUTONS DE MODE DE PAIEMENT (Espèces / Crédit / Partiel) --- */
+.pos-payment-btn {
+  padding: 12px 14px !important;
+  font-size: 1rem !important;
+}
+
+/* --- CHAMPS DE SAISIE (montant, client, table, etc.) --- */
+.pos-payment-form input,
+.pos-payment-section input,
+.pos-payment-form select {
+  padding: 12px !important;
+  font-size: 1rem !important;
+}
