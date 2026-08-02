@@ -477,7 +477,7 @@ object-fit: contain;
 /* ==================== PAIEMENT (AGRANDI) ==================== */
 .pos-payment-form { flex: 1; overflow-y: auto; }
 .pos-payment-form label {
-font-size: 0.9rem; /* labels plus grands */
+font-size: 0.9rem;
 font-weight: 600;
 margin-bottom: 6px;
 display: block;
@@ -485,10 +485,10 @@ display: block;
 .pos-payment-form input,
 .pos-payment-form select {
 width: 100%;
-padding: 12px 14px; /* champs plus grands */
+padding: 12px 14px;
 border: 2px solid var(--border);
 border-radius: var(--radius);
-font-size: 1rem; /* police plus grande */
+font-size: 1rem;
 font-family: 'Inter', sans-serif;
 background: var(--white);
 color: var(--text-primary);
@@ -502,13 +502,13 @@ box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
 }
 .pos-payment-btn {
 flex: 1;
-padding: 14px 16px; /* boutons plus épais */
+padding: 14px 16px;
 border: 2px solid var(--border);
 border-radius: var(--radius);
 background: var(--white);
 cursor: pointer;
 font-weight: 600;
-font-size: 1rem; /* police plus grande */
+font-size: 1rem;
 display: flex;
 align-items: center;
 justify-content: center;
@@ -623,7 +623,6 @@ font-size: 1rem !important;
 .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
 .pos-product-card { padding: 8px; }
 .pos-product-img { height: 70px; }
-/* Les règles du panier étant déjà définies pour 1024px, elles s'appliquent ici aussi */
 .pos-cart-panel { max-height: 35vh; padding: 12px; }
 .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
 padding: 14px !important;
@@ -653,7 +652,6 @@ min-height: 280px;
 .pos-product-name { font-size: 0.7rem; }
 .pos-product-price { font-size: 0.75rem; }
 .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
-/* Accentuation supplémentaire pour très petits écrans */
 .pos-cart-item-name { font-size: 1.1rem !important; }
 .pos-cart-item-total { font-size: 1.05rem !important; }
 .pos-qty-btn { width: 36px !important; height: 36px !important; }
@@ -668,66 +666,72 @@ font-size: 1.05rem !important;
 }
 
 /* ============================================================
-   FORCER L'AFFICHAGE MOBILE SUR TOUS LES ÉCRANS (ORDINATEUR INCLUS)
-   TAILLES IDENTIQUES À CELLES UTILISÉES SUR TABLETTE/MOBILE
+   ADAPTATION ORDINATEUR (>=1025px)
+   - Réduction de la police du panier
+   - Largeur du formulaire de paiement à 700px
    ============================================================ */
+@media(min-width: 1025px) {
+  /* --- Panier : police plus petite --- */
+  .pos-cart-item-name {
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+  }
+  .pos-cart-item-price {
+    font-size: 0.8rem !important;
+  }
+  .pos-cart-item-total {
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+  }
+  .pos-qty-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.7rem !important;
+  }
+  .pos-qty-value {
+    font-size: 0.9rem !important;
+  }
+  .pos-cart-total-row {
+    font-size: 1.1rem !important;
+  }
 
-/* --- BOUTONS DE CATÉGORIES --- */
-.pos-cat-btn {
-  padding: 4px 8px !important;
-  font-size: 20px !important;
-  gap: 4px !important;
-}
-.pos-cat-btn img {
-  max-width: 50px !important;
-  max-height: 50px !important;
-}
+  /* --- Paiement : largeur 700px --- */
+  .pos-cart-panel {
+    width: 700px !important;
+    min-width: 700px !important;
+    max-width: 700px !important;
+  }
 
-/* --- NOMS DES PRODUITS DANS LE PANIER --- */
-.pos-cart-item-name {
-  font-size: 20px !important;
-  font-weight: 700 !important;
-}
-.pos-cart-item-price {
-  font-size: 20px !important;
-}
-.pos-cart-item-total {
-  font-size: 1rem !important;
-  font-weight: 700 !important;
-}
+  /* --- Ajustement du conteneur POS pour garder l’équilibre --- */
+  .pos-container {
+    justify-content: center;
+  }
 
-/* --- BOUTONS + / - (quantité) --- */
-.pos-qty-btn {
-  width: 34px !important;
-  height: 34px !important;
-  font-size: 0.85rem !important;
-}
-.pos-qty-value {
-  font-size: 20px !important;
-}
+  /* --- Les boutons de catégories restent grands (comme sur mobile) --- */
+  .pos-cat-btn {
+    padding: 4px 8px !important;
+    font-size: 20px !important;
+    gap: 4px !important;
+  }
+  .pos-cat-btn img {
+    max-width: 50px !important;
+    max-height: 50px !important;
+  }
 
-/* --- TOTAL DU PANIER --- */
-.pos-cart-total-row {
-  font-size: 25px !important;
-}
-
-/* --- BOUTONS VALIDER / FINALISER --- */
-.pos-validate-btn,
-.pos-finalize-btn {
-  padding: 14px 18px !important;
-  font-size: 1.1rem !important;
-}
-
-/* --- BOUTONS DE MODE DE PAIEMENT (Espèces / Crédit / Partiel) --- */
-.pos-payment-btn {
-  padding: 12px 14px !important;
-  font-size: 1rem !important;
-}
-
-/* --- CHAMPS DE SAISIE (montant, client, table, etc.) --- */
-.pos-payment-form input,
-.pos-payment-section input,
-.pos-payment-form select {
-  padding: 12px !important;
-  font-size: 1rem !important;
+  /* --- Validation / finalisation --- */
+  .pos-validate-btn,
+  .pos-finalize-btn {
+    padding: 14px 18px !important;
+    font-size: 1.1rem !important;
+  }
+  .pos-payment-btn {
+    padding: 12px 14px !important;
+    font-size: 1rem !important;
+  }
+  .pos-payment-form input,
+  .pos-payment-section input,
+  .pos-payment-form select {
+    padding: 12px !important;
+    font-size: 1rem !important;
+  }
 }
