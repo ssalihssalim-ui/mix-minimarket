@@ -2,6 +2,7 @@
 // Contient : Catégories (avec ordre), Produits (catégories multiples), Clients, Fournisseurs
 // Dépend de : admin.js (variables globales, fonctions utilitaires)
 // ✅ Sélection des catégories produits par liste déroulante multiple + badges
+// ✅ Fournisseur avec datalist (recherche)
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -115,11 +116,27 @@ function saveCategory() {
     if (f) fileToBase64(f, sf); else sf(null);
 }
 
-// ==================== PRODUITS (CATÉGORIES MULTIPLES) ====================
+// ==================== PRODUITS (CATÉGORIES MULTIPLES + FOURNISSEUR) ====================
 async function loadStockForProductForm() {
     if (typeof allStockData === 'undefined' || allStockData.length === 0) {
         try { const snap = await db.collection('stock').orderBy('nom').get(); allStockData = []; snap.forEach(d => { let dd = d.data(); dd.id = d.id; allStockData.push(dd); }); } catch (e) { console.error(e); }
     }
+}
+
+// Chargement des fournisseurs pour le formulaire
+async function loadFournisseursForForm() {
+    let fournisseurs = [];
+    try {
+        const cached = await CacheDB.getAll('fournisseurs');
+        if (cached.length) {
+            fournisseurs = cached;
+        } else {
+            const snapshot = await db.collection('fournisseurs').orderBy('nom').get();
+            snapshot.forEach(d => { let dd = d.data(); dd.id = d.id; fournisseurs.push(dd); });
+            for (let doc of fournisseurs) await CacheDB.set('fournisseurs', doc.id, doc);
+        }
+    } catch (e) { console.error(e); }
+    return fournisseurs;
 }
 
 function renderIngredientRow(index, ing) {
@@ -157,7 +174,7 @@ function loadProductsPage(c) {
         '<button class="btn-add" onclick="openProductForm()"><i class="fas fa-plus"></i> Nouveau</button></div></div>' +
         '<div class="table-container"><table class="data-table" id="productsTable" style="font-size:0.7rem;"><thead><tr><th>Img</th>' +
         makeSortableHeader('products', 'nom', 'Nom', 'loadProducts') + '<th>Catégories</th>' +
-        '<th>Marque</th><th>Prix boîte</th><th>Unités/boîte</th>' +
+        '<th>Marque</th><th>Prix boîte</th><th>Unités/boîte</th><th>Fournisseur</th>' +
         makeSortableHeader('products', 'prixAchat', 'Achat', 'loadProducts') + makeSortableHeader('products', 'prixVente', 'Vente', 'loadProducts') +
         makeSortableHeader('products', 'prixPromo', 'Promo', 'loadProducts') + makeSortableHeader('products', 'profit', 'Profit', 'loadProducts') +
         makeSortableHeader('products', 'stock', 'Stock', 'loadProducts') + makeSortableHeader('products', 'vendues', 'Vendues', 'loadProducts') +
@@ -201,17 +218,19 @@ function renderProductsTable() {
     }
     data = applySort('products', data, 'nom'); var pageData = getPageData('products', data);
     tb.innerHTML = '';
-    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:30px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
+    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="18" style="text-align:center;padding:30px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:30px;height:30px;object-fit:cover;border-radius:4px;">' : '<i class="fas fa-box" style="color:#94a3b8;"></i>';
         var disp = d.disponible !== false ? '<span class="status-success">Oui</span>' : '<span class="status-danger">Non</span>';
         var profitVal = (d.profit !== undefined && !isNaN(d.profit)) ? d.profit : 0; var pc = profitVal >= 0 ? '#2E7D32' : '#dc2626';
         var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories.join(', ') : (d.categorie || '-');
+        var fournisseurDisplay = d.fournisseurNom || d.fournisseurId || '-';
         tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(categoriesDisplay) + '</td>' +
             '<td>' + escapeHtml(d.brand || '-') + '</td>' +
             '<td>' + ((d.box_price || 0).toFixed(2)) + '</td>' +
             '<td>' + (d.box_unit || 1) + '</td>' +
+            '<td>' + escapeHtml(fournisseurDisplay) + '</td>' +
             '<td>' + ((d.prixAchat || 0).toFixed(2)) + '</td><td>' + ((d.prixVente || 0).toFixed(2)) + '</td><td>' + ((d.prixPromo || 0).toFixed(2)) + '</td><td style="color:' + pc + ';">' + profitVal.toFixed(2) + '</td><td>' + (d.stock || 0) + '</td><td>' + (d.vendues || 0) + '</td><td>' + ((d.ca || 0).toFixed(2)) + '</td><td>' + disp + '</td><td>' + (d.tempsPrep || '-') + '</td><td>' + (d.description || '-') + '</td><td><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
     }
     document.getElementById('productsPagination').innerHTML = getPaginationHTML('products', data.length);
@@ -241,6 +260,23 @@ async function openProductForm(data) {
             '<div id="selectedCategoriesDisplay" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>' +
         '</div>';
 
+    // --- CHARGEMENT DES FOURNISSEURS POUR LA DATALIST ---
+    const fournisseurs = await loadFournisseursForForm();
+    var datalistOptions = '';
+    fournisseurs.forEach(f => {
+        var label = f.nom + (f.prenom ? ' ' + f.prenom : '') + (f.societe ? ' (' + f.societe + ')' : '');
+        datalistOptions += '<option value="' + escapeHtml(label) + '" data-id="' + f.id + '">';
+    });
+
+    var fournisseurValue = '';
+    if (data.fournisseurNom) {
+        fournisseurValue = data.fournisseurNom;
+    } else if (data.fournisseurId) {
+        // Si on a l'ID mais pas le nom, on cherche le nom dans la liste
+        var found = fournisseurs.find(f => f.id === data.fournisseurId);
+        if (found) fournisseurValue = found.nom + (found.prenom ? ' ' + found.prenom : '') + (found.societe ? ' (' + found.societe + ')' : '');
+    }
+
     var ip = data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:100px;">' : '';
     var dy = data.disponible !== false ? 'selected' : '', dn = data.disponible === false ? 'selected' : '';
 
@@ -255,6 +291,14 @@ async function openProductForm(data) {
         '<div class="form-row">' +
             '<div class="form-group"><label>Unités par boîte</label><input type="number" id="prodBoxUnit" step="1" min="1" value="' + (data.box_unit || 1) + '" oninput="calculatePrixAchat()"></div>' +
             '<div class="form-group"><label>Prix d\'achat unitaire (calculé)</label><input type="number" id="prodPA" step="0.01" value="' + (data.prixAchat || 0) + '" readonly style="background:#f3f4f6;"></div>' +
+        '</div>' +
+        // Champ Fournisseur avec datalist
+        '<div class="form-row">' +
+            '<div class="form-group" style="min-width:100%;">' +
+                '<label>Fournisseur</label>' +
+                '<input list="fournisseurList" id="prodFournisseur" class="form-control" placeholder="Tapez un nom pour rechercher..." value="' + escapeHtml(fournisseurValue) + '" style="width:100%; padding:10px 14px; border:2px solid #e2e8f0; border-radius:8px; font-size:0.9rem;">' +
+                '<datalist id="fournisseurList">' + datalistOptions + '</datalist>' +
+            '</div>' +
         '</div>' +
         '<div class="form-row"><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div><div class="form-group"><label>Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min"></div></div>' +
@@ -290,6 +334,32 @@ function saveProduct() {
     var select = document.getElementById('prodCategoriesSelect');
     var selectedCategories = select ? Array.from(select.selectedOptions).map(opt => opt.value) : [];
 
+    // Récupération du fournisseur depuis le champ avec datalist
+    var fournisseurInput = document.getElementById('prodFournisseur');
+    var fournisseurValue = fournisseurInput ? fournisseurInput.value.trim() : '';
+    var fournisseurId = null;
+    var fournisseurNom = fournisseurValue;
+
+    // Chercher l'ID du fournisseur correspondant dans la datalist (via les options)
+    var datalist = document.getElementById('fournisseurList');
+    if (datalist && fournisseurValue) {
+        var options = datalist.options;
+        for (var opt of options) {
+            if (opt.value.toLowerCase() === fournisseurValue.toLowerCase()) {
+                fournisseurId = opt.getAttribute('data-id');
+                break;
+            }
+        }
+        // Si on trouve un ID, on garde le nom exact
+        if (fournisseurId) {
+            fournisseurNom = fournisseurValue;
+        }
+    }
+    // Si aucun ID trouvé mais qu'une valeur est saisie, on garde le nom saisi
+    if (!fournisseurId && fournisseurValue) {
+        fournisseurId = null; // on ne stocke que le nom
+    }
+
     var sf = function(img) {
         var d = {
             nom: n,
@@ -307,7 +377,9 @@ function saveProduct() {
             description: document.getElementById('prodDesc').value,
             categories: selectedCategories,
             categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',
-            ingredients: ingredients
+            ingredients: ingredients,
+            fournisseurId: fournisseurId,
+            fournisseurNom: fournisseurNom
         };
         if (img) d.imageBase64 = img;
         if (editingId) { 
@@ -457,4 +529,4 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré + champs box)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré + champs box + fournisseur)');
