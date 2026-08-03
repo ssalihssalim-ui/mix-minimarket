@@ -141,6 +141,15 @@ function updateIngredientUnit(selectEl) {
     if (stockItem) { unitSpan.textContent = stockItem.unite || ''; } else { unitSpan.textContent = ''; }
 }
 
+// ========== CALCUL DU PRIX D'ACHAT UNITAIRE ==========
+function calculatePrixAchat() {
+    var boxPrice = parseFloat(document.getElementById('prodBoxPrice').value) || 0;
+    var boxUnit = parseFloat(document.getElementById('prodBoxUnit').value) || 1;
+    if (boxUnit <= 0) boxUnit = 1;
+    var prixAchat = boxPrice / boxUnit;
+    document.getElementById('prodPA').value = prixAchat.toFixed(2);
+}
+
 function loadProductsPage(c) {
     c.innerHTML = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-box"></i> Produits</h3><div style="display:flex;gap:10px;flex-wrap:wrap;">' +
         '<input type="text" id="productSearchInput" placeholder="🔍 Rechercher un produit..." style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; width:220px;" onkeyup="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">' +
@@ -148,6 +157,7 @@ function loadProductsPage(c) {
         '<button class="btn-add" onclick="openProductForm()"><i class="fas fa-plus"></i> Nouveau</button></div></div>' +
         '<div class="table-container"><table class="data-table" id="productsTable" style="font-size:0.7rem;"><thead><tr><th>Img</th>' +
         makeSortableHeader('products', 'nom', 'Nom', 'loadProducts') + '<th>Catégories</th>' +
+        '<th>Marque</th><th>Prix boîte</th><th>Unités/boîte</th>' +
         makeSortableHeader('products', 'prixAchat', 'Achat', 'loadProducts') + makeSortableHeader('products', 'prixVente', 'Vente', 'loadProducts') +
         makeSortableHeader('products', 'prixPromo', 'Promo', 'loadProducts') + makeSortableHeader('products', 'profit', 'Profit', 'loadProducts') +
         makeSortableHeader('products', 'stock', 'Stock', 'loadProducts') + makeSortableHeader('products', 'vendues', 'Vendues', 'loadProducts') +
@@ -191,14 +201,18 @@ function renderProductsTable() {
     }
     data = applySort('products', data, 'nom'); var pageData = getPageData('products', data);
     tb.innerHTML = '';
-    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
+    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:30px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:30px;height:30px;object-fit:cover;border-radius:4px;">' : '<i class="fas fa-box" style="color:#94a3b8;"></i>';
         var disp = d.disponible !== false ? '<span class="status-success">Oui</span>' : '<span class="status-danger">Non</span>';
         var profitVal = (d.profit !== undefined && !isNaN(d.profit)) ? d.profit : 0; var pc = profitVal >= 0 ? '#2E7D32' : '#dc2626';
         var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories.join(', ') : (d.categorie || '-');
-        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(categoriesDisplay) + '</td><td>' + ((d.prixAchat || 0).toFixed(2)) + '</td><td>' + ((d.prixVente || 0).toFixed(2)) + '</td><td>' + ((d.prixPromo || 0).toFixed(2)) + '</td><td style="color:' + pc + ';">' + profitVal.toFixed(2) + '</td><td>' + (d.stock || 0) + '</td><td>' + (d.vendues || 0) + '</td><td>' + ((d.ca || 0).toFixed(2)) + '</td><td>' + disp + '</td><td>' + (d.tempsPrep || '-') + '</td><td>' + (d.description || '-') + '</td><td><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(categoriesDisplay) + '</td>' +
+            '<td>' + escapeHtml(d.brand || '-') + '</td>' +
+            '<td>' + ((d.box_price || 0).toFixed(2)) + '</td>' +
+            '<td>' + (d.box_unit || 1) + '</td>' +
+            '<td>' + ((d.prixAchat || 0).toFixed(2)) + '</td><td>' + ((d.prixVente || 0).toFixed(2)) + '</td><td>' + ((d.prixPromo || 0).toFixed(2)) + '</td><td style="color:' + pc + ';">' + profitVal.toFixed(2) + '</td><td>' + (d.stock || 0) + '</td><td>' + (d.vendues || 0) + '</td><td>' + ((d.ca || 0).toFixed(2)) + '</td><td>' + disp + '</td><td>' + (d.tempsPrep || '-') + '</td><td>' + (d.description || '-') + '</td><td><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
     }
     document.getElementById('productsPagination').innerHTML = getPaginationHTML('products', data.length);
 }
@@ -232,11 +246,19 @@ async function openProductForm(data) {
 
     var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="prodImage" onchange="previewImage(this,\'prodPreview\')"><div id="prodPreview">' + ip + '</div></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required></div></div>' +
-        categoriesHtml +   // <--- remplace l'ancien bloc de catégories
-        '<div class="form-row"><div class="form-group"><label>Prix Achat</label><input type="number" id="prodPA" value="' + (data.prixAchat || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min"></div><div class="form-group"><label>Disponible</label><select id="prodDispo"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Description</label><textarea id="prodDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>';
+        categoriesHtml +
+        // Nouveaux champs : Marque, Prix boîte, Unités par boîte, Prix d'achat calculé
+        '<div class="form-row">' +
+            '<div class="form-group"><label>Marque</label><input type="text" id="prodBrand" value="' + escapeHtml(data.brand || '') + '"></div>' +
+            '<div class="form-group"><label>Prix boîte (MAD)</label><input type="number" id="prodBoxPrice" step="0.01" value="' + (data.box_price || 0) + '" oninput="calculatePrixAchat()"></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+            '<div class="form-group"><label>Unités par boîte</label><input type="number" id="prodBoxUnit" step="1" min="1" value="' + (data.box_unit || 1) + '" oninput="calculatePrixAchat()"></div>' +
+            '<div class="form-group"><label>Prix d\'achat unitaire (calculé)</label><input type="number" id="prodPA" step="0.01" value="' + (data.prixAchat || 0) + '" readonly style="background:#f3f4f6;"></div>' +
+        '</div>' +
+        '<div class="form-row"><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div><div class="form-group"><label>Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label>Disponible</label><select id="prodDispo"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div><div class="form-group"><label>Description</label><textarea id="prodDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>';
     h += '<div class="form-row" style="flex-direction:column;"><label style="font-weight:600; margin-bottom:10px;">🧾 Recette (ingrédients du stock)</label><div id="productIngredientsList" style="display:flex; flex-direction:column; gap:8px;">';
     if (data.ingredients && data.ingredients.length > 0) { data.ingredients.forEach(function(ing, idx) { h += renderIngredientRow(idx, ing); }); }
     h += '</div><button type="button" class="btn-add" onclick="addIngredientRow()" style="margin-top:10px; width:auto;"><i class="fas fa-plus"></i> Ajouter un ingrédient</button></div>';
@@ -247,6 +269,8 @@ async function openProductForm(data) {
     // Afficher les badges des catégories déjà sélectionnées après l'ouverture du modal
     setTimeout(function() {
         if (typeof updateSelectedCategories === 'function') updateSelectedCategories();
+        // Initialiser le calcul du prix d'achat si des valeurs existent
+        calculatePrixAchat();
     }, 50);
 }
 
@@ -269,8 +293,9 @@ function saveProduct() {
     var sf = function(img) {
         var d = {
             nom: n,
-            categories: selectedCategories,
-            categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',
+            brand: document.getElementById('prodBrand').value.trim(),
+            box_price: parseFloat(document.getElementById('prodBoxPrice').value) || 0,
+            box_unit: parseFloat(document.getElementById('prodBoxUnit').value) || 1,
             prixAchat: parseFloat(document.getElementById('prodPA').value) || 0,
             prixVente: parseFloat(document.getElementById('prodPV').value) || 0,
             prixPromo: parseFloat(document.getElementById('prodPromo').value) || 0,
@@ -280,6 +305,8 @@ function saveProduct() {
             tempsPrep: document.getElementById('prodTemps').value,
             disponible: document.getElementById('prodDispo').value === '1',
             description: document.getElementById('prodDesc').value,
+            categories: selectedCategories,
+            categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',
             ingredients: ingredients
         };
         if (img) d.imageBase64 = img;
@@ -430,4 +457,4 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré + champs box)');
