@@ -3,6 +3,7 @@
 // Dépend de : admin.js (variables globales, fonctions utilitaires)
 // ✅ Sélection des catégories produits par liste déroulante multiple + badges
 // ✅ Fournisseur avec datalist (recherche)
+// ✅ Calcul automatique du profit depuis prix d'achat et prix de vente/promo
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -33,7 +34,6 @@ function deselectCategory(catName) {
     updateSelectedCategories();
 }
 
-// Rendre les fonctions accessibles globalement
 window.updateSelectedCategories = updateSelectedCategories;
 window.deselectCategory = deselectCategory;
 
@@ -116,14 +116,13 @@ function saveCategory() {
     if (f) fileToBase64(f, sf); else sf(null);
 }
 
-// ==================== PRODUITS (CATÉGORIES MULTIPLES + FOURNISSEUR) ====================
+// ==================== PRODUITS (CATÉGORIES MULTIPLES + FOURNISSEUR + PROFIT) ====================
 async function loadStockForProductForm() {
     if (typeof allStockData === 'undefined' || allStockData.length === 0) {
         try { const snap = await db.collection('stock').orderBy('nom').get(); allStockData = []; snap.forEach(d => { let dd = d.data(); dd.id = d.id; allStockData.push(dd); }); } catch (e) { console.error(e); }
     }
 }
 
-// Chargement des fournisseurs pour le formulaire
 async function loadFournisseursForForm() {
     let fournisseurs = [];
     try {
@@ -158,7 +157,6 @@ function updateIngredientUnit(selectEl) {
     if (stockItem) { unitSpan.textContent = stockItem.unite || ''; } else { unitSpan.textContent = ''; }
 }
 
-// ========== CALCUL DU PRIX D'ACHAT UNITAIRE ==========
 function calculatePrixAchat() {
     var boxPrice = parseFloat(document.getElementById('prodBoxPrice').value) || 0;
     var boxUnit = parseFloat(document.getElementById('prodBoxUnit').value) || 1;
@@ -239,7 +237,6 @@ function renderProductsTable() {
 async function openProductForm(data) {
     data = data || {}; await loadStockForProductForm();
 
-    // --- NOUVELLE GESTION DES CATÉGORIES (liste multiple + badges) ---
     var selectOptions = '';
     var preselected = data.categories || (data.categorie ? [data.categorie] : []);
     try {
@@ -260,7 +257,6 @@ async function openProductForm(data) {
             '<div id="selectedCategoriesDisplay" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>' +
         '</div>';
 
-    // --- CHARGEMENT DES FOURNISSEURS POUR LA DATALIST ---
     const fournisseurs = await loadFournisseursForForm();
     var datalistOptions = '';
     fournisseurs.forEach(f => {
@@ -272,7 +268,6 @@ async function openProductForm(data) {
     if (data.fournisseurNom) {
         fournisseurValue = data.fournisseurNom;
     } else if (data.fournisseurId) {
-        // Si on a l'ID mais pas le nom, on cherche le nom dans la liste
         var found = fournisseurs.find(f => f.id === data.fournisseurId);
         if (found) fournisseurValue = found.nom + (found.prenom ? ' ' + found.prenom : '') + (found.societe ? ' (' + found.societe + ')' : '');
     }
@@ -283,7 +278,6 @@ async function openProductForm(data) {
     var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="prodImage" onchange="previewImage(this,\'prodPreview\')"><div id="prodPreview">' + ip + '</div></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required></div></div>' +
         categoriesHtml +
-        // Nouveaux champs : Marque, Prix boîte, Unités par boîte, Prix d'achat calculé
         '<div class="form-row">' +
             '<div class="form-group"><label>Marque</label><input type="text" id="prodBrand" value="' + escapeHtml(data.brand || '') + '"></div>' +
             '<div class="form-group"><label>Prix boîte (MAD)</label><input type="number" id="prodBoxPrice" step="0.01" value="' + (data.box_price || 0) + '" oninput="calculatePrixAchat()"></div>' +
@@ -292,7 +286,6 @@ async function openProductForm(data) {
             '<div class="form-group"><label>Unités par boîte</label><input type="number" id="prodBoxUnit" step="1" min="1" value="' + (data.box_unit || 1) + '" oninput="calculatePrixAchat()"></div>' +
             '<div class="form-group"><label>Prix d\'achat unitaire (calculé)</label><input type="number" id="prodPA" step="0.01" value="' + (data.prixAchat || 0) + '" readonly style="background:#f3f4f6;"></div>' +
         '</div>' +
-        // Champ Fournisseur avec datalist
         '<div class="form-row">' +
             '<div class="form-group" style="min-width:100%;">' +
                 '<label>Fournisseur</label>' +
@@ -302,18 +295,16 @@ async function openProductForm(data) {
         '</div>' +
         '<div class="form-row"><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div></div>' +
         '<div class="form-row"><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div><div class="form-group"><label>Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Disponible</label><select id="prodDispo"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div><div class="form-group"><label>Description</label><textarea id="prodDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>';
-    h += '<div class="form-row" style="flex-direction:column;"><label style="font-weight:600; margin-bottom:10px;">🧾 Recette (ingrédients du stock)</label><div id="productIngredientsList" style="display:flex; flex-direction:column; gap:8px;">';
+        '<div class="form-row"><div class="form-group"><label>Disponible</label><select id="prodDispo"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div><div class="form-group"><label>Description</label><textarea id="prodDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
+        '<div class="form-row" style="flex-direction:column;"><label style="font-weight:600; margin-bottom:10px;">🧾 Recette (ingrédients du stock)</label><div id="productIngredientsList" style="display:flex; flex-direction:column; gap:8px;">';
     if (data.ingredients && data.ingredients.length > 0) { data.ingredients.forEach(function(ing, idx) { h += renderIngredientRow(idx, ing); }); }
-    h += '</div><button type="button" class="btn-add" onclick="addIngredientRow()" style="margin-top:10px; width:auto;"><i class="fas fa-plus"></i> Ajouter un ingrédient</button></div>';
-    h += '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveProduct()">Enregistrer</button>';
+    h += '</div><button type="button" class="btn-add" onclick="addIngredientRow()" style="margin-top:10px; width:auto;"><i class="fas fa-plus"></i> Ajouter un ingrédient</button></div>' +
+        '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveProduct()">Enregistrer</button>';
     currentCollection = 'products';
     openModal(editingId ? 'Modifier Produit' : 'Nouveau Produit', h);
 
-    // Afficher les badges des catégories déjà sélectionnées après l'ouverture du modal
     setTimeout(function() {
         if (typeof updateSelectedCategories === 'function') updateSelectedCategories();
-        // Initialiser le calcul du prix d'achat si des valeurs existent
         calculatePrixAchat();
     }, 50);
 }
@@ -330,17 +321,14 @@ function saveProduct() {
         }
     });
 
-    // Récupération des catégories depuis le nouveau sélecteur multiple
     var select = document.getElementById('prodCategoriesSelect');
     var selectedCategories = select ? Array.from(select.selectedOptions).map(opt => opt.value) : [];
 
-    // Récupération du fournisseur depuis le champ avec datalist
     var fournisseurInput = document.getElementById('prodFournisseur');
     var fournisseurValue = fournisseurInput ? fournisseurInput.value.trim() : '';
     var fournisseurId = null;
     var fournisseurNom = fournisseurValue;
 
-    // Chercher l'ID du fournisseur correspondant dans la datalist (via les options)
     var datalist = document.getElementById('fournisseurList');
     if (datalist && fournisseurValue) {
         var options = datalist.options;
@@ -350,15 +338,20 @@ function saveProduct() {
                 break;
             }
         }
-        // Si on trouve un ID, on garde le nom exact
         if (fournisseurId) {
             fournisseurNom = fournisseurValue;
         }
     }
-    // Si aucun ID trouvé mais qu'une valeur est saisie, on garde le nom saisi
     if (!fournisseurId && fournisseurValue) {
-        fournisseurId = null; // on ne stocke que le nom
+        fournisseurId = null;
     }
+
+    // Récupération des valeurs
+    var prixAchat = parseFloat(document.getElementById('prodPA').value) || 0;
+    var prixVente = parseFloat(document.getElementById('prodPV').value) || 0;
+    var prixPromo = parseFloat(document.getElementById('prodPromo').value) || 0;
+    var prix = (prixPromo > 0) ? prixPromo : prixVente;
+    var profit = prix - prixAchat;
 
     var sf = function(img) {
         var d = {
@@ -366,9 +359,10 @@ function saveProduct() {
             brand: document.getElementById('prodBrand').value.trim(),
             box_price: parseFloat(document.getElementById('prodBoxPrice').value) || 0,
             box_unit: parseFloat(document.getElementById('prodBoxUnit').value) || 1,
-            prixAchat: parseFloat(document.getElementById('prodPA').value) || 0,
-            prixVente: parseFloat(document.getElementById('prodPV').value) || 0,
-            prixPromo: parseFloat(document.getElementById('prodPromo').value) || 0,
+            prixAchat: prixAchat,
+            prixVente: prixVente,
+            prixPromo: prixPromo,
+            profit: profit, // ← Profit calculé automatiquement
             stock: parseInt(document.getElementById('prodStock').value) || 0,
             vendues: 0,
             ca: 0,
@@ -529,4 +523,4 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré + champs box + fournisseur)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré + champs box + fournisseur + profit auto)');
