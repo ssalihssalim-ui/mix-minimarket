@@ -1,8 +1,9 @@
-// ==================== POS.JS - LOGIQUE MÉTIER (CORRECTION BOUTON RETOUR) ====================
+// ==================== POS.JS - LOGIQUE MÉTIER (CORRECTION BOUTON RETOUR + INDICATEUR ÉTAPE) ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ Gestion du paiement de crédit depuis admin-credits.js
 // ✅ Tri des catégories par ordre
 // ✅ Bouton Retour GARANTI via #posStaticBackBtn
+// ✅ Indicateur d'étape (Panier / Paiement) comme dans l'ancien projet
 
 var posCart = [];
 var posStep = 1;
@@ -203,7 +204,22 @@ function buildFullPOS(c){
 if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#2E7D32;"></i><p>Chargement...</p></div>'; return; }
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
-h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '"><div class="pos-products-panel"'+productPanelStyle+'><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;"><i class="fas fa-search" style="color:#94a3b8;margin-right:6px;"></i><input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value)" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;">'+(posSearchQuery?'<button onclick="document.getElementById(\'posSearchInput\').value=\'\';posSearchProducts(\'\');"><i class="fas fa-times-circle"></i></button>':'')+'</div><button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:46px;height:46px;cursor:pointer;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button><div style="display:flex;gap:4px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesEnLigneCount+'</span></button></div></div><div class="pos-categories-bar"><button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')"><i class="fas fa-th-large"></i> Tous</button>';
+
+// ===== INDICATEUR D'ÉTAPE (comme dans l'ancien projet) =====
+var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:20px; margin-bottom:12px; padding:8px; background:var(--gray-50); border-radius:var(--radius);">' +
+    '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + ';">' +
+        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">1</span>' +
+        '🛒 Panier' +
+    '</div>' +
+    '<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 2 ? 'var(--black)' : 'var(--text-muted)') + ';">' +
+        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 2 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 2 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">2</span>' +
+        '💳 Paiement' +
+    '</div>' +
+'</div>';
+
+h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
+    stepIndicator +
+    '<div class="pos-products-panel"'+productPanelStyle+'><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;"><i class="fas fa-search" style="color:#94a3b8;margin-right:6px;"></i><input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value)" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;">'+(posSearchQuery?'<button onclick="document.getElementById(\'posSearchInput\').value=\'\';posSearchProducts(\'\');"><i class="fas fa-times-circle"></i></button>':'')+'</div><button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:46px;height:46px;cursor:pointer;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button><div style="display:flex;gap:4px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesEnLigneCount+'</span></button></div></div><div class="pos-categories-bar"><button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')"><i class="fas fa-th-large"></i> Tous</button>';
 var sortedCategories = posCategoriesList.slice().sort(function(a, b) {
     var ordreA = (a.ordre !== undefined && a.ordre !== null) ? parseInt(a.ordre) : 9999;
     var ordreB = (b.ordre !== undefined && b.ordre !== null) ? parseInt(b.ordre) : 9999;
@@ -245,10 +261,16 @@ function posUpdateQty(i,ch){ var it=posCart[i]; if(!it) return; var p=posProduct
 function posRemoveItem(i){ posCart.splice(i,1); updateCartOnly(); }
 function posCalculateTotal(){ var t=0; for(var i=0;i<posCart.length;i++) t+=posCart[i].prixUnitaire*posCart[i].quantite; return t; }
 
+// ==================== GESTION DES ÉTAPES (CORRIGÉES) ====================
+
 function posGoToStep2(){
 if(posCart.length===0){ alert('Panier vide'); return; }
 posStep = 2;
 window.posStep = 2;
+
+// ✅ Afficher le bouton retour
+setStaticBackButtonVisibility(true);
+
 if (typeof window.setVoiceMode === 'function') {
 if (typeof window.lastAddedProductId !== 'undefined') { window.lastAddedProductId = null; }
 window.setVoiceMode('payment', '🎤 Mode paiement', null);
@@ -257,16 +279,33 @@ if(isOnPOSPage()) renderPOS();
 }
 
 function posGoToStep1(){
-alert('Retour cliqué !');  // 👈 ALERTE VISUELLE – à supprimer après test
-console.log('✅ posGoToStep1 exécutée');
-posStep = 1; window.posStep = 1;
-delete window.posCommandeId; delete window.posVenteId;
-var micBtn = document.getElementById('posMicBtn');
-if (micBtn && micBtn.classList.contains('recording')) {
-if (typeof window.setVoiceMode === 'function') { window.setVoiceMode('search', '🎤 Recherche vocale active', null); }
-}
-// ✅ Cacher le bouton statique
+// ✅ Plus d'alerte – retour silencieux comme dans l'ancien projet
+console.log('🔄 Retour à l\'étape 1 (panier)');
+
+// ✅ Conserver toutes les données : panier, client, table, remise
+// NE PAS réinitialiser posCart, posCurrentClient, posCurrentTable, posDiscountMAD
+
+posStep = 1;
+window.posStep = 1;
+
+// Nettoyer les IDs de commande/vente en cours
+delete window.posCommandeId;
+delete window.posVenteId;
+
+// Cacher le bouton statique
 setStaticBackButtonVisibility(false);
+
+// Revenir au mode vocal "recherche"
+if (typeof window.setVoiceMode === 'function') {
+window.setVoiceMode('search', '🎤 Recherche vocale active', null);
+}
+
+// Afficher un petit message de confirmation (optionnel)
+if (typeof showVoiceResult === 'function') {
+showVoiceResult('↩️ Retour au panier');
+}
+
+// Re-rendre le POS
 if(isOnPOSPage()) renderPOS();
 }
 
@@ -334,4 +373,4 @@ if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; docu
 // Exports
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 
-console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour 100% OK)');
+console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour 100% OK + indicateur étape)');
