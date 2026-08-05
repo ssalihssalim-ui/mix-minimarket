@@ -650,7 +650,7 @@ min-height: 280px;
 .pos-product-card { padding: 6px; min-height: 110px; }
 .pos-product-img { height: 60px; }
 .pos-product-name { font-size: 0.7rem; }
-.pos-product-price { font-size: 0.75rem; }
+.pos-product-price { margin-left: 10px; font-size: 0.75rem; }
 .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
 .pos-cart-item-name { font-size: 1.1rem !important; }
 .pos-cart-item-total { font-size: 1.05rem !important; }
