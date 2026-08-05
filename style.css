@@ -766,6 +766,11 @@ button[onclick*="navigateTo('commandes')"] {
   font-weight: 700 !important;
 }
 
+/* Espace vertical entre le nom et le prix */
+.pos-product-card .pos-product-name {
+  margin-bottom: 6px !important;
+}
+
 /* Mode paiement : le panier prend 100% de la place restante */
 .pos-container-full .pos-products-panel {
   display: none !important;
