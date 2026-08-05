@@ -632,7 +632,7 @@ font-size: 1rem !important;
 }
 
 /* ============================================================
-   ÉCRAN MOBILE (< 480px) - 5 PRODUITS PAR LIGNE + Ajustement contenu
+   ÉCRAN MOBILE (< 480px) - 5 PRODUITS PAR LIGNE (FORCÉ)
    ============================================================ */
 @media(max-width:480px) {
   .main-content { padding: 8px 4px; }
@@ -646,14 +646,17 @@ font-size: 1rem !important;
     padding: 8px !important;
   }
   
-  /* ✅ Grille 5 colonnes sur mobile */
+  /* ✅ FORCER 5 colonnes EXACTEMENT */
   .pos-products-grid {
+    display: grid !important;
     grid-template-columns: repeat(5, 1fr) !important;
     gap: 6px !important;
     flex: 1;
     overflow-y: auto;
     min-height: 280px;
     padding: 4px !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   .pos-product-card {
@@ -668,6 +671,7 @@ font-size: 1rem !important;
     overflow: hidden !important;
     width: 100% !important;
     max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .pos-product-img {
