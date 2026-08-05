@@ -1,4 +1,4 @@
-// ==================== POS.JS - LOGIQUE MÉTIER (CORRECTION BOUTON RETOUR + INDICATEUR ÉTAPE CLICABLE) ====================
+// ==================== POS.JS - LOGIQUE MÉTIER (CORRECTION BOUTON RETOUR + INDICATEUR CLICABLE) ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ Gestion du paiement de crédit depuis admin-credits.js
 // ✅ Tri des catégories par ordre
@@ -256,6 +256,7 @@ if(posStep===2) setTimeout(posCalculateChange,200);
 
 // ==================== NAVIGATION ENTRE ÉTAPES (CLIC SUR LES INDICATEURS) ====================
 function posNaviguerEtape(etape) {
+    console.log('🔄 Navigation vers étape', etape);
     if (etape === 1) {
         // Retour à l'étape 1 (Panier)
         posGoToStep1();
@@ -319,8 +320,10 @@ if (typeof showVoiceResult === 'function') {
 showVoiceResult('↩️ Retour au panier');
 }
 
-// Re-rendre le POS
-if(isOnPOSPage()) renderPOS();
+// Forcer le re-rendu après un court délai pour garantir la mise à jour
+setTimeout(function() {
+    if (isOnPOSPage()) renderPOS();
+}, 50);
 }
 
 function posSetPaymentMethod(m){ if((m==='credit'||m==='partiel')&&(!posCurrentClient||!posCurrentClient.id)){ alert('Client requis'); return; } posPaymentMethod=m; posAmountGiven=0; if(isOnPOSPage()) renderPOS(); }
