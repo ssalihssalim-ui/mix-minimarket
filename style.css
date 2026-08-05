@@ -447,11 +447,12 @@ object-fit: contain;
 }
 
 .pos-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
-.pos-product-card { background: var(--gray-50); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 10px; cursor: pointer; transition: var(--transition); text-align: center; display: flex; flex-direction: column; align-items: center; }
+.pos-product-card { background: var(--gray-50); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 10px; cursor: pointer; transition: var(--transition); text-align: center; display: flex; flex-direction: column; align-items: center; overflow: hidden; width: 100%; max-width: 100%; }
 .pos-product-card:hover { border-color: var(--black); box-shadow: var(--shadow); background: var(--white); }
 .pos-product-img { width: 100%; height: 80px; border-radius: var(--radius); overflow: hidden; margin-bottom: 6px; background: var(--gray-200); }
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
-.pos-product-name { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+.pos-product-info { width: 100%; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+.pos-product-name { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .pos-product-price { font-size: 0.82rem; font-weight: 700; color: var(--black); }
 
 /* ==================== POS CART ==================== */
@@ -669,6 +670,7 @@ font-size: 1.05rem !important;
    ADAPTATION ORDINATEUR (>=1025px)
    - Réduction de la police du panier
    - Largeur du formulaire de paiement à 700px
+   - 5 produits par ligne sur grand écran
    ============================================================ */
 @media(min-width: 1025px) {
   /* --- Panier : police plus petite --- */
@@ -734,6 +736,11 @@ font-size: 1.05rem !important;
     padding: 12px !important;
     font-size: 1rem !important;
   }
+
+  /* --- Grille produits : 5 colonnes sur grand écran --- */
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+  }
 }
 
 /* ============================================================
@@ -774,6 +781,17 @@ button[onclick*="navigateTo('commandes')"] {
 /* ⭐ ESPACE VERTICAL entre le nom et le prix */
 .pos-product-card .pos-product-name {
   margin-bottom: 8px !important;
+}
+
+/* ⭐ ÉVITER QUE LE NOM ET LE PRIX DÉPASSENT LE CONTENEUR */
+.pos-product-name,
+.pos-product-price {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+  display: block !important;
+  width: 100% !important;
 }
 
 /* Mode paiement : le panier prend 100% de la place restante */
