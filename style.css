@@ -650,7 +650,7 @@ min-height: 280px;
 .pos-product-card { padding: 6px; min-height: 110px; }
 .pos-product-img { height: 60px; }
 .pos-product-name { font-size: 0.7rem; }
-.pos-product-price { margin-left: 10px; font-size: 0.75rem; }
+.pos-product-price { font-size: 0.75rem; }
 .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
 .pos-cart-item-name { font-size: 1.1rem !important; }
 .pos-cart-item-total { font-size: 1.05rem !important; }
@@ -766,9 +766,14 @@ button[onclick*="navigateTo('commandes')"] {
   font-weight: 700 !important;
 }
 
-/* Espace vertical entre le nom et le prix */
+/* ⭐ ESPACE HORIZONTAL entre le nom et le prix (margin-right: 10px) */
+.pos-product-name {
+  margin-right: 10px !important;
+}
+
+/* ⭐ ESPACE VERTICAL entre le nom et le prix */
 .pos-product-card .pos-product-name {
-  margin-bottom: 6px !important;
+  margin-bottom: 8px !important;
 }
 
 /* Mode paiement : le panier prend 100% de la place restante */
