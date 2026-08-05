@@ -215,6 +215,69 @@ function fastFindProduct(query) {
     return [filtered[0]];
 }
 
+// ========== INDEX PRODUIT ADMIN (AJOUTÉ POUR CORRIGER L'ERREUR) ==========
+function buildProductAdminIndex() {
+    if (window.productAdminIndexBuilt) return;
+    window.productAdminIndex = {};
+    var products = window.allProductsData || window.posProductsList || [];
+    products.forEach(function(p) {
+        if (!p.nom) return;
+        var nomNormalized = p.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        var mots = nomNormalized.split(/[\s,;.]+/);
+        mots.forEach(function(mot) {
+            mot = mot.trim();
+            if (mot.length < 2) return;
+            if (!window.productAdminIndex[mot]) window.productAdminIndex[mot] = [];
+            if (!window.productAdminIndex[mot].includes(p)) window.productAdminIndex[mot].push(p);
+        });
+        var descNormalized = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        descNormalized.split(/[\s,;.]+/).forEach(function(mot) {
+            mot = mot.trim();
+            if (mot.length < 2) return;
+            if (!window.productAdminIndex[mot]) window.productAdminIndex[mot] = [];
+            if (!window.productAdminIndex[mot].includes(p)) window.productAdminIndex[mot].push(p);
+        });
+    });
+    window.productAdminIndexBuilt = true;
+}
+
+function fastFindProductAdmin(query) {
+    buildProductAdminIndex();
+    if (!query) return [];
+    var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    var mots = cleaned.split(/[\s,;.]+/);
+    if (mots.length === 0) return [];
+
+    var firstWord = mots[0];
+    var searchTerm = firstWord;
+    if (mots.length >= 2) {
+        searchTerm = firstWord + ' ' + mots[1];
+    }
+
+    var candidates = window.productAdminIndex[firstWord] || [];
+    if (candidates.length === 0) return [];
+
+    var filtered = candidates.filter(function(p) {
+        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        return nom.indexOf(searchTerm) !== -1;
+    });
+
+    if (filtered.length === 0) {
+        return [candidates[0]];
+    }
+
+    if (filtered.length === 1) return filtered;
+
+    var exact = filtered.find(function(p) {
+        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        return nom === searchTerm;
+    });
+    if (exact) return [exact];
+
+    filtered.sort(function(a, b) { return (a.nom||'').length - (b.nom||'').length; });
+    return [filtered[0]];
+}
+
 // ========== COMMANDES ==========
 function extractNumberFromTranscript(transcript) {
     const cleaned = transcript.toLowerCase().trim();
