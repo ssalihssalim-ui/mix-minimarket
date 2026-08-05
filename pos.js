@@ -1,9 +1,9 @@
-// ==================== POS.JS - LOGIQUE MÉTIER (CORRECTION BOUTON RETOUR + INDICATEUR ÉTAPE) ====================
+// ==================== POS.JS - LOGIQUE MÉTIER (CORRECTION BOUTON RETOUR + INDICATEUR ÉTAPE CLICABLE) ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ Gestion du paiement de crédit depuis admin-credits.js
 // ✅ Tri des catégories par ordre
 // ✅ Bouton Retour GARANTI via #posStaticBackBtn
-// ✅ Indicateur d'étape (Panier / Paiement) comme dans l'ancien projet
+// ✅ Indicateur d'étape (Panier / Paiement) cliquable pour naviguer
 
 var posCart = [];
 var posStep = 1;
@@ -205,13 +205,13 @@ if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div 
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
 
-// ===== INDICATEUR D'ÉTAPE (comme dans l'ancien projet) =====
-var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:20px; margin-bottom:12px; padding:8px; background:var(--gray-50); border-radius:var(--radius);">' +
-    '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + ';">' +
+// ===== INDICATEUR D'ÉTAPE (CLICABLE) =====
+var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:20px; margin-bottom:12px; padding:8px; background:var(--gray-50); border-radius:var(--radius); cursor:default;">' +
+    '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(1)">' +
         '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">1</span>' +
         '🛒 Panier' +
     '</div>' +
-    '<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 2 ? 'var(--black)' : 'var(--text-muted)') + ';">' +
+    '<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 2 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(2)">' +
         '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 2 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 2 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">2</span>' +
         '💳 Paiement' +
     '</div>' +
@@ -254,6 +254,21 @@ if(posStep===1) filterProductGrid();
 if(posStep===2) setTimeout(posCalculateChange,200);
 }
 
+// ==================== NAVIGATION ENTRE ÉTAPES (CLIC SUR LES INDICATEURS) ====================
+function posNaviguerEtape(etape) {
+    if (etape === 1) {
+        // Retour à l'étape 1 (Panier)
+        posGoToStep1();
+    } else if (etape === 2) {
+        // Aller à l'étape 2 (Paiement) – seulement si le panier n'est pas vide
+        if (posCart.length === 0) {
+            alert('⚠️ Panier vide !');
+            return;
+        }
+        posGoToStep2();
+    }
+}
+
 // ==================== MÉTIER ====================
 function posFilterCategory(ca){ posSelectedCategory=ca; posProductOffset=0; var si=document.getElementById('posSearchInput'); if(si) posSearchQuery=si.value.toLowerCase().trim(); if(isOnPOSPage()) filterProductGrid(); }
 function posUpdateDiscountMAD(v){ posDiscountMAD=parseFloat(v)||0; if(posDiscountMAD<0) posDiscountMAD=0; if(isOnPOSPage()) renderPOS(); }
@@ -261,7 +276,7 @@ function posUpdateQty(i,ch){ var it=posCart[i]; if(!it) return; var p=posProduct
 function posRemoveItem(i){ posCart.splice(i,1); updateCartOnly(); }
 function posCalculateTotal(){ var t=0; for(var i=0;i<posCart.length;i++) t+=posCart[i].prixUnitaire*posCart[i].quantite; return t; }
 
-// ==================== GESTION DES ÉTAPES (CORRIGÉES) ====================
+// ==================== GESTION DES ÉTAPES ====================
 
 function posGoToStep2(){
 if(posCart.length===0){ alert('Panier vide'); return; }
@@ -279,7 +294,6 @@ if(isOnPOSPage()) renderPOS();
 }
 
 function posGoToStep1(){
-// ✅ Plus d'alerte – retour silencieux comme dans l'ancien projet
 console.log('🔄 Retour à l\'étape 1 (panier)');
 
 // ✅ Conserver toutes les données : panier, client, table, remise
@@ -372,5 +386,6 @@ if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; docu
 
 // Exports
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
+window.posNaviguerEtape = posNaviguerEtape; // Exporter pour le clic sur les étapes
 
-console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour 100% OK + indicateur étape)');
+console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour 100% OK + indicateur étape cliquable)');
