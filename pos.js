@@ -4,6 +4,7 @@
 // ✅ Tri des catégories par ordre
 // ✅ Bouton Retour GARANTI via #posStaticBackBtn
 // ✅ Indicateur d'étape (Panier / Paiement) cliquable pour naviguer
+// ✅ Re-rendu complet pour réafficher le panneau des produits
 
 var posCart = [];
 var posStep = 1;
@@ -196,7 +197,16 @@ if(!isOnPOSPage()) return;
 var now=Date.now(); if(now-posLastRenderTime<100&&posCart.length>0) return; posLastRenderTime=now;
 var c=document.getElementById('dynamicContent'); if(!c) return;
 if(posCart.length===0&&posStep===1){ buildFullPOS(c); return; }
-if(document.querySelector('.pos-container')&&posStep===1&&posCart.length>0){ updateCartOnly(); filterProductGrid(); var tr=document.querySelector('.pos-cart-total-row span:last-child'); if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } return; }
+if(document.querySelector('.pos-container')&&posStep===1&&posCart.length>0){ 
+    // On est en étape 1 avec panier non vide : on met à jour le panier et la grille, mais on s'assure que le panneau des produits est visible
+    var productPanel = document.querySelector('.pos-products-panel');
+    if (productPanel) productPanel.style.display = 'flex'; // réafficher
+    updateCartOnly(); 
+    filterProductGrid(); 
+    var tr=document.querySelector('.pos-cart-total-row span:last-child'); 
+    if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } 
+    return; 
+}
 buildFullPOS(c);
 }
 
@@ -217,7 +227,7 @@ var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-con
     '</div>' +
 '</div>';
 
-h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
+var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
     stepIndicator +
     '<div class="pos-products-panel"'+productPanelStyle+'><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;"><i class="fas fa-search" style="color:#94a3b8;margin-right:6px;"></i><input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value)" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;">'+(posSearchQuery?'<button onclick="document.getElementById(\'posSearchInput\').value=\'\';posSearchProducts(\'\');"><i class="fas fa-times-circle"></i></button>':'')+'</div><button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:46px;height:46px;cursor:pointer;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button><div style="display:flex;gap:4px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesEnLigneCount+'</span></button></div></div><div class="pos-categories-bar"><button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')"><i class="fas fa-th-large"></i> Tous</button>';
 var sortedCategories = posCategoriesList.slice().sort(function(a, b) {
@@ -320,10 +330,11 @@ if (typeof showVoiceResult === 'function') {
 showVoiceResult('↩️ Retour au panier');
 }
 
-// Forcer le re-rendu après un court délai pour garantir la mise à jour
-setTimeout(function() {
-    if (isOnPOSPage()) renderPOS();
-}, 50);
+// ✅ FORCER UN RE-RENDU COMPLET pour réafficher le panneau des produits
+var c = document.getElementById('dynamicContent');
+if (c && isOnPOSPage()) {
+    buildFullPOS(c);
+}
 }
 
 function posSetPaymentMethod(m){ if((m==='credit'||m==='partiel')&&(!posCurrentClient||!posCurrentClient.id)){ alert('Client requis'); return; } posPaymentMethod=m; posAmountGiven=0; if(isOnPOSPage()) renderPOS(); }
@@ -390,5 +401,6 @@ if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; docu
 // Exports
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 window.posNaviguerEtape = posNaviguerEtape; // Exporter pour le clic sur les étapes
+window.buildFullPOS = buildFullPOS; // Exporter pour le re-rendu forcé
 
-console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour 100% OK + indicateur étape cliquable)');
+console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour 100% OK + indicateur étape cliquable + re-rendu complet)');
