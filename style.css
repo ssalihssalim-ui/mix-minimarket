@@ -735,3 +735,60 @@ font-size: 1.05rem !important;
     font-size: 1rem !important;
   }
 }
+
+/* ============================================================
+   MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
+   ============================================================ */
+
+/* Barre de recherche POS - 20px */
+#posSearchInput {
+  font-size: 20px !important;
+}
+
+/* Boutons Tables et En ligne - 18px */
+button[onclick*="posAfficherCommandesTables"],
+button[onclick*="navigateTo('commandes')"] {
+  font-size: 18px !important;
+  padding: 10px 16px !important;
+  min-height: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+/* Noms des produits - 18px, Prix - 20px */
+.pos-product-name {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+}
+.pos-product-price {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+/* Mode paiement : le panier prend 100% de la place restante */
+.pos-container-full .pos-products-panel {
+  display: none !important;
+}
+.pos-container-full {
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: calc(100vh - 120px) !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+.pos-container-full .pos-cart-panel {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  flex: 1 1 100% !important;
+  border-radius: 0 !important;
+  padding: 16px !important;
+}
+.pos-container-full .pos-cart-panel .pos-payment-form {
+  flex: 1;
+  overflow-y: auto;
+  max-height: none;
+}
