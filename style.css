@@ -632,7 +632,7 @@ font-size: 1rem !important;
 }
 
 /* ============================================================
-   ÉCRAN MOBILE (< 480px) - 5 PRODUITS PAR LIGNE (FORCÉ)
+   ÉCRAN MOBILE (< 480px) - 5 PRODUITS PAR LIGNE (FORCÉ + AJUSTÉ)
    ============================================================ */
 @media(max-width:480px) {
   .main-content { padding: 8px 4px; }
@@ -657,12 +657,13 @@ font-size: 1rem !important;
     padding: 4px !important;
     width: 100% !important;
     max-width: 100% !important;
+    align-content: start !important;
   }
   
   .pos-product-card {
-    padding: 4px !important;
-    min-height: 80px !important;
-    max-height: 110px !important;
+    padding: 4px 3px !important;
+    min-height: 85px !important;
+    max-height: 115px !important;
     border-radius: 8px !important;
     display: flex !important;
     flex-direction: column !important;
@@ -671,26 +672,34 @@ font-size: 1rem !important;
     overflow: hidden !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     box-sizing: border-box !important;
+    border-width: 1px !important;
+    flex: 1 1 auto !important;
   }
   
   .pos-product-img {
-    height: 45px !important;
     width: 100% !important;
+    height: 42px !important;
     max-width: 100% !important;
     border-radius: 4px !important;
     margin-bottom: 2px !important;
     overflow: hidden !important;
     background: var(--gray-200);
     flex-shrink: 0;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
   .pos-product-img img {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
+    display: block !important;
   }
-  .pos-product-img .fas {
-    font-size: 1.2rem !important;
+  .pos-product-img .fas,
+  .pos-product-img .fa-box {
+    font-size: 1rem !important;
   }
   
   .pos-product-info {
@@ -700,11 +709,13 @@ font-size: 1rem !important;
     flex-direction: column !important;
     align-items: center !important;
     overflow: hidden !important;
-    padding: 0 2px !important;
+    padding: 0 1px !important;
+    flex: 1 1 auto !important;
+    min-height: 30px !important;
   }
   
   .pos-product-name {
-    font-size: 0.55rem !important;
+    font-size: 0.5rem !important;
     font-weight: 600 !important;
     text-align: center !important;
     overflow: hidden !important;
@@ -715,10 +726,12 @@ font-size: 1rem !important;
     line-height: 1.1 !important;
     margin-bottom: 1px !important;
     margin-right: 0 !important;
+    padding: 0 1px !important;
+    min-height: 12px !important;
   }
   
   .pos-product-price {
-    font-size: 0.6rem !important;
+    font-size: 0.55rem !important;
     font-weight: 700 !important;
     text-align: center !important;
     overflow: hidden !important;
@@ -727,10 +740,12 @@ font-size: 1rem !important;
     max-width: 100% !important;
     width: 100% !important;
     color: var(--black);
+    padding: 0 1px !important;
+    min-height: 14px !important;
   }
   
   .pos-old-price {
-    font-size: 0.5rem !important;
+    font-size: 0.45rem !important;
     text-decoration: line-through !important;
     color: var(--text-muted) !important;
     margin-right: 2px !important;
@@ -765,16 +780,16 @@ font-size: 1rem !important;
   /* ✅ Catégories plus compactes sur mobile */
   .pos-cat-btn {
     padding: 3px 6px !important;
-    font-size: 0.6rem !important;
+    font-size: 0.55rem !important;
     gap: 2px !important;
-    min-height: 28px !important;
+    min-height: 26px !important;
   }
   .pos-cat-btn img {
-    max-width: 20px !important;
-    max-height: 20px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
   }
   .pos-cat-btn i {
-    font-size: 0.6rem !important;
+    font-size: 0.55rem !important;
   }
   
   /* ✅ Barre de recherche plus compacte */
@@ -783,24 +798,24 @@ font-size: 1rem !important;
     gap: 4px !important;
   }
   .pos-products-panel #posSearchInput {
-    font-size: 0.75rem !important;
+    font-size: 0.7rem !important;
     padding: 6px 10px !important;
-    min-height: 32px !important;
+    min-height: 30px !important;
   }
   #posMicBtn {
-    width: 32px !important;
-    height: 32px !important;
+    width: 30px !important;
+    height: 30px !important;
   }
   #posMicBtn i {
-    font-size: 0.8rem !important;
+    font-size: 0.75rem !important;
   }
   
   /* ✅ Boutons Tables et En ligne plus compacts */
   button[onclick*="posAfficherCommandesTables"],
   button[onclick*="navigateTo('commandes')"] {
-    font-size: 0.6rem !important;
-    padding: 4px 8px !important;
-    min-height: 28px !important;
+    font-size: 0.55rem !important;
+    padding: 3px 6px !important;
+    min-height: 26px !important;
   }
 }
 
