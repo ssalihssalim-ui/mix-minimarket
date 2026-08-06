@@ -745,6 +745,11 @@ MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
 margin-right: 10px !important;
 }
 
+/* ⭐ ESPACE entre le nom et le prix DANS LE PANIER (margin-right: 10px sur le nom) */
+.pos-cart-item-name {
+margin-right: 10px !important;
+}
+
 /* ⭐ PRIX en 19px */
 .pos-product-price {
 font-size: 19px !important;
