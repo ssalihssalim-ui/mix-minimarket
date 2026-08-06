@@ -740,34 +740,12 @@ font-size: 1rem !important;
 MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
 ============================================================ */
 
-/* ⭐ ESPACE entre le nom et le prix (margin-left: 10px sur le prix) */
-.pos-product-price {
-margin-left: 10px !important;
+/* ⭐ ESPACE entre le nom et le prix (margin-right: 10px sur le nom) */
+.pos-product-name {
+margin-right: 10px !important;
 }
 
-/* ⭐ MODE PAIEMENT : le panier prend 100% de la hauteur restante */
-.pos-container-full .pos-products-panel {
-display: none !important;
-}
-.pos-container-full {
-flex-direction: column !important;
-height: 100% !important;
-min-height: calc(100vh - 120px) !important;
-padding: 0 !important;
-gap: 0 !important;
-}
-.pos-container-full .pos-cart-panel {
-width: 100% !important;
-max-width: 100% !important;
-min-width: 100% !important;
-height: 100% !important;
-max-height: 100% !important;
-flex: 1 1 100% !important;
-border-radius: 0 !important;
-padding: 16px !important;
-}
-.pos-container-full .pos-cart-panel .pos-payment-form {
-flex: 1;
-overflow-y: auto;
-max-height: none;
+/* ⭐ PRIX en 19px */
+.pos-product-price {
+font-size: 19px !important;
 }
