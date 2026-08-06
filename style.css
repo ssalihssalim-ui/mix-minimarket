@@ -755,6 +755,16 @@ margin-right: 10px !important;
 font-size: 17px !important;
 }
 
+/* ⭐ NOM DU PRODUIT en 16px (sans dépasser le conteneur) */
+.pos-product-name {
+font-size: 16px !important;
+white-space: nowrap !important;
+overflow: hidden !important;
+text-overflow: ellipsis !important;
+max-width: 100% !important;
+display: block !important;
+}
+
 /* ⭐ MODE PAIEMENT : le panier prend 100% de la hauteur de la page (pas de scroll) */
 .pos-container-full .pos-products-panel {
 display: none !important;
