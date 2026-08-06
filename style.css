@@ -755,31 +755,6 @@ margin-right: 10px !important;
 font-size: 17px !important;
 }
 
-/* ⭐ NOM DU PRODUIT en 16px avec gestion du débordement */
-.pos-product-name {
-font-size: 16px !important;
-font-weight: 600 !important;
-white-space: nowrap !important;
-overflow: hidden !important;
-text-overflow: ellipsis !important;
-max-width: 100% !important;
-display: block !important;
-width: 100% !important;
-}
-
-/* ⭐ S'assurer que le conteneur de la carte produit gère bien l'overflow */
-.pos-product-card {
-overflow: hidden !important;
-max-width: 100% !important;
-}
-
-/* ⭐ S'assurer que le conteneur du nom produit ne déborde pas */
-.pos-product-info {
-width: 100% !important;
-max-width: 100% !important;
-overflow: hidden !important;
-}
-
 /* ⭐ MODE PAIEMENT : le panier prend 100% de la hauteur de la page (pas de scroll) */
 .pos-container-full .pos-products-panel {
 display: none !important;
