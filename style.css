@@ -754,3 +754,44 @@ margin-right: 10px !important;
 .pos-product-price {
 font-size: 17px !important;
 }
+
+/* ⭐ MODE PAIEMENT : le panier prend 100% de la hauteur de la page (pas de scroll) */
+.pos-container-full .pos-products-panel {
+display: none !important;
+}
+.pos-container-full {
+display: flex !important;
+flex-direction: column !important;
+height: 100% !important;
+min-height: 100vh !important;
+min-height: 100dvh !important;
+padding: 0 !important;
+gap: 0 !important;
+margin: 0 !important;
+}
+.pos-container-full .pos-cart-panel {
+width: 100% !important;
+max-width: 100% !important;
+min-width: 100% !important;
+height: 100% !important;
+max-height: 100% !important;
+flex: 1 1 100% !important;
+border-radius: 0 !important;
+padding: 16px !important;
+}
+.pos-container-full .pos-cart-panel .pos-payment-form {
+flex: 1 !important;
+overflow-y: auto !important;
+max-height: none !important;
+display: flex !important;
+flex-direction: column !important;
+}
+.pos-container-full .pos-payment-form .pos-payment-methods {
+display: flex !important;
+flex-wrap: wrap !important;
+gap: 8px !important;
+}
+.pos-container-full .pos-payment-form .pos-payment-btn {
+flex: 1 !important;
+min-width: 80px !important;
+}
