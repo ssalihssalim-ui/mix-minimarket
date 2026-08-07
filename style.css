@@ -666,9 +666,10 @@ font-size: 1.05rem !important;
 }
 
 /* ============================================================
-ADAPTATION ORDINATEUR (>=1025px)
+ADAPTATION ORDINATEUR (>=1025px) ET TABLETTE
 - Réduction de la police du panier
-- Largeur du formulaire de paiement à 700px
+- Largeur du formulaire de paiement à 700px (étape 1)
+- Indicateur d'étape en haut (pas à droite)
 ============================================================ */
 @media(min-width: 1025px) {
 /* --- Panier : police plus petite --- */
@@ -695,14 +696,14 @@ font-size: 0.9rem !important;
 font-size: 1.1rem !important;
 }
 
-/* --- Paiement : largeur 700px --- */
+/* --- Paiement : largeur 700px (étape 1) --- */
 .pos-cart-panel {
 width: 700px !important;
 min-width: 700px !important;
 max-width: 700px !important;
 }
 
-/* --- Ajustement du conteneur POS pour garder l’équilibre --- */
+/* --- Ajustement du conteneur POS pour garder l'équilibre --- */
 .pos-container {
 justify-content: center;
 }
@@ -737,25 +738,10 @@ font-size: 1rem !important;
 }
 
 /* ============================================================
-MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
+MODE PAIEMENT (ÉTAPE 2) - SUR PC ET TABLETTE
+Le panier prend 100% de la hauteur, l'indicateur est en haut
 ============================================================ */
-
-/* ⭐ ESPACE entre le nom et le prix (margin-right: 10px sur le nom) */
-.pos-product-name {
-margin-right: 10px !important;
-}
-
-/* ⭐ ESPACE entre le nom et le prix DANS LE PANIER (margin-right: 10px sur le nom) */
-.pos-cart-item-name {
-margin-right: 10px !important;
-}
-
-/* ⭐ PRIX en 17px */
-.pos-product-price {
-font-size: 17px !important;
-}
-
-/* ⭐ MODE PAIEMENT : le panier prend 100% de la hauteur de la page (pas de scroll) */
+@media(min-width: 768px) {
 .pos-container-full .pos-products-panel {
 display: none !important;
 }
@@ -794,6 +780,101 @@ gap: 8px !important;
 .pos-container-full .pos-payment-form .pos-payment-btn {
 flex: 1 !important;
 min-width: 80px !important;
+}
+/* L'indicateur d'étape reste en haut */
+.pos-steps-nav {
+order: 0 !important;
+width: 100% !important;
+}
+}
+
+/* ============================================================
+MODE PAIEMENT (ÉTAPE 2) - SUR MOBILE (≤ 480px)
+============================================================ */
+@media(max-width:480px) {
+.pos-container-full .pos-products-panel {
+display: none !important;
+}
+.pos-container-full {
+display: flex !important;
+flex-direction: column !important;
+height: 100% !important;
+min-height: 100vh !important;
+min-height: 100dvh !important;
+padding: 0 !important;
+gap: 0 !important;
+margin: 0 !important;
+}
+.pos-container-full .pos-cart-panel {
+width: 100% !important;
+max-width: 100% !important;
+min-width: 100% !important;
+height: 100% !important;
+max-height: 100% !important;
+flex: 1 1 100% !important;
+border-radius: 0 !important;
+padding: 16px !important;
+}
+.pos-container-full .pos-cart-panel .pos-payment-form {
+flex: 1 !important;
+overflow-y: auto !important;
+max-height: none !important;
+display: flex !important;
+flex-direction: column !important;
+}
+.pos-container-full .pos-payment-form .pos-payment-methods {
+display: flex !important;
+flex-wrap: wrap !important;
+gap: 8px !important;
+}
+.pos-container-full .pos-payment-form .pos-payment-btn {
+flex: 1 !important;
+min-width: 80px !important;
+}
+}
+
+/* ============================================================
+MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
+============================================================ */
+
+/* ⭐ ESPACE entre le nom et le prix (margin-right: 10px sur le nom) */
+.pos-product-name {
+margin-right: 10px !important;
+}
+
+/* ⭐ ESPACE entre le nom et le prix DANS LE PANIER (margin-right: 10px sur le nom) */
+.pos-cart-item-name {
+margin-right: 10px !important;
+}
+
+/* ⭐ PRIX en 17px */
+.pos-product-price {
+font-size: 17px !important;
+}
+
+/* ⭐ NOM DU PRODUIT en 16px avec gestion du débordement */
+.pos-product-name {
+font-size: 16px !important;
+font-weight: 600 !important;
+white-space: nowrap !important;
+overflow: hidden !important;
+text-overflow: ellipsis !important;
+max-width: 100% !important;
+display: block !important;
+width: 100% !important;
+}
+
+/* ⭐ S'assurer que le conteneur de la carte produit gère bien l'overflow */
+.pos-product-card {
+overflow: hidden !important;
+max-width: 100% !important;
+}
+
+/* ⭐ S'assurer que le conteneur du nom produit ne déborde pas */
+.pos-product-info {
+width: 100% !important;
+max-width: 100% !important;
+overflow: hidden !important;
 }
 
 /* ============================================================
