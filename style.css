@@ -415,7 +415,14 @@ color: var(--text-primary);
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; }
 
 /* ==================== POS SYSTEM ==================== */
-.pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
+.pos-container { 
+display: flex; 
+flex-direction: column !important; 
+gap: 16px; 
+height: calc(100vh - 180px); 
+min-height: 450px; 
+}
+
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
@@ -454,8 +461,28 @@ object-fit: contain;
 .pos-product-name { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
 .pos-product-price { font-size: 0.82rem; font-weight: 700; color: var(--black); }
 
+/* ==================== POS ROW (PRODUITS + PANIER) ==================== */
+.pos-row {
+display: flex;
+flex: 1;
+gap: 16px;
+min-height: 0;
+}
+
 /* ==================== POS CART ==================== */
-.pos-cart-panel { width: 340px; min-width: 300px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.pos-cart-panel { 
+width: 340px; 
+min-width: 300px; 
+background: var(--white); 
+border-radius: var(--radius-xl); 
+padding: 16px; 
+box-shadow: var(--shadow-xs); 
+border: 1px solid var(--border); 
+display: flex; 
+flex-direction: column; 
+height: 100%; 
+overflow: hidden; 
+}
 .pos-cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .pos-cart-header h3 { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .pos-cart-badge { background: var(--black); color: var(--white); padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 700; }
@@ -759,6 +786,9 @@ font-size: 17px !important;
 .pos-container-full .pos-products-panel {
 display: none !important;
 }
+.pos-container-full .pos-row {
+display: none !important;
+}
 .pos-container-full {
 display: flex !important;
 flex-direction: column !important;
@@ -797,58 +827,58 @@ min-width: 80px !important;
 }
 
 /* ============================================================
-FORCER L'INDICATEUR D'ÉTAPE (pos-steps-nav) EN HAUT DE LA PAGE
+INDICATEUR D'ÉTAPE EN HAUT - PANIER À DROITE SUR PC/TABLETTE
 ============================================================ */
+
+/* Forcer l'indicateur en haut sur tous les écrans */
 .pos-steps-nav {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 20px !important;
-  margin-bottom: 12px !important;
-  padding: 8px 16px !important;
-  background: var(--gray-50) !important;
-  border-radius: var(--radius) !important;
-  width: 100% !important;
-  flex-shrink: 0 !important;
-  flex-wrap: wrap !important;
+display: flex !important;
+justify-content: center !important;
+align-items: center !important;
+gap: 20px !important;
+margin-bottom: 12px !important;
+padding: 8px 16px !important;
+background: var(--gray-50) !important;
+border-radius: var(--radius) !important;
+width: 100% !important;
+flex-shrink: 0 !important;
+flex-wrap: wrap !important;
+order: -1 !important;
 }
 
-/* Solution définitive : forcer le conteneur parent à être en colonne */
+/* Forcer le conteneur en colonne */
 .pos-container {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 16px !important;
-  height: calc(100vh - 180px) !important;
-  min-height: 450px !important;
+display: flex !important;
+flex-direction: column !important;
+gap: 16px !important;
+height: calc(100vh - 180px) !important;
+min-height: 450px !important;
 }
 
-/* Forcer la row (produits + panier) à être en ligne sur PC et tablette */
+/* La row (produits + panier) en ligne sur PC et tablette */
 .pos-row {
-  display: flex !important;
-  flex: 1 !important;
-  gap: 16px !important;
-  min-height: 0 !important;
+display: flex !important;
+flex: 1 !important;
+gap: 16px !important;
+min-height: 0 !important;
+flex-direction: row !important;
 }
 
-/* Sur PC et tablette, la row reste en ligne (produits à gauche, panier à droite) */
-@media(min-width: 768px) {
-  .pos-row {
-    flex-direction: row !important;
-  }
-  .pos-products-panel {
-    flex: 1 !important;
-    min-width: 200px !important;
-    max-height: 100% !important;
-  }
-  .pos-cart-panel {
-    width: 20% !important;
-    min-width: 200px !important;
-    max-width: 350px !important;
-    max-height: 100% !important;
-  }
+/* Produits à gauche, panier à droite sur PC et tablette */
+.pos-products-panel {
+flex: 1 !important;
+min-width: 200px !important;
+max-height: 100% !important;
 }
 
-/* Sur mobile, la row passe en colonne (produits en haut, panier en bas) */
+.pos-cart-panel {
+width: 20% !important;
+min-width: 200px !important;
+max-width: 350px !important;
+max-height: 100% !important;
+}
+
+/* Sur mobile (< 768px), le panier passe en bas */
 @media(max-width: 767px) {
   .pos-row {
     flex-direction: column !important;
@@ -857,5 +887,9 @@ FORCER L'INDICATEUR D'ÉTAPE (pos-steps-nav) EN HAUT DE LA PAGE
     width: 100% !important;
     max-width: 100% !important;
     min-width: 100% !important;
+    max-height: 40vh !important;
+  }
+  .pos-products-panel {
+    max-height: 55vh !important;
   }
 }
