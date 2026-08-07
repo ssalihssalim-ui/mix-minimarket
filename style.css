@@ -797,23 +797,33 @@ min-width: 80px !important;
 }
 
 /* ============================================================
-AUGMENTER LA TAILLE DES TEXTES DES TABLES SUR MOBILE (≤ 480px)
-LISTES : PRODUITS / CRÉDITS / VENTES / CATÉGORIES / CLIENTS / DÉPENSES / COMMANDES
+AUGMENTER LA TAILLE DES TEXTES SUR MOBILE (≤ 480px)
+1. TABLES DES LISTES : PRODUITS / CRÉDITS / VENTES / CATÉGORIES / CLIENTS / DÉPENSES / COMMANDES
+2. MENU SIDEBAR
 ============================================================ */
 @media(max-width: 480px) {
-  /* Tables des listes (hors POS) */
+  /* --- TABLES DES LISTES --- */
   .data-table {
-    font-size: 20px !important;
+    font-size: 22px !important;
   }
   .data-table th {
-    font-size: 20px !important;
+    font-size: 22px !important;
   }
   .data-table td {
-    font-size: 18px !important;
+    font-size: 20px !important;
   }
-  /* Pour les petits écrans, permettre le scroll horizontal */
   .table-container {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* --- MENU SIDEBAR --- */
+  .nav-item {
+    font-size: 22px !important;
+    padding: 16px 20px !important;
+  }
+  .nav-item i {
+    font-size: 22px !important;
+    width: 32px !important;
   }
 }
