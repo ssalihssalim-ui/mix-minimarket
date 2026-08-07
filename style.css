@@ -797,7 +797,7 @@ min-width: 80px !important;
 }
 
 /* ============================================================
-INDICATEUR D'ÉTAPE (PANIER / PAIEMENT) TOUJOURS EN HAUT SUR TOUS LES ÉCRANS
+FORCER L'INDICATEUR D'ÉTAPE (pos-steps-nav) EN HAUT DE LA PAGE
 ============================================================ */
 .pos-steps-nav {
   display: flex !important;
@@ -805,10 +805,57 @@ INDICATEUR D'ÉTAPE (PANIER / PAIEMENT) TOUJOURS EN HAUT SUR TOUS LES ÉCRANS
   align-items: center !important;
   gap: 20px !important;
   margin-bottom: 12px !important;
-  padding: 8px !important;
+  padding: 8px 16px !important;
   background: var(--gray-50) !important;
   border-radius: var(--radius) !important;
   width: 100% !important;
   flex-shrink: 0 !important;
-  order: -1 !important;
+  flex-wrap: wrap !important;
+}
+
+/* Solution définitive : forcer le conteneur parent à être en colonne */
+.pos-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  height: calc(100vh - 180px) !important;
+  min-height: 450px !important;
+}
+
+/* Forcer la row (produits + panier) à être en ligne sur PC et tablette */
+.pos-row {
+  display: flex !important;
+  flex: 1 !important;
+  gap: 16px !important;
+  min-height: 0 !important;
+}
+
+/* Sur PC et tablette, la row reste en ligne (produits à gauche, panier à droite) */
+@media(min-width: 768px) {
+  .pos-row {
+    flex-direction: row !important;
+  }
+  .pos-products-panel {
+    flex: 1 !important;
+    min-width: 200px !important;
+    max-height: 100% !important;
+  }
+  .pos-cart-panel {
+    width: 20% !important;
+    min-width: 200px !important;
+    max-width: 350px !important;
+    max-height: 100% !important;
+  }
+}
+
+/* Sur mobile, la row passe en colonne (produits en haut, panier en bas) */
+@media(max-width: 767px) {
+  .pos-row {
+    flex-direction: column !important;
+  }
+  .pos-cart-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+  }
 }
