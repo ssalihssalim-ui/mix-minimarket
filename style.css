@@ -797,12 +797,12 @@ min-width: 80px !important;
 }
 
 /* ============================================================
-INDICATEUR D'ÉTAPE (PANIER / PAIEMENT) TOUJOURS EN HAUT SUR PC ET TABLETTE
+INDICATEUR D'ÉTAPE (PANIER / PAIEMENT) TOUJOURS EN HAUT SUR TOUS LES ÉCRANS
 ============================================================ */
-@media(min-width: 768px) {
-  .pos-steps-nav {
-    order: 0 !important;
-    width: 100% !important;
-    margin-bottom: 12px !important;
-  }
+.pos-steps-nav {
+  order: 0 !important;
+  width: 100% !important;
+  margin-bottom: 12px !important;
+  display: flex !important;
+  justify-content: center !important;
 }
