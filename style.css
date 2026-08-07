@@ -570,10 +570,11 @@ transition: var(--transition);
 .mobile-menu-btn { display: flex !important; }
 .sidebar-overlay.active { display: block; }
 
-.pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
-.pos-row { flex-direction: column; }
-.pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
-.pos-products-panel { height: auto; max-height: 50vh; }
+/* SUR TABLETTE (≤ 1024px) : MÊME LAYOUT QUE PC (ROW) */
+.pos-container { flex-direction: column !important; height: auto; min-height: calc(100vh - 160px); }
+.pos-row { flex-direction: row !important; flex: 1; gap: 16px; min-height: 0; }
+.pos-products-panel { flex: 1; min-width: 200px; max-height: 100%; }
+.pos-cart-panel { width: 450px !important; min-width: 350px !important; max-width: 500px !important; max-height: 100%; }
 
 /* --- Catégories plus compactes (dès 1024px) --- */
 .pos-cat-btn {
@@ -629,12 +630,15 @@ font-size: 1rem !important;
 .login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
 .login-brand, .register-brand { padding: 24px 16px 16px; }
 .main-content { padding: 12px 8px; }
+
+/* SUR GRAND MOBILE (≤ 768px) : PASSAGE EN COLONNE */
 .pos-container { gap: 10px; }
+.pos-row { flex-direction: column !important; }
 .pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
 .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
 .pos-product-card { padding: 8px; }
 .pos-product-img { height: 70px; }
-.pos-cart-panel { max-height: 35vh; padding: 12px; }
+.pos-cart-panel { width: 100% !important; max-width: 100% !important; min-width: 100% !important; max-height: 35vh; padding: 12px; }
 .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
 padding: 14px !important;
 font-size: 1rem !important;
