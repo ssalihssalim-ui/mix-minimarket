@@ -553,18 +553,43 @@ transition: var(--transition);
 }
 .pos-validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ==================== RESPONSIVE ==================== */
-@media(max-width:1024px) {
+/* ============================================================
+RESPONSIVE MOBILE (< 768px) - POS en colonne
+============================================================ */
+@media(max-width:768px) {
 .sidebar { transform: translateX(-100%); z-index: 150; }
 .sidebar.open { transform: translateX(0); }
-.main-content { margin-left: 0 !important; padding: 16px 12px; }
+.main-content { margin-left: 0 !important; padding: 12px 8px !important; }
 .mobile-menu-btn { display: flex !important; }
 .sidebar-overlay.active { display: block; }
-.pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
-.pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
-.pos-products-panel { height: auto; max-height: 50vh; }
 
-/* --- Catégories plus compactes (dès 1024px) --- */
+.pos-container {
+flex-direction: column !important;
+height: auto !important;
+min-height: calc(100vh - 160px) !important;
+gap: 10px !important;
+}
+
+.pos-products-panel {
+height: auto !important;
+max-height: 50vh !important;
+min-height: 300px !important;
+width: 100% !important;
+}
+
+.pos-products-grid {
+grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+gap: 8px !important;
+}
+
+.pos-cart-panel {
+width: 100% !important;
+min-width: 100% !important;
+max-height: 45vh !important;
+min-height: 200px !important;
+}
+
+/* Catégories plus compactes */
 .pos-cat-btn {
 padding: 4px 8px !important;
 font-size: 20px !important;
@@ -575,7 +600,7 @@ max-width: 50px !important;
 max-height: 50px !important;
 }
 
-/* --- Panier plus lisible (dès 1024px) --- */
+/* Panier plus lisible */
 .pos-cart-item-name {
 font-size: 20px !important;
 font-weight: 700 !important;
@@ -614,37 +639,20 @@ font-size: 1rem !important;
 }
 }
 
-@media(max-width:768px) {
-.login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
-.login-brand, .register-brand { padding: 24px 16px 16px; }
-.main-content { padding: 12px 8px; }
-.pos-container { gap: 10px; }
-.pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
-.pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-.pos-product-card { padding: 8px; }
-.pos-product-img { height: 70px; }
-.pos-cart-panel { max-height: 35vh; padding: 12px; }
-.pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
-padding: 14px !important;
-font-size: 1rem !important;
-}
-}
-
+/* ============================================================
+MOBILE TRÈS PETIT (< 480px)
+============================================================ */
 @media(max-width:480px) {
 .main-content { padding: 8px 4px; }
 .pos-container { gap: 8px; }
 .pos-products-panel {
-height: auto !important;
 min-height: 430px !important;
 max-height: 60vh !important;
-flex: 1 1 auto;
 padding: 8px;
 }
 .pos-products-grid {
 grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
 gap: 6px;
-flex: 1;
-overflow-y: auto;
 min-height: 280px;
 }
 .pos-product-card { padding: 6px; min-height: 110px; }
@@ -666,10 +674,9 @@ font-size: 1.05rem !important;
 }
 
 /* ============================================================
-ADAPTATION ORDINATEUR (>=1025px) ET TABLETTE
+ADAPTATION ORDINATEUR (>=1025px)
 - Réduction de la police du panier
-- Largeur du formulaire de paiement à 700px (étape 1)
-- Indicateur d'étape en haut (pas à droite)
+- Largeur du formulaire de paiement à 700px
 ============================================================ */
 @media(min-width: 1025px) {
 /* --- Panier : police plus petite --- */
@@ -696,7 +703,7 @@ font-size: 0.9rem !important;
 font-size: 1.1rem !important;
 }
 
-/* --- Paiement : largeur 700px (étape 1) --- */
+/* --- Paiement : largeur 700px --- */
 .pos-cart-panel {
 width: 700px !important;
 min-width: 700px !important;
@@ -738,10 +745,9 @@ font-size: 1rem !important;
 }
 
 /* ============================================================
-MODE PAIEMENT (ÉTAPE 2) - SUR PC ET TABLETTE
+MODE PAIEMENT (ÉTAPE 2) - SUR TOUS LES ÉCRANS
 Le panier prend 100% de la hauteur, l'indicateur est en haut
 ============================================================ */
-@media(min-width: 768px) {
 .pos-container-full .pos-products-panel {
 display: none !important;
 }
@@ -785,52 +791,6 @@ min-width: 80px !important;
 .pos-steps-nav {
 order: 0 !important;
 width: 100% !important;
-}
-}
-
-/* ============================================================
-MODE PAIEMENT (ÉTAPE 2) - SUR MOBILE (≤ 480px)
-============================================================ */
-@media(max-width:480px) {
-.pos-container-full .pos-products-panel {
-display: none !important;
-}
-.pos-container-full {
-display: flex !important;
-flex-direction: column !important;
-height: 100% !important;
-min-height: 100vh !important;
-min-height: 100dvh !important;
-padding: 0 !important;
-gap: 0 !important;
-margin: 0 !important;
-}
-.pos-container-full .pos-cart-panel {
-width: 100% !important;
-max-width: 100% !important;
-min-width: 100% !important;
-height: 100% !important;
-max-height: 100% !important;
-flex: 1 1 100% !important;
-border-radius: 0 !important;
-padding: 16px !important;
-}
-.pos-container-full .pos-cart-panel .pos-payment-form {
-flex: 1 !important;
-overflow-y: auto !important;
-max-height: none !important;
-display: flex !important;
-flex-direction: column !important;
-}
-.pos-container-full .pos-payment-form .pos-payment-methods {
-display: flex !important;
-flex-wrap: wrap !important;
-gap: 8px !important;
-}
-.pos-container-full .pos-payment-form .pos-payment-btn {
-flex: 1 !important;
-min-width: 80px !important;
-}
 }
 
 /* ============================================================
