@@ -415,8 +415,36 @@ color: var(--text-primary);
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; }
 
 /* ==================== POS SYSTEM ==================== */
-.pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; flex-direction: column; }
-.pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.pos-container { 
+display: flex; 
+flex-direction: column; 
+gap: 16px; 
+height: calc(100vh - 180px); 
+min-height: 450px; 
+}
+
+/* ==================== POS ROW (PRODUITS + PANIER) ==================== */
+.pos-row {
+display: flex;
+flex: 1;
+gap: 16px;
+min-height: 0;
+}
+
+.pos-products-panel { 
+flex: 1; 
+min-width: 280px; 
+background: var(--white); 
+border-radius: var(--radius-xl); 
+padding: 16px; 
+box-shadow: var(--shadow-xs); 
+border: 1px solid var(--border); 
+display: flex; 
+flex-direction: column; 
+height: 100%; 
+overflow: hidden; 
+}
+
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
 /* 🔥 BOUTONS DE CATÉGORIES AGRANDIS */
@@ -446,15 +474,6 @@ border-radius: 6px;
 object-fit: contain;
 }
 
-/* ==================== POS ROW (PRODUITS + PANIER) ==================== */
-.pos-row {
-display: flex;
-flex: 1;
-gap: 16px;
-min-height: 0;
-}
-
-.pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
 .pos-product-card { background: var(--gray-50); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 10px; cursor: pointer; transition: var(--transition); text-align: center; display: flex; flex-direction: column; align-items: center; }
 .pos-product-card:hover { border-color: var(--black); box-shadow: var(--shadow); background: var(--white); }
@@ -575,7 +594,7 @@ transition: var(--transition);
 .pos-validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ============================================================
-LAYOUT : PC et TABLETTE (≥ 768px) - PANIER À DROITE (20%)
+LAYOUT : PC et TABLETTE (≥ 768px) - INDICATEUR EN HAUT, PRODUITS, PANIER À DROITE
 ============================================================ */
 @media(min-width: 768px) {
   .pos-container {
@@ -600,7 +619,7 @@ LAYOUT : PC et TABLETTE (≥ 768px) - PANIER À DROITE (20%)
   
   .pos-cart-panel {
     width: 20% !important;
-    min-width: 250px !important;
+    min-width: 200px !important;
     max-width: 350px !important;
     max-height: 100%;
   }
