@@ -795,3 +795,14 @@ gap: 8px !important;
 flex: 1 !important;
 min-width: 80px !important;
 }
+
+/* ============================================================
+INDICATEUR D'ÉTAPE (PANIER / PAIEMENT) TOUJOURS EN HAUT SUR PC ET TABLETTE
+============================================================ */
+@media(min-width: 768px) {
+  .pos-steps-nav {
+    order: 0 !important;
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+}
