@@ -415,8 +415,28 @@ color: var(--text-primary);
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; }
 
 /* ==================== POS SYSTEM ==================== */
-.pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
-.pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.pos-container { 
+display: flex; 
+flex-direction: column !important; /* TOUJOURS EN COLONNE */
+gap: 16px; 
+height: calc(100vh - 180px); 
+min-height: 450px; 
+}
+.pos-products-panel { 
+flex: 1; 
+min-width: 280px; 
+background: var(--white); 
+border-radius: var(--radius-xl); 
+padding: 16px; 
+box-shadow: var(--shadow-xs); 
+border: 1px solid var(--border); 
+display: flex; 
+flex-direction: column; 
+height: 100%; 
+overflow: hidden; 
+width: 100% !important; /* TOUJOURS PLEINE LARGEUR */
+max-width: 100% !important;
+}
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
 /* 🔥 BOUTONS DE CATÉGORIES AGRANDIS */
@@ -455,7 +475,21 @@ object-fit: contain;
 .pos-product-price { font-size: 0.82rem; font-weight: 700; color: var(--black); }
 
 /* ==================== POS CART ==================== */
-.pos-cart-panel { width: 340px; min-width: 300px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.pos-cart-panel { 
+width: 100% !important; /* TOUJOURS PLEINE LARGEUR */
+min-width: 100% !important;
+max-width: 100% !important;
+background: var(--white); 
+border-radius: var(--radius-xl); 
+padding: 16px; 
+box-shadow: var(--shadow-xs); 
+border: 1px solid var(--border); 
+display: flex; 
+flex-direction: column; 
+height: 100%; 
+overflow: hidden; 
+max-height: 45vh; /* LIMITE POUR NE PAS PRENDRE TROP DE PLACE */
+}
 .pos-cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .pos-cart-header h3 { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .pos-cart-badge { background: var(--black); color: var(--white); padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 700; }
@@ -560,9 +594,19 @@ transition: var(--transition);
 .main-content { margin-left: 0 !important; padding: 16px 12px; }
 .mobile-menu-btn { display: flex !important; }
 .sidebar-overlay.active { display: block; }
-.pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
-.pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
-.pos-products-panel { height: auto; max-height: 50vh; }
+
+/* POS déjà en colonne sur tous les écrans, on ajuste juste les hauteurs */
+.pos-container { 
+flex-direction: column !important; 
+height: auto; 
+min-height: calc(100vh - 160px); 
+}
+.pos-cart-panel { 
+max-height: 45vh; 
+}
+.pos-products-panel { 
+max-height: 50vh; 
+}
 
 /* --- Catégories plus compactes (dès 1024px) --- */
 .pos-cat-btn {
@@ -666,9 +710,7 @@ font-size: 1.05rem !important;
 }
 
 /* ============================================================
-ADAPTATION ORDINATEUR (>=1025px)
-- Réduction de la police du panier
-- Largeur du formulaire de paiement à 700px
+ADAPTATION ORDINATEUR (>=1025px) - UNIQUEMENT POUR LES TAILLES DE POLICE
 ============================================================ */
 @media(min-width: 1025px) {
 /* --- Panier : police plus petite --- */
@@ -693,18 +735,6 @@ font-size: 0.9rem !important;
 }
 .pos-cart-total-row {
 font-size: 1.1rem !important;
-}
-
-/* --- Paiement : largeur 700px --- */
-.pos-cart-panel {
-width: 700px !important;
-min-width: 700px !important;
-max-width: 700px !important;
-}
-
-/* --- Ajustement du conteneur POS pour garder l’équilibre --- */
-.pos-container {
-justify-content: center;
 }
 
 /* --- Les boutons de catégories restent grands (comme sur mobile) --- */
