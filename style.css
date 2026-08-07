@@ -800,9 +800,15 @@ min-width: 80px !important;
 INDICATEUR D'ÉTAPE (PANIER / PAIEMENT) TOUJOURS EN HAUT SUR TOUS LES ÉCRANS
 ============================================================ */
 .pos-steps-nav {
-  order: 0 !important;
-  width: 100% !important;
-  margin-bottom: 12px !important;
   display: flex !important;
   justify-content: center !important;
+  align-items: center !important;
+  gap: 20px !important;
+  margin-bottom: 12px !important;
+  padding: 8px !important;
+  background: var(--gray-50) !important;
+  border-radius: var(--radius) !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  order: -1 !important;
 }
