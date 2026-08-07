@@ -553,43 +553,18 @@ transition: var(--transition);
 }
 .pos-validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ============================================================
-RESPONSIVE MOBILE (< 768px) - POS en colonne
-============================================================ */
-@media(max-width:768px) {
+/* ==================== RESPONSIVE ==================== */
+@media(max-width:1024px) {
 .sidebar { transform: translateX(-100%); z-index: 150; }
 .sidebar.open { transform: translateX(0); }
-.main-content { margin-left: 0 !important; padding: 12px 8px !important; }
+.main-content { margin-left: 0 !important; padding: 16px 12px; }
 .mobile-menu-btn { display: flex !important; }
 .sidebar-overlay.active { display: block; }
+.pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
+.pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
+.pos-products-panel { height: auto; max-height: 50vh; }
 
-.pos-container {
-flex-direction: column !important;
-height: auto !important;
-min-height: calc(100vh - 160px) !important;
-gap: 10px !important;
-}
-
-.pos-products-panel {
-height: auto !important;
-max-height: 50vh !important;
-min-height: 300px !important;
-width: 100% !important;
-}
-
-.pos-products-grid {
-grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
-gap: 8px !important;
-}
-
-.pos-cart-panel {
-width: 100% !important;
-min-width: 100% !important;
-max-height: 45vh !important;
-min-height: 200px !important;
-}
-
-/* Catégories plus compactes */
+/* --- Catégories plus compactes (dès 1024px) --- */
 .pos-cat-btn {
 padding: 4px 8px !important;
 font-size: 20px !important;
@@ -600,7 +575,7 @@ max-width: 50px !important;
 max-height: 50px !important;
 }
 
-/* Panier plus lisible */
+/* --- Panier plus lisible (dès 1024px) --- */
 .pos-cart-item-name {
 font-size: 20px !important;
 font-weight: 700 !important;
@@ -639,20 +614,37 @@ font-size: 1rem !important;
 }
 }
 
-/* ============================================================
-MOBILE TRÈS PETIT (< 480px)
-============================================================ */
+@media(max-width:768px) {
+.login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
+.login-brand, .register-brand { padding: 24px 16px 16px; }
+.main-content { padding: 12px 8px; }
+.pos-container { gap: 10px; }
+.pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
+.pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.pos-product-card { padding: 8px; }
+.pos-product-img { height: 70px; }
+.pos-cart-panel { max-height: 35vh; padding: 12px; }
+.pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
+padding: 14px !important;
+font-size: 1rem !important;
+}
+}
+
 @media(max-width:480px) {
 .main-content { padding: 8px 4px; }
 .pos-container { gap: 8px; }
 .pos-products-panel {
+height: auto !important;
 min-height: 430px !important;
 max-height: 60vh !important;
+flex: 1 1 auto;
 padding: 8px;
 }
 .pos-products-grid {
 grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
 gap: 6px;
+flex: 1;
+overflow-y: auto;
 min-height: 280px;
 }
 .pos-product-card { padding: 6px; min-height: 110px; }
@@ -710,7 +702,7 @@ min-width: 700px !important;
 max-width: 700px !important;
 }
 
-/* --- Ajustement du conteneur POS pour garder l'équilibre --- */
+/* --- Ajustement du conteneur POS pour garder l’équilibre --- */
 .pos-container {
 justify-content: center;
 }
@@ -745,9 +737,25 @@ font-size: 1rem !important;
 }
 
 /* ============================================================
-MODE PAIEMENT (ÉTAPE 2) - SUR TOUS LES ÉCRANS
-Le panier prend 100% de la hauteur, l'indicateur est en haut
+MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
 ============================================================ */
+
+/* ⭐ ESPACE entre le nom et le prix (margin-right: 10px sur le nom) */
+.pos-product-name {
+margin-right: 10px !important;
+}
+
+/* ⭐ ESPACE entre le nom et le prix DANS LE PANIER (margin-right: 10px sur le nom) */
+.pos-cart-item-name {
+margin-right: 10px !important;
+}
+
+/* ⭐ PRIX en 17px */
+.pos-product-price {
+font-size: 17px !important;
+}
+
+/* ⭐ MODE PAIEMENT : le panier prend 100% de la hauteur de la page (pas de scroll) */
 .pos-container-full .pos-products-panel {
 display: none !important;
 }
@@ -786,85 +794,4 @@ gap: 8px !important;
 .pos-container-full .pos-payment-form .pos-payment-btn {
 flex: 1 !important;
 min-width: 80px !important;
-}
-/* L'indicateur d'étape reste en haut */
-.pos-steps-nav {
-order: 0 !important;
-width: 100% !important;
-}
-
-/* ============================================================
-MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
-============================================================ */
-
-/* ⭐ ESPACE entre le nom et le prix (margin-right: 10px sur le nom) */
-.pos-product-name {
-margin-right: 10px !important;
-}
-
-/* ⭐ ESPACE entre le nom et le prix DANS LE PANIER (margin-right: 10px sur le nom) */
-.pos-cart-item-name {
-margin-right: 10px !important;
-}
-
-/* ⭐ PRIX en 17px */
-.pos-product-price {
-font-size: 17px !important;
-}
-
-/* ⭐ NOM DU PRODUIT en 16px avec gestion du débordement */
-.pos-product-name {
-font-size: 16px !important;
-font-weight: 600 !important;
-white-space: nowrap !important;
-overflow: hidden !important;
-text-overflow: ellipsis !important;
-max-width: 100% !important;
-display: block !important;
-width: 100% !important;
-}
-
-/* ⭐ S'assurer que le conteneur de la carte produit gère bien l'overflow */
-.pos-product-card {
-overflow: hidden !important;
-max-width: 100% !important;
-}
-
-/* ⭐ S'assurer que le conteneur du nom produit ne déborde pas */
-.pos-product-info {
-width: 100% !important;
-max-width: 100% !important;
-overflow: hidden !important;
-}
-
-/* ============================================================
-AUGMENTER LA TAILLE DES TEXTES SUR MOBILE (≤ 480px)
-1. TABLES DES LISTES : PRODUITS / CRÉDITS / VENTES / CATÉGORIES / CLIENTS / DÉPENSES / COMMANDES
-2. MENU SIDEBAR
-============================================================ */
-@media(max-width: 480px) {
-  /* --- TABLES DES LISTES --- */
-  .data-table {
-    font-size: 22px !important;
-  }
-  .data-table th {
-    font-size: 22px !important;
-  }
-  .data-table td {
-    font-size: 20px !important;
-  }
-  .table-container {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-
-  /* --- MENU SIDEBAR --- */
-  .nav-item {
-    font-size: 22px !important;
-    padding: 16px 20px !important;
-  }
-  .nav-item i {
-    font-size: 22px !important;
-    width: 32px !important;
-  }
 }
