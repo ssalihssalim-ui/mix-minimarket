@@ -415,14 +415,7 @@ color: var(--text-primary);
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; }
 
 /* ==================== POS SYSTEM ==================== */
-.pos-container { 
-display: flex; 
-flex-direction: column !important; 
-gap: 16px; 
-height: calc(100vh - 180px); 
-min-height: 450px; 
-}
-
+.pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
@@ -461,28 +454,8 @@ object-fit: contain;
 .pos-product-name { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
 .pos-product-price { font-size: 0.82rem; font-weight: 700; color: var(--black); }
 
-/* ==================== POS ROW (PRODUITS + PANIER) ==================== */
-.pos-row {
-display: flex;
-flex: 1;
-gap: 16px;
-min-height: 0;
-}
-
 /* ==================== POS CART ==================== */
-.pos-cart-panel { 
-width: 340px; 
-min-width: 300px; 
-background: var(--white); 
-border-radius: var(--radius-xl); 
-padding: 16px; 
-box-shadow: var(--shadow-xs); 
-border: 1px solid var(--border); 
-display: flex; 
-flex-direction: column; 
-height: 100%; 
-overflow: hidden; 
-}
+.pos-cart-panel { width: 340px; min-width: 300px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .pos-cart-header h3 { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .pos-cart-badge { background: var(--black); color: var(--white); padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 700; }
@@ -786,9 +759,6 @@ font-size: 17px !important;
 .pos-container-full .pos-products-panel {
 display: none !important;
 }
-.pos-container-full .pos-row {
-display: none !important;
-}
 .pos-container-full {
 display: flex !important;
 flex-direction: column !important;
@@ -827,58 +797,59 @@ min-width: 80px !important;
 }
 
 /* ============================================================
-INDICATEUR D'ÉTAPE EN HAUT - PANIER À DROITE SUR PC/TABLETTE
+FORCER L'INDICATEUR D'ÉTAPE EN HAUT ET LE PANIER À DROITE SUR PC
 ============================================================ */
 
-/* Forcer l'indicateur en haut sur tous les écrans */
-.pos-steps-nav {
-display: flex !important;
-justify-content: center !important;
-align-items: center !important;
-gap: 20px !important;
-margin-bottom: 12px !important;
-padding: 8px 16px !important;
-background: var(--gray-50) !important;
-border-radius: var(--radius) !important;
-width: 100% !important;
-flex-shrink: 0 !important;
-flex-wrap: wrap !important;
-order: -1 !important;
+/* Forcer le conteneur POS en colonne sur tous les écrans */
+.pos-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  height: calc(100vh - 180px) !important;
+  min-height: 450px !important;
 }
 
-/* Forcer le conteneur en colonne */
-.pos-container {
-display: flex !important;
-flex-direction: column !important;
-gap: 16px !important;
-height: calc(100vh - 180px) !important;
-min-height: 450px !important;
+/* Forcer l'indicateur d'étape en haut */
+.pos-steps-nav {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 20px !important;
+  margin-bottom: 12px !important;
+  padding: 8px 16px !important;
+  background: var(--gray-50) !important;
+  border-radius: var(--radius) !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  flex-wrap: wrap !important;
+  order: -1 !important;
 }
 
 /* La row (produits + panier) en ligne sur PC et tablette */
 .pos-row {
-display: flex !important;
-flex: 1 !important;
-gap: 16px !important;
-min-height: 0 !important;
-flex-direction: row !important;
+  display: flex !important;
+  flex: 1 !important;
+  gap: 16px !important;
+  min-height: 0 !important;
+  flex-direction: row !important;
 }
 
-/* PRODUITS À GAUCHE (order: 0) */
+/* PRODUITS À GAUCHE (flex:1) */
 .pos-products-panel {
-flex: 1 !important;
-min-width: 200px !important;
-max-height: 100% !important;
-order: 0 !important;
+  flex: 1 !important;
+  min-width: 200px !important;
+  max-height: 100% !important;
+  order: 0 !important;
 }
 
-/* PANIER À DROITE (order: 1) */
+/* PANIER À DROITE (order: 1 + margin-left: auto) */
 .pos-cart-panel {
-width: 20% !important;
-min-width: 200px !important;
-max-width: 350px !important;
-max-height: 100% !important;
-order: 1 !important;
+  width: 20% !important;
+  min-width: 200px !important;
+  max-width: 350px !important;
+  max-height: 100% !important;
+  order: 1 !important;
+  margin-left: auto !important;
 }
 
 /* Sur mobile (< 768px), le panier passe en bas */
@@ -891,6 +862,7 @@ order: 1 !important;
     max-width: 100% !important;
     min-width: 100% !important;
     max-height: 40vh !important;
+    margin-left: 0 !important;
     order: 1 !important;
   }
   .pos-products-panel {
