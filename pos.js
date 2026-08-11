@@ -214,8 +214,10 @@ function clearClientSearch() {
         input.value = '';
         posCurrentClient = null;
         posCurrentTable = '';
-        document.getElementById('posClientDropdown').style.display = 'none';
-        document.getElementById('clientCreditDisplay').style.display = 'none';
+        var dropdown = document.getElementById('posClientDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+        var creditDisplay = document.getElementById('clientCreditDisplay');
+        if (creditDisplay) creditDisplay.style.display = 'none';
         updatePaymentButtons();
         if (isOnPOSPage()) renderPOS();
         input.focus();
@@ -319,6 +321,7 @@ function posSearchClient(query){
         if (input) input.value = posCurrentClient.name;
         if (dropdown) dropdown.style.display = 'none';
         if (clearBtn) clearBtn.style.display = 'flex';
+        // ✅ Afficher directement le crédit du client
         updateClientCreditDisplay(client.id);
         updatePaymentButtons();
         if (isOnPOSPage()) renderPOS();
