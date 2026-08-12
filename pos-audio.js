@@ -2,6 +2,7 @@
 // Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
 // ✅ Sélection automatique du client par audio avec passage à l'étape paiement
 // ✅ Recherche adaptée selon l'étape POS : produits en étape 1, clients/paiement en étape 2
+// ✅ Affichage automatique du crédit après sélection vocale du client
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -211,7 +212,7 @@ function fastFindProduct(query) {
     return [filtered[0]];
 }
 
-// ========== INDEX PRODUIT ADMIN (AJOUTÉ POUR CORRIGER L'ERREUR) ==========
+// ========== INDEX PRODUIT ADMIN ==========
 function buildProductAdminIndex() {
     if (window.productAdminIndexBuilt) return;
     window.productAdminIndex = {};
@@ -371,7 +372,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // ✅ RECHERCHE ADAPTÉE SELON L'ÉTAPE POS
+    // RECHERCHE ADAPTÉE SELON L'ÉTAPE POS
     // ÉTAPE 1 (Panier) → Recherche PRODUITS en priorité
     // ÉTAPE 2 (Paiement) → Recherche CLIENTS / PAIEMENT en priorité
     // ============================================================
@@ -604,14 +605,20 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             break;
         
-        // ✅ CLIENT TROUVÉ PAR AUDIO - SÉLECTION AUTOMATIQUE + PASSAGE À L'ÉTAPE PAIEMENT
+        // ✅ CLIENT TROUVÉ PAR AUDIO - SÉLECTION AUTOMATIQUE COMPLÈTE
         case 'client':
+            // Sélectionner le client
             window.posCurrentClient = { id: cmd.client.id, name: cmd.client.nom + ' ' + cmd.client.prenom };
             window.posCurrentTable = '';
             
             // Mettre à jour le champ client
             var ci = document.getElementById('posClientSearchInput');
-            if (ci) ci.value = window.posCurrentClient.name;
+            if (ci) {
+                ci.value = window.posCurrentClient.name;
+                // Déclencher l'événement input pour que la recherche client prenne en compte le changement
+                var evt = new Event('input', { bubbles: true });
+                ci.dispatchEvent(evt);
+            }
             
             // Mettre à jour l'affichage du crédit
             if (typeof window.updateClientCreditDisplay === 'function') {
@@ -623,6 +630,32 @@ function handleVoiceCommand(cmd) {
                 window.updatePaymentButtons();
             }
             
+            // Forcer l'affichage du crédit dans la zone dédiée
+            var creditDisplay = document.getElementById('clientCreditDisplay');
+            if (creditDisplay) {
+                // Si la fonction updateClientCreditDisplay ne l'a pas fait, on force l'affichage
+                var total = 0;
+                try {
+                    // Appel direct pour charger et afficher le crédit
+                    if (typeof window.loadClientCredits === 'function') {
+                        window.loadClientCredits(cmd.client.id).then(function(amount) {
+                            if (amount > 0) {
+                                creditDisplay.textContent = '💳 Crédit: ' + amount.toFixed(2) + ' MAD';
+                                creditDisplay.style.color = '#ef4444';
+                                creditDisplay.style.fontWeight = '700';
+                            } else {
+                                creditDisplay.textContent = '✅ Aucun crédit';
+                                creditDisplay.style.color = '#16a34a';
+                                creditDisplay.style.fontWeight = '600';
+                            }
+                            creditDisplay.style.display = 'block';
+                        });
+                    }
+                } catch(e) {
+                    console.warn('Erreur affichage crédit:', e);
+                }
+            }
+            
             window.voicePaymentState = 1;
             showVoiceResult('👤 ' + window.posCurrentClient.name);
             hideVoiceFlowIndicator();
@@ -631,6 +664,10 @@ function handleVoiceCommand(cmd) {
             setTimeout(function() {
                 if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
                     window.posGoToStep2();
+                }
+                // Forcer le re-rendu pour afficher le crédit
+                if (typeof window.renderPOS === 'function') {
+                    setTimeout(function() { window.renderPOS(); }, 100);
                 }
                 setTimeout(function() { 
                     showVoiceFlowIndicator('payment_mode'); 
@@ -951,4 +988,4 @@ window.buildProductIndex = buildProductIndex;
 window.buildProductAdminIndex = buildProductAdminIndex;
 window.fastFindProductAdmin = fastFindProductAdmin;
 
-console.log('🎤 Module vocal – prêt avec retour visuel (recherche adaptée selon étape POS)');
+console.log('🎤 Module vocal – prêt avec retour visuel (recherche adaptée selon étape POS + sélection client audio complète)');
