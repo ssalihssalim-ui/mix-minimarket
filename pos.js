@@ -1,4 +1,4 @@
-// ==================== POS.JS - LOGIQUE MÉTIER (POLICES AGRANDIES V2) ====================
+// ==================== POS.JS - LOGIQUE MÉTIER (PANIER AGRANDI) ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ Étapes (Panier/Paiement): 28px avec icônes 28px
 // ✅ Barre recherche produits: hauteur 44px, texte 24px
@@ -10,6 +10,7 @@
 // ✅ Crédit: 28px bold
 // ✅ Boutons paiement: 24px bold / min-height:65px
 // ✅ Bouton Finaliser: 24px bold / min-height:65px
+// ✅ PANIER: Nom article 24px, Prix unitaire 24px, Quantité 28px, +/- 24px, Total produit 24px, Total général 30px, Valider hauteur 60px texte 24px
 
 var posCart = [];
 var posStep = 1;
@@ -365,7 +366,50 @@ function posSetTable(v){ posCurrentTable=v.trim(); if(posCurrentTable){ posCurre
 function posAddToCartOrOpenOptions(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } var cat=posCategoriesList.find(function(c){ return c.nom===p.categorie; }),isRecette=cat&&cat.recette===true; if(isRecette){ posCurrentProductId=pid; posOpenOptionsModal(pid); }else{ var ex=posCart.find(function(x){ return x.id===pid; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:[],epice:'Normal',sel:'Normal'}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); updateCartOnly(); } }
 async function posOpenOptionsModal(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } if(typeof allStockData==='undefined'||allStockData.length===0){ try{ var snap=await db.collection('stock').orderBy('nom').get(); allStockData=[]; snap.forEach(function(d){ var dd=d.data();dd.id=d.id;allStockData.push(dd); }); }catch(e){} } try{ var doc=await db.collection('products').doc(pid).get(); posCurrentProductIngredients=doc.exists?(doc.data().ingredients||[]):[]; }catch(e){ posCurrentProductIngredients=[]; } var grouped={}; posCurrentProductIngredients.forEach(function(ing){ var si=allStockData.find(function(s){ return s.id===ing.idStock; }),cat=si?si.categorie:'Autre'; if(!grouped[cat]) grouped[cat]=[]; grouped[cat].push(ing.nom); }); var order=['Sauces','Légumes','Fruits','Viande','Poulet','Poisson'],sortedCats=Object.keys(grouped).sort(function(a,b){ var ia=order.indexOf(a),ib=order.indexOf(b); if(ia!==-1&&ib!==-1) return ia-ib; if(ia!==-1) return -1; if(ib!==-1) return 1; return a.localeCompare(b); }); posCurrentProductId=pid; var h='<h4>'+escapeHtml(p.nom)+'</h4>'; if(sortedCats.length===0) h+='<div style="color:#94a3b8;">Aucun ingrédient</div>'; else sortedCats.forEach(function(cat){ h+='<div style="margin-bottom:10px;"><label style="font-weight:600;">🥫 '+escapeHtml(cat)+'</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; grouped[cat].forEach(function(ing){ h+='<label style="display:flex;align-items:center;gap:3px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="checkbox" class="pos-interdit-check" value="'+escapeHtml(ing)+'"> '+escapeHtml(ing)+'</label>'; }); h+='</div></div>'; }); h+='<div><label>🌶️ Épices:</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; posEpicesList.forEach(function(s,idx){ h+='<label style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="radio" name="pos-epice" value="'+s+'" '+(idx===0?'checked':'')+'> '+s+'</label>'; }); h+='</div></div><div><label>🧂 Sel:</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; posSelList.forEach(function(s,idx){ h+='<label style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="radio" name="pos-sel" value="'+s+'" '+(idx===0?'checked':'')+'> '+s+'</label>'; }); h+='</div></div>'; h+='<div style="text-align:right;margin-top:15px;"><button class="btn-cancel" onclick="closeModal()">Annuler</button> <button class="btn-save" onclick="posConfirmOptions()">Ajouter</button></div>'; openModal('Personnaliser',h); }
 function posConfirmOptions(){ var interdits=[]; document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb){ interdits.push(cb.value); }); var epice=(document.querySelector('input[name="pos-epice"]:checked')||{}).value||'Normal',sel=(document.querySelector('input[name="pos-sel"]:checked')||{}).value||'Normal',p=posProductsList.find(function(x){ return x.id===posCurrentProductId; }); if(!p){ closeModal(); return; } var ex=posCart.find(function(x){ return x.id===posCurrentProductId; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); closeModal(); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:interdits,epice:epice,sel:sel}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); closeModal(); updateCartOnly(); }
-function updateCartOnly(){ if(!isOnPOSPage()) return; var ci=document.querySelector('.pos-cart-items'); if(!ci) return; var html=''; if(posCart.length===0) html='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>'; else for(var k=0;k<posCart.length;k++){ var it=posCart[k],opts=''; if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>'; if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>'; html+='<div class="pos-cart-item"><div class="pos-cart-item-info"><span class="pos-cart-item-name">'+escapeHtml(it.nom)+opts+'</span><span class="pos-cart-item-price">'+it.prixUnitaire.toFixed(2)+' MAD/u</span></div><div class="pos-cart-item-actions"><button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)"><i class="fas fa-minus"></i></button><span class="pos-qty-value">'+it.quantite+'</span><button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)"><i class="fas fa-plus"></i></button><button class="pos-remove-btn" onclick="posRemoveItem('+k+')"><i class="fas fa-times"></i></button></div><span class="pos-cart-item-total">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span></div>'; } ci.innerHTML=html; var badge=document.querySelector('.pos-cart-badge'); if(badge) badge.textContent=posCart.length; var tr=document.querySelector('.pos-cart-total-row span:last-child'); if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } var vb=document.querySelector('.pos-validate-btn'); if(vb) vb.disabled=posCart.length===0; }
+
+function updateCartOnly(){ 
+    if(!isOnPOSPage()) return; 
+    var ci=document.querySelector('.pos-cart-items'); 
+    if(!ci) return; 
+    var html=''; 
+    if(posCart.length===0) {
+        html='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>'; 
+    } else {
+        for(var k=0;k<posCart.length;k++){ 
+            var it=posCart[k],opts=''; 
+            if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; 
+            if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>'; 
+            if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>'; 
+            html+='<div class="pos-cart-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid #e2e8f0;">' +
+                '<div class="pos-cart-item-info" style="flex:1;">' +
+                    '<span class="pos-cart-item-name" style="font-size:24px;font-weight:600;display:block;">'+escapeHtml(it.nom)+opts+'</span>' +
+                    '<span class="pos-cart-item-price" style="font-size:24px;color:#64748b;">'+it.prixUnitaire.toFixed(2)+' MAD/u</span>' +
+                '</div>' +
+                '<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:6px;">' +
+                    '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="font-size:24px;width:36px;height:36px;border-radius:50%;border:2px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-minus"></i></button>' +
+                    '<span class="pos-qty-value" style="font-size:28px;font-weight:700;min-width:32px;text-align:center;">'+it.quantite+'</span>' +
+                    '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="font-size:24px;width:36px;height:36px;border-radius:50%;border:2px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-plus"></i></button>' +
+                    '<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="font-size:24px;background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;"><i class="fas fa-times"></i></button>' +
+                '</div>' +
+                '<span class="pos-cart-item-total" style="font-size:24px;font-weight:700;min-width:100px;text-align:right;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
+            '</div>'; 
+        } 
+    }
+    ci.innerHTML=html; 
+    var badge=document.querySelector('.pos-cart-badge'); 
+    if(badge) badge.textContent=posCart.length; 
+    var tr=document.querySelector('.pos-cart-total-row span:last-child'); 
+    if(tr){ 
+        var st=posCalculateTotal(),t=st-posDiscountMAD; 
+        tr.textContent=t.toFixed(2)+' MAD'; 
+    } 
+    var vb=document.querySelector('.pos-validate-btn'); 
+    if(vb) {
+        vb.disabled=posCart.length===0;
+        vb.style.height='60px';
+        vb.style.fontSize='24px';
+    }
+}
 function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('factureCounter'))||0; factureCounter++; localStorage.setItem('factureCounter',factureCounter); return 'FACT-'+new Date().getFullYear()+'-'+String(factureCounter).padStart(5,'0'); }
 
 function renderPOS(){
@@ -390,7 +434,6 @@ if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div 
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
 
-// ===== INDICATEUR D'ÉTAPE (CLICABLE) - 28px avec icônes 28px =====
 var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:20px; margin-bottom:12px; padding:8px; background:var(--gray-50); border-radius:var(--radius); cursor:default;">' +
     '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:10px; font-size:28px; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(1)">' +
         '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:28px;">1</span>' +
@@ -407,11 +450,9 @@ var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
     stepIndicator +
     '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:16px; flex:1; min-width:280px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
-    // Barre de recherche - hauteur 44px, texte 24px
     '<div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;position:relative;height:44px;">' +
         '<i class="fas fa-search" style="color:#94a3b8;margin-right:8px;font-size:20px;"></i>' +
         '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:24px;padding-right:30px;height:44px;">' +
-        // Bouton ✕ - 24px
         '<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:24px;align-items:center;justify-content:center;" title="Effacer la recherche"><i class="fas fa-times-circle"></i></button>' +
     '</div>' +
     '<button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:46px;height:46px;cursor:pointer;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
@@ -431,10 +472,30 @@ for(var i=0;i<sortedCategories.length;i++){
 }
 h+='</div></div><div class="pos-products-grid" id="posProductGrid"></div></div><div class="pos-cart-panel">';
 if(posStep===1){
-h+='<div class="pos-cart-header"><h3><i class="fas fa-shopping-cart"></i> Panier <span class="pos-cart-badge">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()"><i class="fas fa-trash-alt"></i> Vider</button></div><div class="pos-cart-items">';
-if(posCart.length===0){ h+='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>'; }
-else{ for(var k=0;k<posCart.length;k++){ var it=posCart[k],opts=''; if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>'; if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>'; h+='<div class="pos-cart-item"><div class="pos-cart-item-info"><span class="pos-cart-item-name">'+escapeHtml(it.nom)+opts+'</span><span class="pos-cart-item-price">'+it.prixUnitaire.toFixed(2)+' MAD/u</span></div><div class="pos-cart-item-actions"><button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)"><i class="fas fa-minus"></i></button><span class="pos-qty-value">'+it.quantite+'</span><button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)"><i class="fas fa-plus"></i></button><button class="pos-remove-btn" onclick="posRemoveItem('+k+')"><i class="fas fa-times"></i></button></div><span class="pos-cart-item-total">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span></div>'; } }
-h+='</div><div style="padding:8px 0;display:flex;gap:8px;"><label>Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:4px 8px;border:2px solid #e2e8f0;border-radius:6px;"></div><div class="pos-cart-footer">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div><button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+'><i class="fas fa-check-circle"></i> Valider</button></div>';
+h+='<div class="pos-cart-header" style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;"><h3 style="font-size:28px;"><i class="fas fa-shopping-cart"></i> Panier <span class="pos-cart-badge" style="background:#2E7D32;color:#fff;border-radius:50%;padding:2px 10px;font-size:24px;">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()" style="font-size:24px;background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;"><i class="fas fa-trash-alt"></i> Vider</button></div><div class="pos-cart-items" style="max-height:300px;overflow-y:auto;padding:4px;">';
+if(posCart.length===0){ h+='<div class="pos-cart-empty" style="text-align:center;padding:20px;color:#94a3b8;"><i class="fas fa-shopping-basket" style="font-size:40px;"></i><p style="font-size:24px;">Panier vide</p></div>'; }
+else{ 
+    for(var k=0;k<posCart.length;k++){ 
+        var it=posCart[k],opts=''; 
+        if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; 
+        if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>'; 
+        if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>'; 
+        h+='<div class="pos-cart-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid #e2e8f0;">' +
+            '<div class="pos-cart-item-info" style="flex:1;">' +
+                '<span class="pos-cart-item-name" style="font-size:24px;font-weight:600;display:block;">'+escapeHtml(it.nom)+opts+'</span>' +
+                '<span class="pos-cart-item-price" style="font-size:24px;color:#64748b;">'+it.prixUnitaire.toFixed(2)+' MAD/u</span>' +
+            '</div>' +
+            '<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:6px;">' +
+                '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="font-size:24px;width:36px;height:36px;border-radius:50%;border:2px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-minus"></i></button>' +
+                '<span class="pos-qty-value" style="font-size:28px;font-weight:700;min-width:32px;text-align:center;">'+it.quantite+'</span>' +
+                '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="font-size:24px;width:36px;height:36px;border-radius:50%;border:2px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-plus"></i></button>' +
+                '<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="font-size:24px;background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;"><i class="fas fa-times"></i></button>' +
+            '</div>' +
+            '<span class="pos-cart-item-total" style="font-size:24px;font-weight:700;min-width:100px;text-align:right;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
+        '</div>'; 
+    } 
+}
+h+='</div><div style="padding:8px 0;display:flex;gap:8px;align-items:center;"><label style="font-size:24px;">Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:100px;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:24px;"></div><div class="pos-cart-footer" style="padding:8px 0;">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;font-size:24px;"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;font-size:24px;"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:30px;font-weight:700;padding:8px 0;border-top:2px solid #e2e8f0;"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div><button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+' style="width:100%;padding:12px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-size:24px;font-weight:700;height:60px;cursor:pointer;"><i class="fas fa-check-circle"></i> Valider</button></div>';
 }else{
 var canCredit=posCurrentClient&&posCurrentClient.id;
 var creditDisplay = '';
@@ -610,4 +671,4 @@ window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProduc
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (Étapes 28px, Recherche 24px/44px, ✕ 24px, Articles/Total 30px, Montant donné 36px, Rendu 40px, Client 28px, Boutons 24px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (Étapes 28px, Recherche 24px/44px, ✕ 24px, PANIER: nom 24px, prix 24px, qty 28px, +/- 24px, total produit 24px, total général 30px, Valider 24px/60px, Montant donné 36px, Rendu 40px, Client 28px, Boutons 24px)');
