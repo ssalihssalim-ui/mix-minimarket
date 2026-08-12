@@ -305,6 +305,89 @@ transition: var(--transition);
 .user-info { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 500; }
 .user-info i { font-size: 1.4rem; color: var(--accent); }
 
+/* ============================================================
+SIDEBAR - TEXTE 30px ET ICÔNES 30px (AJOUT)
+============================================================ */
+
+/* Texte des items du menu */
+.sidebar-nav .nav-item {
+  font-size: 30px !important;
+  padding: 16px 20px !important;
+  gap: 18px !important;
+}
+
+/* Icônes des items du menu */
+.sidebar-nav .nav-item i {
+  font-size: 30px !important;
+  width: 36px !important;
+  text-align: center !important;
+}
+
+/* Titre du sidebar */
+.sidebar-header h2 {
+  font-size: 32px !important;
+}
+
+/* Sous-titre du sidebar */
+.sidebar-subtitle {
+  font-size: 20px !important;
+  letter-spacing: 2px !important;
+}
+
+/* Nom de l'utilisateur en bas */
+.user-info {
+  font-size: 28px !important;
+}
+
+.user-info i {
+  font-size: 30px !important;
+}
+
+/* Items de déconnexion */
+.logout-item {
+  font-size: 30px !important;
+}
+
+.logout-item i {
+  font-size: 30px !important;
+}
+
+/* Ajustement pour les écrans moyens (tablette) */
+@media(max-width:1024px) {
+  .sidebar-nav .nav-item {
+    font-size: 26px !important;
+    padding: 14px 16px !important;
+    gap: 14px !important;
+  }
+  
+  .sidebar-nav .nav-item i {
+    font-size: 26px !important;
+    width: 32px !important;
+  }
+  
+  .sidebar-header h2 {
+    font-size: 28px !important;
+  }
+}
+
+/* Ajustement pour mobile (< 768px) */
+@media(max-width:768px) {
+  .sidebar-nav .nav-item {
+    font-size: 22px !important;
+    padding: 12px 14px !important;
+    gap: 12px !important;
+  }
+  
+  .sidebar-nav .nav-item i {
+    font-size: 22px !important;
+    width: 28px !important;
+  }
+  
+  .sidebar-header h2 {
+    font-size: 24px !important;
+  }
+}
+
 /* ==================== MAIN CONTENT ==================== */
 .main-content {
 flex: 1;
