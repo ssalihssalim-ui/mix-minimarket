@@ -1,5 +1,7 @@
 // ==================== POS-AUDIO.JS v10 – COMPATIBLE AVEC LE NOUVEAU POS ====================
 // Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
+// ✅ Sélection automatique du client par audio avec passage à l'étape paiement
+// ✅ Recherche adaptée selon l'étape POS : produits en étape 1, clients/paiement en étape 2
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -61,7 +63,6 @@ function showVoiceResult(msg) {
 }
 
 function showVoiceModeIndicator() {
-    // On pourrait changer l'apparence du bouton micro, mais on garde le comportement du bouton
     var mb = document.getElementById('posMicBtn');
     if (mb && isRecording) {
         mb.style.background = '#fee2e2';
@@ -69,12 +70,9 @@ function showVoiceModeIndicator() {
     }
 }
 
-function hideVoiceFlowIndicator() {
-    // Pas d'indicateur visuel supplémentaire pour le moment
-}
+function hideVoiceFlowIndicator() {}
 
 function showVoiceFlowIndicator(phase) {
-    // Affiche une petite bulle contextuelle (optionnel)
     var labels = {
         'product': 'Dites le nom du produit',
         'quantity': 'Dites la quantité',
@@ -84,9 +82,7 @@ function showVoiceFlowIndicator(phase) {
     if (labels[phase]) showVoiceResult(labels[phase]);
 }
 
-function showProcessingIndicator() {
-    // Rien de spécial
-}
+function showProcessingIndicator() {}
 
 // ========== UTILITAIRES ==========
 function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
@@ -324,6 +320,7 @@ function detectPeriodFilter(transcript) {
 function parseVoiceCommand(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
+    var posStep = window.posStep || 1;
 
     // ⚡ NAVIGATION EN PREMIER
     if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises')) {
@@ -373,18 +370,30 @@ function parseVoiceCommand(transcript) {
         return { type: 'ignore' };
     }
 
-    // MODE PAIEMENT
-    if (voiceMode === 'payment' || (currentPage === 'POS' && (window.posStep || 0) === 2)) {
+    // ============================================================
+    // ✅ RECHERCHE ADAPTÉE SELON L'ÉTAPE POS
+    // ÉTAPE 1 (Panier) → Recherche PRODUITS en priorité
+    // ÉTAPE 2 (Paiement) → Recherche CLIENTS / PAIEMENT en priorité
+    // ============================================================
+
+    // === ÉTAPE 2 : MODE PAIEMENT ===
+    if ((posStep === 2 || voiceMode === 'payment') && (currentPage === 'POS' || currentPage === 'Dashboard')) {
         switch (window.voicePaymentState) {
             case 0:
+                // Recherche d'abord un client
                 if (window.posAllClients) {
                     var clients = fastFindClient(cleaned);
-                    if (clients.length === 1) return { type: 'client', client: clients[0] };
+                    if (clients.length === 1) {
+                        return { type: 'client', client: clients[0] };
+                    }
                     if (clients.length > 1) {
-                        var best = clients.find(function(c) { return (c.nom + ' ' + c.prenom).toLowerCase().indexOf(cleaned) !== -1; }) || clients[0];
+                        var best = clients.find(function(c) { 
+                            return (c.nom + ' ' + c.prenom).toLowerCase().indexOf(cleaned) !== -1; 
+                        }) || clients[0];
                         return { type: 'client', client: best };
                     }
                 }
+                // Sinon mode de paiement
                 var pm0 = detectPaymentMode(cleaned);
                 if (pm0) return { type: 'payment_mode', mode: pm0 };
                 return { type: 'ignore' };
@@ -395,21 +404,29 @@ function parseVoiceCommand(transcript) {
             case 2:
                 var n = extractNumberFromTranscript(cleaned);
                 if (n !== null && n > 0) return { type: 'number', value: n };
-                if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
+                if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || 
+                    cleaned.includes('confirmer') || cleaned.includes('ok') || cleaned.includes('finaliser')) {
+                    return { type: 'validate' };
+                }
                 return { type: 'ignore' };
         }
     }
 
-    // RECHERCHE PRODUIT (POS)
-    if (voiceMode === 'search') {
-        if ((currentPage === 'POS' || currentPage === 'Dashboard') && (window.posStep || 0) === 1) {
+    // === ÉTAPE 1 : RECHERCHE PRODUIT (POS) ===
+    if (voiceMode === 'search' || posStep === 1) {
+        if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 1) {
             var products = window.posProductsList || [];
             if (products.length) {
                 var best = fastFindProduct(cleaned)[0];
                 if (best) return { type: 'search_product', product: best, page: 'pos' };
             }
-            if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) return { type: 'next' };
-            if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || cleaned.includes('confirmer') || cleaned.includes('ok')) return { type: 'validate' };
+            if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) {
+                return { type: 'next' };
+            }
+            if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || 
+                cleaned.includes('confirmer') || cleaned.includes('ok')) {
+                return { type: 'validate' };
+            }
             if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
             if (cleaned.includes('efface') || cleaned.includes('vider')) return { type: 'clear' };
             if (cleaned.includes('termine') || cleaned.includes('terminer') || cleaned.includes('fin')) return { type: 'finalize' };
@@ -586,17 +603,41 @@ function handleVoiceCommand(cmd) {
             }
             hideVoiceFlowIndicator();
             break;
+        
+        // ✅ CLIENT TROUVÉ PAR AUDIO - SÉLECTION AUTOMATIQUE + PASSAGE À L'ÉTAPE PAIEMENT
         case 'client':
             window.posCurrentClient = { id: cmd.client.id, name: cmd.client.nom + ' ' + cmd.client.prenom };
             window.posCurrentTable = '';
+            
+            // Mettre à jour le champ client
             var ci = document.getElementById('posClientSearchInput');
             if (ci) ci.value = window.posCurrentClient.name;
-            if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButtons();
+            
+            // Mettre à jour l'affichage du crédit
+            if (typeof window.updateClientCreditDisplay === 'function') {
+                window.updateClientCreditDisplay(cmd.client.id);
+            }
+            
+            // Mettre à jour les boutons de paiement
+            if (typeof window.updatePaymentButtons === 'function') {
+                window.updatePaymentButtons();
+            }
+            
             window.voicePaymentState = 1;
             showVoiceResult('👤 ' + window.posCurrentClient.name);
             hideVoiceFlowIndicator();
-            setTimeout(function() { showVoiceFlowIndicator('payment_mode'); }, 100);
+            
+            // ✅ PASSER AUTOMATIQUEMENT À L'ÉTAPE PAIEMENT
+            setTimeout(function() {
+                if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
+                    window.posGoToStep2();
+                }
+                setTimeout(function() { 
+                    showVoiceFlowIndicator('payment_mode'); 
+                }, 300);
+            }, 400);
             break;
+            
         case 'payment_mode':
             if (typeof window.posSetPaymentMethod === 'function') {
                 window.posSetPaymentMethod(cmd.mode);
@@ -910,4 +951,4 @@ window.buildProductIndex = buildProductIndex;
 window.buildProductAdminIndex = buildProductAdminIndex;
 window.fastFindProductAdmin = fastFindProductAdmin;
 
-console.log('🎤 Module vocal – prêt avec retour visuel');
+console.log('🎤 Module vocal – prêt avec retour visuel (recherche adaptée selon étape POS)');
