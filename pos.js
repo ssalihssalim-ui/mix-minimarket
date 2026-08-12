@@ -8,7 +8,7 @@
 // ✅ Bouton ✕ à l'intérieur de la barre de recherche (à droite)
 // ✅ Accès au paiement même si panier vide
 // ✅ Affichage du total des crédits impayés du client
-// ✅ Sélection automatique du client en tapant son nom
+// ✅ Sélection automatique du client en tapant son nom (focus automatique sur l'étape suivante)
 // ✅ Bouton ✕ dans le champ de recherche client
 // ✅ Police 22px pour la recherche client
 
@@ -285,7 +285,7 @@ async function posPayerCommandeTable(cid){ if(!confirm('Marquer comme payée ?')
 // ==================== PANIER (inchangé) ====================
 function posResetCart(){ posCart=[]; posStep=1; posSelectedCategory='all'; posCurrentClient=null; posCurrentTable=''; posPaymentMethod='espece'; posAmountGiven=0; posDiscountMAD=0; posSearchQuery=''; posProductOffset=0; posFilteredClients=posAllClients.slice(); clientCreditsCache = {}; delete window.posCommandeId; delete window.posVenteId; var si=document.getElementById('posSearchInput'); if(si) si.value=''; if(isOnPOSPage()) renderPOS(); }
 
-// ==================== RECHERCHE CLIENT AVEC SÉLECTION AUTOMATIQUE ====================
+// ==================== RECHERCHE CLIENT AVEC SÉLECTION AUTOMATIQUE + FOCUS ÉTAPE SUIVANTE ====================
 function posSearchClient(query){ 
     var q = query.toLowerCase().trim(); 
     posCurrentClient = null;
@@ -325,6 +325,14 @@ function posSearchClient(query){
         updateClientCreditDisplay(client.id);
         updatePaymentButtons();
         if (isOnPOSPage()) renderPOS();
+        
+        // ✅ PASSER AUTOMATIQUEMENT À L'ÉTAPE SUIVANTE (PAIEMENT)
+        setTimeout(function() {
+            // Si on est en étape 1, passer à l'étape 2
+            if (posStep === 1 && isOnPOSPage()) {
+                posGoToStep2();
+            }
+        }, 300);
         return;
     }
     
@@ -368,7 +376,14 @@ function posSelectClientFromDropdown(cid,cn){
     
     updatePaymentButtons(); 
     updateClientCreditDisplay(cid);
-    if(isOnPOSPage()) renderPOS(); 
+    if(isOnPOSPage()) renderPOS();
+    
+    // ✅ PASSER AUTOMATIQUEMENT À L'ÉTAPE SUIVANTE (PAIEMENT) APRÈS SÉLECTION MANUELLE
+    setTimeout(function() {
+        if (posStep === 1 && isOnPOSPage()) {
+            posGoToStep2();
+        }
+    }, 300);
 }
 
 document.addEventListener('click',function(e){ 
@@ -627,4 +642,4 @@ window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProduc
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour OK + ✕ recherche + accès paiement panier vide + crédits client + sélection auto client + ✕ client + police 22px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour OK + ✕ recherche + accès paiement panier vide + crédits client + sélection auto client + ✕ client + police 22px + focus automatique étape paiement)');
