@@ -1,7 +1,7 @@
 // ==================== POS.JS - 5 COLONNES SUR MOBILE ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ 5 colonnes sur mobile (< 700px)
-// ✅ Nom produit 22px bold uppercase, Prix produit 24px sur mobile
+// ✅ Nom produit 24px, Prix produit 24px sur mobile
 // ✅ Nom panier 22px, Prix panier 24px
 // ✅ Bouton Valider 26px / hauteur 60px
 
@@ -235,10 +235,10 @@ if(totalProducts===0){ html+='<div style="grid-column:1/-1;text-align:center;pad
 else{
 if(posSearchQuery) html+='<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">'+totalProducts+' résultat'+(totalProducts>1?'s':'')+'</div>';
 for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>'); 
-// ✅ Style adapté pour mobile (5 colonnes) - Nom 22px bold uppercase, Prix 24px
+// ✅ Style adapté pour mobile (5 colonnes) - Nom 24px, Prix 24px
 var cardStyle = isMobile ? 'padding:4px 2px;min-height:90px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
 var imgStyle = isMobile ? 'height:35px;width:100%;margin-bottom:2px;border-radius:6px;' : 'height:80px;margin-bottom:6px;';
-var nameStyle = isMobile ? 'font-size:22px !important;font-weight:700 !important;text-transform:uppercase;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
+var nameStyle = isMobile ? 'font-size:24px !important;font-weight:700 !important;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
 var priceStyle = isMobile ? 'font-size:24px !important;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
 
 html+='<div class="pos-product-card '+sc+'" style="'+cardStyle+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+
@@ -731,4 +731,4 @@ window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProduc
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom produit 22px bold uppercase, Prix produit 24px, Nom panier 22px, Prix panier 24px, Valider 26px/60px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom produit 24px, Prix produit 24px, Nom panier 22px, Prix panier 24px, Valider 26px/60px)');
