@@ -236,8 +236,8 @@ for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPro
 // ✅ Style adapté pour mobile (5 colonnes) - Nom 18px, Prix 20px
 var cardStyle = isMobile ? 'padding:4px 2px;min-height:90px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
 var imgStyle = isMobile ? 'height:35px;width:100%;margin-bottom:2px;border-radius:6px;' : 'height:80px;margin-bottom:6px;';
-var nameStyle = isMobile ? 'font-size:18px;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
-var priceStyle = isMobile ? 'font-size:20px;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
+var nameStyle = isMobile ? 'font-size:18px !important;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
+var priceStyle = isMobile ? 'font-size:20px !important;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
 
 html+='<div class="pos-product-card '+sc+'" style="'+cardStyle+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+
     (p.imageBase64?'<div class="pos-product-img" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;flex-shrink:0;"><img src="'+escapeHtml(p.imageBase64)+'" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;"></div>':'<div class="pos-product-img pos-product-placeholder" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-box" style="'+(isMobile?'font-size:16px;':'font-size:24px;')+'"></i></div>')+
