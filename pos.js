@@ -10,10 +10,11 @@
 // ✅ Affichage du total des crédits impayés du client
 // ✅ Sélection automatique du client en tapant son nom (focus automatique sur l'étape suivante)
 // ✅ Bouton ✕ dans le champ de recherche client
-// ✅ Police 28px pour le nom client et le crédit
-// ✅ Police 30px pour le montant donné
-// ✅ Police 35px pour le montant rendu (vert/rouge)
-// ✅ Hauteur des boutons de paiement augmentée
+// ✅ Police 28px bold pour le nom client
+// ✅ Police 30px bold pour le montant donné
+// ✅ Police 35px bold pour le montant rendu (vert/rouge)
+// ✅ Police 24px bold pour les boutons de paiement
+// ✅ Hauteur des boutons augmentée (min-height: 65px)
 
 var posCart = [];
 var posStep = 1;
@@ -121,7 +122,7 @@ async function updateClientCreditDisplay(clientId) {
         displayEl.textContent = '✅ Aucun crédit';
         displayEl.style.display = 'block';
         displayEl.style.color = '#16a34a';
-        displayEl.style.fontWeight = '600';
+        displayEl.style.fontWeight = '700';
         displayEl.style.fontSize = '28px';
     }
 }
@@ -479,22 +480,22 @@ h+='</div><div style="padding:8px 0;display:flex;gap:8px;"><label>Remise:</label
 var canCredit=posCurrentClient&&posCurrentClient.id;
 var creditDisplay = '';
 if (posCurrentClient && posCurrentClient.id) {
-    creditDisplay = '<div id="clientCreditDisplay" style="font-size:28px;padding:4px 0;text-align:right;"></div>';
+    creditDisplay = '<div id="clientCreditDisplay" style="font-size:28px;font-weight:700;padding:4px 0;text-align:right;"></div>';
 }
-h+='<div class="pos-cart-header"><h3><i class="fas fa-credit-card"></i> Paiement</h3></div><div class="pos-payment-form"><div style="margin-bottom:4px;"><label style="font-size:20px;">Client</label><div style="position:relative;">' +
+h+='<div class="pos-cart-header"><h3><i class="fas fa-credit-card"></i> Paiement</h3></div><div class="pos-payment-form"><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Client</label><div style="position:relative;">' +
     '<div style="display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:8px;padding:2px 12px;position:relative;">' +
-        '<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;font-size:28px;padding-right:30px;">' +
+        '<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;font-size:28px !important;font-weight:700 !important;padding-right:30px;">' +
         '<button id="posClientClearBtn" onclick="clearClientSearch()" style="display:'+((posCurrentClient && posCurrentClient.name) ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:1.3rem;align-items:center;justify-content:center;" title="Effacer le client"><i class="fas fa-times-circle"></i></button>' +
     '</div>' +
-    '<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;"></div></div>'+creditDisplay+'</div><div style="margin:2px 0;font-size:0.7rem;text-align:center;">— OU —</div><div style="margin-bottom:4px;"><label>Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="padding:8px;background:#f8fafc;border-radius:8px;"><div>Articles: '+posCart.length+'</div>'+(posDiscountMAD>0?'<div style="color:#ef4444;">Remise: -'+posDiscountMAD.toFixed(2)+'</div>':'')+'<div style="font-size:1.1rem;font-weight:700;">Total: '+t.toFixed(2)+' MAD</div></div></div><div style="margin-bottom:4px;"><label>Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="display:flex;gap:6px;">' +
-    '<button class="pos-payment-btn '+(posPaymentMethod==='espece'?'active':'')+'" onclick="posSetPaymentMethod(\'espece\')" style="font-size:24px;padding:16px 20px;height:auto;min-height:60px;"><i class="fas fa-money-bill-wave"></i> Espèces</button>' +
-    '<button class="pos-payment-btn '+(posPaymentMethod==='credit'?'active':'')+'" onclick="posSetPaymentMethod(\'credit\')" id="posCreditBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px;padding:16px 20px;height:auto;min-height:60px;"><i class="fas fa-credit-card"></i> Crédit</button>' +
-    '<button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px;padding:16px 20px;height:auto;min-height:60px;"><i class="fas fa-hand-holding-usd"></i> Partiel</button>' +
+    '<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;"></div></div>'+creditDisplay+'</div><div style="margin:2px 0;font-size:0.7rem;text-align:center;">— OU —</div><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="padding:8px;background:#f8fafc;border-radius:8px;"><div style="font-size:1rem;">Articles: '+posCart.length+'</div>'+(posDiscountMAD>0?'<div style="color:#ef4444;">Remise: -'+posDiscountMAD.toFixed(2)+'</div>':'')+'<div style="font-size:1.1rem;font-weight:700;">Total: '+t.toFixed(2)+' MAD</div></div></div><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="display:flex;gap:6px;">' +
+    '<button class="pos-payment-btn '+(posPaymentMethod==='espece'?'active':'')+'" onclick="posSetPaymentMethod(\'espece\')" style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-money-bill-wave"></i> Espèces</button>' +
+    '<button class="pos-payment-btn '+(posPaymentMethod==='credit'?'active':'')+'" onclick="posSetPaymentMethod(\'credit\')" id="posCreditBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-credit-card"></i> Crédit</button>' +
+    '<button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-hand-holding-usd"></i> Partiel</button>' +
     '</div></div>';
 if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') {
-    h+='<div style="margin-bottom:4px;"><label style="font-size:20px;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:8px;font-size:30px;"><div id="posChangeDisplay" style="font-size:35px;font-weight:700;padding:8px 0;"></div></div>';
+    h+='<div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:8px;font-size:30px !important;font-weight:700 !important;"><div id="posChangeDisplay" style="font-size:35px;font-weight:700;padding:8px 0;"></div></div>';
 }
-h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()" style="width:100%;padding:16px;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-size:24px;font-weight:700;min-height:60px;"><i class="fas fa-check-circle"></i> Finaliser</button></div>';
+h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()" style="width:100%;padding:16px;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-size:24px !important;font-weight:700 !important;min-height:65px;"><i class="fas fa-check-circle"></i> Finaliser</button></div>';
 }
 h+='</div></div>'; c.innerHTML=h;
 
@@ -582,6 +583,7 @@ if (c && isOnPOSPage()) {
 }
 
 function posSetPaymentMethod(m){ if((m==='credit'||m==='partiel')&&(!posCurrentClient||!posCurrentClient.id)){ alert('Client requis'); return; } posPaymentMethod=m; posAmountGiven=0; if(isOnPOSPage()) renderPOS(); }
+
 function posCalculateChange(){ 
     var ai=document.getElementById('posAmountGiven');
     var cd=document.getElementById('posChangeDisplay');
@@ -667,4 +669,4 @@ window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProduc
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour OK + ✕ recherche + accès paiement panier vide + crédits client + sélection auto client + ✕ client + polices 28/30/35px + boutons agrandis)');
+console.log('⚡ Mixmax Minimarket - POS chargé (bouton Retour OK + ✕ recherche + accès paiement panier vide + crédits client + sélection auto client + ✕ client + polices 28/30/35px bold + boutons agrandis)');
