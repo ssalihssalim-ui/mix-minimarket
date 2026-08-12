@@ -1,10 +1,13 @@
-// ==================== POS.JS - LOGIQUE MÉTIER (POLICES AGRANDIES) ====================
+// ==================== POS.JS - LOGIQUE MÉTIER (POLICES AGRANDIES V2) ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
-// ✅ Police Articles/Total: 30px
-// ✅ Police Montant donné: 36px
-// ✅ Police Montant rendu: 40px avec margin-right:20px
-// ✅ Police Client: 28px bold
-// ✅ Police Crédit: 28px bold
+// ✅ Étapes (Panier/Paiement): 28px avec icônes 28px
+// ✅ Barre recherche produits: hauteur 44px, texte 24px
+// ✅ Bouton ✕ recherche: 24px
+// ✅ Articles/Total: 30px
+// ✅ Montant donné: 36px
+// ✅ Montant rendu: 40px avec margin-right:20px
+// ✅ Client: 28px bold
+// ✅ Crédit: 28px bold
 // ✅ Boutons paiement: 24px bold / min-height:65px
 // ✅ Bouton Finaliser: 24px bold / min-height:65px
 
@@ -387,14 +390,15 @@ if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div 
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
 
+// ===== INDICATEUR D'ÉTAPE (CLICABLE) - 28px avec icônes 28px =====
 var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:20px; margin-bottom:12px; padding:8px; background:var(--gray-50); border-radius:var(--radius); cursor:default;">' +
-    '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(1)">' +
-        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">1</span>' +
-        '🛒 Panier' +
+    '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:10px; font-size:28px; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(1)">' +
+        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:28px;">1</span>' +
+        '<span style="font-size:28px;">🛒</span> Panier' +
     '</div>' +
-    '<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 2 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(2)">' +
-        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 2 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 2 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">2</span>' +
-        '💳 Paiement' +
+    '<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" style="display:flex; align-items:center; gap:10px; font-size:28px; font-weight:600; color:' + (posStep === 2 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(2)">' +
+        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; background:' + (posStep === 2 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 2 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:28px;">2</span>' +
+        '<span style="font-size:28px;">💳</span> Paiement' +
     '</div>' +
 '</div>';
 
@@ -403,10 +407,12 @@ var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
     stepIndicator +
     '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:16px; flex:1; min-width:280px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
-    '<div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;position:relative;">' +
-        '<i class="fas fa-search" style="color:#94a3b8;margin-right:6px;"></i>' +
-        '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;font-size:16px;padding-right:30px;">' +
-        '<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:1.1rem;align-items:center;justify-content:center;" title="Effacer la recherche"><i class="fas fa-times-circle"></i></button>' +
+    // Barre de recherche - hauteur 44px, texte 24px
+    '<div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;position:relative;height:44px;">' +
+        '<i class="fas fa-search" style="color:#94a3b8;margin-right:8px;font-size:20px;"></i>' +
+        '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:24px;padding-right:30px;height:44px;">' +
+        // Bouton ✕ - 24px
+        '<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:24px;align-items:center;justify-content:center;" title="Effacer la recherche"><i class="fas fa-times-circle"></i></button>' +
     '</div>' +
     '<button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:46px;height:46px;cursor:pointer;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
     '<div style="display:flex;gap:4px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesEnLigneCount+'</span></button></div>' +
@@ -604,4 +610,4 @@ window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProduc
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (polices: Articles/Total 30px, Montant donné 36px, Rendu 40px, Client 28px, Boutons 24px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (Étapes 28px, Recherche 24px/44px, ✕ 24px, Articles/Total 30px, Montant donné 36px, Rendu 40px, Client 28px, Boutons 24px)');
