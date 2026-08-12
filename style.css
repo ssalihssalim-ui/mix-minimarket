@@ -419,7 +419,7 @@ color: var(--text-primary);
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
-/* 🔥 BOUTONS DE CATÉGORIES AGRANDIS */
+/* BOUTONS DE CATÉGORIES AGRANDIS */
 .pos-cat-btn {
 display: flex;
 align-items: center;
@@ -436,7 +436,6 @@ white-space: nowrap;
 transition: var(--transition);
 }
 .pos-cat-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
-/* 🔥 Images des catégories limitées à 100x100px */
 .pos-cat-btn img {
 width: auto;
 height: auto;
@@ -517,7 +516,6 @@ transition: var(--transition);
 }
 .pos-payment-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
 
-/* Bouton finaliser agrandi */
 .pos-finalize-btn {
 width: 100%;
 padding: 14px;
@@ -564,7 +562,6 @@ transition: var(--transition);
 .pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
 .pos-products-panel { height: auto; max-height: 50vh; }
 
-/* --- Catégories plus compactes (dès 1024px) --- */
 .pos-cat-btn {
 padding: 4px 8px !important;
 font-size: 20px !important;
@@ -575,7 +572,6 @@ max-width: 50px !important;
 max-height: 50px !important;
 }
 
-/* --- Panier plus lisible (dès 1024px) --- */
 .pos-cart-item-name {
 font-size: 20px !important;
 font-weight: 700 !important;
@@ -641,16 +637,37 @@ flex: 1 1 auto;
 padding: 8px;
 }
 .pos-products-grid {
-grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-gap: 6px;
+grid-template-columns: repeat(5, 1fr) !important;
+gap: 4px !important;
 flex: 1;
 overflow-y: auto;
-min-height: 280px;
+min-height: 200px;
+padding: 2px !important;
 }
-.pos-product-card { padding: 6px; min-height: 110px; }
-.pos-product-img { height: 60px; }
-.pos-product-name { font-size: 0.7rem; }
-.pos-product-price { font-size: 0.75rem; }
+.pos-product-card { 
+padding: 4px !important; 
+min-height: 75px !important;
+border-radius: 8px !important;
+border-width: 1px !important;
+}
+.pos-product-img { 
+height: 35px !important; 
+width: 100% !important;
+margin-bottom: 3px !important;
+border-radius: 6px !important;
+}
+.pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
+.pos-product-placeholder i { font-size: 16px !important; }
+.pos-product-name { 
+font-size: 9px !important; 
+font-weight: 600 !important;
+margin-right: 0 !important;
+line-height: 1.1 !important;
+overflow: hidden !important;
+text-overflow: ellipsis !important;
+white-space: nowrap !important;
+}
+.pos-product-price { font-size: 11px !important; font-weight: 700 !important; }
 .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
 .pos-cart-item-name { font-size: 1.1rem !important; }
 .pos-cart-item-total { font-size: 1.05rem !important; }
@@ -671,7 +688,6 @@ ADAPTATION ORDINATEUR (>=1025px)
 - Largeur du formulaire de paiement à 700px
 ============================================================ */
 @media(min-width: 1025px) {
-/* --- Panier : police plus petite --- */
 .pos-cart-item-name {
 font-size: 0.9rem !important;
 font-weight: 600 !important;
@@ -695,19 +711,16 @@ font-size: 0.9rem !important;
 font-size: 1.1rem !important;
 }
 
-/* --- Paiement : largeur 700px --- */
 .pos-cart-panel {
 width: 700px !important;
 min-width: 700px !important;
 max-width: 700px !important;
 }
 
-/* --- Ajustement du conteneur POS pour garder l’équilibre --- */
 .pos-container {
 justify-content: center;
 }
 
-/* --- Les boutons de catégories restent grands (comme sur mobile) --- */
 .pos-cat-btn {
 padding: 4px 8px !important;
 font-size: 20px !important;
@@ -718,7 +731,6 @@ max-width: 50px !important;
 max-height: 50px !important;
 }
 
-/* --- Validation / finalisation --- */
 .pos-validate-btn,
 .pos-finalize-btn {
 padding: 14px 18px !important;
@@ -740,22 +752,18 @@ font-size: 1rem !important;
 MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
 ============================================================ */
 
-/* ⭐ ESPACE entre le nom et le prix (margin-right: 10px sur le nom) */
 .pos-product-name {
 margin-right: 10px !important;
 }
 
-/* ⭐ ESPACE entre le nom et le prix DANS LE PANIER (margin-right: 10px sur le nom) */
 .pos-cart-item-name {
 margin-right: 10px !important;
 }
 
-/* ⭐ PRIX en 17px */
 .pos-product-price {
 font-size: 17px !important;
 }
 
-/* ⭐ MODE PAIEMENT : le panier prend 100% de la hauteur de la page (pas de scroll) */
 .pos-container-full .pos-products-panel {
 display: none !important;
 }
@@ -800,7 +808,6 @@ min-width: 80px !important;
 FORCER L'INDICATEUR D'ÉTAPE EN HAUT ET LE PANIER À DROITE SUR PC
 ============================================================ */
 
-/* Forcer le conteneur POS en colonne sur tous les écrans */
 .pos-container {
 display: flex !important;
 flex-direction: column !important;
@@ -809,7 +816,6 @@ height: calc(100vh - 180px) !important;
 min-height: 450px !important;
 }
 
-/* Forcer l'indicateur d'étape en haut */
 .pos-steps-nav {
 display: flex !important;
 justify-content: center !important;
@@ -825,7 +831,6 @@ flex-wrap: wrap !important;
 order: -1 !important;
 }
 
-/* La row (produits + panier) en ligne sur PC et tablette */
 .pos-row {
 display: flex !important;
 flex: 1 !important;
@@ -834,7 +839,6 @@ min-height: 0 !important;
 flex-direction: row !important;
 }
 
-/* PRODUITS À GAUCHE (flex:1) */
 .pos-products-panel {
 flex: 1 !important;
 min-width: 200px !important;
@@ -842,7 +846,6 @@ max-height: 100% !important;
 order: 0 !important;
 }
 
-/* PANIER À DROITE (order: 1 + margin-left: auto) */
 .pos-cart-panel {
 width: 20% !important;
 min-width: 200px !important;
@@ -852,7 +855,6 @@ order: 1 !important;
 margin-left: auto !important;
 }
 
-/* Sur mobile (< 768px), le panier passe en bas */
 @media(max-width: 767px) {
 .pos-row {
 flex-direction: column !important;
@@ -868,5 +870,77 @@ order: 1 !important;
 .pos-products-panel {
 max-height: 55vh !important;
 order: 0 !important;
+}
+}
+
+/* ============================================================
+FORCER 5 COLONNES SUR TELEPHONE (AJOUT COMPLÉMENTAIRE)
+============================================================ */
+
+/* Pour les très petits écrans (< 380px) */
+@media screen and (max-width: 380px) {
+.pos-products-grid {
+grid-template-columns: repeat(5, 1fr) !important;
+gap: 3px !important;
+padding: 2px !important;
+}
+.pos-product-card {
+padding: 3px !important;
+min-height: 65px !important;
+border-radius: 6px !important;
+}
+.pos-product-img {
+height: 28px !important;
+}
+.pos-product-name {
+font-size: 7px !important;
+}
+.pos-product-price {
+font-size: 9px !important;
+}
+}
+
+/* Pour les écrans entre 481px et 600px (petites tablettes) */
+@media screen and (min-width: 481px) and (max-width: 600px) {
+.pos-products-grid {
+grid-template-columns: repeat(5, 1fr) !important;
+gap: 6px !important;
+}
+.pos-product-card {
+padding: 6px !important;
+min-height: 90px !important;
+}
+.pos-product-img {
+height: 45px !important;
+}
+.pos-product-name {
+font-size: 10px !important;
+}
+.pos-product-price {
+font-size: 12px !important;
+}
+}
+
+/* Mode paysage sur mobile */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+.pos-products-grid {
+grid-template-columns: repeat(5, 1fr) !important;
+gap: 4px !important;
+}
+.pos-product-card {
+padding: 4px !important;
+min-height: 60px !important;
+}
+.pos-product-img {
+height: 30px !important;
+}
+.pos-product-name {
+font-size: 8px !important;
+}
+.pos-product-price {
+font-size: 10px !important;
+}
+.pos-cart-panel {
+max-height: 100% !important;
 }
 }
