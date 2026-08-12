@@ -1,9 +1,9 @@
 // ==================== POS.JS - 5 COLONNES SUR MOBILE ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ 5 colonnes sur mobile (< 700px)
-// ✅ Nom produit 20px, Prix produit 22px sur mobile
-// ✅ Prix panier 20px sous la quantité
-// ✅ Bouton Valider 24px / hauteur 60px
+// ✅ Nom produit 22px bold uppercase, Prix produit 24px sur mobile
+// ✅ Nom panier 22px, Prix panier 24px
+// ✅ Bouton Valider 26px / hauteur 60px
 
 var posCart = [];
 var posStep = 1;
@@ -235,17 +235,17 @@ if(totalProducts===0){ html+='<div style="grid-column:1/-1;text-align:center;pad
 else{
 if(posSearchQuery) html+='<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">'+totalProducts+' résultat'+(totalProducts>1?'s':'')+'</div>';
 for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>'); 
-// ✅ Style adapté pour mobile (5 colonnes) - Nom 20px, Prix 22px
-var cardStyle = isMobile ? 'padding:4px 2px;min-height:85px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
+// ✅ Style adapté pour mobile (5 colonnes) - Nom 22px bold uppercase, Prix 24px
+var cardStyle = isMobile ? 'padding:4px 2px;min-height:90px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
 var imgStyle = isMobile ? 'height:35px;width:100%;margin-bottom:2px;border-radius:6px;' : 'height:80px;margin-bottom:6px;';
-var nameStyle = isMobile ? 'font-size:20px !important;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
-var priceStyle = isMobile ? 'font-size:22px !important;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
+var nameStyle = isMobile ? 'font-size:22px !important;font-weight:700 !important;text-transform:uppercase;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
+var priceStyle = isMobile ? 'font-size:24px !important;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
 
 html+='<div class="pos-product-card '+sc+'" style="'+cardStyle+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+
     (p.imageBase64?'<div class="pos-product-img" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;flex-shrink:0;"><img src="'+escapeHtml(p.imageBase64)+'" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;"></div>':'<div class="pos-product-img pos-product-placeholder" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-box" style="'+(isMobile?'font-size:16px;':'font-size:24px;')+'"></i></div>')+
     '<div class="pos-product-info" style="display:flex;flex-direction:column;align-items:center;width:100%;flex:1;justify-content:center;">'+
         '<span class="pos-product-name" style="'+nameStyle+'">'+dn+stt+'</span>'+
-        '<span class="pos-product-price" style="'+priceStyle+'">'+(hp?'<span class="pos-old-price" style="'+(isMobile?'font-size:14px;':'')+'text-decoration:line-through;color:#94a3b8;">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price" style="'+(isMobile?'font-size:22px;color:#ef4444;':'')+'">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD</span>')+'</span>'+
+        '<span class="pos-product-price" style="'+priceStyle+'">'+(hp?'<span class="pos-old-price" style="'+(isMobile?'font-size:16px;':'')+'text-decoration:line-through;color:#94a3b8;">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price" style="'+(isMobile?'font-size:24px;color:#ef4444;':'')+'">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD</span>')+'</span>'+
     '</div></div>'; }
 if(posHasMoreProducts){ html+='<div style="grid-column:1/-1;text-align:center;padding:10px;"><button class="btn-add" onclick="loadMoreProducts()" style="font-size:0.8rem;">Afficher plus ('+(totalProducts-displayProducts.length)+' produits restants)</button></div>'; }
 }
@@ -396,9 +396,10 @@ function updateCartOnly(){
         var btnSize = isMobile ? '40px' : '28px';
         var fontSize = isMobile ? '1.2rem' : '0.7rem';
         var qtySize = isMobile ? '1.3rem' : '0.85rem';
-        var nameSize = isMobile ? '1.1rem' : '0.85rem';
+        // ✅ Nom panier 22px, Prix panier 24px
+        var nameSize = isMobile ? '22px' : '0.85rem';
         var priceSize = isMobile ? '0.7rem' : '0.7rem';
-        var totalSize = isMobile ? '20px' : '0.8rem';
+        var totalSize = isMobile ? '24px' : '0.8rem';
         
         for(var k=0;k<posCart.length;k++){ 
             var it=posCart[k],opts=''; 
@@ -417,7 +418,6 @@ function updateCartOnly(){
                     '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
                     '<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:1.1rem;transition:all 0.2s;"><i class="fas fa-times"></i></button>' +
                 '</div>' +
-                // ✅ Prix du panier - 20px sur mobile
                 '<span class="pos-cart-item-total" style="font-size:'+totalSize+';font-weight:700;min-width:80px;text-align:right;flex-shrink:0;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
             '</div>'; 
         } 
@@ -433,9 +433,9 @@ function updateCartOnly(){
     var vb=document.querySelector('.pos-validate-btn'); 
     if(vb) {
         vb.disabled=posCart.length===0;
-        // ✅ Bouton Valider: 24px font-size, hauteur 60px
+        // ✅ Bouton Valider: 26px font-size, hauteur 60px
         vb.style.height = '60px';
-        vb.style.fontSize = '24px';
+        vb.style.fontSize = '26px';
         vb.style.fontWeight = '700';
         vb.style.padding = '16px';
         vb.style.borderRadius = '12px';
@@ -532,9 +532,10 @@ else{
         var btnSize = isMobile ? '36px' : '28px';
         var fontSize = isMobile ? '1.1rem' : '0.7rem';
         var qtySize = isMobile ? '1.2rem' : '0.85rem';
-        var nameSize = isMobile ? '1rem' : '0.85rem';
+        // ✅ Nom panier 22px, Prix panier 24px
+        var nameSize = isMobile ? '22px' : '0.85rem';
         var priceSize = isMobile ? '0.7rem' : '0.7rem';
-        var totalSize = isMobile ? '20px' : '0.8rem';
+        var totalSize = isMobile ? '24px' : '0.8rem';
         h+='<div class="pos-cart-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border);gap:8px;">' +
             '<div class="pos-cart-item-info" style="flex:1;min-width:0;">' +
                 '<span class="pos-cart-item-name" style="font-size:'+nameSize+';font-weight:600;display:block;margin-right:10px;word-break:break-word;">'+escapeHtml(it.nom)+opts+'</span>' +
@@ -551,8 +552,8 @@ else{
     } 
 }
 h+='</div><div style="padding:8px 0;display:flex;gap:8px;align-items:center;"><label style="font-size:'+(isMobile?'20px':'1rem')+';">Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:6px;border:2px solid #e2e8f0;border-radius:6px;font-size:'+(isMobile?'20px':'1rem')+';"></div><div class="pos-cart-footer" style="padding:8px 0;">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;font-size:'+(isMobile?'20px':'1.1rem')+';"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;font-size:'+(isMobile?'20px':'1.1rem')+';"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:'+(isMobile?'28px':'30px')+';font-weight:700;padding:8px 0;border-top:2px solid var(--border);"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div>' +
-    // ✅ Bouton Valider: 24px font-size, hauteur 60px
-    '<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+' style="width:100%;padding:16px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-size:24px;font-weight:700;height:60px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fas fa-check-circle"></i> Valider</button></div>';
+    // ✅ Bouton Valider: 26px font-size, hauteur 60px
+    '<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+' style="width:100%;padding:16px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-size:26px;font-weight:700;height:60px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fas fa-check-circle"></i> Valider</button></div>';
 }else{
 var canCredit=posCurrentClient&&posCurrentClient.id;
 var creditDisplay = '';
@@ -730,4 +731,4 @@ window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProduc
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom 20px, Prix 22px, Prix panier 20px, Valider 24px/60px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom produit 22px bold uppercase, Prix produit 24px, Nom panier 22px, Prix panier 24px, Valider 26px/60px)');
