@@ -418,10 +418,88 @@ overflow-y: auto;
 overflow-x: hidden;
 }
 
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
-.header-title { display: flex; align-items: center; gap: 14px; }
-.header-title i { font-size: 1.4rem; color: var(--white); background: var(--black); padding: 12px; border-radius: var(--radius); }
-.header-title h2 { font-size: 1.5rem; color: var(--text-primary); font-weight: 700; }
+/* ============================================================
+ALIGNER LE TITRE AVEC LE BOUTON MENU + RÉDUIRE L'ESPACE EN HAUT
+============================================================ */
+
+/* ✅ Header de page aligné avec le bouton menu */
+.page-header {
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  margin-top: 0px !important;
+  margin-bottom: 4px !important;
+  padding: 2px 8px !important;
+  min-height: 30px !important;
+  gap: 10px !important;
+  flex-wrap: wrap;
+}
+
+/* ✅ Supprimer le margin-left du titre */
+.page-header .header-title {
+  margin-left: 0px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* ✅ Réduire la taille de l'icône et du titre */
+.header-title i {
+  font-size: 1.1rem !important;
+  color: var(--white);
+  background: var(--black);
+  padding: 6px;
+  border-radius: var(--radius);
+}
+
+.header-title h2 {
+  font-size: 1.2rem !important;
+  color: var(--text-primary);
+  font-weight: 700;
+  margin: 0 !important;
+}
+
+/* ✅ Supprimer les marges supplémentaires */
+.main-content {
+  padding-top: 8px !important;
+}
+
+/* ✅ Ajustement pour mobile */
+@media(max-width:768px) {
+  .page-header {
+    padding: 2px 6px !important;
+    min-height: 28px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 1rem !important;
+    padding: 4px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 1rem !important;
+  }
+}
+
+/* ✅ Pour iPhone 13 Pro Max */
+@media screen and (min-device-width: 390px) and (max-device-width: 430px) and (min-device-height: 844px) {
+  .page-header {
+    margin-top: 0px !important;
+    margin-bottom: 2px !important;
+    padding: 1px 6px !important;
+    min-height: 24px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 0.95rem !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 0.9rem !important;
+    padding: 4px !important;
+  }
+}
 
 /* ==================== CARDS ==================== */
 .content-card {
@@ -832,19 +910,19 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   .page-header {
     margin-top: 0px !important;
-    margin-bottom: 4px !important;
-    padding-top: 5px !important;
-    padding-bottom: 5px !important;
-    min-height: 30px !important;
+    margin-bottom: 2px !important;
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+    min-height: 24px !important;
   }
   
   .page-header .header-title h2 {
-    font-size: 1.2rem !important;
+    font-size: 0.95rem !important;
   }
   
   .page-header .header-title i {
-    font-size: 1rem !important;
-    padding: 8px !important;
+    font-size: 0.9rem !important;
+    padding: 4px !important;
   }
   
   .pos-container {
@@ -879,9 +957,9 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   .page-header {
     margin-top: 5px !important;
-    margin-bottom: 10px !important;
-    padding-top: 5px !important;
-    padding-bottom: 5px !important;
+    margin-bottom: 6px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
   }
 }
 
