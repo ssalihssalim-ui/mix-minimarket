@@ -255,7 +255,7 @@ transition: var(--transition);
 
 /* ==================== SIDEBAR ==================== */
 .sidebar {
-width: 280px;
+width: 300px; /* ✅ Augmenté de 20px (280px -> 300px) */
 background: var(--bg-dark);
 display: flex;
 flex-direction: column;
@@ -391,7 +391,7 @@ SIDEBAR - TEXTE 30px ET ICÔNES 30px
 /* ==================== MAIN CONTENT ==================== */
 .main-content {
 flex: 1;
-margin-left: 280px;
+margin-left: 300px; /* ✅ Augmenté de 20px (280px -> 300px) */
 padding: 22px;
 background: var(--bg-page);
 height: 100vh;
