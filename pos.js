@@ -1,8 +1,8 @@
 // ==================== POS.JS - 5 COLONNES SUR MOBILE ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
 // ✅ 5 colonnes sur mobile (< 700px)
-// ✅ Nom produit 25px, Prix produit 26px sur mobile
-// ✅ Nom panier 26px, Prix panier 26px
+// ✅ Nom produit 22px bold uppercase, Prix produit 24px sur mobile
+// ✅ Nom panier 22px, Prix panier 24px
 // ✅ Bouton Valider 26px / hauteur 60px
 
 var posCart = [];
@@ -235,17 +235,17 @@ if(totalProducts===0){ html+='<div style="grid-column:1/-1;text-align:center;pad
 else{
 if(posSearchQuery) html+='<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">'+totalProducts+' résultat'+(totalProducts>1?'s':'')+'</div>';
 for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>'); 
-// ✅ Style adapté pour mobile (5 colonnes) - Nom 25px, Prix 26px
-var cardStyle = isMobile ? 'padding:4px 2px;min-height:95px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
+// ✅ Style adapté pour mobile (5 colonnes) - Nom 22px bold uppercase, Prix 24px
+var cardStyle = isMobile ? 'padding:4px 2px;min-height:90px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
 var imgStyle = isMobile ? 'height:35px;width:100%;margin-bottom:2px;border-radius:6px;' : 'height:80px;margin-bottom:6px;';
-var nameStyle = isMobile ? 'font-size:25px !important;font-weight:700 !important;text-transform:uppercase;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
-var priceStyle = isMobile ? 'font-size:26px !important;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
+var nameStyle = isMobile ? 'font-size:22px !important;font-weight:700 !important;text-transform:uppercase;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
+var priceStyle = isMobile ? 'font-size:24px !important;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
 
 html+='<div class="pos-product-card '+sc+'" style="'+cardStyle+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+
     (p.imageBase64?'<div class="pos-product-img" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;flex-shrink:0;"><img src="'+escapeHtml(p.imageBase64)+'" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;"></div>':'<div class="pos-product-img pos-product-placeholder" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-box" style="'+(isMobile?'font-size:16px;':'font-size:24px;')+'"></i></div>')+
     '<div class="pos-product-info" style="display:flex;flex-direction:column;align-items:center;width:100%;flex:1;justify-content:center;">'+
         '<span class="pos-product-name" style="'+nameStyle+'">'+dn+stt+'</span>'+
-        '<span class="pos-product-price" style="'+priceStyle+'">'+(hp?'<span class="pos-old-price" style="'+(isMobile?'font-size:16px;':'')+'text-decoration:line-through;color:#94a3b8;">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price" style="'+(isMobile?'font-size:26px;color:#ef4444;':'')+'">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD</span>')+'</span>'+
+        '<span class="pos-product-price" style="'+priceStyle+'">'+(hp?'<span class="pos-old-price" style="'+(isMobile?'font-size:16px;':'')+'text-decoration:line-through;color:#94a3b8;">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price" style="'+(isMobile?'font-size:24px;color:#ef4444;':'')+'">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD</span>')+'</span>'+
     '</div></div>'; }
 if(posHasMoreProducts){ html+='<div style="grid-column:1/-1;text-align:center;padding:10px;"><button class="btn-add" onclick="loadMoreProducts()" style="font-size:0.8rem;">Afficher plus ('+(totalProducts-displayProducts.length)+' produits restants)</button></div>'; }
 }
@@ -396,10 +396,10 @@ function updateCartOnly(){
         var btnSize = isMobile ? '40px' : '28px';
         var fontSize = isMobile ? '1.2rem' : '0.7rem';
         var qtySize = isMobile ? '1.3rem' : '0.85rem';
-        // ✅ Nom panier 26px, Prix panier 26px
-        var nameSize = isMobile ? '26px' : '0.85rem';
+        // ✅ Nom panier 22px, Prix panier 24px
+        var nameSize = isMobile ? '22px' : '0.85rem';
         var priceSize = isMobile ? '0.7rem' : '0.7rem';
-        var totalSize = isMobile ? '26px' : '0.8rem';
+        var totalSize = isMobile ? '24px' : '0.8rem';
         
         for(var k=0;k<posCart.length;k++){ 
             var it=posCart[k],opts=''; 
@@ -477,7 +477,7 @@ var stepNumberSize = isMobile ? '22px' : '28px';
 var stepNumberSize2 = isMobile ? '26px' : '38px';
 var stepGap = isMobile ? '12px' : '20px';
 
-var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:'+stepGap+'; margin-bottom:12px; padding:8px 12px; background:var(--gray-50); border-radius:var(--radius); cursor:default;">' +
+var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:'+stepGap+'; margin-bottom:4px; padding:4px 12px; background:var(--gray-50); border-radius:var(--radius); cursor:default;">' +
     '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:6px; font-size:'+stepSize+'; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(1)">' +
         '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:'+stepNumberSize2+'; height:'+stepNumberSize2+'; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:'+stepNumberSize+';">1</span>' +
         '<span style="font-size:'+stepSize+';">🛒</span> Panier' +
@@ -498,7 +498,8 @@ var panelPadding = isMobile ? '8px' : '16px';
 
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
     stepIndicator +
-    '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; flex:1; min-width:200px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+    // ✅ Augmenter la hauteur de pos-products-panel de 50px pour afficher 4 produits
+    '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; flex:1; min-width:200px; min-height:520px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
     '<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 10px;position:relative;height:'+(isMobile?'38px':'44px')+';">' +
         '<i class="fas fa-search" style="color:#94a3b8;margin-right:6px;font-size:'+(isMobile?'16px':'20px')+';"></i>' +
         '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:'+(isMobile?'16px':'24px')+';padding-right:30px;height:'+(isMobile?'38px':'44px')+';">' +
@@ -532,10 +533,10 @@ else{
         var btnSize = isMobile ? '36px' : '28px';
         var fontSize = isMobile ? '1.1rem' : '0.7rem';
         var qtySize = isMobile ? '1.2rem' : '0.85rem';
-        // ✅ Nom panier 26px, Prix panier 26px
-        var nameSize = isMobile ? '26px' : '0.85rem';
+        // ✅ Nom panier 22px, Prix panier 24px
+        var nameSize = isMobile ? '22px' : '0.85rem';
         var priceSize = isMobile ? '0.7rem' : '0.7rem';
-        var totalSize = isMobile ? '26px' : '0.8rem';
+        var totalSize = isMobile ? '24px' : '0.8rem';
         h+='<div class="pos-cart-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border);gap:8px;">' +
             '<div class="pos-cart-item-info" style="flex:1;min-width:0;">' +
                 '<span class="pos-cart-item-name" style="font-size:'+nameSize+';font-weight:600;display:block;margin-right:10px;word-break:break-word;">'+escapeHtml(it.nom)+opts+'</span>' +
@@ -731,4 +732,4 @@ window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProduc
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom produit 25px, Prix produit 26px, Nom panier 26px, Prix panier 26px, Valider 26px/60px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom produit 22px bold uppercase, Prix produit 24px, Nom panier 22px, Prix panier 24px, Valider 26px/60px)');
