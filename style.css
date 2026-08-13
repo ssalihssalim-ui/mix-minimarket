@@ -519,10 +519,10 @@ color: var(--text-primary);
 .pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
-/* ✅ Augmenter la hauteur de pos-products-panel de 20px */
+/* ✅ Augmenter la hauteur de pos-products-panel de 40px (470px -> 510px) */
 .pos-products-panel {
-  min-height: 470px !important;
-  max-height: calc(100% + 20px) !important;
+  min-height: 510px !important;
+  max-height: calc(100% + 40px) !important;
 }
 
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
@@ -671,6 +671,55 @@ transition: var(--transition);
 
 .pos-steps-nav .pos-step span {
   font-size: 23px !important;
+}
+
+/* ============================================================
+DIMINUER LA HAUTEUR DE pos-steps-nav DE 40px
+============================================================ */
+.pos-steps-nav {
+  padding: 2px 12px !important;
+  min-height: 30px !important;
+  max-height: 40px !important;
+  margin-bottom: 6px !important;
+}
+
+/* ============================================================
+AUGMENTER FONTSIZE NOM PRODUIT ET PRIX DE +1px
+============================================================ */
+@media(max-width:600px) {
+  .pos-product-name {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+  }
+  .pos-product-price {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+  .pos-promo-price {
+    font-size: 12px !important;
+  }
+}
+
+/* Ajustement pour iPhone 13 Pro Max (390px - 430px) */
+@media screen and (min-width: 390px) and (max-width: 430px) {
+  .pos-product-name {
+    font-size: 12px !important;
+  }
+  .pos-product-price {
+    font-size: 14px !important;
+  }
+  .pos-promo-price {
+    font-size: 14px !important;
+  }
+}
+
+/* Ajustement pour écrans moyens (tablette) */
+@media(max-width:1024px) {
+  .pos-steps-nav {
+    padding: 4px 12px !important;
+    min-height: 35px !important;
+    max-height: 45px !important;
+  }
 }
 
 /* ============================================================
@@ -934,7 +983,7 @@ border-radius: 6px !important;
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
 .pos-product-placeholder i { font-size: 16px !important; }
 .pos-product-name { 
-font-size: 9px !important; 
+font-size: 10px !important; /* ✅ +1px (était 9px) */
 font-weight: 600 !important;
 margin-right: 0 !important;
 line-height: 1.1 !important;
@@ -943,9 +992,9 @@ text-overflow: ellipsis !important;
 white-space: nowrap !important;
 max-width: 100% !important;
 }
-.pos-product-price { font-size: 11px !important; font-weight: 700 !important; }
+.pos-product-price { font-size: 12px !important; font-weight: 700 !important; } /* ✅ +1px (était 11px) */
 .pos-old-price { font-size: 9px !important; }
-.pos-promo-price { font-size: 11px !important; color: var(--danger) !important; }
+.pos-promo-price { font-size: 12px !important; color: var(--danger) !important; } /* ✅ +1px */
 
 .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
 .pos-cart-item-name { font-size: 1.1rem !important; }
@@ -976,10 +1025,10 @@ min-height: 85px !important;
 height: 40px !important;
 }
 .pos-product-name {
-font-size: 11px !important;
+font-size: 12px !important; /* ✅ +1px (était 11px) */
 }
 .pos-product-price {
-font-size: 13px !important;
+font-size: 14px !important; /* ✅ +1px (était 13px) */
 }
 }
 
