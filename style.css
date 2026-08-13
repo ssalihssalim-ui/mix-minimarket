@@ -549,9 +549,9 @@ color: var(--text-primary);
 .pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
-/* ✅ Augmenter la hauteur de pos-products-panel de 50px */
+/* ✅ Augmenter la hauteur de pos-products-panel */
 .pos-products-panel {
-  min-height: 520px !important;
+  min-height: 540px !important;
   max-height: calc(100% + 50px) !important;
 }
 
@@ -582,7 +582,7 @@ border-radius: 6px;
 object-fit: contain;
 }
 
-/* ✅ AUGMENTER LA TAILLE DES PRODUITS */
+/* ✅ AUGMENTER LA TAILLE DES CARTES PRODUITS */
 .pos-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
 .pos-product-card { background: var(--gray-50); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 14px; cursor: pointer; transition: var(--transition); text-align: center; display: flex; flex-direction: column; align-items: center; min-height: 130px; }
 .pos-product-card:hover { border-color: var(--black); box-shadow: var(--shadow); background: var(--white); }
@@ -870,28 +870,10 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
     padding-top: 10px !important;
   }
   
-  /* ✅ Augmenter la hauteur de pos-products-panel de 50px */
+  /* ✅ Augmenter la hauteur de pos-products-panel */
   .pos-products-panel {
-    min-height: 570px !important;
+    min-height: 590px !important;
     max-height: calc(100% + 50px) !important;
-  }
-  
-  /* ✅ Augmenter la taille des produits sur iPhone 13 Pro Max */
-  .pos-product-card {
-    padding: 8px !important;
-    min-height: 110px !important;
-  }
-  
-  .pos-product-img {
-    height: 55px !important;
-  }
-  
-  .pos-product-name {
-    font-size: 13px !important;
-  }
-  
-  .pos-product-price {
-    font-size: 15px !important;
   }
 }
 
@@ -959,45 +941,232 @@ RESPONSIVE - TITRES margin-left sur mobile
 }
 
 /* ============================================================
-AUGMENTER LA TAILLE DES PRODUITS SUR TABLETTE
+AUGMENTER LA TAILLE DES CARTES PRODUITS SUR PC
 ============================================================ */
-@media(max-width:1024px) and (min-width:601px) {
+@media(min-width: 1025px) {
   .pos-product-card {
-    padding: 12px !important;
-    min-height: 120px !important;
+    padding: 16px !important;
+    min-height: 180px !important;
+    border-radius: 12px !important;
   }
+  
   .pos-product-img {
-    height: 80px !important;
+    height: 110px !important;
+    margin-bottom: 10px !important;
+    border-radius: 8px !important;
   }
+  
   .pos-product-name {
-    font-size: 1rem !important;
-    font-weight: 600 !important;
-  }
-  .pos-product-price {
-    font-size: 1rem !important;
+    font-size: 1.2rem !important;
     font-weight: 700 !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .pos-product-price {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+  }
+  
+  .pos-products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap: 14px !important;
   }
 }
 
-/* ============================================================
-AUGMENTER LA TAILLE DES PRODUITS SUR MOBILE (5 colonnes)
-============================================================ */
-@media(max-width:600px) {
+/* ✅ Augmenter la taille des cartes produits sur tablette */
+@media(max-width: 1024px) and (min-width: 601px) {
   .pos-product-card {
-    padding: 6px !important;
-    min-height: 100px !important;
+    padding: 12px !important;
+    min-height: 150px !important;
+    border-radius: 12px !important;
   }
+  
   .pos-product-img {
-    height: 50px !important;
+    height: 90px !important;
+    margin-bottom: 8px !important;
   }
+  
   .pos-product-name {
-    font-size: 12px !important;
-    font-weight: 600 !important;
-  }
-  .pos-product-price {
-    font-size: 14px !important;
+    font-size: 1.1rem !important;
     font-weight: 700 !important;
   }
+  
+  .pos-product-price {
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+  }
+  
+  .pos-products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+
+/* ✅ Augmenter la taille des cartes produits sur mobile (5 colonnes) */
+@media(max-width:600px) {
+  .pos-product-card {
+    padding: 8px 4px !important;
+    min-height: 120px !important;
+    border-radius: 10px !important;
+    border-width: 1px !important;
+  }
+  
+  .pos-product-img {
+    height: 55px !important;
+    width: 100% !important;
+    margin-bottom: 4px !important;
+    border-radius: 6px !important;
+  }
+  
+  .pos-product-name {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .pos-product-price {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+  }
+  
+  .pos-promo-price {
+    font-size: 16px !important;
+  }
+  
+  .pos-old-price {
+    font-size: 11px !important;
+  }
+  
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 6px !important;
+    padding: 4px 2px !important;
+  }
+}
+
+/* ✅ Spécifique iPhone 13 Pro Max et grands téléphones (390px - 430px) */
+@media screen and (min-width: 390px) and (max-width: 430px) {
+  .pos-product-card {
+    padding: 8px 6px !important;
+    min-height: 130px !important;
+    border-radius: 10px !important;
+  }
+  
+  .pos-product-img {
+    height: 60px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .pos-product-name {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+  }
+  
+  .pos-product-price {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+  }
+  
+  .pos-promo-price {
+    font-size: 17px !important;
+  }
+  
+  .pos-products-grid {
+    gap: 6px !important;
+    padding: 4px !important;
+  }
+}
+
+/* ✅ Pour les très petits écrans (< 380px) */
+@media screen and (max-width: 380px) {
+  .pos-product-card {
+    padding: 4px 2px !important;
+    min-height: 90px !important;
+    border-radius: 8px !important;
+  }
+  
+  .pos-product-img {
+    height: 40px !important;
+  }
+  
+  .pos-product-name {
+    font-size: 11px !important;
+  }
+  
+  .pos-product-price {
+    font-size: 13px !important;
+  }
+}
+
+/* ✅ Pour les écrans entre 481px et 600px (petites tablettes) */
+@media screen and (min-width: 481px) and (max-width: 600px) {
+  .pos-product-card {
+    padding: 10px 6px !important;
+    min-height: 130px !important;
+  }
+  
+  .pos-product-img {
+    height: 60px !important;
+  }
+  
+  .pos-product-name {
+    font-size: 14px !important;
+  }
+  
+  .pos-product-price {
+    font-size: 16px !important;
+  }
+  
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+/* ✅ Mode paysage sur mobile */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .pos-product-card {
+    padding: 4px 3px !important;
+    min-height: 80px !important;
+  }
+  
+  .pos-product-img {
+    height: 40px !important;
+  }
+  
+  .pos-product-name {
+    font-size: 10px !important;
+  }
+  
+  .pos-product-price {
+    font-size: 12px !important;
+  }
+  
+  .pos-products-grid {
+    gap: 4px !important;
+  }
+}
+
+/* ✅ Ajustement de la grille pour mieux s'adapter */
+.pos-products-grid {
+  display: grid !important;
+  align-content: start !important;
+}
+
+/* ✅ Amélioration du texte pour qu'il reste dans la carte */
+.pos-product-name {
+  display: block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+  text-align: center !important;
+}
+
+.pos-product-price {
+  display: block !important;
+  text-align: center !important;
 }
 
 /* ==================== RESPONSIVE ==================== */
@@ -1089,34 +1258,34 @@ flex: 1 1 auto;
 padding: 8px;
 }
 
-/* ✅ 5 COLONNES sur mobile */
+/* ✅ 5 COLONNES sur mobile - CARTES AGRANDIES */
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
-gap: 4px !important;
+gap: 6px !important;
 flex: 1;
 overflow-y: auto;
 min-height: 200px;
-padding: 2px !important;
+padding: 4px 2px !important;
 }
 
 .pos-product-card { 
-padding: 6px !important; 
-min-height: 100px !important;
-border-radius: 8px !important;
+padding: 8px 4px !important; 
+min-height: 120px !important;
+border-radius: 10px !important;
 border-width: 1px !important;
 margin: 0 !important;
 }
 .pos-product-img { 
-height: 50px !important; 
+height: 55px !important; 
 width: 100% !important;
-margin-bottom: 3px !important;
+margin-bottom: 4px !important;
 border-radius: 6px !important;
 }
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
 .pos-product-placeholder i { font-size: 16px !important; }
 .pos-product-name { 
-font-size: 12px !important;
-font-weight: 600 !important;
+font-size: 14px !important;
+font-weight: 700 !important;
 margin-right: 0 !important;
 line-height: 1.1 !important;
 overflow: hidden !important;
@@ -1124,9 +1293,9 @@ text-overflow: ellipsis !important;
 white-space: nowrap !important;
 max-width: 100% !important;
 }
-.pos-product-price { font-size: 14px !important; font-weight: 700 !important; }
-.pos-old-price { font-size: 9px !important; }
-.pos-promo-price { font-size: 14px !important; color: var(--danger) !important; }
+.pos-product-price { font-size: 16px !important; font-weight: 700 !important; }
+.pos-old-price { font-size: 11px !important; }
+.pos-promo-price { font-size: 16px !important; color: var(--danger) !important; }
 
 .pos-cart-panel { max-height: 28vh !important; min-height: 180px; padding: 10px; }
 .pos-cart-item-name { font-size: 1.1rem !important; }
@@ -1146,21 +1315,23 @@ font-size: 1.05rem !important;
 @media screen and (min-width: 390px) and (max-width: 430px) {
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
-gap: 5px !important;
-padding: 3px !important;
+gap: 6px !important;
+padding: 4px !important;
 }
 .pos-product-card {
-padding: 8px !important;
-min-height: 110px !important;
+padding: 8px 6px !important;
+min-height: 130px !important;
 }
 .pos-product-img {
-height: 55px !important;
+height: 60px !important;
 }
 .pos-product-name {
-font-size: 13px !important;
+font-size: 15px !important;
+font-weight: 700 !important;
 }
 .pos-product-price {
-font-size: 15px !important;
+font-size: 17px !important;
+font-weight: 700 !important;
 }
 }
 
@@ -1168,22 +1339,22 @@ font-size: 15px !important;
 @media screen and (max-width: 380px) {
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
-gap: 3px !important;
+gap: 4px !important;
 padding: 2px !important;
 }
 .pos-product-card {
-padding: 4px !important;
-min-height: 80px !important;
-border-radius: 6px !important;
+padding: 4px 2px !important;
+min-height: 90px !important;
+border-radius: 8px !important;
 }
 .pos-product-img {
-height: 35px !important;
+height: 40px !important;
 }
 .pos-product-name {
-font-size: 10px !important;
+font-size: 11px !important;
 }
 .pos-product-price {
-font-size: 12px !important;
+font-size: 13px !important;
 }
 }
 
@@ -1191,20 +1362,20 @@ font-size: 12px !important;
 @media screen and (min-width: 481px) and (max-width: 600px) {
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
-gap: 6px !important;
+gap: 8px !important;
 }
 .pos-product-card {
-padding: 8px !important;
-min-height: 105px !important;
+padding: 10px 6px !important;
+min-height: 130px !important;
 }
 .pos-product-img {
-height: 55px !important;
+height: 60px !important;
 }
 .pos-product-name {
-font-size: 12px !important;
+font-size: 14px !important;
 }
 .pos-product-price {
-font-size: 14px !important;
+font-size: 16px !important;
 }
 }
 
@@ -1215,17 +1386,17 @@ grid-template-columns: repeat(5, 1fr) !important;
 gap: 4px !important;
 }
 .pos-product-card {
-padding: 4px !important;
-min-height: 70px !important;
+padding: 4px 3px !important;
+min-height: 80px !important;
 }
 .pos-product-img {
-height: 35px !important;
+height: 40px !important;
 }
 .pos-product-name {
-font-size: 9px !important;
+font-size: 10px !important;
 }
 .pos-product-price {
-font-size: 11px !important;
+font-size: 12px !important;
 }
 .pos-cart-panel {
 max-height: 100% !important;
