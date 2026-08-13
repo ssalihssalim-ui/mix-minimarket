@@ -802,28 +802,48 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   #dashboardPage,
   #clientPage,
   #menuTactilePage {
-    padding-top: 60px !important;
+    padding-top: 50px !important; /* réduit de 60px à 50px */
   }
   
   .main-content {
-    padding-top: 80px !important;
+    padding-top: 60px !important; /* réduit de 80px à 60px */
   }
   
   .sidebar {
-    padding-top: 60px !important;
+    padding-top: 50px !important;
   }
   
   .mobile-menu-btn {
-    top: 70px !important;
+    top: 60px !important;
     left: 25px !important;
   }
   
+  /* ✅ Page header réduit de 30px */
   .page-header {
-    margin-top: 20px !important;
+    margin-top: 0px !important;
+    margin-bottom: 8px !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+    min-height: 30px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 1.2rem !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 1rem !important;
+    padding: 8px !important;
   }
   
   .pos-container {
-    padding-top: 20px !important;
+    padding-top: 10px !important; /* réduit de 20px à 10px */
+  }
+  
+  /* ✅ Augmenter la hauteur de pos-products-panel de 40px */
+  .pos-products-panel {
+    min-height: 550px !important;
+    max-height: calc(100% + 40px) !important;
   }
 }
 
@@ -845,6 +865,13 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   .sidebar {
     padding-top: 50px !important;
+  }
+  
+  .page-header {
+    margin-top: 5px !important;
+    margin-bottom: 10px !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
   }
 }
 
