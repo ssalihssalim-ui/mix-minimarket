@@ -597,9 +597,10 @@ color: var(--text-primary);
 .pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
+/* ✅ Augmenter la hauteur de pos-products-panel de 60px (520px -> 580px) */
 .pos-products-panel {
-  min-height: 520px !important;
-  max-height: calc(100% + 50px) !important;
+  min-height: 580px !important;
+  max-height: calc(100% + 60px) !important;
 }
 
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
@@ -929,9 +930,10 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
     padding-top: 10px !important;
   }
   
+  /* ✅ Augmenter la hauteur de pos-products-panel de 60px pour iPhone 13 Pro Max */
   .pos-products-panel {
-    min-height: 570px !important;
-    max-height: calc(100% + 50px) !important;
+    min-height: 630px !important;
+    max-height: calc(100% + 60px) !important;
   }
 }
 
@@ -1066,8 +1068,8 @@ FORCER 5 COLONNES SUR TOUS LES TELEPHONES
 .pos-container { gap: 8px; }
 .pos-products-panel {
 height: auto !important;
-min-height: 430px !important;
-max-height: 60vh !important;
+min-height: 470px !important;
+max-height: 65vh !important;
 flex: 1 1 auto;
 padding: 8px;
 }
