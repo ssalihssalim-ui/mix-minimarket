@@ -1,7 +1,7 @@
 // ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
 // Recherche dans description client + remplacement par nom/prénom
-// Filtres vocaux avec effacement barre recherche
+// BOUTONS D'ACTION CORRIGÉS - bien visibles et alignés
 // Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
@@ -81,7 +81,6 @@ function filterVentesBySearchWithDescription(data, query) {
     var results = [];
     var clientsMap = {};
     
-    // Construire un map clientId -> client pour accès rapide
     window.clientsDataForSearch.forEach(function(c) {
         clientsMap[c.id] = c;
     });
@@ -90,12 +89,10 @@ function filterVentesBySearchWithDescription(data, query) {
         var match = false;
         var clientInfo = null;
         
-        // 1. Chercher dans le nom du client
         if (vente.clientName && vente.clientName.toLowerCase().indexOf(q) !== -1) {
             match = true;
         }
         
-        // 2. Chercher dans les items
         if (!match && vente.items) {
             for (var i = 0; i < vente.items.length; i++) {
                 if (vente.items[i].nom && vente.items[i].nom.toLowerCase().indexOf(q) !== -1) {
@@ -105,7 +102,6 @@ function filterVentesBySearchWithDescription(data, query) {
             }
         }
         
-        // 3. Chercher dans la description du client (si clientId existe)
         if (!match && vente.clientId && clientsMap[vente.clientId]) {
             var client = clientsMap[vente.clientId];
             var description = client.description || '';
@@ -115,9 +111,7 @@ function filterVentesBySearchWithDescription(data, query) {
             }
         }
         
-        // 4. Chercher dans la description du client (si clientName existe mais pas clientId)
         if (!match && vente.clientName && !vente.clientId) {
-            // Chercher le client par nom
             for (var id in clientsMap) {
                 var c = clientsMap[id];
                 var fullName = (c.nom || '') + ' ' + (c.prenom || '');
@@ -133,7 +127,6 @@ function filterVentesBySearchWithDescription(data, query) {
         }
         
         if (match) {
-            // Si on a trouvé un client via description, remplacer clientName par nom+prénom
             if (clientInfo) {
                 vente._clientDisplayName = (clientInfo.nom || '') + ' ' + (clientInfo.prenom || '');
             } else if (vente.clientId && clientsMap[vente.clientId]) {
@@ -199,7 +192,7 @@ function renderCommandeFactureCell(commande) {
     `;
 }
 
-// ========== STYLES CSS DYNAMIQUES ==========
+// ========== STYLES CSS DYNAMIQUES (AVEC BOUTONS CORRIGÉS) ==========
 function injectVentesStyles() {
     const styleId = 'ventes-pro-styles-final';
     if (document.getElementById(styleId)) return;
@@ -322,6 +315,7 @@ function injectVentesStyles() {
                 font-size: 22px !important;
                 border-collapse: separate;
                 border-spacing: 0 4px;
+                width: 100%;
             }
             
             #ventesPage .data-table thead th,
@@ -337,6 +331,7 @@ function injectVentesStyles() {
                 position: sticky;
                 top: 0;
                 z-index: 2;
+                white-space: nowrap;
             }
             
             #ventesPage .data-table thead th i,
@@ -439,13 +434,15 @@ function injectVentesStyles() {
                 display: none !important;
             }
             
-            /* === BOUTONS D'ACTION === */
+            /* === BOUTONS D'ACTION CORRIGÉS === */
             #ventesPage .action-buttons,
             #commandesPage .action-buttons {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                flex-wrap: wrap;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 6px !important;
+                flex-wrap: nowrap !important;
+                min-width: 180px !important;
             }
             
             #ventesPage .action-buttons .btn-edit,
@@ -454,51 +451,104 @@ function injectVentesStyles() {
             #commandesPage .action-buttons .btn-edit,
             #commandesPage .action-buttons .btn-delete,
             #commandesPage .action-buttons .btn-add {
-                width: 44px;
-                height: 44px;
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
                 border-radius: 10px !important;
                 display: inline-flex !important;
                 align-items: center !important;
                 justify-content: center !important;
                 padding: 0 !important;
                 font-size: 18px !important;
-                transition: var(--transition);
-                border: none;
-                background: var(--gray-50);
-                color: var(--text-secondary);
-                cursor: pointer;
+                transition: var(--transition) !important;
+                border: none !important;
+                background: var(--gray-50) !important;
+                color: var(--text-secondary) !important;
+                cursor: pointer !important;
+                flex-shrink: 0 !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+            }
+            
+            #ventesPage .action-buttons .btn-edit i,
+            #ventesPage .action-buttons .btn-delete i,
+            #ventesPage .action-buttons .btn-add i,
+            #commandesPage .action-buttons .btn-edit i,
+            #commandesPage .action-buttons .btn-delete i,
+            #commandesPage .action-buttons .btn-add i {
+                font-size: 18px !important;
+                pointer-events: none !important;
             }
             
             #ventesPage .action-buttons .btn-edit:hover,
             #commandesPage .action-buttons .btn-edit:hover {
-                background: var(--gray-200);
-                color: var(--black);
-                transform: translateY(-2px);
+                background: var(--gray-200) !important;
+                color: var(--black) !important;
+                transform: translateY(-2px) !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
             }
             
             #ventesPage .action-buttons .btn-delete,
             #commandesPage .action-buttons .btn-delete {
-                color: var(--danger);
-                background: rgba(239, 68, 68, 0.08);
+                color: var(--danger) !important;
+                background: rgba(239, 68, 68, 0.08) !important;
             }
             
             #ventesPage .action-buttons .btn-delete:hover,
             #commandesPage .action-buttons .btn-delete:hover {
-                background: rgba(239, 68, 68, 0.15);
-                transform: translateY(-2px);
+                background: rgba(239, 68, 68, 0.15) !important;
+                transform: translateY(-2px) !important;
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15) !important;
             }
             
             #ventesPage .action-buttons .btn-add,
             #commandesPage .action-buttons .btn-add {
-                background: var(--black);
-                color: var(--white);
+                background: var(--black) !important;
+                color: var(--white) !important;
             }
             
             #ventesPage .action-buttons .btn-add:hover,
             #commandesPage .action-buttons .btn-add:hover {
-                background: var(--primary-hover);
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-sm);
+                background: var(--primary-hover) !important;
+                transform: translateY(-2px) !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            }
+            
+            /* === BOUTON WHATSAPP SPÉCIAL === */
+            #ventesPage .action-buttons .btn-edit.whatsapp-btn,
+            #commandesPage .action-buttons .btn-edit.whatsapp-btn {
+                color: #25D366 !important;
+                background: rgba(37, 211, 102, 0.08) !important;
+            }
+            
+            #ventesPage .action-buttons .btn-edit.whatsapp-btn:hover,
+            #commandesPage .action-buttons .btn-edit.whatsapp-btn:hover {
+                background: rgba(37, 211, 102, 0.15) !important;
+                transform: translateY(-2px) !important;
+            }
+            
+            /* === BOUTON PAYER SPÉCIAL === */
+            #ventesPage .action-buttons .btn-add.payer-btn,
+            #commandesPage .action-buttons .btn-add.payer-btn {
+                background: #10B981 !important;
+                color: #fff !important;
+                font-size: 14px !important;
+                padding: 0 12px !important;
+                width: auto !important;
+                min-width: 60px !important;
+                border-radius: 8px !important;
+                gap: 4px !important;
+            }
+            
+            #ventesPage .action-buttons .btn-add.payer-btn:hover,
+            #commandesPage .action-buttons .btn-add.payer-btn:hover {
+                background: #059669 !important;
+                transform: translateY(-2px) !important;
+            }
+            
+            #ventesPage .action-buttons .btn-add.payer-btn i,
+            #commandesPage .action-buttons .btn-add.payer-btn i {
+                font-size: 14px !important;
             }
             
             /* === FILTRES === */
@@ -578,6 +628,34 @@ function injectVentesStyles() {
             }
             
             /* === RESPONSIVE === */
+            @media(max-width:1024px) {
+                #ventesPage .action-buttons,
+                #commandesPage .action-buttons {
+                    min-width: 140px !important;
+                    gap: 4px !important;
+                }
+                
+                #ventesPage .action-buttons .btn-edit,
+                #ventesPage .action-buttons .btn-delete,
+                #ventesPage .action-buttons .btn-add,
+                #commandesPage .action-buttons .btn-edit,
+                #commandesPage .action-buttons .btn-delete,
+                #commandesPage .action-buttons .btn-add {
+                    width: 38px !important;
+                    height: 38px !important;
+                    min-width: 38px !important;
+                    min-height: 38px !important;
+                    font-size: 16px !important;
+                }
+                
+                #ventesPage .action-buttons .btn-add.payer-btn,
+                #commandesPage .action-buttons .btn-add.payer-btn {
+                    min-width: 50px !important;
+                    font-size: 12px !important;
+                    padding: 0 10px !important;
+                }
+            }
+            
             @media(max-width:768px) {
                 #ventesPage .data-table tbody td,
                 #commandesPage .data-table tbody td {
@@ -618,6 +696,26 @@ function injectVentesStyles() {
                 .voice-display-field {
                     font-size: 18px !important;
                     width: 140px !important;
+                }
+                
+                #ventesPage .action-buttons,
+                #commandesPage .action-buttons {
+                    min-width: 120px !important;
+                    gap: 4px !important;
+                }
+                
+                #ventesPage .action-buttons .btn-edit,
+                #ventesPage .action-buttons .btn-delete,
+                #ventesPage .action-buttons .btn-add,
+                #commandesPage .action-buttons .btn-edit,
+                #commandesPage .action-buttons .btn-delete,
+                #commandesPage .action-buttons .btn-add {
+                    width: 34px !important;
+                    height: 34px !important;
+                    min-width: 34px !important;
+                    min-height: 34px !important;
+                    font-size: 14px !important;
+                    border-radius: 8px !important;
                 }
             }
             
@@ -676,6 +774,43 @@ function injectVentesStyles() {
                     font-size: 15px !important;
                     width: 100px !important;
                     padding: 6px 8px !important;
+                }
+                
+                #ventesPage .action-buttons,
+                #commandesPage .action-buttons {
+                    min-width: 90px !important;
+                    gap: 2px !important;
+                }
+                
+                #ventesPage .action-buttons .btn-edit,
+                #ventesPage .action-buttons .btn-delete,
+                #ventesPage .action-buttons .btn-add,
+                #commandesPage .action-buttons .btn-edit,
+                #commandesPage .action-buttons .btn-delete,
+                #commandesPage .action-buttons .btn-add {
+                    width: 28px !important;
+                    height: 28px !important;
+                    min-width: 28px !important;
+                    min-height: 28px !important;
+                    font-size: 12px !important;
+                    border-radius: 6px !important;
+                }
+                
+                #ventesPage .action-buttons .btn-add.payer-btn,
+                #commandesPage .action-buttons .btn-add.payer-btn {
+                    min-width: 40px !important;
+                    font-size: 10px !important;
+                    padding: 0 6px !important;
+                    height: 28px !important;
+                }
+                
+                #ventesPage .action-buttons .btn-edit i,
+                #ventesPage .action-buttons .btn-delete i,
+                #ventesPage .action-buttons .btn-add i,
+                #commandesPage .action-buttons .btn-edit i,
+                #commandesPage .action-buttons .btn-delete i,
+                #commandesPage .action-buttons .btn-add i {
+                    font-size: 12px !important;
                 }
             }
         </style>
@@ -935,7 +1070,6 @@ function cancelCommande(cid) {
 function loadVentesPage(c) {
     injectVentesStyles();
     
-    // Charger les clients pour la recherche description
     loadClientsForSearch();
     
     window.ventesPeriod = 'all';
@@ -988,7 +1122,6 @@ function loadVentesPage(c) {
     loadVentes();
 }
 
-// Fonction pour gérer la recherche avec description
 function handleVentesSearch(value) {
     window.ventesSearch = value;
     window.currentPages.ventes = 1;
@@ -996,7 +1129,6 @@ function handleVentesSearch(value) {
     applyVentesFilters();
 }
 
-// Fonction pour effacer la recherche sur la page Ventes
 function clearVentesSearch() {
     var searchField = document.getElementById('ventesSearchInput');
     if (searchField) {
@@ -1010,7 +1142,6 @@ function clearVentesSearch() {
     }
 }
 
-// Fonction pour traiter la recherche vocale avec détection de filtre
 function processVentesSearchFromVoice(text) {
     var searchField = document.getElementById('ventesSearchInput');
     var periodSelect = document.getElementById('ventesPeriodSelect');
@@ -1018,15 +1149,12 @@ function processVentesSearchFromVoice(text) {
     
     if (!searchField || !periodSelect) return;
     
-    // Vérifier si c'est un filtre de date
     var detectedFilter = detectPeriodFilterVentes(text);
     if (detectedFilter) {
-        // Appliquer le filtre
         periodSelect.value = detectedFilter;
         window.ventesPeriod = detectedFilter;
         window.currentPages.ventes = 1;
         
-        // EFFACER la barre de recherche
         searchField.value = '';
         window.ventesSearch = '';
         
@@ -1042,17 +1170,14 @@ function processVentesSearchFromVoice(text) {
             setTimeout(function() { voiceDisplay.value = ''; }, 2000);
         }
         
-        // Appliquer les filtres
         applyVentesFilters();
         
-        // Mettre à jour le bouton X (caché car barre vide)
         var clearBtn = document.getElementById('ventesClearBtn');
         if (clearBtn) clearBtn.classList.add('hidden');
         
         return true;
     }
     
-    // Sinon, recherche normale
     searchField.value = text;
     window.ventesSearch = text;
     window.currentPages.ventes = 1;
@@ -1095,20 +1220,16 @@ async function loadVentes() {
 }
 
 function applyVentesFilters() {
-    // Filtre par période
     var filtered = filterByPeriod(window.allVentesData, window.ventesPeriod);
     
-    // Filtre par recherche - AVEC RECHERCHE DESCRIPTION
     if (window.ventesSearch && window.ventesSearch.trim() !== '') {
         filtered = filterVentesBySearchWithDescription(filtered, window.ventesSearch);
     } else {
-        // Réinitialiser _clientDisplayName
         filtered.forEach(function(d) {
             delete d._clientDisplayName;
         });
     }
     
-    // Filtre par statut
     var statusFilter = document.getElementById('ventesStatusFilter');
     if (statusFilter && statusFilter.value !== 'all') {
         filtered = filtered.filter(function(d) {
@@ -1176,7 +1297,7 @@ function renderVentesTablePro() {
                         ${isAdmin ? `<th><i class="fas fa-user-tie"></i> Vendeur</th>` : ''}
                         <th><i class="fas fa-credit-card"></i> Paiement</th>
                         <th><i class="fas fa-circle"></i> Statut</th>
-                        <th><i class="fas fa-tools"></i> Actions</th>
+                        <th style="min-width:200px;"><i class="fas fa-tools"></i> Actions</th>
                         ${window.venteSelectionMode ? '<th style="width:40px;">✅</th>' : ''}
                     </tr>
                 </thead>
@@ -1218,13 +1339,13 @@ function renderVentesTablePro() {
                 <button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer">
                     <i class="fas fa-print"></i>
                 </button>
-                <button class="btn-edit" onclick="sendWhatsApp('${d.id}')" title="WhatsApp" style="color:#25D366;">
+                <button class="btn-edit whatsapp-btn" onclick="sendWhatsApp('${d.id}')" title="Envoyer WhatsApp">
                     <i class="fab fa-whatsapp"></i>
                 </button>
         `;
         if (!d.paid) {
-            actions += `<button class="btn-add" onclick="payerVente('${d.id}')" title="Payer" style="background:#10B981;">
-                            <i class="fas fa-check"></i>
+            actions += `<button class="btn-add payer-btn" onclick="payerVente('${d.id}')" title="Payer">
+                            <i class="fas fa-check"></i> Payer
                         </button>`;
         }
         if (isAdmin) {
@@ -1592,4 +1713,4 @@ window.clearVentesSearch = clearVentesSearch;
 window.loadClientsForSearch = loadClientsForSearch;
 window.filterVentesBySearchWithDescription = filterVentesBySearchWithDescription;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec recherche description + remplacement) chargé ✅');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec boutons corrigés) chargé ✅');
