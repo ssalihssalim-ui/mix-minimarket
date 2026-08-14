@@ -311,99 +311,99 @@ SIDEBAR - TEXTE 30px ET ICÔNES 30px
 
 /* Texte des items du menu */
 .sidebar-nav .nav-item {
-font-size: 30px !important;
-padding: 16px 20px !important;
-gap: 18px !important;
+  font-size: 30px !important;
+  padding: 16px 20px !important;
+  gap: 18px !important;
 }
 
 /* Icônes des items du menu */
 .sidebar-nav .nav-item i {
-font-size: 30px !important;
-width: 36px !important;
-text-align: center !important;
+  font-size: 30px !important;
+  width: 36px !important;
+  text-align: center !important;
 }
 
 /* Titre du sidebar */
 .sidebar-header h2 {
-font-size: 32px !important;
+  font-size: 32px !important;
 }
 
 /* Sous-titre du sidebar */
 .sidebar-subtitle {
-font-size: 20px !important;
-letter-spacing: 2px !important;
+  font-size: 20px !important;
+  letter-spacing: 2px !important;
 }
 
 /* Nom de l'utilisateur en bas */
 .user-info {
-font-size: 28px !important;
+  font-size: 28px !important;
 }
 
 .user-info i {
-font-size: 30px !important;
+  font-size: 30px !important;
 }
 
 /* Items de déconnexion */
 .logout-item {
-font-size: 30px !important;
+  font-size: 30px !important;
 }
 
 .logout-item i {
-font-size: 30px !important;
+  font-size: 30px !important;
 }
 
 /* Ajustement pour les écrans moyens (tablette) */
 @media(max-width:1024px) {
-.sidebar-nav .nav-item {
-font-size: 26px !important;
-padding: 14px 16px !important;
-gap: 14px !important;
-}
-
-.sidebar-nav .nav-item i {
-font-size: 26px !important;
-width: 32px !important;
-}
-
-.sidebar-header h2 {
-font-size: 28px !important;
-}
+  .sidebar-nav .nav-item {
+    font-size: 26px !important;
+    padding: 14px 16px !important;
+    gap: 14px !important;
+  }
+  
+  .sidebar-nav .nav-item i {
+    font-size: 26px !important;
+    width: 32px !important;
+  }
+  
+  .sidebar-header h2 {
+    font-size: 28px !important;
+  }
 }
 
 /* Ajustement pour mobile (< 768px) */
 @media(max-width:768px) {
-.sidebar-nav .nav-item {
-font-size: 22px !important;
-padding: 12px 14px !important;
-gap: 12px !important;
-}
-
-.sidebar-nav .nav-item i {
-font-size: 22px !important;
-width: 28px !important;
-}
-
-.sidebar-header h2 {
-font-size: 24px !important;
-}
+  .sidebar-nav .nav-item {
+    font-size: 22px !important;
+    padding: 12px 14px !important;
+    gap: 12px !important;
+  }
+  
+  .sidebar-nav .nav-item i {
+    font-size: 22px !important;
+    width: 28px !important;
+  }
+  
+  .sidebar-header h2 {
+    font-size: 24px !important;
+  }
 }
 
 /* ============================================================
 MOBILE MENU - AUGMENTÉ
 ============================================================ */
 .mobile-menu-btn {
-font-size: 30px !important;
-width: 56px !important;
-height: 56px !important;
-top: 20px !important;
-left: 20px !important;
+  font-size: 30px !important;
+  width: 56px !important;
+  height: 56px !important;
+  top: 20px !important;
+  left: 20px !important;
 }
 
 /* Augmenter la largeur du sidebar sur mobile */
 @media(max-width:768px) {
-.sidebar {
-width: 320px !important; /* +20px */
-}
+  .sidebar {
+    width: 320px !important; /* +20px */
+  }
 }
 
 /* ==================== MAIN CONTENT ==================== */
@@ -424,81 +424,81 @@ ALIGNER LE TITRE AVEC LE BOUTON MENU + RÉDUIRE L'ESPACE EN HAUT
 
 /* ✅ Header de page aligné avec le bouton menu */
 .page-header {
-display: flex !important;
-justify-content: flex-start !important;
-align-items: center !important;
-margin-top: 0px !important;
-margin-bottom: 4px !important;
-padding: 2px 8px !important;
-min-height: 30px !important;
-gap: 10px !important;
-flex-wrap: wrap;
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  margin-top: 0px !important;
+  margin-bottom: 4px !important;
+  padding: 2px 8px !important;
+  min-height: 30px !important;
+  gap: 10px !important;
+  flex-wrap: wrap;
 }
 
 /* ✅ Supprimer le margin-left du titre */
 .page-header .header-title {
-margin-left: 0px !important;
-display: flex !important;
-align-items: center !important;
-gap: 8px !important;
+  margin-left: 0px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
 }
 
 /* ✅ Réduire la taille de l'icône et du titre */
 .header-title i {
-font-size: 1.1rem !important;
-color: var(--white);
-background: var(--black);
-padding: 6px;
-border-radius: var(--radius);
+  font-size: 1.1rem !important;
+  color: var(--white);
+  background: var(--black);
+  padding: 6px;
+  border-radius: var(--radius);
 }
 
 .header-title h2 {
-font-size: 1.2rem !important;
-color: var(--text-primary);
-font-weight: 700;
-margin: 0 !important;
+  font-size: 1.2rem !important;
+  color: var(--text-primary);
+  font-weight: 700;
+  margin: 0 !important;
 }
 
 /* ✅ Supprimer les marges supplémentaires */
 .main-content {
-padding-top: 8px !important;
+  padding-top: 8px !important;
 }
 
 /* ✅ Ajustement pour mobile */
 @media(max-width:768px) {
-.page-header {
-padding: 2px 6px !important;
-min-height: 28px !important;
-margin-bottom: 2px !important;
-}
-
-.page-header .header-title i {
-font-size: 1rem !important;
-padding: 4px !important;
-}
-
-.page-header .header-title h2 {
-font-size: 1rem !important;
-}
+  .page-header {
+    padding: 2px 6px !important;
+    min-height: 28px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 1rem !important;
+    padding: 4px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 1rem !important;
+  }
 }
 
 /* ✅ Pour iPhone 13 Pro Max */
 @media screen and (min-device-width: 390px) and (max-device-width: 430px) and (min-device-height: 844px) {
-.page-header {
-margin-top: 0px !important;
-margin-bottom: 2px !important;
-padding: 1px 6px !important;
-min-height: 24px !important;
-}
-
-.page-header .header-title h2 {
-font-size: 0.95rem !important;
-}
-
-.page-header .header-title i {
-font-size: 0.9rem !important;
-padding: 4px !important;
-}
+  .page-header {
+    margin-top: 0px !important;
+    margin-bottom: 2px !important;
+    padding: 1px 6px !important;
+    min-height: 24px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 0.95rem !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 0.9rem !important;
+    padding: 4px !important;
+  }
 }
 
 /* ==================== CARDS ==================== */
@@ -597,11 +597,11 @@ color: var(--text-primary);
 .pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
-/* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes */
+/* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes claires */
 .pos-products-panel {
-min-height: 760px !important;
-max-height: 80vh !important;
-height: auto !important;
+  min-height: 780px !important;
+  max-height: 82vh !important;
+  height: auto !important;
 }
 
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
@@ -632,16 +632,16 @@ object-fit: contain;
 }
 
 /* ✅ Forcer la grille à occuper tout l'espace pour 3 lignes */
-.pos-products-grid {
-display: grid;
-grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-gap: 8px !important;
-flex: 1;
-overflow-y: auto;
-padding-right: 4px;
-min-height: 580px !important;
-max-height: 650px !important;
-height: auto !important;
+.pos-products-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
+  gap: 8px !important; 
+  flex: 1; 
+  overflow-y: auto; 
+  padding-right: 4px; 
+  min-height: 580px !important;
+  max-height: 650px !important;
+  height: auto !important;
 }
 
 .pos-product-card { background: var(--gray-50); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 10px; cursor: pointer; transition: var(--transition); text-align: center; display: flex; flex-direction: column; align-items: center; }
@@ -650,18 +650,18 @@ height: auto !important;
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
 
 /* ✅ AUGMENTER LA POLICE DU NOM PRODUIT ET LE METTRE EN BOLD */
-.pos-product-name {
-font-size: 1.1rem !important;
-font-weight: 700 !important;
-color: var(--text-primary);
-line-height: 1.2;
+.pos-product-name { 
+  font-size: 1.1rem !important; 
+  font-weight: 700 !important; 
+  color: var(--text-primary); 
+  line-height: 1.2; 
 }
 
 /* ✅ AUGMENTER LA POLICE DU PRIX PRODUIT */
-.pos-product-price {
-font-size: 1.1rem !important;
-font-weight: 700 !important;
-color: var(--black);
+.pos-product-price { 
+  font-size: 1.1rem !important; 
+  font-weight: 700 !important; 
+  color: var(--black); 
 }
 
 /* ==================== POS CART ==================== */
@@ -766,64 +766,64 @@ transition: var(--transition);
 1 PANIER / 2 PAIEMENT - FONTSIZE 23px
 ============================================================ */
 .pos-steps-nav .pos-step {
-font-size: 23px !important;
+  font-size: 23px !important;
 }
 
 .pos-steps-nav .pos-step .step-number {
-font-size: 23px !important;
+  font-size: 23px !important;
 }
 
 .pos-steps-nav .pos-step span {
-font-size: 23px !important;
+  font-size: 23px !important;
 }
 
 /* ============================================================
 DIMINUER LA HAUTEUR DE pos-steps-nav DE 40px
 ============================================================ */
 .pos-steps-nav {
-padding: 2px 12px !important;
-min-height: 30px !important;
-max-height: 40px !important;
-margin-bottom: 4px !important;
+  padding: 2px 12px !important;
+  min-height: 30px !important;
+  max-height: 40px !important;
+  margin-bottom: 4px !important;
 }
 
 /* ============================================================
 AUGMENTER FONTSIZE NOM PRODUIT ET PRIX DE +1px
 ============================================================ */
 @media(max-width:600px) {
-.pos-product-name {
-font-size: 10px !important;
-font-weight: 600 !important;
-}
-.pos-product-price {
-font-size: 12px !important;
-font-weight: 700 !important;
-}
-.pos-promo-price {
-font-size: 12px !important;
-}
+  .pos-product-name {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+  }
+  .pos-product-price {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+  .pos-promo-price {
+    font-size: 12px !important;
+  }
 }
 
 /* Ajustement pour iPhone 13 Pro Max (390px - 430px) */
 @media screen and (min-width: 390px) and (max-width: 430px) {
-.pos-product-name {
-font-size: 12px !important;
-}
-.pos-product-price {
-font-size: 14px !important;
-}
-.pos-promo-price {
-font-size: 14px !important;
-}
+  .pos-product-name {
+    font-size: 12px !important;
+  }
+  .pos-product-price {
+    font-size: 14px !important;
+  }
+  .pos-promo-price {
+    font-size: 14px !important;
+  }
 }
 
 /* Ajustement pour écrans moyens (tablette) */
 @media(max-width:1024px) {
-.pos-steps-nav {
-padding: 4px 12px !important;
-min-height: 35px !important;
-max-height: 45px !important;
-}
+  .pos-steps-nav {
+    padding: 4px 12px !important;
+    min-height: 35px !important;
+    max-height: 45px !important;
+  }
 }
 
 /* ============================================================
@@ -838,194 +838,410 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
 .main-content,
 .sidebar,
 .login-wrapper {
-padding-top: env(safe-area-inset-top, 0px) !important;
-padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-padding-left: env(safe-area-inset-left, 0px) !important;
-padding-right: env(safe-area-inset-right, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  padding-left: env(safe-area-inset-left, 0px) !important;
+  padding-right: env(safe-area-inset-right, 0px) !important;
 }
 
 /* Pour le dashboard */
 .dashboard {
-padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
 }
 
 /* Pour le sidebar */
 .sidebar {
-padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
 }
 
 /* Pour le main content */
 .main-content {
-padding-top: calc(22px + env(safe-area-inset-top, 0px)) !important;
+  padding-top: calc(22px + env(safe-area-inset-top, 0px)) !important;
 }
 
 /* Pour le bouton de menu mobile */
 .mobile-menu-btn {
-top: calc(20px + env(safe-area-inset-top, 0px)) !important;
-left: calc(20px + env(safe-area-inset-left, 0px)) !important;
+  top: calc(20px + env(safe-area-inset-top, 0px)) !important;
+  left: calc(20px + env(safe-area-inset-left, 0px)) !important;
 }
 
 /* Pour le POS - container */
 .pos-container {
-padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
 }
 
 /* Pour le modal */
 .modal {
-padding-top: env(safe-area-inset-top, 0px) !important;
-padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
 }
 
 /* Pour le header de page */
 .page-header {
-padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
 }
 
 /* Pour la page de menu tactile */
 #menuTactilePage {
-padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
 }
 
 /* ✅ Pour iOS spécifique avec notch / Dynamic Island */
 @supports (padding: max(0px)) {
-.dashboard,
-#dashboardPage,
-#clientPage,
-#menuTactilePage,
-.main-content,
-.sidebar,
-.login-wrapper {
-padding-top: max(env(safe-area-inset-top), 0px) !important;
-padding-bottom: max(env(safe-area-inset-bottom), 0px) !important;
-}
+  .dashboard,
+  #dashboardPage,
+  #clientPage,
+  #menuTactilePage,
+  .main-content,
+  .sidebar,
+  .login-wrapper {
+    padding-top: max(env(safe-area-inset-top), 0px) !important;
+    padding-bottom: max(env(safe-area-inset-bottom), 0px) !important;
+  }
 }
 
 /* ✅ Pour iPhone 13 Pro Max et appareils avec Dynamic Island (390x844) */
 @media screen and (min-device-width: 390px) and (max-device-width: 430px) and (min-device-height: 844px) {
-.dashboard,
-#dashboardPage,
-#clientPage,
-#menuTactilePage {
-padding-top: 50px !important;
-}
-
-.main-content {
-padding-top: 60px !important;
-}
-
-.sidebar {
-padding-top: 50px !important;
-}
-
-.mobile-menu-btn {
-top: 60px !important;
-left: 25px !important;
-}
-
-.page-header {
-margin-top: 0px !important;
-margin-bottom: 2px !important;
-padding-top: 1px !important;
-padding-bottom: 1px !important;
-min-height: 24px !important;
-}
-
-.page-header .header-title h2 {
-font-size: 0.95rem !important;
-}
-
-.page-header .header-title i {
-font-size: 0.9rem !important;
-padding: 4px !important;
-}
-
-.pos-container {
-padding-top: 10px !important;
-}
-
-/* ✅ Augmenter la hauteur de pos-products-panel pour iPhone 13 Pro Max */
-.pos-products-panel {
-min-height: 790px !important;
-max-height: 82vh !important;
-height: auto !important;
-}
-
-.pos-products-grid {
-min-height: 580px !important;
-max-height: 680px !important;
-gap: 6px !important;
-}
-
-.pos-product-card {
-min-height: 110px !important;
-padding: 4px 2px !important;
-}
-
-.pos-product-img {
-height: 45px !important;
-}
-
-.pos-product-name {
-font-size: 12px !important;
-}
-
-.pos-product-price {
-font-size: 14px !important;
-}
-
-/* ✅ Réduire la hauteur du panier */
-.pos-cart-panel {
-max-height: 22vh !important;
-min-height: 120px !important;
-}
+  .dashboard,
+  #dashboardPage,
+  #clientPage,
+  #menuTactilePage {
+    padding-top: 50px !important;
+  }
+  
+  .main-content {
+    padding-top: 60px !important;
+  }
+  
+  .sidebar {
+    padding-top: 50px !important;
+  }
+  
+  .mobile-menu-btn {
+    top: 60px !important;
+    left: 25px !important;
+  }
+  
+  .page-header {
+    margin-top: 0px !important;
+    margin-bottom: 2px !important;
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+    min-height: 24px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 0.95rem !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 0.9rem !important;
+    padding: 4px !important;
+  }
+  
+  .pos-container {
+    padding-top: 10px !important;
+  }
+  
+  /* ✅ Augmenter la hauteur de pos-products-panel pour iPhone 13 Pro Max */
+  .pos-products-panel {
+    min-height: 820px !important;
+    max-height: 85vh !important;
+    height: auto !important;
+  }
+  
+  .pos-products-grid {
+    min-height: 660px !important;
+    max-height: 740px !important;
+    gap: 6px !important;
+  }
+  
+  .pos-product-card {
+    min-height: 130px !important;
+    padding: 6px 3px !important;
+  }
+  
+  .pos-product-img {
+    height: 50px !important;
+  }
+  
+  .pos-product-name {
+    font-size: 14px !important;
+  }
+  
+  .pos-product-price {
+    font-size: 16px !important;
+  }
+  
+  /* ✅ Réduire la hauteur du panier */
+  .pos-cart-panel {
+    max-height: 18vh !important;
+    min-height: 100px !important;
+  }
 }
 
 /* ✅ Pour tous les appareils avec notch */
 @supports (-webkit-touch-callout: none) {
-.dashboard,
-#dashboardPage,
-#clientPage {
-padding-top: 50px !important;
-}
-
-.main-content {
-padding-top: 70px !important;
-}
-
-.mobile-menu-btn {
-top: 65px !important;
-}
-
-.sidebar {
-padding-top: 50px !important;
-}
-
-.page-header {
-margin-top: 5px !important;
-margin-bottom: 6px !important;
-padding-top: 4px !important;
-padding-bottom: 4px !important;
-}
+  .dashboard,
+  #dashboardPage,
+  #clientPage {
+    padding-top: 50px !important;
+  }
+  
+  .main-content {
+    padding-top: 70px !important;
+  }
+  
+  .mobile-menu-btn {
+    top: 65px !important;
+  }
+  
+  .sidebar {
+    padding-top: 50px !important;
+  }
+  
+  .page-header {
+    margin-top: 5px !important;
+    margin-bottom: 6px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
 }
 
 /* ✅ Pour iOS 15+ avec safe-area */
 @supports (padding: 0px env(safe-area-inset-top)) {
-.main-content {
-padding-top: calc(22px + env(safe-area-inset-top)) !important;
+  .main-content {
+    padding-top: calc(22px + env(safe-area-inset-top)) !important;
+  }
+  
+  .mobile-menu-btn {
+    top: calc(20px + env(safe-area-inset-top)) !important;
+    left: calc(20px + env(safe-area-inset-left)) !important;
+  }
+  
+  .sidebar {
+    padding-top: calc(20px + env(safe-area-inset-top)) !important;
+  }
+  
+  .dashboard {
+    padding-top: env(safe-area-inset-top) !important;
+  }
 }
 
-.mobile-menu-btn {
-top: calc(20px + env(safe-area-inset-top)) !important;
-left: calc(20px + env(safe-area-inset-left)) !important;
+/* ============================================================
+AUGMENTER LA TAILLE DE POLICE DE TOUTES LES PAGES SUR MOBILE
+============================================================ */
+
+/* ✅ Pour tous les mobiles < 700px */
+@media(max-width:700px) {
+  /* Taille générale */
+  body {
+    font-size: 24px !important;
+  }
+  
+  /* Titres des pages */
+  .page-header .header-title h2 {
+    font-size: 24px !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 24px !important;
+    padding: 8px !important;
+  }
+  
+  /* Cards */
+  .content-card {
+    padding: 16px !important;
+  }
+  
+  .card-header h3 {
+    font-size: 24px !important;
+  }
+  
+  /* Tables */
+  .data-table th,
+  .data-table td {
+    font-size: 24px !important;
+    padding: 12px 16px !important;
+  }
+  
+  /* Stats */
+  .stat-value {
+    font-size: 28px !important;
+  }
+  
+  .stat-label {
+    font-size: 20px !important;
+  }
+  
+  .stat-card {
+    padding: 16px !important;
+  }
+  
+  /* Badges */
+  .status-success,
+  .status-warning,
+  .status-danger {
+    font-size: 20px !important;
+    padding: 6px 14px !important;
+  }
+  
+  /* Boutons */
+  .btn-add,
+  .btn-edit,
+  .btn-delete,
+  .btn-save,
+  .btn-cancel {
+    font-size: 24px !important;
+    padding: 12px 20px !important;
+  }
+  
+  /* Formulaires */
+  .form-group label {
+    font-size: 20px !important;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 24px !important;
+    padding: 14px !important;
+  }
+  
+  /* Modal */
+  .modal-header h3 {
+    font-size: 24px !important;
+  }
+  
+  .modal-content {
+    padding: 20px !important;
+  }
+  
+  /* Input groups */
+  .input-group input,
+  .input-group select {
+    font-size: 24px !important;
+    padding: 14px !important;
+  }
+  
+  .input-group i {
+    font-size: 24px !important;
+    min-width: 48px !important;
+  }
 }
 
-.sidebar {
-padding-top: calc(20px + env(safe-area-inset-top)) !important;
+/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) */
+@media screen and (min-width: 390px) and (max-width: 430px) {
+  body {
+    font-size: 24px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 24px !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 24px !important;
+    padding: 10px !important;
+  }
+  
+  .data-table th,
+  .data-table td {
+    font-size: 24px !important;
+    padding: 14px 18px !important;
+  }
+  
+  .stat-value {
+    font-size: 28px !important;
+  }
+  
+  .btn-add,
+  .btn-edit,
+  .btn-delete,
+  .btn-save,
+  .btn-cancel {
+    font-size: 24px !important;
+    padding: 14px 22px !important;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 24px !important;
+    padding: 16px !important;
+  }
+  
+  .input-group input,
+  .input-group select {
+    font-size: 24px !important;
+    padding: 16px !important;
+  }
+  
+  .input-group i {
+    font-size: 24px !important;
+  }
 }
 
-.dashboard {
-padding-top: env(safe-area-inset-top) !important;
+/* ✅ Pour très petits écrans (< 380px) */
+@media screen and (max-width: 380px) {
+  body {
+    font-size: 20px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 20px !important;
+  }
+  
+  .data-table th,
+  .data-table td {
+    font-size: 20px !important;
+    padding: 10px 12px !important;
+  }
+  
+  .btn-add,
+  .btn-edit,
+  .btn-delete,
+  .btn-save,
+  .btn-cancel {
+    font-size: 20px !important;
+    padding: 10px 16px !important;
+  }
 }
+
+/* ✅ Ajustement pour les pages spécifiques */
+@media(max-width:700px) {
+  /* Page Produits */
+  .product-card .product-name {
+    font-size: 24px !important;
+  }
+  
+  .product-card .product-price {
+    font-size: 24px !important;
+  }
+  
+  /* Page Ventes */
+  .vente-total {
+    font-size: 28px !important;
+  }
+  
+  /* Page Clients */
+  .client-name {
+    font-size: 24px !important;
+  }
+  
+  .client-phone {
+    font-size: 22px !important;
+  }
+  
+  /* Page Crédits */
+  .credit-amount {
+    font-size: 26px !important;
+  }
+  
+  /* Page Catégories */
+  .category-name {
+    font-size: 24px !important;
+  }
 }
 
 /* ==================== RESPONSIVE ==================== */
@@ -1116,16 +1332,16 @@ grid-template-columns: repeat(5, 1fr) !important;
 gap: 5px !important;
 flex: 1;
 overflow-y: auto;
-min-height: 480px !important;
-max-height: 560px !important;
+min-height: 580px !important;
+max-height: 660px !important;
 padding: 4px !important;
 height: auto !important;
 align-content: start !important;
 }
 
-.pos-product-card {
-padding: 5px 2px !important;
-min-height: 95px !important;
+.pos-product-card { 
+padding: 5px 2px !important; 
+min-height: 115px !important;
 border-radius: 8px !important;
 border-width: 1px !important;
 margin: 0 !important;
@@ -1134,15 +1350,15 @@ flex-direction: column !important;
 align-items: center !important;
 justify-content: center !important;
 }
-.pos-product-img {
-height: 40px !important;
+.pos-product-img { 
+height: 45px !important; 
 width: 100% !important;
 margin-bottom: 3px !important;
 border-radius: 6px !important;
 }
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
 .pos-product-placeholder i { font-size: 16px !important; }
-.pos-product-name {
+.pos-product-name { 
 font-size: 11px !important;
 font-weight: 600 !important;
 margin-right: 0 !important;
@@ -1159,16 +1375,16 @@ text-align: center !important;
 
 /* ✅ Hauteur du panel pour afficher 3 lignes */
 .pos-products-panel {
-min-height: 620px !important;
-max-height: 72vh !important;
-height: auto !important;
-flex: 0 1 auto !important;
+  min-height: 720px !important;
+  max-height: 82vh !important;
+  height: auto !important;
+  flex: 0 1 auto !important;
 }
 
 /* ✅ Réduire la hauteur du panier */
-.pos-cart-panel {
-max-height: 24vh !important;
-min-height: 120px !important;
+.pos-cart-panel { 
+  max-height: 20vh !important; 
+  min-height: 110px !important;
 }
 
 .pos-cart-item-name { font-size: 1.1rem !important; }
@@ -1190,32 +1406,32 @@ font-size: 1.05rem !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 6px !important;
 padding: 4px !important;
-min-height: 560px !important;
-max-height: 640px !important;
+min-height: 660px !important;
+max-height: 740px !important;
 }
 .pos-product-card {
 padding: 6px 3px !important;
-min-height: 110px !important;
+min-height: 130px !important;
 }
 .pos-product-img {
-height: 45px !important;
+height: 50px !important;
 }
 .pos-product-name {
-font-size: 12px !important;
+font-size: 14px !important;
 }
 .pos-product-price {
-font-size: 14px !important;
+font-size: 16px !important;
 }
 .pos-promo-price {
-font-size: 14px !important;
+font-size: 16px !important;
 }
 .pos-products-panel {
-min-height: 720px !important;
-max-height: 78vh !important;
+  min-height: 820px !important;
+  max-height: 85vh !important;
 }
-.pos-cart-panel {
-max-height: 22vh !important;
-min-height: 120px !important;
+.pos-cart-panel { 
+  max-height: 18vh !important; 
+  min-height: 100px !important;
 }
 }
 
@@ -1225,16 +1441,16 @@ min-height: 120px !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 3px !important;
 padding: 2px !important;
-min-height: 360px !important;
-max-height: 440px !important;
+min-height: 400px !important;
+max-height: 480px !important;
 }
 .pos-product-card {
 padding: 3px 1px !important;
-min-height: 80px !important;
+min-height: 85px !important;
 border-radius: 4px !important;
 }
 .pos-product-img {
-height: 32px !important;
+height: 34px !important;
 }
 .pos-product-name {
 font-size: 9px !important;
@@ -1243,12 +1459,12 @@ font-size: 9px !important;
 font-size: 11px !important;
 }
 .pos-products-panel {
-min-height: 480px !important;
-max-height: 65vh !important;
+  min-height: 520px !important;
+  max-height: 68vh !important;
 }
-.pos-cart-panel {
-max-height: 20vh !important;
-min-height: 100px !important;
+.pos-cart-panel { 
+  max-height: 18vh !important; 
+  min-height: 90px !important;
 }
 }
 
@@ -1258,12 +1474,12 @@ min-height: 100px !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 6px !important;
 padding: 4px !important;
-min-height: 480px !important;
-max-height: 560px !important;
+min-height: 520px !important;
+max-height: 600px !important;
 }
 .pos-product-card {
 padding: 6px 4px !important;
-min-height: 130px !important;
+min-height: 135px !important;
 }
 .pos-product-img {
 height: 55px !important;
@@ -1275,12 +1491,12 @@ font-size: 13px !important;
 font-size: 15px !important;
 }
 .pos-products-panel {
-min-height: 620px !important;
-max-height: 72vh !important;
+  min-height: 660px !important;
+  max-height: 75vh !important;
 }
-.pos-cart-panel {
-max-height: 24vh !important;
-min-height: 130px !important;
+.pos-cart-panel { 
+  max-height: 22vh !important; 
+  min-height: 130px !important;
 }
 }
 
@@ -1289,15 +1505,15 @@ min-height: 130px !important;
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 4px !important;
-min-height: 300px !important;
-max-height: 400px !important;
+min-height: 340px !important;
+max-height: 420px !important;
 }
 .pos-product-card {
 padding: 4px 3px !important;
-min-height: 75px !important;
+min-height: 80px !important;
 }
 .pos-product-img {
-height: 32px !important;
+height: 34px !important;
 }
 .pos-product-name {
 font-size: 9px !important;
@@ -1306,12 +1522,12 @@ font-size: 9px !important;
 font-size: 11px !important;
 }
 .pos-products-panel {
-min-height: 380px !important;
-max-height: 70vh !important;
+  min-height: 420px !important;
+  max-height: 72vh !important;
 }
-.pos-cart-panel {
-max-height: 40vh !important;
-min-height: 100px !important;
+.pos-cart-panel { 
+  max-height: 38vh !important; 
+  min-height: 90px !important;
 }
 }
 
