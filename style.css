@@ -599,8 +599,8 @@ color: var(--text-primary);
 
 /* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes claires */
 .pos-products-panel {
-  min-height: 760px !important;
-  max-height: 80vh !important;
+  min-height: 780px !important;
+  max-height: 82vh !important;
   height: auto !important;
 }
 
@@ -945,38 +945,38 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   /* ✅ Augmenter la hauteur de pos-products-panel pour iPhone 13 Pro Max */
   .pos-products-panel {
-    min-height: 780px !important;
-    max-height: 82vh !important;
+    min-height: 820px !important;
+    max-height: 85vh !important;
     height: auto !important;
   }
   
   .pos-products-grid {
-    min-height: 620px !important;
-    max-height: 700px !important;
+    min-height: 660px !important;
+    max-height: 740px !important;
     gap: 6px !important;
   }
   
   .pos-product-card {
-    min-height: 120px !important;
+    min-height: 130px !important;
     padding: 6px 3px !important;
   }
   
   .pos-product-img {
-    height: 48px !important;
+    height: 50px !important;
   }
   
   .pos-product-name {
-    font-size: 13px !important;
+    font-size: 14px !important;
   }
   
   .pos-product-price {
-    font-size: 15px !important;
+    font-size: 16px !important;
   }
   
   /* ✅ Réduire la hauteur du panier */
   .pos-cart-panel {
-    max-height: 20vh !important;
-    min-height: 110px !important;
+    max-height: 18vh !important;
+    min-height: 100px !important;
   }
 }
 
@@ -1025,6 +1025,222 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   .dashboard {
     padding-top: env(safe-area-inset-top) !important;
+  }
+}
+
+/* ============================================================
+AUGMENTER LA TAILLE DE POLICE DE TOUTES LES PAGES SUR MOBILE
+============================================================ */
+
+/* ✅ Pour tous les mobiles < 700px */
+@media(max-width:700px) {
+  /* Taille générale */
+  body {
+    font-size: 24px !important;
+  }
+  
+  /* Titres des pages */
+  .page-header .header-title h2 {
+    font-size: 24px !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 24px !important;
+    padding: 8px !important;
+  }
+  
+  /* Cards */
+  .content-card {
+    padding: 16px !important;
+  }
+  
+  .card-header h3 {
+    font-size: 24px !important;
+  }
+  
+  /* Tables */
+  .data-table th,
+  .data-table td {
+    font-size: 24px !important;
+    padding: 12px 16px !important;
+  }
+  
+  /* Stats */
+  .stat-value {
+    font-size: 28px !important;
+  }
+  
+  .stat-label {
+    font-size: 20px !important;
+  }
+  
+  .stat-card {
+    padding: 16px !important;
+  }
+  
+  /* Badges */
+  .status-success,
+  .status-warning,
+  .status-danger {
+    font-size: 20px !important;
+    padding: 6px 14px !important;
+  }
+  
+  /* Boutons */
+  .btn-add,
+  .btn-edit,
+  .btn-delete,
+  .btn-save,
+  .btn-cancel {
+    font-size: 24px !important;
+    padding: 12px 20px !important;
+  }
+  
+  /* Formulaires */
+  .form-group label {
+    font-size: 20px !important;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 24px !important;
+    padding: 14px !important;
+  }
+  
+  /* Modal */
+  .modal-header h3 {
+    font-size: 24px !important;
+  }
+  
+  .modal-content {
+    padding: 20px !important;
+  }
+  
+  /* Input groups */
+  .input-group input,
+  .input-group select {
+    font-size: 24px !important;
+    padding: 14px !important;
+  }
+  
+  .input-group i {
+    font-size: 24px !important;
+    min-width: 48px !important;
+  }
+}
+
+/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) */
+@media screen and (min-width: 390px) and (max-width: 430px) {
+  body {
+    font-size: 24px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 24px !important;
+  }
+  
+  .page-header .header-title i {
+    font-size: 24px !important;
+    padding: 10px !important;
+  }
+  
+  .data-table th,
+  .data-table td {
+    font-size: 24px !important;
+    padding: 14px 18px !important;
+  }
+  
+  .stat-value {
+    font-size: 28px !important;
+  }
+  
+  .btn-add,
+  .btn-edit,
+  .btn-delete,
+  .btn-save,
+  .btn-cancel {
+    font-size: 24px !important;
+    padding: 14px 22px !important;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 24px !important;
+    padding: 16px !important;
+  }
+  
+  .input-group input,
+  .input-group select {
+    font-size: 24px !important;
+    padding: 16px !important;
+  }
+  
+  .input-group i {
+    font-size: 24px !important;
+  }
+}
+
+/* ✅ Pour très petits écrans (< 380px) */
+@media screen and (max-width: 380px) {
+  body {
+    font-size: 20px !important;
+  }
+  
+  .page-header .header-title h2 {
+    font-size: 20px !important;
+  }
+  
+  .data-table th,
+  .data-table td {
+    font-size: 20px !important;
+    padding: 10px 12px !important;
+  }
+  
+  .btn-add,
+  .btn-edit,
+  .btn-delete,
+  .btn-save,
+  .btn-cancel {
+    font-size: 20px !important;
+    padding: 10px 16px !important;
+  }
+}
+
+/* ✅ Ajustement pour les pages spécifiques */
+@media(max-width:700px) {
+  /* Page Produits */
+  .product-card .product-name {
+    font-size: 24px !important;
+  }
+  
+  .product-card .product-price {
+    font-size: 24px !important;
+  }
+  
+  /* Page Ventes */
+  .vente-total {
+    font-size: 28px !important;
+  }
+  
+  /* Page Clients */
+  .client-name {
+    font-size: 24px !important;
+  }
+  
+  .client-phone {
+    font-size: 22px !important;
+  }
+  
+  /* Page Crédits */
+  .credit-amount {
+    font-size: 26px !important;
+  }
+  
+  /* Page Catégories */
+  .category-name {
+    font-size: 24px !important;
   }
 }
 
@@ -1116,8 +1332,8 @@ grid-template-columns: repeat(5, 1fr) !important;
 gap: 5px !important;
 flex: 1;
 overflow-y: auto;
-min-height: 540px !important;
-max-height: 620px !important;
+min-height: 580px !important;
+max-height: 660px !important;
 padding: 4px !important;
 height: auto !important;
 align-content: start !important;
@@ -1125,7 +1341,7 @@ align-content: start !important;
 
 .pos-product-card { 
 padding: 5px 2px !important; 
-min-height: 105px !important;
+min-height: 115px !important;
 border-radius: 8px !important;
 border-width: 1px !important;
 margin: 0 !important;
@@ -1135,7 +1351,7 @@ align-items: center !important;
 justify-content: center !important;
 }
 .pos-product-img { 
-height: 42px !important; 
+height: 45px !important; 
 width: 100% !important;
 margin-bottom: 3px !important;
 border-radius: 6px !important;
@@ -1159,16 +1375,16 @@ text-align: center !important;
 
 /* ✅ Hauteur du panel pour afficher 3 lignes */
 .pos-products-panel {
-  min-height: 680px !important;
-  max-height: 78vh !important;
+  min-height: 720px !important;
+  max-height: 82vh !important;
   height: auto !important;
   flex: 0 1 auto !important;
 }
 
 /* ✅ Réduire la hauteur du panier */
 .pos-cart-panel { 
-  max-height: 22vh !important; 
-  min-height: 120px !important;
+  max-height: 20vh !important; 
+  min-height: 110px !important;
 }
 
 .pos-cart-item-name { font-size: 1.1rem !important; }
@@ -1190,32 +1406,32 @@ font-size: 1.05rem !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 6px !important;
 padding: 4px !important;
-min-height: 620px !important;
-max-height: 700px !important;
+min-height: 660px !important;
+max-height: 740px !important;
 }
 .pos-product-card {
 padding: 6px 3px !important;
-min-height: 120px !important;
+min-height: 130px !important;
 }
 .pos-product-img {
-height: 48px !important;
+height: 50px !important;
 }
 .pos-product-name {
-font-size: 13px !important;
+font-size: 14px !important;
 }
 .pos-product-price {
-font-size: 15px !important;
+font-size: 16px !important;
 }
 .pos-promo-price {
-font-size: 15px !important;
+font-size: 16px !important;
 }
 .pos-products-panel {
-  min-height: 780px !important;
-  max-height: 82vh !important;
+  min-height: 820px !important;
+  max-height: 85vh !important;
 }
 .pos-cart-panel { 
-  max-height: 20vh !important; 
-  min-height: 110px !important;
+  max-height: 18vh !important; 
+  min-height: 100px !important;
 }
 }
 
