@@ -1,7 +1,7 @@
 // ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET PRO FINAL ====================
 // Version : Facture/Date/Client en colonnes séparées
 // Bouton X pour effacer la recherche
-// Reconnaissance vocale des filtres de date
+// Micro activé depuis POS - Pas de bouton micro sur la page
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -15,10 +15,11 @@ window.filteredCommandes = window.filteredCommandes || null;
 window.venteSelectionMode = window.venteSelectionMode || false;
 window.venteSelectedIndex = window.venteSelectedIndex || -1;
 
-// ========== VARIABLES VOCALES ==========
+// ========== VARIABLES VOCALES (CONTINUES) ==========
 window.voiceRecognition = null;
 window.voiceIsListening = false;
 window.voiceCurrentTarget = null;
+window.voiceGlobalEnabled = false; // Activé depuis le POS
 
 // ========== FONCTIONS UTILITAIRES ==========
 
@@ -315,40 +316,6 @@ function injectVentesStyles() {
                 display: none !important;
             }
             
-            /* === BOUTON MICRO === */
-            .search-bar-pro .btn-add {
-                width: 44px !important;
-                height: 44px !important;
-                border-radius: 10px !important;
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                padding: 0 !important;
-                font-size: 18px !important;
-                background: var(--black) !important;
-                color: var(--white) !important;
-                border: none !important;
-                cursor: pointer !important;
-                transition: var(--transition) !important;
-                flex-shrink: 0;
-            }
-            
-            .search-bar-pro .btn-add:hover {
-                background: var(--primary-hover) !important;
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-sm);
-            }
-            
-            .search-bar-pro .btn-add.listening {
-                background: #ef4444 !important;
-                animation: pulse 1s infinite;
-            }
-            
-            @keyframes pulse {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-            }
-            
             /* === BOUTONS D'ACTION === */
             #ventesPage .action-buttons,
             #commandesPage .action-buttons {
@@ -487,6 +454,45 @@ function injectVentesStyles() {
                 margin-right: 6px;
             }
             
+            /* === INDICATEUR VOCAL (en bas) === */
+            .voice-indicator {
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--black);
+                color: var(--white);
+                padding: 16px 32px;
+                border-radius: 12px;
+                font-size: 22px;
+                font-weight: 600;
+                z-index: 9999;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                pointer-events: none;
+                font-family: 'Inter', sans-serif;
+            }
+            
+            .voice-indicator.active {
+                opacity: 1;
+            }
+            
+            .voice-indicator .pulse {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                background: #10B981;
+                border-radius: 50%;
+                margin-right: 10px;
+                animation: pulse-voice 1s infinite;
+            }
+            
+            @keyframes pulse-voice {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.5); opacity: 0.5; }
+            }
+            
             /* === RESPONSIVE === */
             @media(max-width:768px) {
                 #ventesPage .data-table tbody td,
@@ -584,7 +590,7 @@ function injectVentesStyles() {
 }
 
 // ============================================================
-// RECONNAISSANCE VOCALE - AVEC FILTRES DE DATE
+// RECONNAISSANCE VOCALE - GLOBALE (Activée depuis le POS)
 // ============================================================
 
 // Mapping des mots-clés pour les filtres de date
@@ -605,6 +611,16 @@ const dateFilterKeywords = {
     'tout': 'all'
 };
 
+// Mapping des mots-clés pour la navigation
+const navigationKeywords = {
+    'liste des ventes': 'ventes',
+    'ventes': 'ventes',
+    'afficher les ventes': 'ventes',
+    'liste des commandes': 'commandes',
+    'commandes': 'commandes',
+    'afficher les commandes': 'commandes'
+};
+
 function detectDateFilter(text) {
     const lower = text.toLowerCase().trim();
     for (const [keyword, value] of Object.entries(dateFilterKeywords)) {
@@ -615,50 +631,63 @@ function detectDateFilter(text) {
     return null;
 }
 
+function detectNavigation(text) {
+    const lower = text.toLowerCase().trim();
+    for (const [keyword, value] of Object.entries(navigationKeywords)) {
+        if (lower.includes(keyword)) {
+            return value;
+        }
+    }
+    return null;
+}
+
 /**
- * Active/désactive la reconnaissance vocale
- * @param {string} target - 'ventes' ou 'commandes'
+ * Active la reconnaissance vocale globale (appelée depuis le POS)
  */
-function toggleVoiceRecognition(target) {
-    window.voiceCurrentTarget = target;
-    
-    // Si déjà en écoute, on arrête
-    if (window.voiceIsListening) {
-        stopVoiceRecognition();
+function enableGlobalVoiceRecognition() {
+    if (window.voiceGlobalEnabled) {
+        console.log('🎤 Voice déjà active');
         return;
     }
     
-    // Vérifier le support du navigateur
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        alert('❌ La reconnaissance vocale n\'est pas supportée par votre navigateur.\n' +
-              'Utilisez Chrome, Edge ou Safari sur iOS.');
+        console.warn('❌ Reconnaissance vocale non supportée');
         return;
     }
     
-    // Créer l'instance
-    window.voiceRecognition = new SpeechRecognition();
-    const recognition = window.voiceRecognition;
+    window.voiceGlobalEnabled = true;
+    startGlobalVoiceRecognition();
+    console.log('🎤 Voice globale activée');
+}
+
+/**
+ * Démarre la reconnaissance vocale continue
+ */
+function startGlobalVoiceRecognition() {
+    if (!window.voiceGlobalEnabled) return;
     
-    // Configuration
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    
+    if (window.voiceRecognition) {
+        try {
+            window.voiceRecognition.stop();
+        } catch (e) {}
+    }
+    
+    const recognition = new SpeechRecognition();
     recognition.lang = 'fr-FR';
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     
-    // Indicateur visuel
-    const searchField = document.getElementById(target + 'SearchInput');
-    const micBtn = document.querySelector(`#${target}Page .search-bar-pro .btn-add`);
-    
-    if (micBtn) {
-        micBtn.classList.add('listening');
-        micBtn.innerHTML = '<i class="fas fa-stop"></i>';
-        micBtn.title = 'Arrêter l\'écoute';
-    }
-    
+    window.voiceRecognition = recognition;
     window.voiceIsListening = true;
     
-    // Résultats intermédiaires
+    // Indicateur visuel
+    showVoiceIndicator('🎤 Écoute active...', true);
+    
     recognition.onresult = function(event) {
         let final = '';
         let interim = '';
@@ -673,37 +702,113 @@ function toggleVoiceRecognition(target) {
         }
         
         const text = final || interim;
+        if (text.trim().length > 0) {
+            console.log('🎤 Entendu:', text.trim());
+            processVoiceCommand(text.trim());
+        }
+    };
+    
+    recognition.onerror = function(event) {
+        console.warn('🎤 Erreur vocale:', event.error);
+        // Redémarrer en cas d'erreur
+        if (window.voiceGlobalEnabled) {
+            setTimeout(startGlobalVoiceRecognition, 1000);
+        }
+    };
+    
+    recognition.onend = function() {
+        console.log('🎤 Voice stopped');
+        window.voiceIsListening = false;
+        // Redémarrer si toujours actif
+        if (window.voiceGlobalEnabled) {
+            setTimeout(startGlobalVoiceRecognition, 500);
+        } else {
+            showVoiceIndicator('🎤 Écoute désactivée', false);
+        }
+    };
+    
+    try {
+        recognition.start();
+    } catch (e) {
+        console.warn('🎤 Erreur démarrage:', e);
+        if (window.voiceGlobalEnabled) {
+            setTimeout(startGlobalVoiceRecognition, 1000);
+        }
+    }
+}
+
+/**
+ * Arrête la reconnaissance vocale globale
+ */
+function disableGlobalVoiceRecognition() {
+    window.voiceGlobalEnabled = false;
+    window.voiceIsListening = false;
+    if (window.voiceRecognition) {
+        try {
+            window.voiceRecognition.stop();
+        } catch (e) {}
+        window.voiceRecognition = null;
+    }
+    showVoiceIndicator('🎤 Écoute désactivée', false);
+    console.log('🎤 Voice globale désactivée');
+}
+
+/**
+ * Traite une commande vocale
+ */
+function processVoiceCommand(text) {
+    // 1. Vérifier si c'est une navigation
+    const navTarget = detectNavigation(text);
+    if (navTarget) {
+        showVoiceIndicator(`📱 Navigation vers ${navTarget}...`, true);
+        setTimeout(() => {
+            if (navTarget === 'ventes') {
+                // Vérifier si on est déjà sur la page ventes
+                const ventesPage = document.getElementById('ventesPage');
+                if (ventesPage && ventesPage.closest('.page-content')?.style?.display !== 'none') {
+                    showVoiceIndicator('📋 Déjà sur la page Ventes', false);
+                    setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
+                } else {
+                    navigateTo('ventes');
+                    // Attendre que la page charge
+                    setTimeout(() => {
+                        // La page ventes va se charger et le micro reste actif
+                        showVoiceIndicator('📋 Page Ventes chargée', false);
+                        setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
+                    }, 800);
+                }
+            } else if (navTarget === 'commandes') {
+                navigateTo('commandes');
+                setTimeout(() => {
+                    showVoiceIndicator('📋 Page Commandes chargée', false);
+                    setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
+                }, 800);
+            }
+        }, 300);
+        return;
+    }
+    
+    // 2. Vérifier si c'est un filtre de date (uniquement sur la page courante)
+    const detectedFilter = detectDateFilter(text);
+    if (detectedFilter) {
+        // Déterminer la page courante
+        const ventesPage = document.getElementById('ventesPage');
+        const commandesPage = document.getElementById('commandesPage');
+        let target = null;
         
-        // Afficher dans le champ de recherche
-        if (searchField) {
-            searchField.value = text.trim();
-            // Déclencher l'événement pour la recherche
-            const event = new Event('keyup');
-            searchField.dispatchEvent(event);
+        if (ventesPage && ventesPage.closest('.page-content')?.style?.display !== 'none') {
+            target = 'ventes';
+        } else if (commandesPage && commandesPage.closest('.page-content')?.style?.display !== 'none') {
+            target = 'commandes';
         }
         
-        // Si résultat final, on traite
-        if (final) {
-            const cleanText = final.trim();
-            
-            // Vérifier si c'est un filtre de date
-            const detectedFilter = detectDateFilter(cleanText);
-            if (detectedFilter) {
-                // Appliquer le filtre de date
-                const periodSelect = document.getElementById(target + 'PeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = detectedFilter;
-                    // Déclencher l'événement change
-                    const changeEvent = new Event('change');
-                    periodSelect.dispatchEvent(changeEvent);
-                }
-                // Effacer le texte de la barre de recherche
-                if (searchField) {
-                    searchField.value = '';
-                    const event = new Event('keyup');
-                    searchField.dispatchEvent(event);
-                }
-                // Afficher une notification
+        if (target) {
+            const periodSelect = document.getElementById(target + 'PeriodSelect');
+            if (periodSelect) {
+                periodSelect.value = detectedFilter;
+                const changeEvent = new Event('change');
+                periodSelect.dispatchEvent(changeEvent);
+                
                 const filterLabels = {
                     'today': 'Aujourd\'hui',
                     'week': 'Cette semaine',
@@ -711,158 +816,65 @@ function toggleVoiceRecognition(target) {
                     'year': 'Cette année',
                     'all': 'Toutes les ventes'
                 };
-                showVoiceNotification(`📅 Filtre appliqué : ${filterLabels[detectedFilter] || detectedFilter}`);
-            } else {
-                // Recherche normale
+                showVoiceIndicator(`📅 Filtre appliqué : ${filterLabels[detectedFilter] || detectedFilter}`, false);
+                setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
+                
+                // Effacer la barre de recherche
+                const searchField = document.getElementById(target + 'SearchInput');
                 if (searchField) {
-                    searchField.value = cleanText;
+                    searchField.value = '';
                     const event = new Event('keyup');
                     searchField.dispatchEvent(event);
                 }
-                showVoiceNotification(`🔍 Recherche : "${cleanText}"`);
+                return;
             }
-            
-            // Effacer l'affichage vocal après 3 secondes
-            setTimeout(() => {
-                if (searchField && searchField.value === cleanText) {
-                    // On garde le texte, l'utilisateur peut le voir
-                }
-            }, 100);
-            
-            stopVoiceRecognition();
         }
-    };
+    }
     
-    // Erreur
-    recognition.onerror = function(event) {
-        console.error('Erreur vocal:', event.error);
-        let msg = '❌ Erreur: ';
-        switch(event.error) {
-            case 'not-allowed': msg += 'Microphone non autorisé'; break;
-            case 'no-speech': msg += 'Aucun son détecté'; break;
-            case 'audio-capture': msg += 'Microphone inaccessible'; break;
-            case 'network': msg += 'Problème réseau'; break;
-            default: msg += event.error;
-        }
-        showVoiceNotification(msg);
-        window.voiceIsListening = false;
-        if (micBtn) {
-            micBtn.classList.remove('listening');
-            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-            micBtn.title = 'Recherche vocale';
-        }
-    };
+    // 3. Recherche normale (si on est sur une page)
+    const ventesPage = document.getElementById('ventesPage');
+    const commandesPage = document.getElementById('commandesPage');
+    let target = null;
     
-    // Fin
-    recognition.onend = function() {
-        window.voiceIsListening = false;
-        if (micBtn) {
-            micBtn.classList.remove('listening');
-            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-            micBtn.title = 'Recherche vocale';
-        }
-    };
+    if (ventesPage && ventesPage.closest('.page-content')?.style?.display !== 'none') {
+        target = 'ventes';
+    } else if (commandesPage && commandesPage.closest('.page-content')?.style?.display !== 'none') {
+        target = 'commandes';
+    }
     
-    // Démarrer
-    try {
-        recognition.start();
-    } catch (e) {
-        console.error('Erreur démarrage vocal:', e);
-        window.voiceIsListening = false;
-        if (micBtn) {
-            micBtn.classList.remove('listening');
-            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-            micBtn.title = 'Recherche vocale';
+    if (target) {
+        const searchField = document.getElementById(target + 'SearchInput');
+        if (searchField) {
+            searchField.value = text;
+            const event = new Event('keyup');
+            searchField.dispatchEvent(event);
+            showVoiceIndicator(`🔍 Recherche : "${text}"`, false);
+            setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
         }
-        showVoiceNotification('❌ Erreur de démarrage');
     }
 }
 
 /**
- * Arrête la reconnaissance vocale
+ * Affiche un indicateur vocal en bas de l'écran
  */
-function stopVoiceRecognition() {
-    if (window.voiceRecognition) {
-        try {
-            window.voiceRecognition.stop();
-        } catch (e) {}
-        window.voiceRecognition = null;
-    }
-    window.voiceIsListening = false;
-    
-    const target = window.voiceCurrentTarget || 'ventes';
-    const micBtn = document.querySelector(`#${target}Page .search-bar-pro .btn-add`);
-    if (micBtn) {
-        micBtn.classList.remove('listening');
-        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-        micBtn.title = 'Recherche vocale';
-    }
-}
-
-/**
- * Affiche une notification vocale
- */
-function showVoiceNotification(message) {
-    // Créer ou récupérer la notification
-    let notif = document.getElementById('voiceNotification');
-    if (!notif) {
-        notif = document.createElement('div');
-        notif.id = 'voiceNotification';
-        notif.style.cssText = `
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--black);
-            color: var(--white);
-            padding: 16px 32px;
-            border-radius: 12px;
-            font-size: 22px;
-            font-weight: 600;
-            z-index: 9999;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            transition: opacity 0.3s ease;
-            opacity: 0;
-            pointer-events: none;
-            font-family: 'Inter', sans-serif;
-        `;
-        document.body.appendChild(notif);
+function showVoiceIndicator(message, isListening) {
+    let indicator = document.getElementById('voiceGlobalIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'voiceGlobalIndicator';
+        indicator.className = 'voice-indicator';
+        document.body.appendChild(indicator);
     }
     
-    notif.textContent = message;
-    notif.style.opacity = '1';
-    
-    clearTimeout(window.voiceNotifTimeout);
-    window.voiceNotifTimeout = setTimeout(() => {
-        notif.style.opacity = '0';
-    }, 3000);
-}
-
-// Fonction pour effacer la recherche
-function clearSearch(target) {
-    const searchField = document.getElementById(target + 'SearchInput');
-    if (searchField) {
-        searchField.value = '';
-        const event = new Event('keyup');
-        searchField.dispatchEvent(event);
-        // Masquer le bouton X
-        const clearBtn = document.getElementById(target + 'ClearBtn');
-        if (clearBtn) {
-            clearBtn.classList.add('hidden');
-        }
-    }
-}
-
-// Fonction pour gérer l'affichage du bouton X
-function handleSearchInput(target) {
-    const searchField = document.getElementById(target + 'SearchInput');
-    const clearBtn = document.getElementById(target + 'ClearBtn');
-    if (searchField && clearBtn) {
-        if (searchField.value.length > 0) {
-            clearBtn.classList.remove('hidden');
-        } else {
-            clearBtn.classList.add('hidden');
-        }
+    if (isListening) {
+        indicator.innerHTML = `<span class="pulse"></span> ${message}`;
+        indicator.className = 'voice-indicator active';
+    } else {
+        indicator.textContent = message;
+        indicator.className = 'voice-indicator active';
+        setTimeout(() => {
+            indicator.className = 'voice-indicator';
+        }, 2000);
     }
 }
 
@@ -883,9 +895,6 @@ function loadCommandesPage(c) {
                         <button class="search-clear-btn hidden" id="commandesClearBtn" onclick="clearSearch('commandes')" title="Effacer la recherche">
                             <i class="fas fa-times"></i>
                         </button>
-                        <button class="btn-add" onclick="toggleVoiceRecognition('commandes')" title="Recherche vocale">
-                            <i class="fas fa-microphone"></i>
-                        </button>
                     </div>
                     <div class="filter-group">
                         <label><i class="far fa-calendar-alt"></i> Période</label>
@@ -903,6 +912,11 @@ function loadCommandesPage(c) {
         </div>
     `;
     loadCommandes();
+    
+    // Si la voice globale est active, afficher l'indicateur
+    if (window.voiceGlobalEnabled) {
+        showVoiceIndicator('🎤 Écoute active...', true);
+    }
 }
 
 async function loadCommandes() {
@@ -1077,7 +1091,7 @@ function renderCommandesTablePro() {
     document.getElementById('commandesPagination').innerHTML = getPaginationHTML('commandes', data.length);
 }
 
-// Fonctions commandes (inchangées)
+// ==================== COMMANDES (Fonctions conservées) ====================
 async function validateCommande(cid) {
     if (!confirm('Valider cette commande ?')) return;
     await CacheDB.write('commandes', cid, {
@@ -1116,7 +1130,7 @@ function cancelCommande(cid) {
     }
 }
 
-// ==================== VENTES (PRO) ====================
+// ==================== VENTES (PRO - SANS BOUTON MICRO) ====================
 function loadVentesPage(c) {
     injectVentesStyles();
     
@@ -1139,9 +1153,6 @@ function loadVentesPage(c) {
                                onkeyup="window.ventesSearch = this.value; window.currentPages.ventes=1; handleSearchInput('ventes'); applyVentesFilters();">
                         <button class="search-clear-btn hidden" id="ventesClearBtn" onclick="clearSearch('ventes')" title="Effacer la recherche">
                             <i class="fas fa-times"></i>
-                        </button>
-                        <button class="btn-add" onclick="toggleVoiceRecognition('ventes')" title="Recherche vocale">
-                            <i class="fas fa-microphone"></i>
                         </button>
                     </div>
                     <div class="filter-group">
@@ -1170,6 +1181,11 @@ function loadVentesPage(c) {
         </div>
     `;
     loadVentes();
+    
+    // Si la voice globale est active, afficher l'indicateur
+    if (window.voiceGlobalEnabled) {
+        showVoiceIndicator('🎤 Écoute active...', true);
+    }
 }
 
 async function loadVentes() {
@@ -1635,6 +1651,32 @@ async function sendWhatsApp(did) {
     }
 }
 
+// ==================== UTILITAIRES RECHERCHE ====================
+function clearSearch(target) {
+    const searchField = document.getElementById(target + 'SearchInput');
+    if (searchField) {
+        searchField.value = '';
+        const event = new Event('keyup');
+        searchField.dispatchEvent(event);
+        const clearBtn = document.getElementById(target + 'ClearBtn');
+        if (clearBtn) {
+            clearBtn.classList.add('hidden');
+        }
+    }
+}
+
+function handleSearchInput(target) {
+    const searchField = document.getElementById(target + 'SearchInput');
+    const clearBtn = document.getElementById(target + 'ClearBtn');
+    if (searchField && clearBtn) {
+        if (searchField.value.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+    }
+}
+
 // ==================== EXPORTS ====================
 window.loadCommandesPage = loadCommandesPage;
 window.loadCommandes = loadCommandes;
@@ -1654,13 +1696,13 @@ window.payerVente = payerVente;
 window.printFacture = printFacture;
 window.imprimerFacture = imprimerFacture;
 window.sendWhatsApp = sendWhatsApp;
-window.toggleVoiceRecognition = toggleVoiceRecognition;
-window.stopVoiceRecognition = stopVoiceRecognition;
 window.clearSearch = clearSearch;
 window.handleSearchInput = handleSearchInput;
 window.injectVentesStyles = injectVentesStyles;
-window.showVoiceNotification = showVoiceNotification;
+window.enableGlobalVoiceRecognition = enableGlobalVoiceRecognition;
+window.disableGlobalVoiceRecognition = disableGlobalVoiceRecognition;
+window.processVoiceCommand = processVoiceCommand;
+window.showVoiceIndicator = showVoiceIndicator;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO FINAL chargé ✅');
-console.log('🎤 Reconnaissance vocale avec filtres de date activée');
-console.log('❌ Bouton X pour effacer la recherche (35px)');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO FINAL (sans micro) chargé ✅');
+console.log('🎤 Voice globale - Activez depuis le POS avec "listen"');
