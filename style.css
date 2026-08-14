@@ -597,10 +597,11 @@ color: var(--text-primary);
 .pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
-/* ✅ Augmenter la hauteur de pos-products-panel de 70px pour afficher 3 lignes */
+/* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes */
 .pos-products-panel {
-  min-height: 650px !important;
-  max-height: calc(100% + 70px) !important;
+  min-height: 720px !important;
+  max-height: 78vh !important;
+  height: auto !important;
 }
 
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
@@ -630,7 +631,19 @@ border-radius: 6px;
 object-fit: contain;
 }
 
-.pos-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
+/* ✅ Forcer la grille à occuper tout l'espace pour 3 lignes */
+.pos-products-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
+  gap: 10px; 
+  flex: 1; 
+  overflow-y: auto; 
+  padding-right: 4px; 
+  min-height: 520px !important;
+  max-height: 620px !important;
+  height: auto !important;
+}
+
 .pos-product-card { background: var(--gray-50); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 10px; cursor: pointer; transition: var(--transition); text-align: center; display: flex; flex-direction: column; align-items: center; }
 .pos-product-card:hover { border-color: var(--black); box-shadow: var(--shadow); background: var(--white); }
 .pos-product-img { width: 100%; height: 80px; border-radius: var(--radius); overflow: hidden; margin-bottom: 6px; background: var(--gray-200); }
@@ -930,10 +943,39 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
     padding-top: 10px !important;
   }
   
-  /* ✅ Augmenter la hauteur de pos-products-panel de 70px pour iPhone 13 Pro Max */
+  /* ✅ Augmenter la hauteur de pos-products-panel pour iPhone 13 Pro Max */
   .pos-products-panel {
-    min-height: 700px !important;
-    max-height: calc(100% + 70px) !important;
+    min-height: 750px !important;
+    max-height: 80vh !important;
+    height: auto !important;
+  }
+  
+  .pos-products-grid {
+    min-height: 550px !important;
+    max-height: 650px !important;
+  }
+  
+  .pos-product-card {
+    min-height: 110px !important;
+    padding: 4px 2px !important;
+  }
+  
+  .pos-product-img {
+    height: 45px !important;
+  }
+  
+  .pos-product-name {
+    font-size: 12px !important;
+  }
+  
+  .pos-product-price {
+    font-size: 14px !important;
+  }
+  
+  /* ✅ Réduire la hauteur du panier */
+  .pos-cart-panel {
+    max-height: 26vh !important;
+    min-height: 120px !important;
   }
 }
 
@@ -1061,7 +1103,7 @@ font-size: 1rem !important;
 }
 
 /* ============================================================
-AUGMENTER LA HAUTEUR DE pos-products-panel POUR 3 LIGNES
+FORCER 3 LIGNES SUR TOUS LES TELEPHONES
 ============================================================ */
 @media(max-width:600px) {
 .main-content { padding: 8px 4px; }
@@ -1073,19 +1115,21 @@ grid-template-columns: repeat(5, 1fr) !important;
 gap: 4px !important;
 flex: 1;
 overflow-y: auto;
-min-height: 200px;
+min-height: 420px !important;
+max-height: 500px !important;
 padding: 2px !important;
+height: auto !important;
 }
 
 .pos-product-card { 
 padding: 4px 2px !important; 
-min-height: 110px !important;
+min-height: 100px !important;
 border-radius: 6px !important;
 border-width: 1px !important;
 margin: 0 !important;
 }
 .pos-product-img { 
-height: 45px !important; 
+height: 40px !important; 
 width: 100% !important;
 margin-bottom: 2px !important;
 border-radius: 6px !important;
@@ -1106,15 +1150,16 @@ max-width: 100% !important;
 .pos-old-price { font-size: 9px !important; }
 .pos-promo-price { font-size: 13px !important; color: var(--danger) !important; }
 
-/* ✅ Hauteur du panel pour afficher 3 lignes (5 colonnes x 3 lignes) */
+/* ✅ Hauteur du panel pour afficher 3 lignes */
 .pos-products-panel {
-  min-height: 420px !important;
-  max-height: 60vh !important;
+  min-height: 550px !important;
+  max-height: 65vh !important;
+  height: auto !important;
 }
 
-/* ✅ Réduire la hauteur du panier de 70px */
+/* ✅ Réduire la hauteur du panier */
 .pos-cart-panel { 
-  max-height: calc(28vh - 70px) !important; 
+  max-height: 24vh !important; 
   min-height: 120px !important;
 }
 
@@ -1137,13 +1182,15 @@ font-size: 1.05rem !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 5px !important;
 padding: 3px !important;
+min-height: 550px !important;
+max-height: 650px !important;
 }
 .pos-product-card {
 padding: 5px 3px !important;
-min-height: 120px !important;
+min-height: 110px !important;
 }
 .pos-product-img {
-height: 50px !important;
+height: 45px !important;
 }
 .pos-product-name {
 font-size: 12px !important;
@@ -1152,11 +1199,12 @@ font-size: 12px !important;
 font-size: 14px !important;
 }
 .pos-products-panel {
-  min-height: 450px !important;
-  max-height: 60vh !important;
+  min-height: 750px !important;
+  max-height: 80vh !important;
+  height: auto !important;
 }
 .pos-cart-panel { 
-  max-height: calc(30vh - 70px) !important; 
+  max-height: 26vh !important; 
   min-height: 120px !important;
 }
 }
@@ -1167,10 +1215,12 @@ font-size: 14px !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 3px !important;
 padding: 2px !important;
+min-height: 350px !important;
+max-height: 420px !important;
 }
 .pos-product-card {
 padding: 3px 1px !important;
-min-height: 90px !important;
+min-height: 85px !important;
 border-radius: 4px !important;
 }
 .pos-product-img {
@@ -1183,11 +1233,11 @@ font-size: 9px !important;
 font-size: 11px !important;
 }
 .pos-products-panel {
-  min-height: 330px !important;
-  max-height: 55vh !important;
+  min-height: 450px !important;
+  max-height: 60vh !important;
 }
 .pos-cart-panel { 
-  max-height: calc(25vh - 70px) !important; 
+  max-height: 22vh !important; 
   min-height: 100px !important;
 }
 }
@@ -1198,6 +1248,8 @@ font-size: 11px !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 6px !important;
 padding: 4px !important;
+min-height: 460px !important;
+max-height: 550px !important;
 }
 .pos-product-card {
 padding: 6px 4px !important;
@@ -1213,11 +1265,11 @@ font-size: 13px !important;
 font-size: 15px !important;
 }
 .pos-products-panel {
-  min-height: 460px !important;
-  max-height: 55vh !important;
+  min-height: 600px !important;
+  max-height: 70vh !important;
 }
 .pos-cart-panel { 
-  max-height: calc(30vh - 70px) !important; 
+  max-height: 28vh !important; 
   min-height: 130px !important;
 }
 }
@@ -1227,26 +1279,28 @@ font-size: 15px !important;
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 4px !important;
+min-height: 300px !important;
+max-height: 400px !important;
 }
 .pos-product-card {
 padding: 4px 3px !important;
-min-height: 85px !important;
+min-height: 80px !important;
 }
 .pos-product-img {
-height: 40px !important;
+height: 35px !important;
 }
 .pos-product-name {
-font-size: 10px !important;
+font-size: 9px !important;
 }
 .pos-product-price {
-font-size: 12px !important;
+font-size: 11px !important;
 }
 .pos-products-panel {
-  min-height: 350px !important;
-  max-height: 65vh !important;
+  min-height: 380px !important;
+  max-height: 70vh !important;
 }
 .pos-cart-panel { 
-  max-height: calc(40vh - 70px) !important; 
+  max-height: 40vh !important; 
   min-height: 100px !important;
 }
 }
