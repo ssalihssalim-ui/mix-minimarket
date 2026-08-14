@@ -1289,16 +1289,190 @@ AUGMENTER LA TAILLE DE POLICE - PAGE VENTES
   }
 }
 
-/* ✅ Pour très petits écrans (< 380px) */
+/* ============================================================
+AUGMENTER LA TAILLE DE POLICE - PAGE CRÉDITS
+============================================================ */
+
+/* ✅ Pour tous les mobiles < 700px */
+@media(max-width:700px) {
+  
+  /* Barre de recherche Crédits */
+  #creditsSearchInput,
+  #creditsVoiceDisplay {
+    font-size: 24px !important;
+    padding: 12px 16px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+  }
+  
+  /* Select période */
+  #creditsPeriodSelect {
+    font-size: 24px !important;
+    padding: 12px 16px !important;
+    height: 56px !important;
+  }
+  
+  /* Bouton Actualiser */
+  #creditsTableContainer .btn-add,
+  .btn-add {
+    font-size: 24px !important;
+    padding: 12px 20px !important;
+    height: 56px !important;
+  }
+  
+  /* Header du tableau */
+  .data-table th {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    padding: 14px 12px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Cellules du tableau */
+  .data-table td {
+    font-size: 24px !important;
+    padding: 14px 12px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Ligne Date en bold */
+  .data-table td:first-child {
+    font-weight: 700 !important;
+    font-size: 24px !important;
+  }
+  
+  /* Nom du client en bold */
+  .data-table td:nth-child(2) {
+    font-weight: 700 !important;
+    font-size: 24px !important;
+  }
+  
+  /* Total restant en bold */
+  .data-table td strong {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+  }
+  
+  /* Total général en bas */
+  .table-container + div {
+    font-size: 28px !important;
+    padding: 20px !important;
+  }
+  
+  .table-container + div strong {
+    font-size: 30px !important;
+  }
+  
+  /* Pagination */
+  #creditsPagination {
+    font-size: 24px !important;
+  }
+  
+  #creditsPagination button {
+    font-size: 24px !important;
+    padding: 10px 16px !important;
+  }
+  
+  /* Boutons actions */
+  .data-table .btn-edit,
+  .data-table .btn-add,
+  .data-table .btn-delete {
+    font-size: 22px !important;
+    padding: 8px 12px !important;
+    height: 44px !important;
+  }
+  
+  .data-table .btn-edit i,
+  .data-table .btn-add i,
+  .data-table .btn-delete i {
+    font-size: 22px !important;
+  }
+  
+  /* Badge statut crédit */
+  .data-table .status-warning,
+  .data-table .status-success,
+  .data-table .status-danger {
+    font-size: 20px !important;
+    padding: 6px 14px !important;
+  }
+}
+
+/* ✅ Spécifique iPhone 13 Pro Max pour Crédits (390px - 430px) */
+@media screen and (min-width: 390px) and (max-width: 430px) {
+  #creditsSearchInput,
+  #creditsVoiceDisplay {
+    font-size: 24px !important;
+    padding: 14px 18px !important;
+    height: 60px !important;
+  }
+  
+  #creditsPeriodSelect {
+    font-size: 24px !important;
+    padding: 14px 18px !important;
+    height: 60px !important;
+  }
+  
+  .btn-add {
+    font-size: 24px !important;
+    padding: 14px 22px !important;
+    height: 60px !important;
+  }
+  
+  .data-table th {
+    font-size: 24px !important;
+    padding: 16px 14px !important;
+  }
+  
+  .data-table td {
+    font-size: 24px !important;
+    padding: 16px 14px !important;
+  }
+  
+  .data-table td strong {
+    font-size: 26px !important;
+  }
+  
+  .table-container + div {
+    font-size: 30px !important;
+    padding: 24px !important;
+  }
+  
+  .table-container + div strong {
+    font-size: 32px !important;
+  }
+  
+  .data-table .btn-edit,
+  .data-table .btn-add,
+  .data-table .btn-delete {
+    font-size: 24px !important;
+    padding: 10px 14px !important;
+    height: 48px !important;
+  }
+  
+  .data-table .btn-edit i,
+  .data-table .btn-add i,
+  .data-table .btn-delete i {
+    font-size: 24px !important;
+  }
+  
+  .data-table .status-warning,
+  .data-table .status-success,
+  .data-table .status-danger {
+    font-size: 22px !important;
+    padding: 8px 16px !important;
+  }
+}
+
+/* ✅ Pour très petits écrans (< 380px) - Crédits */
 @media screen and (max-width: 380px) {
-  #ventesSearchInput,
-  #ventesVoiceDisplay {
+  #creditsSearchInput,
+  #creditsVoiceDisplay {
     font-size: 20px !important;
     padding: 10px 14px !important;
     height: 48px !important;
   }
   
-  #ventesPeriodSelect {
+  #creditsPeriodSelect {
     font-size: 20px !important;
     padding: 10px 14px !important;
     height: 48px !important;
@@ -1319,54 +1493,27 @@ AUGMENTER LA TAILLE DE POLICE - PAGE VENTES
   .data-table td strong {
     font-size: 22px !important;
   }
+  
+  .data-table .status-warning,
+  .data-table .status-success,
+  .data-table .status-danger {
+    font-size: 18px !important;
+    padding: 4px 10px !important;
+  }
 }
 
-/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) - suite pour Ventes */
-@media screen and (min-width: 390px) and (max-width: 430px) {
-  .page-header .header-title h2 {
-    font-size: 24px !important;
-  }
-  
-  .page-header .header-title i {
-    font-size: 24px !important;
-    padding: 10px !important;
-  }
-  
-  .data-table th,
-  .data-table td {
-    font-size: 24px !important;
-    padding: 14px 18px !important;
-  }
-  
-  .stat-value {
-    font-size: 28px !important;
-  }
-  
-  .btn-add,
-  .btn-edit,
-  .btn-delete,
-  .btn-save,
-  .btn-cancel {
-    font-size: 24px !important;
-    padding: 14px 22px !important;
-  }
-  
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    font-size: 24px !important;
-    padding: 16px !important;
-  }
-  
-  .input-group input,
-  .input-group select {
-    font-size: 24px !important;
-    padding: 16px !important;
-  }
-  
-  .input-group i {
-    font-size: 24px !important;
-  }
+/* ✅ Pour le total des crédits en bas de page */
+.credits-total-container {
+  font-size: 28px !important;
+  padding: 20px !important;
+  background: #FEF3C7 !important;
+  border-radius: 12px !important;
+  text-align: center !important;
+  margin-top: 15px !important;
+}
+
+.credits-total-container strong {
+  font-size: 30px !important;
 }
 
 /* ✅ Pour très petits écrans (< 380px) - suite */
