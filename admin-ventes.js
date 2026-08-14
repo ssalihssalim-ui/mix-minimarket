@@ -1,7 +1,8 @@
 // ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET ====================
-// Version : Design pro - Facture/Date/Client en colonnes séparées
-// Bouton X pour effacer la recherche - Micro intégré depuis POS via POS-AUDIO
-// Version FINALE - Compatible avec POS-AUDIO v10
+// Version : Design PRO - Facture/Date/Client en colonnes séparées
+// Bouton X pour effacer la recherche
+// GARDE le champ ventesVoiceDisplay pour POS-AUDIO
+// Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -14,10 +15,6 @@ window.filteredVentes = window.filteredVentes || null;
 window.filteredCommandes = window.filteredCommandes || null;
 window.venteSelectionMode = window.venteSelectionMode || false;
 window.venteSelectedIndex = window.venteSelectedIndex || -1;
-
-// ========== VARIABLES POUR VOICE (INTÉGRATION POS-AUDIO) ==========
-window.ventesVoiceSearchInput = null;
-window.ventesVoicePeriodSelect = null;
 
 // ========== FONCTIONS UTILITAIRES ==========
 
@@ -87,27 +84,6 @@ function renderCommandeFactureCell(commande) {
     `;
 }
 
-// ========== DÉTECTION PÉRIODE POUR VOICE (compatible POS-AUDIO) ==========
-function detectPeriodFilterVentes(text) {
-    var cleaned = text.toLowerCase().trim();
-    if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today") || cleaned.includes("ajourdhui")) {
-        return 'today';
-    }
-    if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours") || cleaned.includes("ce mois ci")) {
-        return 'month';
-    }
-    if (cleaned.includes("cette semaine") || cleaned.includes("cettesemaine") || cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours")) {
-        return 'week';
-    }
-    if (cleaned.includes("cette année") || cleaned.includes("cetteannee") || cleaned.includes("cette annee") || cleaned.includes("1 an") || cleaned.includes("1an")) {
-        return 'year';
-    }
-    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous") || cleaned.includes("toute les ventes")) {
-        return 'all';
-    }
-    return null;
-}
-
 // ========== STYLES CSS DYNAMIQUES ==========
 function injectVentesStyles() {
     const styleId = 'ventes-pro-styles-final';
@@ -140,6 +116,19 @@ function injectVentesStyles() {
             #ventesPage .status-danger, #commandesPage .status-danger {
                 font-size: 18px !important;
                 padding: 6px 16px !important;
+            }
+            
+            /* === CHAMP VOCAL (pour POS-AUDIO) === */
+            .voice-display-field {
+                padding: 8px 12px !important;
+                border: 2px solid #16a34a !important;
+                border-radius: 8px !important;
+                width: 180px !important;
+                background: #f0fdf4 !important;
+                color: #14532d !important;
+                font-weight: 600 !important;
+                font-size: 22px !important;
+                min-height: 48px !important;
             }
             
             /* === COLONNES SÉPARÉES === */
@@ -510,6 +499,11 @@ function injectVentesStyles() {
                     min-width: 32px !important;
                     font-size: 16px !important;
                 }
+                
+                .voice-display-field {
+                    font-size: 18px !important;
+                    width: 140px !important;
+                }
             }
             
             @media(max-width:500px) {
@@ -561,6 +555,12 @@ function injectVentesStyles() {
                 #commandesPage .filter-group select {
                     font-size: 16px !important;
                     padding: 8px 12px !important;
+                }
+                
+                .voice-display-field {
+                    font-size: 15px !important;
+                    width: 100px !important;
+                    padding: 6px 8px !important;
                 }
             }
         </style>
@@ -816,7 +816,7 @@ function cancelCommande(cid) {
     }
 }
 
-// ==================== VENTES (PRO - SANS BOUTON MICRO) ====================
+// ==================== VENTES (PRO AVEC CHAMP VOCAL) ====================
 function loadVentesPage(c) {
     injectVentesStyles();
     
@@ -841,6 +841,7 @@ function loadVentesPage(c) {
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
+                    <input type="text" id="ventesVoiceDisplay" placeholder="🎤 Audio..." class="voice-display-field" readonly>
                     <div class="filter-group">
                         <label><i class="far fa-calendar-alt"></i> Période</label>
                         <select id="ventesPeriodSelect" onchange="window.ventesPeriod = this.value; window.currentPages.ventes=1; applyVentesFilters();">
@@ -1380,7 +1381,5 @@ window.sendWhatsApp = sendWhatsApp;
 window.clearSearch = clearSearch;
 window.handleSearchInput = handleSearchInput;
 window.injectVentesStyles = injectVentesStyles;
-window.detectPeriodFilterVentes = detectPeriodFilterVentes;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (sans micro) chargé ✅');
-console.log('🎤 Compatible avec POS-AUDIO - Dites "liste des ventes" pour naviguer');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec champ vocal) chargé ✅');
