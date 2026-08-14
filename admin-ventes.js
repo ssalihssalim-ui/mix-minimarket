@@ -1,8 +1,7 @@
 // ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
-// Bouton X pour effacer la recherche
-// Filtres vocaux : détection + effacement barre recherche
-// Recherche client dans description incluse
+// Recherche dans description client + remplacement par nom/prénom
+// Filtres vocaux avec effacement barre recherche
 // Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
@@ -16,6 +15,7 @@ window.filteredVentes = window.filteredVentes || null;
 window.filteredCommandes = window.filteredCommandes || null;
 window.venteSelectionMode = window.venteSelectionMode || false;
 window.venteSelectedIndex = window.venteSelectedIndex || -1;
+window.clientsDataForSearch = window.clientsDataForSearch || [];
 
 // ========== FONCTIONS UTILITAIRES ==========
 
@@ -56,6 +56,99 @@ function detectPeriodFilterVentes(text) {
     return null;
 }
 
+// ========== CHARGER LES CLIENTS POUR LA RECHERCHE ==========
+async function loadClientsForSearch() {
+    try {
+        const snapshot = await db.collection('clients').limit(2000).get();
+        window.clientsDataForSearch = [];
+        snapshot.forEach(doc => {
+            var d = doc.data();
+            d.id = doc.id;
+            window.clientsDataForSearch.push(d);
+        });
+        console.log('📋 Clients chargés pour recherche description:', window.clientsDataForSearch.length);
+    } catch(e) {
+        console.warn('Erreur chargement clients pour recherche:', e);
+        window.clientsDataForSearch = [];
+    }
+}
+
+// ========== FONCTION DE RECHERCHE AVEC DESCRIPTION ==========
+function filterVentesBySearchWithDescription(data, query) {
+    if (!query || query.trim() === '') return data;
+    
+    var q = query.toLowerCase().trim();
+    var results = [];
+    var clientsMap = {};
+    
+    // Construire un map clientId -> client pour accès rapide
+    window.clientsDataForSearch.forEach(function(c) {
+        clientsMap[c.id] = c;
+    });
+    
+    data.forEach(function(vente) {
+        var match = false;
+        var clientInfo = null;
+        
+        // 1. Chercher dans le nom du client
+        if (vente.clientName && vente.clientName.toLowerCase().indexOf(q) !== -1) {
+            match = true;
+        }
+        
+        // 2. Chercher dans les items
+        if (!match && vente.items) {
+            for (var i = 0; i < vente.items.length; i++) {
+                if (vente.items[i].nom && vente.items[i].nom.toLowerCase().indexOf(q) !== -1) {
+                    match = true;
+                    break;
+                }
+            }
+        }
+        
+        // 3. Chercher dans la description du client (si clientId existe)
+        if (!match && vente.clientId && clientsMap[vente.clientId]) {
+            var client = clientsMap[vente.clientId];
+            var description = client.description || '';
+            if (description.toLowerCase().indexOf(q) !== -1) {
+                match = true;
+                clientInfo = client;
+            }
+        }
+        
+        // 4. Chercher dans la description du client (si clientName existe mais pas clientId)
+        if (!match && vente.clientName && !vente.clientId) {
+            // Chercher le client par nom
+            for (var id in clientsMap) {
+                var c = clientsMap[id];
+                var fullName = (c.nom || '') + ' ' + (c.prenom || '');
+                if (fullName.trim().toLowerCase() === vente.clientName.toLowerCase()) {
+                    var desc = c.description || '';
+                    if (desc.toLowerCase().indexOf(q) !== -1) {
+                        match = true;
+                        clientInfo = c;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (match) {
+            // Si on a trouvé un client via description, remplacer clientName par nom+prénom
+            if (clientInfo) {
+                vente._clientDisplayName = (clientInfo.nom || '') + ' ' + (clientInfo.prenom || '');
+            } else if (vente.clientId && clientsMap[vente.clientId]) {
+                var c = clientsMap[vente.clientId];
+                vente._clientDisplayName = (c.nom || '') + ' ' + (c.prenom || '');
+            } else {
+                vente._clientDisplayName = vente.clientName || vente.table || 'Client inconnu';
+            }
+            results.push(vente);
+        }
+    });
+    
+    return results;
+}
+
 // Génère l'affichage Facture (colonne séparée)
 function renderFactureCell(vente) {
     const factureNum = vente.factureNum || vente.id?.substring(0, 8) || '---';
@@ -84,9 +177,9 @@ function renderDateCell(vente) {
     `;
 }
 
-// Génère l'affichage Client (colonne séparée)
+// Génère l'affichage Client (colonne séparée) - utilise _clientDisplayName si présent
 function renderClientCell(vente) {
-    const clientName = vente.clientName || vente.table || 'Client inconnu';
+    var clientName = vente._clientDisplayName || vente.clientName || vente.table || 'Client inconnu';
     return `
         <div class="client-cell">
             <i class="fas fa-user-circle"></i>
@@ -838,9 +931,12 @@ function cancelCommande(cid) {
     }
 }
 
-// ==================== VENTES (PRO AVEC CHAMP VOCAL + FILTRES) ====================
+// ==================== VENTES (PRO AVEC RECHERCHE DESCRIPTION) ====================
 function loadVentesPage(c) {
     injectVentesStyles();
+    
+    // Charger les clients pour la recherche description
+    loadClientsForSearch();
     
     window.ventesPeriod = 'all';
     window.ventesSearch = '';
@@ -857,9 +953,9 @@ function loadVentesPage(c) {
                     <div class="search-bar-pro">
                         <i class="fas fa-search"></i>
                         <input type="text" id="ventesSearchInput" 
-                               placeholder="Rechercher (client, produit)..."
-                               onkeyup="window.ventesSearch = this.value; window.currentPages.ventes=1; handleSearchInput('ventes'); applyVentesFilters();">
-                        <button class="search-clear-btn hidden" id="ventesClearBtn" onclick="clearSearch('ventes')" title="Effacer la recherche">
+                               placeholder="Rechercher (client, produit, description)..."
+                               onkeyup="handleVentesSearch(this.value);">
+                        <button class="search-clear-btn hidden" id="ventesClearBtn" onclick="clearVentesSearch()" title="Effacer la recherche">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -892,69 +988,30 @@ function loadVentesPage(c) {
     loadVentes();
 }
 
-async function loadVentes() {
-    var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
-    var vendeurCaissier = '';
-    if (!isAdmin && window.currentUserData) {
-        vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
-    }
-    try {
-        const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').limit(2000).get();
-        window.allVentesData = [];
-        snapshot.forEach(dc => {
-            var d = dc.data(); d.id = dc.id;
-            var achat = 0, profit = 0;
-            if (d.items) {
-                d.items.forEach(function(it) {
-                    var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
-                        pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
-                    achat += pa * q;
-                    profit += (pvr - pa) * q;
-                });
-            }
-            d.achat = achat; d.profit = profit;
-            window.allVentesData.push(d);
-        });
-        if (!isAdmin) {
-            window.allVentesData = window.allVentesData.filter(function(d) { return d.vendeur === vendeurCaissier; });
-        }
-        if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
-        if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
-    } catch (e) { console.error('Erreur chargement ventes:', e); }
+// Fonction pour gérer la recherche avec description
+function handleVentesSearch(value) {
+    window.ventesSearch = value;
     window.currentPages.ventes = 1;
+    handleSearchInput('ventes');
     applyVentesFilters();
 }
 
-function applyVentesFilters() {
-    // Filtre par période
-    var filtered = filterByPeriod(window.allVentesData, window.ventesPeriod);
-    
-    // Filtre par recherche - INCLUT LA DESCRIPTION
-    filtered = filterBySearch(filtered, window.ventesSearch, ['clientName', 'items.nom', 'description']);
-    
-    // Filtre par statut
-    var statusFilter = document.getElementById('ventesStatusFilter');
-    if (statusFilter && statusFilter.value !== 'all') {
-        filtered = filtered.filter(function(d) {
-            return (d.statutPaiement || (d.paid ? 'payé' : 'impayé')) === statusFilter.value;
-        });
+// Fonction pour effacer la recherche sur la page Ventes
+function clearVentesSearch() {
+    var searchField = document.getElementById('ventesSearchInput');
+    if (searchField) {
+        searchField.value = '';
+        window.ventesSearch = '';
+        applyVentesFilters();
+        var clearBtn = document.getElementById('ventesClearBtn');
+        if (clearBtn) {
+            clearBtn.classList.add('hidden');
+        }
     }
-    
-    if (!window.sortOrders.ventes || !window.sortOrders.ventes.createdAt) {
-        filtered.sort(function(a, b) {
-            var da = a.createdAt?.seconds || 0;
-            var db = b.createdAt?.seconds || 0;
-            return db - da;
-        });
-    } else {
-        filtered = applySort('ventes', filtered, 'createdAt');
-    }
-    window.filteredVentes = filtered;
-    renderVentesTablePro();
 }
 
 // Fonction pour traiter la recherche vocale avec détection de filtre
-function processVentestSearchFromVoice(text) {
+function processVentesSearchFromVoice(text) {
     var searchField = document.getElementById('ventesSearchInput');
     var periodSelect = document.getElementById('ventesPeriodSelect');
     var voiceDisplay = document.getElementById('ventesVoiceDisplay');
@@ -1002,6 +1059,74 @@ function processVentestSearchFromVoice(text) {
     applyVentesFilters();
     
     return false;
+}
+
+async function loadVentes() {
+    var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
+    var vendeurCaissier = '';
+    if (!isAdmin && window.currentUserData) {
+        vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    }
+    try {
+        const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').limit(2000).get();
+        window.allVentesData = [];
+        snapshot.forEach(dc => {
+            var d = dc.data(); d.id = dc.id;
+            var achat = 0, profit = 0;
+            if (d.items) {
+                d.items.forEach(function(it) {
+                    var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
+                        pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
+                    achat += pa * q;
+                    profit += (pvr - pa) * q;
+                });
+            }
+            d.achat = achat; d.profit = profit;
+            window.allVentesData.push(d);
+        });
+        if (!isAdmin) {
+            window.allVentesData = window.allVentesData.filter(function(d) { return d.vendeur === vendeurCaissier; });
+        }
+        if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
+        if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
+    } catch (e) { console.error('Erreur chargement ventes:', e); }
+    window.currentPages.ventes = 1;
+    applyVentesFilters();
+}
+
+function applyVentesFilters() {
+    // Filtre par période
+    var filtered = filterByPeriod(window.allVentesData, window.ventesPeriod);
+    
+    // Filtre par recherche - AVEC RECHERCHE DESCRIPTION
+    if (window.ventesSearch && window.ventesSearch.trim() !== '') {
+        filtered = filterVentesBySearchWithDescription(filtered, window.ventesSearch);
+    } else {
+        // Réinitialiser _clientDisplayName
+        filtered.forEach(function(d) {
+            delete d._clientDisplayName;
+        });
+    }
+    
+    // Filtre par statut
+    var statusFilter = document.getElementById('ventesStatusFilter');
+    if (statusFilter && statusFilter.value !== 'all') {
+        filtered = filtered.filter(function(d) {
+            return (d.statutPaiement || (d.paid ? 'payé' : 'impayé')) === statusFilter.value;
+        });
+    }
+    
+    if (!window.sortOrders.ventes || !window.sortOrders.ventes.createdAt) {
+        filtered.sort(function(a, b) {
+            var da = a.createdAt?.seconds || 0;
+            var db = b.createdAt?.seconds || 0;
+            return db - da;
+        });
+    } else {
+        filtered = applySort('ventes', filtered, 'createdAt');
+    }
+    window.filteredVentes = filtered;
+    renderVentesTablePro();
 }
 
 function renderVentesTablePro() {
@@ -1412,19 +1537,16 @@ async function sendWhatsApp(did) {
 
 // ==================== UTILITAIRES RECHERCHE ====================
 function clearSearch(target) {
-    const searchField = document.getElementById(target + 'SearchInput');
-    if (searchField) {
-        searchField.value = '';
-        if (target === 'ventes') {
-            window.ventesSearch = '';
-            applyVentesFilters();
-        } else if (target === 'commandes') {
+    if (target === 'ventes') {
+        clearVentesSearch();
+    } else if (target === 'commandes') {
+        const searchField = document.getElementById('commandesSearchInput');
+        if (searchField) {
+            searchField.value = '';
             window.commandesSearch = '';
             applyCommandesFilters();
-        }
-        const clearBtn = document.getElementById(target + 'ClearBtn');
-        if (clearBtn) {
-            clearBtn.classList.add('hidden');
+            const clearBtn = document.getElementById('commandesClearBtn');
+            if (clearBtn) clearBtn.classList.add('hidden');
         }
     }
 }
@@ -1464,6 +1586,10 @@ window.clearSearch = clearSearch;
 window.handleSearchInput = handleSearchInput;
 window.injectVentesStyles = injectVentesStyles;
 window.detectPeriodFilterVentes = detectPeriodFilterVentes;
-window.processVentestSearchFromVoice = processVentestSearchFromVoice;
+window.processVentesSearchFromVoice = processVentesSearchFromVoice;
+window.handleVentesSearch = handleVentesSearch;
+window.clearVentesSearch = clearVentesSearch;
+window.loadClientsForSearch = loadClientsForSearch;
+window.filterVentesBySearchWithDescription = filterVentesBySearchWithDescription;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec filtres vocaux + description) chargé ✅');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec recherche description + remplacement) chargé ✅');
