@@ -1,7 +1,6 @@
 // ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
-// Recherche dans description client + remplacement par nom/prénom
-// BOUTONS D'ACTION CORRIGÉS - bien visibles et alignés
+// BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
 // Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
@@ -18,6 +17,16 @@ window.venteSelectedIndex = window.venteSelectedIndex || -1;
 window.clientsDataForSearch = window.clientsDataForSearch || [];
 
 // ========== FONCTIONS UTILITAIRES ==========
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
 
 // Format date + heure en français
 function formatDateHeure(seconds) {
@@ -170,7 +179,7 @@ function renderDateCell(vente) {
     `;
 }
 
-// Génère l'affichage Client (colonne séparée) - utilise _clientDisplayName si présent
+// Génère l'affichage Client (colonne séparée)
 function renderClientCell(vente) {
     var clientName = vente._clientDisplayName || vente.clientName || vente.table || 'Client inconnu';
     return `
@@ -192,7 +201,7 @@ function renderCommandeFactureCell(commande) {
     `;
 }
 
-// ========== STYLES CSS DYNAMIQUES (AVEC BOUTONS CORRIGÉS) ==========
+// ========== STYLES CSS DYNAMIQUES ==========
 function injectVentesStyles() {
     const styleId = 'ventes-pro-styles-final';
     if (document.getElementById(styleId)) return;
@@ -215,7 +224,9 @@ function injectVentesStyles() {
             
             #ventesPage .btn-add, #commandesPage .btn-add,
             #ventesPage .btn-edit, #commandesPage .btn-edit,
-            #ventesPage .btn-delete, #commandesPage .btn-delete {
+            #ventesPage .btn-delete, #commandesPage .btn-delete,
+            #ventesPage .btn-save, #commandesPage .btn-save,
+            #ventesPage .btn-cancel, #commandesPage .btn-cancel {
                 font-size: 18px !important;
             }
             
@@ -226,7 +237,7 @@ function injectVentesStyles() {
                 padding: 6px 16px !important;
             }
             
-            /* === CHAMP VOCAL (pour POS-AUDIO) === */
+            /* === CHAMP VOCAL === */
             .voice-display-field {
                 padding: 8px 12px !important;
                 border: 2px solid #16a34a !important;
@@ -434,7 +445,7 @@ function injectVentesStyles() {
                 display: none !important;
             }
             
-            /* === BOUTONS D'ACTION CORRIGÉS === */
+            /* === BOUTONS D'ACTION CORRIGÉS - AVEC ICÔNES === */
             #ventesPage .action-buttons,
             #commandesPage .action-buttons {
                 display: flex !important;
@@ -461,7 +472,7 @@ function injectVentesStyles() {
                 justify-content: center !important;
                 padding: 0 !important;
                 font-size: 18px !important;
-                transition: var(--transition) !important;
+                transition: all 0.2s ease !important;
                 border: none !important;
                 background: var(--gray-50) !important;
                 color: var(--text-secondary) !important;
@@ -470,14 +481,16 @@ function injectVentesStyles() {
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
             }
             
+            /* === ICÔNES DES BOUTONS === */
             #ventesPage .action-buttons .btn-edit i,
             #ventesPage .action-buttons .btn-delete i,
             #ventesPage .action-buttons .btn-add i,
             #commandesPage .action-buttons .btn-edit i,
             #commandesPage .action-buttons .btn-delete i,
             #commandesPage .action-buttons .btn-add i {
-                font-size: 18px !important;
+                font-size: 20px !important;
                 pointer-events: none !important;
+                line-height: 1 !important;
             }
             
             #ventesPage .action-buttons .btn-edit:hover,
@@ -490,7 +503,7 @@ function injectVentesStyles() {
             
             #ventesPage .action-buttons .btn-delete,
             #commandesPage .action-buttons .btn-delete {
-                color: var(--danger) !important;
+                color: #ef4444 !important;
                 background: rgba(239, 68, 68, 0.08) !important;
             }
             
@@ -525,6 +538,12 @@ function injectVentesStyles() {
             #commandesPage .action-buttons .btn-edit.whatsapp-btn:hover {
                 background: rgba(37, 211, 102, 0.15) !important;
                 transform: translateY(-2px) !important;
+                box-shadow: 0 4px 12px rgba(37, 211, 102, 0.15) !important;
+            }
+            
+            #ventesPage .action-buttons .btn-edit.whatsapp-btn i,
+            #commandesPage .action-buttons .btn-edit.whatsapp-btn i {
+                font-size: 22px !important;
             }
             
             /* === BOUTON PAYER SPÉCIAL === */
@@ -716,6 +735,15 @@ function injectVentesStyles() {
                     min-height: 34px !important;
                     font-size: 14px !important;
                     border-radius: 8px !important;
+                }
+                
+                #ventesPage .action-buttons .btn-edit i,
+                #ventesPage .action-buttons .btn-delete i,
+                #ventesPage .action-buttons .btn-add i,
+                #commandesPage .action-buttons .btn-edit i,
+                #commandesPage .action-buttons .btn-delete i,
+                #commandesPage .action-buttons .btn-add i {
+                    font-size: 16px !important;
                 }
             }
             
@@ -928,7 +956,7 @@ function renderCommandesTablePro() {
                         <th><i class="fas fa-cog"></i> Options</th>
                         ${makeSortableHeader('commandes', 'total', '💰 Total', 'renderCommandesTablePro')}
                         ${makeSortableHeader('commandes', 'statut', '📌 Statut', 'renderCommandesTablePro')}
-                        <th><i class="fas fa-tools"></i> Actions</th>
+                        <th style="min-width:200px;"><i class="fas fa-tools"></i> Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1066,7 +1094,7 @@ function cancelCommande(cid) {
     }
 }
 
-// ==================== VENTES (PRO AVEC RECHERCHE DESCRIPTION) ====================
+// ==================== VENTES (PRO AVEC BOUTONS CORRIGÉS) ====================
 function loadVentesPage(c) {
     injectVentesStyles();
     
@@ -1334,9 +1362,10 @@ function renderVentesTablePro() {
         };
         var st = statutMap[d.statutPaiement] || { class: 'status-warning', label: d.statutPaiement || 'Inconnu', icon: 'fa-question-circle' };
         
+        // ✅ BOUTONS AVEC ICÔNES CORRIGÉES
         var actions = `
             <div class="action-buttons">
-                <button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer">
+                <button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer / PDF">
                     <i class="fas fa-print"></i>
                 </button>
                 <button class="btn-edit whatsapp-btn" onclick="sendWhatsApp('${d.id}')" title="Envoyer WhatsApp">
@@ -1713,4 +1742,4 @@ window.clearVentesSearch = clearVentesSearch;
 window.loadClientsForSearch = loadClientsForSearch;
 window.filterVentesBySearchWithDescription = filterVentesBySearchWithDescription;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec boutons corrigés) chargé ✅');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec icônes corrigées) chargé ✅');
