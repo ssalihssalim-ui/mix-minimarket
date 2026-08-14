@@ -1,5 +1,5 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
-// Gestion des crédits – Complet, avec police 24px sur mobile
+// Gestion des crédits – Complet, avec police 24px
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
@@ -7,7 +7,6 @@ window.creditSelectionMode = false;
 window.creditSelectedIds = [];
 window.allCreditsData = window.allCreditsData || [];
 
-// Index pour la recherche dans la description des clients
 window.clientDescriptionIndex = {};
 window.clientDescriptionWordIndex = {};
 
@@ -24,7 +23,6 @@ async function loadCreditsPage(c) {
     if (!window.sortOrders.credits) window.sortOrders.credits = {};
     if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
 
-    // Chargement des clients
     if (!window.posAllClients || window.posAllClients.length === 0) {
         const cachedClients = await CacheDB.getAll('clients');
         if (cachedClients.length) {
@@ -63,22 +61,36 @@ async function loadCreditsPage(c) {
 
     c.innerHTML = '<div class="content-card">' +
         '<div class="card-header">' +
-        '<h3 style="font-size:24px;"><i class="fas fa-credit-card"></i> Crédits</h3>' +
+        '<h3 style="font-size:28px;"><i class="fas fa-credit-card"></i> Crédits</h3>' +
         '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">' +
         '<div style="position:relative;">' +
-        '<input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher (client, description)..." style="padding:12px 16px; border:2px solid #e2e8f0; border-radius:8px; width:250px; font-size:24px; height:56px;" onkeyup="searchClientInCreditsDropdown(this.value)" onfocus="searchClientInCreditsDropdown(this.value)" autocomplete="off">' +
-        '<div id="creditsClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 5px 15px rgba(0,0,0,0.1);font-size:24px;"></div>' +
+        '<input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher..." style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:8px; width:280px; font-size:24px !important; height:56px; min-height:56px;">' +
+        '<div id="creditsClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>' +
         '</div>' +
-        '<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." style="padding:12px 16px; border:2px solid #16a34a; border-radius:8px; width:180px; background:#f0fdf4; color:#14532d; font-weight:600; font-size:24px; height:56px;" readonly>' +
-        '<select id="creditsPeriodSelect" style="padding:12px 16px; border:2px solid #e2e8f0; border-radius:8px; font-size:24px; height:56px;" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">' + getPeriodOptions('all') + '</select>' +
-        '<button class="btn-add" onclick="loadCredits()" style="font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-sync"></i> Actualiser</button>' +
-        '<button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-check-square"></i> Sélectionner</button>' +
-        '<button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5; font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-check-double"></i> Tout sélectionner</button>' +
-        '<button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-trash"></i> Supprimer sélection</button>' +
+        '<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." style="padding:14px 18px; border:2px solid #16a34a; border-radius:8px; width:180px; background:#f0fdf4; color:#14532d; font-weight:600; font-size:24px !important; height:56px; min-height:56px;" readonly>' +
+        '<select id="creditsPeriodSelect" style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:8px; font-size:24px !important; height:56px; min-height:56px;" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">' + getPeriodOptions('all') + '</select>' +
+        '<button class="btn-add" onclick="loadCredits()" style="font-size:24px !important; padding:14px 20px; height:56px; min-height:56px;"><i class="fas fa-sync"></i> Actualiser</button>' +
+        '<button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="font-size:24px !important; padding:14px 20px; height:56px; min-height:56px;"><i class="fas fa-check-square"></i> Sélectionner</button>' +
+        '<button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5; font-size:24px !important; padding:14px 20px; height:56px; min-height:56px;"><i class="fas fa-check-double"></i> Tout sélectionner</button>' +
+        '<button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:24px !important; padding:14px 20px; height:56px; min-height:56px;"><i class="fas fa-trash"></i> Supprimer</button>' +
         '</div></div>' +
         '<div id="creditsTableContainer"></div>' +
         '<div id="creditsPagination" style="margin-top:10px;"></div>' +
         '</div>';
+
+    // Attacher les événements après rendu
+    setTimeout(function() {
+        var searchInput = document.getElementById('creditsSearchInput');
+        if (searchInput) {
+            searchInput.onkeyup = function() {
+                searchClientInCreditsDropdown(this.value);
+            };
+            searchInput.onfocus = function() {
+                searchClientInCreditsDropdown(this.value);
+            };
+            searchInput.autocomplete = 'off';
+        }
+    }, 100);
 
     loadCredits();
 }
@@ -117,7 +129,6 @@ async function loadCredits() {
         vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
     }
 
-    // 1. Cache
     const cached = await CacheDB.getAll('credits');
     if (cached.length) {
         window.allCreditsData = cached;
@@ -132,7 +143,6 @@ async function loadCredits() {
         applyCreditsFilters();
     }
 
-    // 2. En ligne
     if (navigator.onLine) {
         try {
             const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').limit(2000).get();
@@ -237,28 +247,30 @@ function renderCreditsTable() {
     var pageData = getPageData('credits', data);
 
     if (pageData.length === 0) {
-        cont.innerHTML = '<p style="text-align:center;padding:40px;font-size:24px;">Aucun crédit trouvé</p>';
+        cont.innerHTML = '<p style="text-align:center;padding:40px;font-size:28px;">Aucun crédit trouvé</p>';
         document.getElementById('creditsPagination').innerHTML = '';
         return;
     }
 
     var tc = 0;
-    var h = '<div class="table-container" style="overflow-x:auto;"><table class="data-table" style="width:100%;border-collapse:collapse;font-size:24px;min-width:800px;"><thead><tr style="background:#f9fafb;">' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Facture</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Date</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Client</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Articles</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Total</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Payé</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Restant</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Mode</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Vendeur</th>' +
-        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Actions</th>';
+    var h = '<div class="table-container" style="overflow-x:auto;border-radius:10px;border:1px solid #e2e8f0;">' +
+        '<table class="data-table" style="width:100%;border-collapse:collapse;min-width:900px;font-size:24px !important;">' +
+        '<thead><tr style="background:#f9fafb;">' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Facture</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Date</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Client</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Articles</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Total</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Payé</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Restant</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Mode</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Vendeur</th>' +
+        '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;">Actions</th>';
 
     if (window.creditSelectionMode) {
-        h += '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;width:40px;">☑️</th>';
+        h += '<th style="padding:16px 14px;text-align:left;font-weight:700;font-size:24px !important;border-bottom:2px solid #e2e8f0;width:40px;">☑️</th>';
     }
-    h += '</thead><tbody>';
+    h += '</tr></thead><tbody>';
 
     pageData.forEach(function(d, index) {
         var reste = d.remainingAmount || d.total || 0;
@@ -277,16 +289,16 @@ function renderCreditsTable() {
             articlesHtml = '-';
         }
 
-        var actions = '<button class="btn-edit" onclick="printFacture(\'' + d.id + '\')" style="font-size:22px;padding:8px 12px;"><i class="fas fa-print"></i></button> ';
+        var actions = '<button class="btn-edit" onclick="printFacture(\'' + d.id + '\')" style="font-size:22px !important;padding:10px 14px;background:none;border:none;color:#4b5563;cursor:pointer;"><i class="fas fa-print"></i></button> ';
         if (!d.paid) {
-            actions += '<button class="btn-add" style="padding:8px 12px;font-size:22px;background:#2E7D32;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="payerCredit(\'' + d.id + '\')">Payer</button> ';
+            actions += '<button class="btn-add" onclick="payerCredit(\'' + d.id + '\')" style="font-size:22px !important;padding:10px 16px;background:#2E7D32;color:#fff;border:none;border-radius:6px;cursor:pointer;"><i class="fas fa-check"></i> Payer</button> ';
         }
 
         var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
         if (isAdmin) {
-            actions += '<button class="btn-edit" onclick="editCredit(\'' + d.id + '\')" style="font-size:22px;padding:8px 12px;"><i class="fas fa-edit"></i></button> ';
+            actions += '<button class="btn-edit" onclick="editCredit(\'' + d.id + '\')" style="font-size:22px !important;padding:10px 14px;background:none;border:none;color:#4b5563;cursor:pointer;"><i class="fas fa-edit"></i></button> ';
             if (!window.creditSelectionMode) {
-                actions += '<button class="btn-delete" onclick="if(confirm(\'Supprimer définitivement ce crédit ?\')) deleteCredit(\'' + d.id + '\')" style="font-size:22px;padding:8px 12px;color:#ef4444;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button>';
+                actions += '<button class="btn-delete" onclick="if(confirm(\'Supprimer définitivement ce crédit ?\')) deleteCredit(\'' + d.id + '\')" style="font-size:22px !important;padding:10px 14px;background:none;border:none;color:#ef4444;cursor:pointer;"><i class="fas fa-trash"></i></button>';
             }
         }
 
@@ -294,26 +306,26 @@ function renderCreditsTable() {
         var rowClass = isSelected ? ' style="background:#fef3c7; border-left:4px solid #d97706;"' : '';
 
         h += '<tr' + rowClass + '>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;font-weight:700;">' + (d.factureNum || d.id.substring(0, 8)) + '</td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;font-weight:700;">' + dt + '</td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;font-weight:700;">' + escapeHtml(d.clientName || d.table || '-') + '</td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;"><small style="font-size:22px;">' + articlesHtml + '</small></td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + d.total.toFixed(2) + '</td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + amountPaid.toFixed(2) + '</td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;color:#ef4444;"><strong style="font-size:26px;">' + reste.toFixed(2) + '</strong></td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + mode + '</td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + escapeHtml(d.vendeur || '-') + '</td>' +
-            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + actions + '</td>';
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;font-weight:700;">' + (d.factureNum || d.id.substring(0, 8)) + '</td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;font-weight:700;">' + dt + '</td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;font-weight:700;">' + escapeHtml(d.clientName || d.table || '-') + '</td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;"><span style="font-size:22px;">' + articlesHtml + '</span></td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;">' + d.total.toFixed(2) + '</td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;">' + amountPaid.toFixed(2) + '</td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;color:#ef4444;font-weight:700;"><span style="font-size:28px !important;">' + reste.toFixed(2) + '</span></td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;">' + mode + '</td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;">' + escapeHtml(d.vendeur || '-') + '</td>' +
+            '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;">' + actions + '</td>';
 
         if (window.creditSelectionMode) {
             var checked = isSelected ? 'checked' : '';
-            h += '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;text-align:center;"><input type="checkbox" class="credit-select-check" data-id="' + d.id + '" ' + checked + ' onchange="toggleCreditSelection(\'' + d.id + '\')" style="transform:scale(1.5);"></td>';
+            h += '<td style="padding:16px 14px;font-size:24px !important;border-bottom:1px solid #e2e8f0;text-align:center;"><input type="checkbox" class="credit-select-check" data-id="' + d.id + '" ' + checked + ' onchange="toggleCreditSelection(\'' + d.id + '\')" style="transform:scale(1.5);width:24px;height:24px;"></td>';
         }
         h += '</tr>';
     });
 
     h += '</tbody></table></div>';
-    h += '<div style="margin-top:15px;padding:20px;background:#fef2f2;border-radius:12px;text-align:center;font-size:28px;"><strong>Impayés: ' + tc.toFixed(2) + ' MAD</strong></div>';
+    h += '<div style="margin-top:15px;padding:20px;background:#fef2f2;border-radius:12px;text-align:center;font-size:28px !important;"><strong style="font-size:30px !important;">Impayés: ' + tc.toFixed(2) + ' MAD</strong></div>';
 
     cont.innerHTML = h;
     document.getElementById('creditsPagination').innerHTML = getPaginationHTML('credits', data.length);
@@ -504,8 +516,8 @@ function searchClientInCreditsDropdown(query) {
     var h = '';
     results.forEach(function(c) {
         var clientNameSafe = (c.nom + ' ' + c.prenom).replace(/'/g, "\\'");
-        h += '<div onclick="selectCreditClient(\'' + clientNameSafe + '\')" style="padding:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:24px;">' +
-            '<strong style="font-size:24px;">' + escapeHtml(c.nom) + ' ' + escapeHtml(c.prenom) + '</strong>' +
+        h += '<div onclick="selectCreditClient(\'' + clientNameSafe + '\')" style="padding:14px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:24px !important;">' +
+            '<strong style="font-size:24px !important;">' + escapeHtml(c.nom) + ' ' + escapeHtml(c.prenom) + '</strong>' +
             '<span style="color:#94a3b8;font-size:20px;display:block;">' + escapeHtml(c.description || c.telephone || '') + '</span></div>';
     });
 
@@ -551,8 +563,8 @@ async function editCredit(id) {
             '<div class="form-group"><label style="font-size:24px;">Mode de paiement</label><input type="text" id="editCreditMode" value="' + escapeHtml(d.paymentMethod || '') + '" style="font-size:24px;padding:14px;"></div>' +
             '<div class="form-group"><label style="font-size:24px;">Statut</label><select id="editCreditStatut" style="font-size:24px;padding:14px;"><option value="0" ' + (!d.paid ? 'selected' : '') + '>Impayé</option><option value="1" ' + (d.paid ? 'selected' : '') + '>Payé</option></select></div>' +
             '</div>' +
-            '<button class="btn-cancel" onclick="closeModal()" style="font-size:24px;padding:12px 22px;">Annuler</button>' +
-            '<button class="btn-save" onclick="saveEditCredit()" style="font-size:24px;padding:12px 22px;">Enregistrer</button>';
+            '<button class="btn-cancel" onclick="closeModal()" style="font-size:24px;padding:14px 22px;">Annuler</button>' +
+            '<button class="btn-save" onclick="saveEditCredit()" style="font-size:24px;padding:14px 22px;">Enregistrer</button>';
 
         openModal('Modifier Crédit ' + (d.factureNum || id.substring(0, 8)), h);
     } catch (e) {
