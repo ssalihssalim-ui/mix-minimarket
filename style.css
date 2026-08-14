@@ -597,7 +597,7 @@ color: var(--text-primary);
 .pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
 .pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
-/* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes */
+/* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes claires */
 .pos-products-panel {
   min-height: 760px !important;
   max-height: 80vh !important;
@@ -945,38 +945,38 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   /* ✅ Augmenter la hauteur de pos-products-panel pour iPhone 13 Pro Max */
   .pos-products-panel {
-    min-height: 790px !important;
+    min-height: 780px !important;
     max-height: 82vh !important;
     height: auto !important;
   }
   
   .pos-products-grid {
-    min-height: 580px !important;
-    max-height: 680px !important;
+    min-height: 620px !important;
+    max-height: 700px !important;
     gap: 6px !important;
   }
   
   .pos-product-card {
-    min-height: 110px !important;
-    padding: 4px 2px !important;
+    min-height: 120px !important;
+    padding: 6px 3px !important;
   }
   
   .pos-product-img {
-    height: 45px !important;
+    height: 48px !important;
   }
   
   .pos-product-name {
-    font-size: 12px !important;
+    font-size: 13px !important;
   }
   
   .pos-product-price {
-    font-size: 14px !important;
+    font-size: 15px !important;
   }
   
   /* ✅ Réduire la hauteur du panier */
   .pos-cart-panel {
-    max-height: 22vh !important;
-    min-height: 120px !important;
+    max-height: 20vh !important;
+    min-height: 110px !important;
   }
 }
 
@@ -1116,8 +1116,8 @@ grid-template-columns: repeat(5, 1fr) !important;
 gap: 5px !important;
 flex: 1;
 overflow-y: auto;
-min-height: 480px !important;
-max-height: 560px !important;
+min-height: 540px !important;
+max-height: 620px !important;
 padding: 4px !important;
 height: auto !important;
 align-content: start !important;
@@ -1125,7 +1125,7 @@ align-content: start !important;
 
 .pos-product-card { 
 padding: 5px 2px !important; 
-min-height: 95px !important;
+min-height: 105px !important;
 border-radius: 8px !important;
 border-width: 1px !important;
 margin: 0 !important;
@@ -1135,7 +1135,7 @@ align-items: center !important;
 justify-content: center !important;
 }
 .pos-product-img { 
-height: 40px !important; 
+height: 42px !important; 
 width: 100% !important;
 margin-bottom: 3px !important;
 border-radius: 6px !important;
@@ -1159,15 +1159,15 @@ text-align: center !important;
 
 /* ✅ Hauteur du panel pour afficher 3 lignes */
 .pos-products-panel {
-  min-height: 620px !important;
-  max-height: 72vh !important;
+  min-height: 680px !important;
+  max-height: 78vh !important;
   height: auto !important;
   flex: 0 1 auto !important;
 }
 
 /* ✅ Réduire la hauteur du panier */
 .pos-cart-panel { 
-  max-height: 24vh !important; 
+  max-height: 22vh !important; 
   min-height: 120px !important;
 }
 
@@ -1190,32 +1190,32 @@ font-size: 1.05rem !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 6px !important;
 padding: 4px !important;
-min-height: 560px !important;
-max-height: 640px !important;
+min-height: 620px !important;
+max-height: 700px !important;
 }
 .pos-product-card {
 padding: 6px 3px !important;
-min-height: 110px !important;
+min-height: 120px !important;
 }
 .pos-product-img {
-height: 45px !important;
+height: 48px !important;
 }
 .pos-product-name {
-font-size: 12px !important;
+font-size: 13px !important;
 }
 .pos-product-price {
-font-size: 14px !important;
+font-size: 15px !important;
 }
 .pos-promo-price {
-font-size: 14px !important;
+font-size: 15px !important;
 }
 .pos-products-panel {
-  min-height: 720px !important;
-  max-height: 78vh !important;
+  min-height: 780px !important;
+  max-height: 82vh !important;
 }
 .pos-cart-panel { 
-  max-height: 22vh !important; 
-  min-height: 120px !important;
+  max-height: 20vh !important; 
+  min-height: 110px !important;
 }
 }
 
@@ -1225,16 +1225,16 @@ font-size: 14px !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 3px !important;
 padding: 2px !important;
-min-height: 360px !important;
-max-height: 440px !important;
+min-height: 400px !important;
+max-height: 480px !important;
 }
 .pos-product-card {
 padding: 3px 1px !important;
-min-height: 80px !important;
+min-height: 85px !important;
 border-radius: 4px !important;
 }
 .pos-product-img {
-height: 32px !important;
+height: 34px !important;
 }
 .pos-product-name {
 font-size: 9px !important;
@@ -1243,12 +1243,12 @@ font-size: 9px !important;
 font-size: 11px !important;
 }
 .pos-products-panel {
-  min-height: 480px !important;
-  max-height: 65vh !important;
+  min-height: 520px !important;
+  max-height: 68vh !important;
 }
 .pos-cart-panel { 
-  max-height: 20vh !important; 
-  min-height: 100px !important;
+  max-height: 18vh !important; 
+  min-height: 90px !important;
 }
 }
 
@@ -1258,12 +1258,12 @@ font-size: 11px !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 6px !important;
 padding: 4px !important;
-min-height: 480px !important;
-max-height: 560px !important;
+min-height: 520px !important;
+max-height: 600px !important;
 }
 .pos-product-card {
 padding: 6px 4px !important;
-min-height: 130px !important;
+min-height: 135px !important;
 }
 .pos-product-img {
 height: 55px !important;
@@ -1275,11 +1275,11 @@ font-size: 13px !important;
 font-size: 15px !important;
 }
 .pos-products-panel {
-  min-height: 620px !important;
-  max-height: 72vh !important;
+  min-height: 660px !important;
+  max-height: 75vh !important;
 }
 .pos-cart-panel { 
-  max-height: 24vh !important; 
+  max-height: 22vh !important; 
   min-height: 130px !important;
 }
 }
@@ -1289,15 +1289,15 @@ font-size: 15px !important;
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 4px !important;
-min-height: 300px !important;
-max-height: 400px !important;
+min-height: 340px !important;
+max-height: 420px !important;
 }
 .pos-product-card {
 padding: 4px 3px !important;
-min-height: 75px !important;
+min-height: 80px !important;
 }
 .pos-product-img {
-height: 32px !important;
+height: 34px !important;
 }
 .pos-product-name {
 font-size: 9px !important;
@@ -1306,12 +1306,12 @@ font-size: 9px !important;
 font-size: 11px !important;
 }
 .pos-products-panel {
-  min-height: 380px !important;
-  max-height: 70vh !important;
+  min-height: 420px !important;
+  max-height: 72vh !important;
 }
 .pos-cart-panel { 
-  max-height: 40vh !important; 
-  min-height: 100px !important;
+  max-height: 38vh !important; 
+  min-height: 90px !important;
 }
 }
 
