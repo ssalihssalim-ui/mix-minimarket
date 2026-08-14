@@ -1,7 +1,7 @@
-// ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET PRO FINAL ====================
-// Version : Facture/Date/Client en colonnes séparées
-// Bouton X pour effacer la recherche
-// Micro activé depuis POS - Pas de bouton micro sur la page
+// ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET ====================
+// Version : Design pro - Facture/Date/Client en colonnes séparées
+// Bouton X pour effacer la recherche - Micro intégré depuis POS
+// Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -14,12 +14,6 @@ window.filteredVentes = window.filteredVentes || null;
 window.filteredCommandes = window.filteredCommandes || null;
 window.venteSelectionMode = window.venteSelectionMode || false;
 window.venteSelectedIndex = window.venteSelectedIndex || -1;
-
-// ========== VARIABLES VOCALES (CONTINUES) ==========
-window.voiceRecognition = null;
-window.voiceIsListening = false;
-window.voiceCurrentTarget = null;
-window.voiceGlobalEnabled = false; // Activé depuis le POS
 
 // ========== FONCTIONS UTILITAIRES ==========
 
@@ -454,7 +448,7 @@ function injectVentesStyles() {
                 margin-right: 6px;
             }
             
-            /* === INDICATEUR VOCAL (en bas) === */
+            /* === INDICATEUR VOCAL (pour voice depuis POS) === */
             .voice-indicator {
                 position: fixed;
                 bottom: 30px;
@@ -710,7 +704,6 @@ function startGlobalVoiceRecognition() {
     
     recognition.onerror = function(event) {
         console.warn('🎤 Erreur vocale:', event.error);
-        // Redémarrer en cas d'erreur
         if (window.voiceGlobalEnabled) {
             setTimeout(startGlobalVoiceRecognition, 1000);
         }
@@ -719,7 +712,6 @@ function startGlobalVoiceRecognition() {
     recognition.onend = function() {
         console.log('🎤 Voice stopped');
         window.voiceIsListening = false;
-        // Redémarrer si toujours actif
         if (window.voiceGlobalEnabled) {
             setTimeout(startGlobalVoiceRecognition, 500);
         } else {
@@ -763,16 +755,13 @@ function processVoiceCommand(text) {
         showVoiceIndicator(`📱 Navigation vers ${navTarget}...`, true);
         setTimeout(() => {
             if (navTarget === 'ventes') {
-                // Vérifier si on est déjà sur la page ventes
                 const ventesPage = document.getElementById('ventesPage');
                 if (ventesPage && ventesPage.closest('.page-content')?.style?.display !== 'none') {
                     showVoiceIndicator('📋 Déjà sur la page Ventes', false);
                     setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
                 } else {
                     navigateTo('ventes');
-                    // Attendre que la page charge
                     setTimeout(() => {
-                        // La page ventes va se charger et le micro reste actif
                         showVoiceIndicator('📋 Page Ventes chargée', false);
                         setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
                     }, 800);
@@ -788,10 +777,9 @@ function processVoiceCommand(text) {
         return;
     }
     
-    // 2. Vérifier si c'est un filtre de date (uniquement sur la page courante)
+    // 2. Vérifier si c'est un filtre de date
     const detectedFilter = detectDateFilter(text);
     if (detectedFilter) {
-        // Déterminer la page courante
         const ventesPage = document.getElementById('ventesPage');
         const commandesPage = document.getElementById('commandesPage');
         let target = null;
@@ -819,7 +807,6 @@ function processVoiceCommand(text) {
                 showVoiceIndicator(`📅 Filtre appliqué : ${filterLabels[detectedFilter] || detectedFilter}`, false);
                 setTimeout(() => showVoiceIndicator('🎤 Écoute active...', true), 1500);
                 
-                // Effacer la barre de recherche
                 const searchField = document.getElementById(target + 'SearchInput');
                 if (searchField) {
                     searchField.value = '';
@@ -831,7 +818,7 @@ function processVoiceCommand(text) {
         }
     }
     
-    // 3. Recherche normale (si on est sur une page)
+    // 3. Recherche normale
     const ventesPage = document.getElementById('ventesPage');
     const commandesPage = document.getElementById('commandesPage');
     let target = null;
@@ -878,7 +865,7 @@ function showVoiceIndicator(message, isListening) {
     }
 }
 
-// ==================== COMMANDES EN LIGNE (PRO) ====================
+// ==================== COMMANDES EN LIGNE ====================
 function loadCommandesPage(c) {
     injectVentesStyles();
     
@@ -913,7 +900,6 @@ function loadCommandesPage(c) {
     `;
     loadCommandes();
     
-    // Si la voice globale est active, afficher l'indicateur
     if (window.voiceGlobalEnabled) {
         showVoiceIndicator('🎤 Écoute active...', true);
     }
@@ -1182,7 +1168,6 @@ function loadVentesPage(c) {
     `;
     loadVentes();
     
-    // Si la voice globale est active, afficher l'indicateur
     if (window.voiceGlobalEnabled) {
         showVoiceIndicator('🎤 Écoute active...', true);
     }
@@ -1704,5 +1689,5 @@ window.disableGlobalVoiceRecognition = disableGlobalVoiceRecognition;
 window.processVoiceCommand = processVoiceCommand;
 window.showVoiceIndicator = showVoiceIndicator;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO FINAL (sans micro) chargé ✅');
-console.log('🎤 Voice globale - Activez depuis le POS avec "listen"');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (sans micro) chargé ✅');
+console.log('🎤 Voice globale - Activez depuis le POS si nécessaire');
