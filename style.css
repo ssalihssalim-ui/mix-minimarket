@@ -1130,12 +1130,199 @@ AUGMENTER LA TAILLE DE POLICE DE TOUTES LES PAGES SUR MOBILE
   }
 }
 
-/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) */
-@media screen and (min-width: 390px) and (max-width: 430px) {
-  body {
+/* ============================================================
+AUGMENTER LA TAILLE DE POLICE - PAGE VENTES
+============================================================ */
+
+/* ✅ Pour tous les écrans, mais surtout mobile */
+@media(max-width:700px) {
+  
+  /* Barre de recherche Ventes */
+  #ventesSearchInput,
+  #ventesVoiceDisplay {
+    font-size: 24px !important;
+    padding: 12px 16px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+  }
+  
+  /* Select période */
+  #ventesPeriodSelect {
+    font-size: 24px !important;
+    padding: 12px 16px !important;
+    height: 56px !important;
+  }
+  
+  /* Bouton Actualiser */
+  #ventesTableContainer .btn-add,
+  .btn-add {
+    font-size: 24px !important;
+    padding: 12px 20px !important;
+    height: 56px !important;
+  }
+  
+  /* Header du tableau */
+  .data-table th {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    padding: 14px 12px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Cellules du tableau */
+  .data-table td {
+    font-size: 24px !important;
+    padding: 14px 12px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Ligne Date en bold */
+  .data-table td:first-child {
+    font-weight: 700 !important;
     font-size: 24px !important;
   }
   
+  /* Nom du client en bold */
+  .data-table td:nth-child(3) {
+    font-weight: 700 !important;
+    font-size: 24px !important;
+  }
+  
+  /* Total en bold */
+  .data-table td strong {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+  }
+  
+  /* Total général en bas */
+  .table-container + div {
+    font-size: 28px !important;
+    padding: 20px !important;
+  }
+  
+  .table-container + div strong {
+    font-size: 30px !important;
+  }
+  
+  /* Pagination */
+  #ventesPagination {
+    font-size: 24px !important;
+  }
+  
+  #ventesPagination button {
+    font-size: 24px !important;
+    padding: 10px 16px !important;
+  }
+  
+  /* Boutons actions (imprimer, WhatsApp, etc.) */
+  .data-table .btn-edit,
+  .data-table .btn-add,
+  .data-table .btn-delete {
+    font-size: 22px !important;
+    padding: 8px 12px !important;
+    height: 44px !important;
+  }
+  
+  .data-table .btn-edit i,
+  .data-table .btn-add i,
+  .data-table .btn-delete i {
+    font-size: 22px !important;
+  }
+}
+
+/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) */
+@media screen and (min-width: 390px) and (max-width: 430px) {
+  #ventesSearchInput,
+  #ventesVoiceDisplay {
+    font-size: 24px !important;
+    padding: 14px 18px !important;
+    height: 60px !important;
+  }
+  
+  #ventesPeriodSelect {
+    font-size: 24px !important;
+    padding: 14px 18px !important;
+    height: 60px !important;
+  }
+  
+  .btn-add {
+    font-size: 24px !important;
+    padding: 14px 22px !important;
+    height: 60px !important;
+  }
+  
+  .data-table th {
+    font-size: 24px !important;
+    padding: 16px 14px !important;
+  }
+  
+  .data-table td {
+    font-size: 24px !important;
+    padding: 16px 14px !important;
+  }
+  
+  .data-table td strong {
+    font-size: 26px !important;
+  }
+  
+  .table-container + div {
+    font-size: 30px !important;
+    padding: 24px !important;
+  }
+  
+  .table-container + div strong {
+    font-size: 32px !important;
+  }
+  
+  .data-table .btn-edit,
+  .data-table .btn-add,
+  .data-table .btn-delete {
+    font-size: 24px !important;
+    padding: 10px 14px !important;
+    height: 48px !important;
+  }
+  
+  .data-table .btn-edit i,
+  .data-table .btn-add i,
+  .data-table .btn-delete i {
+    font-size: 24px !important;
+  }
+}
+
+/* ✅ Pour très petits écrans (< 380px) */
+@media screen and (max-width: 380px) {
+  #ventesSearchInput,
+  #ventesVoiceDisplay {
+    font-size: 20px !important;
+    padding: 10px 14px !important;
+    height: 48px !important;
+  }
+  
+  #ventesPeriodSelect {
+    font-size: 20px !important;
+    padding: 10px 14px !important;
+    height: 48px !important;
+  }
+  
+  .btn-add {
+    font-size: 20px !important;
+    padding: 10px 16px !important;
+    height: 48px !important;
+  }
+  
+  .data-table th,
+  .data-table td {
+    font-size: 20px !important;
+    padding: 10px 8px !important;
+  }
+  
+  .data-table td strong {
+    font-size: 22px !important;
+  }
+}
+
+/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) - suite pour Ventes */
+@media screen and (min-width: 390px) and (max-width: 430px) {
   .page-header .header-title h2 {
     font-size: 24px !important;
   }
@@ -1182,7 +1369,7 @@ AUGMENTER LA TAILLE DE POLICE DE TOUTES LES PAGES SUR MOBILE
   }
 }
 
-/* ✅ Pour très petits écrans (< 380px) */
+/* ✅ Pour très petits écrans (< 380px) - suite */
 @media screen and (max-width: 380px) {
   body {
     font-size: 20px !important;
