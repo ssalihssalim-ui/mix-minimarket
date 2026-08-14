@@ -1,104 +1,104 @@
 /* ==================== MIXMAX MINIMARKET – DESIGN SYSTEM PRO ==================== */
 :root {
---white: #FFFFFF;
---white-soft: #F8F9FA;
---gray-50: #F9FAFB;
---gray-100: #F3F4F6;
---gray-200: #E5E7EB;
---gray-300: #D1D5DB;
---gray-400: #9CA3AF;
---gray-500: #6B7280;
---gray-600: #4B5563;
---gray-700: #374151;
---gray-800: #1F2937;
---gray-900: #111827;
---black: #0A0D12;
+  --white: #FFFFFF;
+  --white-soft: #F8F9FA;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+  --black: #0A0D12;
 
---primary: #111827;
---primary-hover: #1F2937;
---accent: #14B8A6;
---accent-light: #99F6E4;
+  --primary: #111827;
+  --primary-hover: #1F2937;
+  --accent: #14B8A6;
+  --accent-light: #99F6E4;
 
---success: #10B981;
---danger: #EF4444;
---warning: #F59E0B;
---info: #14B8A6;
+  --success: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --info: #14B8A6;
 
---bg-page: #F9FAFB;
---bg-card: #FFFFFF;
---bg-dark: #0A0D12;
---text-primary: #111827;
---text-secondary: #6B7280;
---text-muted: #9CA3AF;
---border: #E5E7EB;
---border-dark: #374151;
+  --bg-page: #F9FAFB;
+  --bg-card: #FFFFFF;
+  --bg-dark: #0A0D12;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --border: #E5E7EB;
+  --border-dark: #374151;
 
---shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
---shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
---shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
---shadow-md: 0 10px 25px rgba(0,0,0,0.08);
---shadow-lg: 0 20px 40px rgba(0,0,0,0.10);
---shadow-xl: 0 25px 50px rgba(0,0,0,0.12);
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+  --shadow-md: 0 10px 25px rgba(0,0,0,0.08);
+  --shadow-lg: 0 20px 40px rgba(0,0,0,0.10);
+  --shadow-xl: 0 25px 50px rgba(0,0,0,0.12);
 
---radius-xs: 4px;
---radius-sm: 6px;
---radius: 10px;
---radius-lg: 14px;
---radius-xl: 20px;
---radius-2xl: 24px;
---radius-full: 9999px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
 
---transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
---transition-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ==================== RESET & BASE ==================== */
 *,
 *::before,
 *::after {
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-user-select: none;
--webkit-user-select: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 input, select, textarea, [contenteditable="true"] {
-user-select: text !important;
--webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 html, body {
-overflow: hidden;
-width: 100%;
-height: 100%;
-height: 100dvh;
-position: fixed;
-top: 0;
-left: 0;
-background: var(--bg-page);
--webkit-text-size-adjust: 100%;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: var(--bg-page);
+  -webkit-text-size-adjust: 100%;
 }
 
 @supports (-webkit-touch-callout: none) {
-html, body {
-height: 100vh !important;
-height: 100dvh !important;
-min-height: -webkit-fill-available !important;
-}
-.dashboard {
-min-height: -webkit-fill-available !important;
-}
+  html, body {
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: -webkit-fill-available !important;
+  }
+  .dashboard {
+    min-height: -webkit-fill-available !important;
+  }
 }
 
 body {
-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-color: var(--text-primary);
--webkit-font-smoothing: antialiased;
--moz-osx-font-smoothing: grayscale;
--webkit-tap-highlight-color: transparent;
-line-height: 1.5;
-font-size: 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.5;
+  font-size: 16px;
 }
 
 /* ==================== SCROLLBAR MINIMAL ==================== */
@@ -109,139 +109,139 @@ font-size: 16px;
 
 /* ==================== LOGIN / REGISTER ==================== */
 .login-wrapper {
-min-height: 100vh;
-min-height: 100dvh;
-display: flex;
-align-items: center;
-justify-content: center;
-background: var(--bg-dark);
-position: relative;
-padding: 20px;
-overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-dark);
+  position: relative;
+  padding: 20px;
+  overflow: hidden;
 }
 
 .login-wrapper::before {
-content: '';
-position: absolute;
-inset: 0;
-background: radial-gradient(ellipse at 50% 50%, rgba(20,184,166,0.06), transparent 70%);
-z-index: 1;
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(20,184,166,0.06), transparent 70%);
+  z-index: 1;
 }
 
 .login-container, .register-container {
-position: relative;
-z-index: 2;
-width: 920px;
-max-width: 100%;
-background: var(--white);
-border-radius: var(--radius-2xl);
-display: flex;
-overflow: hidden;
-box-shadow: var(--shadow-xl);
-animation: fadeInUp 0.7s ease;
+  position: relative;
+  z-index: 2;
+  width: 920px;
+  max-width: 100%;
+  background: var(--white);
+  border-radius: var(--radius-2xl);
+  display: flex;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  animation: fadeInUp 0.7s ease;
 }
 
 @keyframes fadeInUp {
-from { opacity: 0; transform: translateY(30px); }
-to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .login-brand, .register-brand {
-flex: 1;
-background: var(--bg-dark);
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-padding: 50px 30px;
-text-align: center;
-gap: 22px;
-position: relative;
-overflow: hidden;
+  flex: 1;
+  background: var(--bg-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 30px;
+  text-align: center;
+  gap: 22px;
+  position: relative;
+  overflow: hidden;
 }
 
 .brand-icon {
-width: 100px;
-height: 100px;
-background: linear-gradient(135deg, var(--gray-800), var(--black));
-border-radius: 50%;
-display: flex;
-align-items: center;
-justify-content: center;
-box-shadow: var(--shadow-md);
-border: 1px solid rgba(255,255,255,0.05);
-overflow: hidden;
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, var(--gray-800), var(--black));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
 }
 
 .brand-logo { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .login-brand h1, .register-brand h1 {
-font-size: clamp(1.8rem, 3vw, 2.4rem);
-color: var(--white);
-font-weight: 700;
-letter-spacing: -0.5px;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  color: var(--white);
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .login-brand h1 span, .register-brand h1 span { color: var(--accent); font-weight: 800; }
 
 .login-form, .register-form {
-flex: 1;
-padding: 50px 40px;
-display: flex;
-flex-direction: column;
-justify-content: center;
-background: var(--white);
+  flex: 1;
+  padding: 50px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--white);
 }
 
 .login-form h2, .register-form h2 {
-color: var(--text-primary);
-margin-bottom: 28px;
-text-align: center;
-font-size: 1.5rem;
-font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 28px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .input-group {
-display: flex;
-align-items: center;
-background: var(--gray-50);
-border-radius: var(--radius);
-margin-bottom: 14px;
-border: 2px solid var(--border);
-transition: var(--transition);
-overflow: hidden;
+  display: flex;
+  align-items: center;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  border: 2px solid var(--border);
+  transition: var(--transition);
+  overflow: hidden;
 }
 
 .input-group:focus-within { border-color: var(--black); box-shadow: 0 0 0 3px rgba(0,0,0,0.04); background: var(--white); }
 .input-group i { padding: 0 16px; color: var(--gray-500); font-size: 1.1rem; min-width: 48px; text-align: center; }
 .input-group input, .input-group select {
-flex: 1;
-padding: 16px 14px 16px 0;
-border: none;
-background: transparent;
-font-size: 1rem;
-outline: none;
-font-family: 'Inter', sans-serif;
-color: var(--text-primary);
-width: 100%;
+  flex: 1;
+  padding: 16px 14px 16px 0;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  color: var(--text-primary);
+  width: 100%;
 }
 
 .btn-login {
-width: 100%;
-padding: 16px;
-background: var(--black);
-border: none;
-border-radius: var(--radius);
-color: var(--white);
-font-weight: 600;
-font-size: 1.05rem;
-cursor: pointer;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 10px;
-margin-top: 18px;
-transition: var(--transition);
+  width: 100%;
+  padding: 16px;
+  background: var(--black);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--white);
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  transition: var(--transition);
 }
 
 .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
@@ -255,19 +255,19 @@ transition: var(--transition);
 
 /* ==================== SIDEBAR ==================== */
 .sidebar {
-width: 300px;
-background: var(--bg-dark);
-display: flex;
-flex-direction: column;
-position: fixed;
-height: 100vh;
-height: 100dvh;
-left: 0;
-top: 0;
-z-index: 100;
-overflow-y: auto;
-transition: transform 0.3s ease;
-box-shadow: var(--shadow-md);
+  width: 300px;
+  background: var(--bg-dark);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  height: 100dvh;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  box-shadow: var(--shadow-md);
 }
 
 .sidebar-header { padding: 28px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.04); }
@@ -281,16 +281,16 @@ box-shadow: var(--shadow-md);
 .sidebar-nav ul { list-style: none; display: flex; flex-direction: column; gap: 2px; }
 
 .nav-item {
-display: flex;
-align-items: center;
-gap: 14px;
-padding: 13px 16px;
-border-radius: var(--radius);
-cursor: pointer;
-color: rgba(255,255,255,0.45);
-font-size: 0.9rem;
-font-weight: 500;
-transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: var(--transition);
 }
 
 .nav-item i { width: 24px; text-align: center; font-size: 1rem; }
@@ -306,91 +306,40 @@ transition: var(--transition);
 .user-info i { font-size: 1.4rem; color: var(--accent); }
 
 /* ============================================================
-SIDEBAR - TEXTE 30px ET ICÔNES 30px
-============================================================ */
-
-/* Texte des items du menu */
+   SIDEBAR - TEXTE 30px ET ICÔNES 30px
+   ============================================================ */
 .sidebar-nav .nav-item {
   font-size: 30px !important;
   padding: 16px 20px !important;
   gap: 18px !important;
 }
-
-/* Icônes des items du menu */
 .sidebar-nav .nav-item i {
   font-size: 30px !important;
   width: 36px !important;
   text-align: center !important;
 }
+.sidebar-header h2 { font-size: 32px !important; }
+.sidebar-subtitle { font-size: 20px !important; letter-spacing: 2px !important; }
+.user-info { font-size: 28px !important; }
+.user-info i { font-size: 30px !important; }
+.logout-item { font-size: 30px !important; }
+.logout-item i { font-size: 30px !important; }
 
-/* Titre du sidebar */
-.sidebar-header h2 {
-  font-size: 32px !important;
-}
-
-/* Sous-titre du sidebar */
-.sidebar-subtitle {
-  font-size: 20px !important;
-  letter-spacing: 2px !important;
-}
-
-/* Nom de l'utilisateur en bas */
-.user-info {
-  font-size: 28px !important;
-}
-
-.user-info i {
-  font-size: 30px !important;
-}
-
-/* Items de déconnexion */
-.logout-item {
-  font-size: 30px !important;
-}
-
-.logout-item i {
-  font-size: 30px !important;
-}
-
-/* Ajustement pour les écrans moyens (tablette) */
 @media(max-width:1024px) {
-  .sidebar-nav .nav-item {
-    font-size: 26px !important;
-    padding: 14px 16px !important;
-    gap: 14px !important;
-  }
-  
-  .sidebar-nav .nav-item i {
-    font-size: 26px !important;
-    width: 32px !important;
-  }
-  
-  .sidebar-header h2 {
-    font-size: 28px !important;
-  }
+  .sidebar-nav .nav-item { font-size: 26px !important; padding: 14px 16px !important; gap: 14px !important; }
+  .sidebar-nav .nav-item i { font-size: 26px !important; width: 32px !important; }
+  .sidebar-header h2 { font-size: 28px !important; }
 }
 
-/* Ajustement pour mobile (< 768px) */
 @media(max-width:768px) {
-  .sidebar-nav .nav-item {
-    font-size: 22px !important;
-    padding: 12px 14px !important;
-    gap: 12px !important;
-  }
-  
-  .sidebar-nav .nav-item i {
-    font-size: 22px !important;
-    width: 28px !important;
-  }
-  
-  .sidebar-header h2 {
-    font-size: 24px !important;
-  }
+  .sidebar-nav .nav-item { font-size: 22px !important; padding: 12px 14px !important; gap: 12px !important; }
+  .sidebar-nav .nav-item i { font-size: 22px !important; width: 28px !important; }
+  .sidebar-header h2 { font-size: 24px !important; }
 }
 
 /* ============================================================
-MOBILE MENU - AUGMENTÉ
-============================================================ */
+   MOBILE MENU - AUGMENTÉ
+   ============================================================ */
 .mobile-menu-btn {
   font-size: 30px !important;
   width: 56px !important;
@@ -399,30 +348,25 @@ MOBILE MENU - AUGMENTÉ
   left: 20px !important;
 }
 
-/* Augmenter la largeur du sidebar sur mobile */
 @media(max-width:768px) {
-  .sidebar {
-    width: 320px !important; /* +20px */
-  }
+  .sidebar { width: 320px !important; }
 }
 
 /* ==================== MAIN CONTENT ==================== */
 .main-content {
-flex: 1;
-margin-left: 300px;
-padding: 22px;
-background: var(--bg-page);
-height: 100vh;
-height: 100dvh;
-overflow-y: auto;
-overflow-x: hidden;
+  flex: 1;
+  margin-left: 300px;
+  padding: 22px;
+  background: var(--bg-page);
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ============================================================
-ALIGNER LE TITRE AVEC LE BOUTON MENU + RÉDUIRE L'ESPACE EN HAUT
-============================================================ */
-
-/* ✅ Header de page aligné avec le bouton menu */
+   ALIGNER LE TITRE AVEC LE BOUTON MENU + RÉDUIRE L'ESPACE EN HAUT
+   ============================================================ */
 .page-header {
   display: flex !important;
   justify-content: flex-start !important;
@@ -435,7 +379,6 @@ ALIGNER LE TITRE AVEC LE BOUTON MENU + RÉDUIRE L'ESPACE EN HAUT
   flex-wrap: wrap;
 }
 
-/* ✅ Supprimer le margin-left du titre */
 .page-header .header-title {
   margin-left: 0px !important;
   display: flex !important;
@@ -443,7 +386,6 @@ ALIGNER LE TITRE AVEC LE BOUTON MENU + RÉDUIRE L'ESPACE EN HAUT
   gap: 8px !important;
 }
 
-/* ✅ Réduire la taille de l'icône et du titre */
 .header-title i {
   font-size: 1.1rem !important;
   color: var(--white);
@@ -459,57 +401,29 @@ ALIGNER LE TITRE AVEC LE BOUTON MENU + RÉDUIRE L'ESPACE EN HAUT
   margin: 0 !important;
 }
 
-/* ✅ Supprimer les marges supplémentaires */
-.main-content {
-  padding-top: 8px !important;
-}
+.main-content { padding-top: 8px !important; }
 
-/* ✅ Ajustement pour mobile */
 @media(max-width:768px) {
-  .page-header {
-    padding: 2px 6px !important;
-    min-height: 28px !important;
-    margin-bottom: 2px !important;
-  }
-  
-  .page-header .header-title i {
-    font-size: 1rem !important;
-    padding: 4px !important;
-  }
-  
-  .page-header .header-title h2 {
-    font-size: 1rem !important;
-  }
+  .page-header { padding: 2px 6px !important; min-height: 28px !important; margin-bottom: 2px !important; }
+  .page-header .header-title i { font-size: 1rem !important; padding: 4px !important; }
+  .page-header .header-title h2 { font-size: 1rem !important; }
 }
 
-/* ✅ Pour iPhone 13 Pro Max */
 @media screen and (min-device-width: 390px) and (max-device-width: 430px) and (min-device-height: 844px) {
-  .page-header {
-    margin-top: 0px !important;
-    margin-bottom: 2px !important;
-    padding: 1px 6px !important;
-    min-height: 24px !important;
-  }
-  
-  .page-header .header-title h2 {
-    font-size: 0.95rem !important;
-  }
-  
-  .page-header .header-title i {
-    font-size: 0.9rem !important;
-    padding: 4px !important;
-  }
+  .page-header { margin-top: 0px !important; margin-bottom: 2px !important; padding: 1px 6px !important; min-height: 24px !important; }
+  .page-header .header-title h2 { font-size: 0.95rem !important; }
+  .page-header .header-title i { font-size: 0.9rem !important; padding: 4px !important; }
 }
 
 /* ==================== CARDS ==================== */
 .content-card {
-background: var(--bg-card);
-border-radius: var(--radius-xl);
-padding: 20px;
-box-shadow: var(--shadow-xs);
-margin-bottom: 18px;
-border: 1px solid var(--border);
-transition: var(--transition);
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  box-shadow: var(--shadow-xs);
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  transition: var(--transition);
 }
 
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
@@ -537,20 +451,20 @@ transition: var(--transition);
 
 /* ==================== BUTTONS ==================== */
 .btn-add {
-background: var(--black);
-border: none;
-padding: 9px 16px;
-border-radius: var(--radius);
-color: var(--white);
-cursor: pointer;
-display: inline-flex;
-align-items: center;
-gap: 8px;
-font-size: 0.82rem;
-font-family: 'Inter', sans-serif;
-font-weight: 600;
-white-space: nowrap;
-transition: var(--transition);
+  background: var(--black);
+  border: none;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  color: var(--white);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: var(--transition);
 }
 .btn-add:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
@@ -572,15 +486,15 @@ transition: var(--transition);
 .form-group { flex: 1; min-width: 160px; }
 .form-group label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
 .form-group input, .form-group select, .form-group textarea {
-width: 100%;
-padding: 10px 14px;
-border: 2px solid var(--border);
-border-radius: var(--radius);
-font-size: 0.9rem;
-font-family: 'Inter', sans-serif;
-transition: var(--transition);
-background: var(--white);
-color: var(--text-primary);
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
+  transition: var(--transition);
+  background: var(--white);
+  color: var(--text-primary);
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--black); box-shadow: 0 0 0 3px rgba(0,0,0,0.04); }
 
@@ -595,10 +509,18 @@ color: var(--text-primary);
 
 /* ==================== POS SYSTEM ==================== */
 .pos-container { display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 450px; }
-.pos-products-panel { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius-xl); padding: 16px; box-shadow: var(--shadow-xs); border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-
-/* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes claires */
 .pos-products-panel {
+  flex: 1;
+  min-width: 280px;
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
   min-height: 780px !important;
   max-height: 82vh !important;
   height: auto !important;
@@ -607,38 +529,37 @@ color: var(--text-primary);
 .pos-categories-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 8px; flex-shrink: 0; }
 
 .pos-cat-btn {
-display: flex;
-align-items: center;
-gap: 10px;
-padding: 12px 24px;
-border: 2px solid var(--border);
-border-radius: var(--radius-full);
-background: var(--white);
-color: var(--text-primary);
-font-weight: 700;
-font-size: 0.9rem;
-cursor: pointer;
-white-space: nowrap;
-transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--white);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
 }
 .pos-cat-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
 .pos-cat-btn img {
-width: auto;
-height: auto;
-max-width: 100px;
-max-height: 100px;
-border-radius: 6px;
-object-fit: contain;
+  width: auto;
+  height: auto;
+  max-width: 100px;
+  max-height: 100px;
+  border-radius: 6px;
+  object-fit: contain;
 }
 
-/* ✅ Forcer la grille à occuper tout l'espace pour 3 lignes */
-.pos-products-grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
-  gap: 8px !important; 
-  flex: 1; 
-  overflow-y: auto; 
-  padding-right: 4px; 
+.pos-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px !important;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
   min-height: 580px !important;
   max-height: 650px !important;
   height: auto !important;
@@ -649,19 +570,17 @@ object-fit: contain;
 .pos-product-img { width: 100%; height: 80px; border-radius: var(--radius); overflow: hidden; margin-bottom: 6px; background: var(--gray-200); }
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
 
-/* ✅ AUGMENTER LA POLICE DU NOM PRODUIT ET LE METTRE EN BOLD */
-.pos-product-name { 
-  font-size: 1.1rem !important; 
-  font-weight: 700 !important; 
-  color: var(--text-primary); 
-  line-height: 1.2; 
+.pos-product-name {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
-/* ✅ AUGMENTER LA POLICE DU PRIX PRODUIT */
-.pos-product-price { 
-  font-size: 1.1rem !important; 
-  font-weight: 700 !important; 
-  color: var(--black); 
+.pos-product-price {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: var(--black);
 }
 
 /* ==================== POS CART ==================== */
@@ -687,99 +606,91 @@ object-fit: contain;
 /* ==================== PAIEMENT (AGRANDI) ==================== */
 .pos-payment-form { flex: 1; overflow-y: auto; }
 .pos-payment-form label {
-font-size: 0.9rem;
-font-weight: 600;
-margin-bottom: 6px;
-display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
 }
 .pos-payment-form input,
 .pos-payment-form select {
-width: 100%;
-padding: 12px 14px;
-border: 2px solid var(--border);
-border-radius: var(--radius);
-font-size: 1rem;
-font-family: 'Inter', sans-serif;
-background: var(--white);
-color: var(--text-primary);
-transition: var(--transition);
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  background: var(--white);
+  color: var(--text-primary);
+  transition: var(--transition);
 }
 .pos-payment-form input:focus,
 .pos-payment-form select:focus {
-border-color: var(--black);
-outline: none;
-box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+  border-color: var(--black);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
 }
 .pos-payment-btn {
-flex: 1;
-padding: 14px 16px;
-border: 2px solid var(--border);
-border-radius: var(--radius);
-background: var(--white);
-cursor: pointer;
-font-weight: 600;
-font-size: 1rem;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 8px;
-transition: var(--transition);
+  flex: 1;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: var(--transition);
 }
 .pos-payment-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
 
 .pos-finalize-btn {
-width: 100%;
-padding: 14px;
-border: none;
-border-radius: var(--radius);
-background: var(--success);
-color: var(--white);
-font-weight: 700;
-font-size: 1.1rem;
-cursor: pointer;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 8px;
-margin-top: 12px;
-transition: var(--transition);
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--success);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  transition: var(--transition);
 }
 .pos-validate-btn {
-width: 100%;
-padding: 14px;
-border: none;
-border-radius: var(--radius);
-background: var(--black);
-color: var(--white);
-font-weight: 700;
-font-size: 1rem;
-cursor: pointer;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 8px;
-transition: var(--transition);
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--black);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: var(--transition);
 }
 .pos-validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ============================================================
-1 PANIER / 2 PAIEMENT - FONTSIZE 23px
-============================================================ */
-.pos-steps-nav .pos-step {
-  font-size: 23px !important;
-}
-
-.pos-steps-nav .pos-step .step-number {
-  font-size: 23px !important;
-}
-
-.pos-steps-nav .pos-step span {
-  font-size: 23px !important;
-}
+   1 PANIER / 2 PAIEMENT - FONTSIZE 23px
+   ============================================================ */
+.pos-steps-nav .pos-step { font-size: 23px !important; }
+.pos-steps-nav .pos-step .step-number { font-size: 23px !important; }
+.pos-steps-nav .pos-step span { font-size: 23px !important; }
 
 /* ============================================================
-DIMINUER LA HAUTEUR DE pos-steps-nav DE 40px
-============================================================ */
+   DIMINUER LA HAUTEUR DE pos-steps-nav DE 40px
+   ============================================================ */
 .pos-steps-nav {
   padding: 2px 12px !important;
   min-height: 30px !important;
@@ -787,50 +698,25 @@ DIMINUER LA HAUTEUR DE pos-steps-nav DE 40px
   margin-bottom: 4px !important;
 }
 
-/* ============================================================
-AUGMENTER FONTSIZE NOM PRODUIT ET PRIX DE +1px
-============================================================ */
 @media(max-width:600px) {
-  .pos-product-name {
-    font-size: 10px !important;
-    font-weight: 600 !important;
-  }
-  .pos-product-price {
-    font-size: 12px !important;
-    font-weight: 700 !important;
-  }
-  .pos-promo-price {
-    font-size: 12px !important;
-  }
+  .pos-product-name { font-size: 10px !important; font-weight: 600 !important; }
+  .pos-product-price { font-size: 12px !important; font-weight: 700 !important; }
+  .pos-promo-price { font-size: 12px !important; }
 }
 
-/* Ajustement pour iPhone 13 Pro Max (390px - 430px) */
 @media screen and (min-width: 390px) and (max-width: 430px) {
-  .pos-product-name {
-    font-size: 12px !important;
-  }
-  .pos-product-price {
-    font-size: 14px !important;
-  }
-  .pos-promo-price {
-    font-size: 14px !important;
-  }
+  .pos-product-name { font-size: 12px !important; }
+  .pos-product-price { font-size: 14px !important; }
+  .pos-promo-price { font-size: 14px !important; }
 }
 
-/* Ajustement pour écrans moyens (tablette) */
 @media(max-width:1024px) {
-  .pos-steps-nav {
-    padding: 4px 12px !important;
-    min-height: 35px !important;
-    max-height: 45px !important;
-  }
+  .pos-steps-nav { padding: 4px 12px !important; min-height: 35px !important; max-height: 45px !important; }
 }
 
 /* ============================================================
-SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
-============================================================ */
-
-/* Appliquer le safe-area-padding pour tous les éléments principaux */
+   SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
+   ============================================================ */
 #dashboardPage,
 #clientPage,
 #menuTactilePage,
@@ -844,49 +730,21 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   padding-right: env(safe-area-inset-right, 0px) !important;
 }
 
-/* Pour le dashboard */
-.dashboard {
-  padding-top: env(safe-area-inset-top, 0px) !important;
-}
-
-/* Pour le sidebar */
-.sidebar {
-  padding-top: env(safe-area-inset-top, 0px) !important;
-}
-
-/* Pour le main content */
-.main-content {
-  padding-top: calc(22px + env(safe-area-inset-top, 0px)) !important;
-}
-
-/* Pour le bouton de menu mobile */
+.dashboard { padding-top: env(safe-area-inset-top, 0px) !important; }
+.sidebar { padding-top: env(safe-area-inset-top, 0px) !important; }
+.main-content { padding-top: calc(22px + env(safe-area-inset-top, 0px)) !important; }
 .mobile-menu-btn {
   top: calc(20px + env(safe-area-inset-top, 0px)) !important;
   left: calc(20px + env(safe-area-inset-left, 0px)) !important;
 }
-
-/* Pour le POS - container */
-.pos-container {
-  padding-top: env(safe-area-inset-top, 0px) !important;
-}
-
-/* Pour le modal */
+.pos-container { padding-top: env(safe-area-inset-top, 0px) !important; }
 .modal {
   padding-top: env(safe-area-inset-top, 0px) !important;
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
 }
+.page-header { padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important; }
+#menuTactilePage { padding-top: env(safe-area-inset-top, 0px) !important; }
 
-/* Pour le header de page */
-.page-header {
-  padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
-}
-
-/* Pour la page de menu tactile */
-#menuTactilePage {
-  padding-top: env(safe-area-inset-top, 0px) !important;
-}
-
-/* ✅ Pour iOS spécifique avec notch / Dynamic Island */
 @supports (padding: max(0px)) {
   .dashboard,
   #dashboardPage,
@@ -900,609 +758,187 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   }
 }
 
-/* ✅ Pour iPhone 13 Pro Max et appareils avec Dynamic Island (390x844) */
 @media screen and (min-device-width: 390px) and (max-device-width: 430px) and (min-device-height: 844px) {
   .dashboard,
   #dashboardPage,
   #clientPage,
-  #menuTactilePage {
-    padding-top: 50px !important;
-  }
-  
-  .main-content {
-    padding-top: 60px !important;
-  }
-  
-  .sidebar {
-    padding-top: 50px !important;
-  }
-  
-  .mobile-menu-btn {
-    top: 60px !important;
-    left: 25px !important;
-  }
-  
-  .page-header {
-    margin-top: 0px !important;
-    margin-bottom: 2px !important;
-    padding-top: 1px !important;
-    padding-bottom: 1px !important;
-    min-height: 24px !important;
-  }
-  
-  .page-header .header-title h2 {
-    font-size: 0.95rem !important;
-  }
-  
-  .page-header .header-title i {
-    font-size: 0.9rem !important;
-    padding: 4px !important;
-  }
-  
-  .pos-container {
-    padding-top: 10px !important;
-  }
-  
-  /* ✅ Augmenter la hauteur de pos-products-panel pour iPhone 13 Pro Max */
-  .pos-products-panel {
-    min-height: 820px !important;
-    max-height: 85vh !important;
-    height: auto !important;
-  }
-  
-  .pos-products-grid {
-    min-height: 660px !important;
-    max-height: 740px !important;
-    gap: 6px !important;
-  }
-  
-  .pos-product-card {
-    min-height: 130px !important;
-    padding: 6px 3px !important;
-  }
-  
-  .pos-product-img {
-    height: 50px !important;
-  }
-  
-  .pos-product-name {
-    font-size: 14px !important;
-  }
-  
-  .pos-product-price {
-    font-size: 16px !important;
-  }
-  
-  /* ✅ Réduire la hauteur du panier */
-  .pos-cart-panel {
-    max-height: 18vh !important;
-    min-height: 100px !important;
-  }
+  #menuTactilePage { padding-top: 50px !important; }
+  .main-content { padding-top: 60px !important; }
+  .sidebar { padding-top: 50px !important; }
+  .mobile-menu-btn { top: 60px !important; left: 25px !important; }
+  .page-header { margin-top: 0px !important; margin-bottom: 2px !important; padding-top: 1px !important; padding-bottom: 1px !important; min-height: 24px !important; }
+  .page-header .header-title h2 { font-size: 0.95rem !important; }
+  .page-header .header-title i { font-size: 0.9rem !important; padding: 4px !important; }
+  .pos-container { padding-top: 10px !important; }
+  .pos-products-panel { min-height: 820px !important; max-height: 85vh !important; height: auto !important; }
+  .pos-products-grid { min-height: 660px !important; max-height: 740px !important; gap: 6px !important; }
+  .pos-product-card { min-height: 130px !important; padding: 6px 3px !important; }
+  .pos-product-img { height: 50px !important; }
+  .pos-product-name { font-size: 14px !important; }
+  .pos-product-price { font-size: 16px !important; }
+  .pos-cart-panel { max-height: 18vh !important; min-height: 100px !important; }
 }
 
-/* ✅ Pour tous les appareils avec notch */
 @supports (-webkit-touch-callout: none) {
   .dashboard,
   #dashboardPage,
-  #clientPage {
-    padding-top: 50px !important;
-  }
-  
-  .main-content {
-    padding-top: 70px !important;
-  }
-  
-  .mobile-menu-btn {
-    top: 65px !important;
-  }
-  
-  .sidebar {
-    padding-top: 50px !important;
-  }
-  
-  .page-header {
-    margin-top: 5px !important;
-    margin-bottom: 6px !important;
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
-  }
+  #clientPage { padding-top: 50px !important; }
+  .main-content { padding-top: 70px !important; }
+  .mobile-menu-btn { top: 65px !important; }
+  .sidebar { padding-top: 50px !important; }
+  .page-header { margin-top: 5px !important; margin-bottom: 6px !important; padding-top: 4px !important; padding-bottom: 4px !important; }
 }
 
-/* ✅ Pour iOS 15+ avec safe-area */
 @supports (padding: 0px env(safe-area-inset-top)) {
-  .main-content {
-    padding-top: calc(22px + env(safe-area-inset-top)) !important;
-  }
-  
+  .main-content { padding-top: calc(22px + env(safe-area-inset-top)) !important; }
   .mobile-menu-btn {
     top: calc(20px + env(safe-area-inset-top)) !important;
     left: calc(20px + env(safe-area-inset-left)) !important;
   }
-  
-  .sidebar {
-    padding-top: calc(20px + env(safe-area-inset-top)) !important;
-  }
-  
-  .dashboard {
-    padding-top: env(safe-area-inset-top) !important;
-  }
+  .sidebar { padding-top: calc(20px + env(safe-area-inset-top)) !important; }
+  .dashboard { padding-top: env(safe-area-inset-top) !important; }
 }
 
 /* ============================================================
-AUGMENTER LA TAILLE DE POLICE DE TOUTES LES PAGES SUR MOBILE
-============================================================ */
-
-/* ✅ Pour tous les mobiles < 700px */
+   AUGMENTER LA TAILLE DE POLICE DE TOUTES LES PAGES SUR MOBILE
+   ============================================================ */
 @media(max-width:700px) {
-  /* Taille générale */
-  body {
-    font-size: 24px !important;
-  }
-  
-  /* Titres des pages */
-  .page-header .header-title h2 {
-    font-size: 24px !important;
-  }
-  
-  .page-header .header-title i {
-    font-size: 24px !important;
-    padding: 8px !important;
-  }
-  
-  /* Cards */
-  .content-card {
-    padding: 16px !important;
-  }
-  
-  .card-header h3 {
-    font-size: 24px !important;
-  }
-  
-  /* Tables */
+  body { font-size: 24px !important; }
+  .page-header .header-title h2 { font-size: 24px !important; }
+  .page-header .header-title i { font-size: 24px !important; padding: 8px !important; }
+  .content-card { padding: 16px !important; }
+  .card-header h3 { font-size: 24px !important; }
   .data-table th,
-  .data-table td {
-    font-size: 24px !important;
-    padding: 12px 16px !important;
-  }
-  
-  /* Stats */
-  .stat-value {
-    font-size: 28px !important;
-  }
-  
-  .stat-label {
-    font-size: 20px !important;
-  }
-  
-  .stat-card {
-    padding: 16px !important;
-  }
-  
-  /* Badges */
+  .data-table td { font-size: 24px !important; padding: 12px 16px !important; }
+  .stat-value { font-size: 28px !important; }
+  .stat-label { font-size: 20px !important; }
+  .stat-card { padding: 16px !important; }
   .status-success,
   .status-warning,
-  .status-danger {
-    font-size: 20px !important;
-    padding: 6px 14px !important;
-  }
-  
-  /* Boutons */
+  .status-danger { font-size: 20px !important; padding: 6px 14px !important; }
   .btn-add,
   .btn-edit,
   .btn-delete,
   .btn-save,
-  .btn-cancel {
-    font-size: 24px !important;
-    padding: 12px 20px !important;
-  }
-  
-  /* Formulaires */
-  .form-group label {
-    font-size: 20px !important;
-  }
-  
+  .btn-cancel { font-size: 24px !important; padding: 12px 20px !important; }
+  .form-group label { font-size: 20px !important; }
   .form-group input,
   .form-group select,
-  .form-group textarea {
-    font-size: 24px !important;
-    padding: 14px !important;
-  }
-  
-  /* Modal */
-  .modal-header h3 {
-    font-size: 24px !important;
-  }
-  
-  .modal-content {
-    padding: 20px !important;
-  }
-  
-  /* Input groups */
+  .form-group textarea { font-size: 24px !important; padding: 14px !important; }
+  .modal-header h3 { font-size: 24px !important; }
+  .modal-content { padding: 20px !important; }
   .input-group input,
-  .input-group select {
-    font-size: 24px !important;
-    padding: 14px !important;
-  }
-  
-  .input-group i {
-    font-size: 24px !important;
-    min-width: 48px !important;
-  }
+  .input-group select { font-size: 24px !important; padding: 14px !important; }
+  .input-group i { font-size: 24px !important; min-width: 48px !important; }
 }
 
 /* ============================================================
-AUGMENTER LA TAILLE DE POLICE - PAGE VENTES
-============================================================ */
-
-/* ✅ Pour tous les écrans, mais surtout mobile */
+   AUGMENTER LA TAILLE DE POLICE - PAGE VENTES
+   ============================================================ */
 @media(max-width:700px) {
-  
-  /* Barre de recherche Ventes */
   #ventesSearchInput,
-  #ventesVoiceDisplay {
-    font-size: 24px !important;
-    padding: 12px 16px !important;
-    height: 56px !important;
-    min-height: 56px !important;
-  }
-  
-  /* Select période */
-  #ventesPeriodSelect {
-    font-size: 24px !important;
-    padding: 12px 16px !important;
-    height: 56px !important;
-  }
-  
-  /* Bouton Actualiser */
+  #ventesVoiceDisplay { font-size: 24px !important; padding: 12px 16px !important; height: 56px !important; min-height: 56px !important; }
+  #ventesPeriodSelect { font-size: 24px !important; padding: 12px 16px !important; height: 56px !important; }
   #ventesTableContainer .btn-add,
-  .btn-add {
-    font-size: 24px !important;
-    padding: 12px 20px !important;
-    height: 56px !important;
-  }
-  
-  /* Header du tableau */
-  .data-table th {
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    padding: 14px 12px !important;
-    white-space: nowrap !important;
-  }
-  
-  /* Cellules du tableau */
-  .data-table td {
-    font-size: 24px !important;
-    padding: 14px 12px !important;
-    white-space: nowrap !important;
-  }
-  
-  /* Ligne Date en bold */
-  .data-table td:first-child {
-    font-weight: 700 !important;
-    font-size: 24px !important;
-  }
-  
-  /* Nom du client en bold */
-  .data-table td:nth-child(3) {
-    font-weight: 700 !important;
-    font-size: 24px !important;
-  }
-  
-  /* Total en bold */
-  .data-table td strong {
-    font-size: 26px !important;
-    font-weight: 700 !important;
-  }
-  
-  /* Total général en bas */
-  .table-container + div {
-    font-size: 28px !important;
-    padding: 20px !important;
-  }
-  
-  .table-container + div strong {
-    font-size: 30px !important;
-  }
-  
-  /* Pagination */
-  #ventesPagination {
-    font-size: 24px !important;
-  }
-  
-  #ventesPagination button {
-    font-size: 24px !important;
-    padding: 10px 16px !important;
-  }
-  
-  /* Boutons actions (imprimer, WhatsApp, etc.) */
+  .btn-add { font-size: 24px !important; padding: 12px 20px !important; height: 56px !important; }
+  .data-table th { font-size: 24px !important; font-weight: 700 !important; padding: 14px 12px !important; white-space: nowrap !important; }
+  .data-table td { font-size: 24px !important; padding: 14px 12px !important; white-space: nowrap !important; }
+  .data-table td:first-child { font-weight: 700 !important; font-size: 24px !important; }
+  .data-table td:nth-child(3) { font-weight: 700 !important; font-size: 24px !important; }
+  .data-table td strong { font-size: 26px !important; font-weight: 700 !important; }
+  .table-container + div { font-size: 28px !important; padding: 20px !important; }
+  .table-container + div strong { font-size: 30px !important; }
+  #ventesPagination { font-size: 24px !important; }
+  #ventesPagination button { font-size: 24px !important; padding: 10px 16px !important; }
   .data-table .btn-edit,
   .data-table .btn-add,
-  .data-table .btn-delete {
-    font-size: 22px !important;
-    padding: 8px 12px !important;
-    height: 44px !important;
-  }
-  
+  .data-table .btn-delete { font-size: 22px !important; padding: 8px 12px !important; height: 44px !important; }
   .data-table .btn-edit i,
   .data-table .btn-add i,
-  .data-table .btn-delete i {
-    font-size: 22px !important;
-  }
+  .data-table .btn-delete i { font-size: 22px !important; }
 }
 
-/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) */
 @media screen and (min-width: 390px) and (max-width: 430px) {
   #ventesSearchInput,
-  #ventesVoiceDisplay {
-    font-size: 24px !important;
-    padding: 14px 18px !important;
-    height: 60px !important;
-  }
-  
-  #ventesPeriodSelect {
-    font-size: 24px !important;
-    padding: 14px 18px !important;
-    height: 60px !important;
-  }
-  
-  .btn-add {
-    font-size: 24px !important;
-    padding: 14px 22px !important;
-    height: 60px !important;
-  }
-  
-  .data-table th {
-    font-size: 24px !important;
-    padding: 16px 14px !important;
-  }
-  
-  .data-table td {
-    font-size: 24px !important;
-    padding: 16px 14px !important;
-  }
-  
-  .data-table td strong {
-    font-size: 26px !important;
-  }
-  
-  .table-container + div {
-    font-size: 30px !important;
-    padding: 24px !important;
-  }
-  
-  .table-container + div strong {
-    font-size: 32px !important;
-  }
-  
+  #ventesVoiceDisplay { font-size: 24px !important; padding: 14px 18px !important; height: 60px !important; }
+  #ventesPeriodSelect { font-size: 24px !important; padding: 14px 18px !important; height: 60px !important; }
+  .btn-add { font-size: 24px !important; padding: 14px 22px !important; height: 60px !important; }
+  .data-table th { font-size: 24px !important; padding: 16px 14px !important; }
+  .data-table td { font-size: 24px !important; padding: 16px 14px !important; }
+  .data-table td strong { font-size: 26px !important; }
+  .table-container + div { font-size: 30px !important; padding: 24px !important; }
+  .table-container + div strong { font-size: 32px !important; }
   .data-table .btn-edit,
   .data-table .btn-add,
-  .data-table .btn-delete {
-    font-size: 24px !important;
-    padding: 10px 14px !important;
-    height: 48px !important;
-  }
-  
+  .data-table .btn-delete { font-size: 24px !important; padding: 10px 14px !important; height: 48px !important; }
   .data-table .btn-edit i,
   .data-table .btn-add i,
-  .data-table .btn-delete i {
-    font-size: 24px !important;
-  }
+  .data-table .btn-delete i { font-size: 24px !important; }
 }
 
 /* ============================================================
-AUGMENTER LA TAILLE DE POLICE - PAGE CRÉDITS
-============================================================ */
-
-/* ✅ Pour tous les mobiles < 700px */
+   AUGMENTER LA TAILLE DE POLICE - PAGE CRÉDITS
+   ============================================================ */
 @media(max-width:700px) {
-  
-  /* Barre de recherche Crédits */
   #creditsSearchInput,
-  #creditsVoiceDisplay {
-    font-size: 24px !important;
-    padding: 12px 16px !important;
-    height: 56px !important;
-    min-height: 56px !important;
-  }
-  
-  /* Select période */
-  #creditsPeriodSelect {
-    font-size: 24px !important;
-    padding: 12px 16px !important;
-    height: 56px !important;
-  }
-  
-  /* Bouton Actualiser */
+  #creditsVoiceDisplay { font-size: 24px !important; padding: 12px 16px !important; height: 56px !important; min-height: 56px !important; }
+  #creditsPeriodSelect { font-size: 24px !important; padding: 12px 16px !important; height: 56px !important; }
   #creditsTableContainer .btn-add,
-  .btn-add {
-    font-size: 24px !important;
-    padding: 12px 20px !important;
-    height: 56px !important;
-  }
-  
-  /* Header du tableau */
-  .data-table th {
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    padding: 14px 12px !important;
-    white-space: nowrap !important;
-  }
-  
-  /* Cellules du tableau */
-  .data-table td {
-    font-size: 24px !important;
-    padding: 14px 12px !important;
-    white-space: nowrap !important;
-  }
-  
-  /* Ligne Date en bold */
-  .data-table td:first-child {
-    font-weight: 700 !important;
-    font-size: 24px !important;
-  }
-  
-  /* Nom du client en bold */
-  .data-table td:nth-child(2) {
-    font-weight: 700 !important;
-    font-size: 24px !important;
-  }
-  
-  /* Total restant en bold */
-  .data-table td strong {
-    font-size: 26px !important;
-    font-weight: 700 !important;
-  }
-  
-  /* Total général en bas */
-  .table-container + div {
-    font-size: 28px !important;
-    padding: 20px !important;
-  }
-  
-  .table-container + div strong {
-    font-size: 30px !important;
-  }
-  
-  /* Pagination */
-  #creditsPagination {
-    font-size: 24px !important;
-  }
-  
-  #creditsPagination button {
-    font-size: 24px !important;
-    padding: 10px 16px !important;
-  }
-  
-  /* Boutons actions */
+  .btn-add { font-size: 24px !important; padding: 12px 20px !important; height: 56px !important; }
+  .data-table th { font-size: 24px !important; font-weight: 700 !important; padding: 14px 12px !important; white-space: nowrap !important; }
+  .data-table td { font-size: 24px !important; padding: 14px 12px !important; white-space: nowrap !important; }
+  .data-table td:first-child { font-weight: 700 !important; font-size: 24px !important; }
+  .data-table td:nth-child(2) { font-weight: 700 !important; font-size: 24px !important; }
+  .data-table td strong { font-size: 26px !important; font-weight: 700 !important; }
+  .table-container + div { font-size: 28px !important; padding: 20px !important; }
+  .table-container + div strong { font-size: 30px !important; }
+  #creditsPagination { font-size: 24px !important; }
+  #creditsPagination button { font-size: 24px !important; padding: 10px 16px !important; }
   .data-table .btn-edit,
   .data-table .btn-add,
-  .data-table .btn-delete {
-    font-size: 22px !important;
-    padding: 8px 12px !important;
-    height: 44px !important;
-  }
-  
+  .data-table .btn-delete { font-size: 22px !important; padding: 8px 12px !important; height: 44px !important; }
   .data-table .btn-edit i,
   .data-table .btn-add i,
-  .data-table .btn-delete i {
-    font-size: 22px !important;
-  }
-  
-  /* Badge statut crédit */
+  .data-table .btn-delete i { font-size: 22px !important; }
   .data-table .status-warning,
   .data-table .status-success,
-  .data-table .status-danger {
-    font-size: 20px !important;
-    padding: 6px 14px !important;
-  }
+  .data-table .status-danger { font-size: 20px !important; padding: 6px 14px !important; }
 }
 
-/* ✅ Spécifique iPhone 13 Pro Max pour Crédits (390px - 430px) */
 @media screen and (min-width: 390px) and (max-width: 430px) {
   #creditsSearchInput,
-  #creditsVoiceDisplay {
-    font-size: 24px !important;
-    padding: 14px 18px !important;
-    height: 60px !important;
-  }
-  
-  #creditsPeriodSelect {
-    font-size: 24px !important;
-    padding: 14px 18px !important;
-    height: 60px !important;
-  }
-  
-  .btn-add {
-    font-size: 24px !important;
-    padding: 14px 22px !important;
-    height: 60px !important;
-  }
-  
-  .data-table th {
-    font-size: 24px !important;
-    padding: 16px 14px !important;
-  }
-  
-  .data-table td {
-    font-size: 24px !important;
-    padding: 16px 14px !important;
-  }
-  
-  .data-table td strong {
-    font-size: 26px !important;
-  }
-  
-  .table-container + div {
-    font-size: 30px !important;
-    padding: 24px !important;
-  }
-  
-  .table-container + div strong {
-    font-size: 32px !important;
-  }
-  
+  #creditsVoiceDisplay { font-size: 24px !important; padding: 14px 18px !important; height: 60px !important; }
+  #creditsPeriodSelect { font-size: 24px !important; padding: 14px 18px !important; height: 60px !important; }
+  .btn-add { font-size: 24px !important; padding: 14px 22px !important; height: 60px !important; }
+  .data-table th { font-size: 24px !important; padding: 16px 14px !important; }
+  .data-table td { font-size: 24px !important; padding: 16px 14px !important; }
+  .data-table td strong { font-size: 26px !important; }
+  .table-container + div { font-size: 30px !important; padding: 24px !important; }
+  .table-container + div strong { font-size: 32px !important; }
   .data-table .btn-edit,
   .data-table .btn-add,
-  .data-table .btn-delete {
-    font-size: 24px !important;
-    padding: 10px 14px !important;
-    height: 48px !important;
-  }
-  
+  .data-table .btn-delete { font-size: 24px !important; padding: 10px 14px !important; height: 48px !important; }
   .data-table .btn-edit i,
   .data-table .btn-add i,
-  .data-table .btn-delete i {
-    font-size: 24px !important;
-  }
-  
+  .data-table .btn-delete i { font-size: 24px !important; }
   .data-table .status-warning,
   .data-table .status-success,
-  .data-table .status-danger {
-    font-size: 22px !important;
-    padding: 8px 16px !important;
-  }
+  .data-table .status-danger { font-size: 22px !important; padding: 8px 16px !important; }
 }
 
-/* ✅ Pour très petits écrans (< 380px) - Crédits */
 @media screen and (max-width: 380px) {
   #creditsSearchInput,
-  #creditsVoiceDisplay {
-    font-size: 20px !important;
-    padding: 10px 14px !important;
-    height: 48px !important;
-  }
-  
-  #creditsPeriodSelect {
-    font-size: 20px !important;
-    padding: 10px 14px !important;
-    height: 48px !important;
-  }
-  
-  .btn-add {
-    font-size: 20px !important;
-    padding: 10px 16px !important;
-    height: 48px !important;
-  }
-  
+  #creditsVoiceDisplay { font-size: 20px !important; padding: 10px 14px !important; height: 48px !important; }
+  #creditsPeriodSelect { font-size: 20px !important; padding: 10px 14px !important; height: 48px !important; }
+  .btn-add { font-size: 20px !important; padding: 10px 16px !important; height: 48px !important; }
   .data-table th,
-  .data-table td {
-    font-size: 20px !important;
-    padding: 10px 8px !important;
-  }
-  
-  .data-table td strong {
-    font-size: 22px !important;
-  }
-  
+  .data-table td { font-size: 20px !important; padding: 10px 8px !important; }
+  .data-table td strong { font-size: 22px !important; }
   .data-table .status-warning,
   .data-table .status-success,
-  .data-table .status-danger {
-    font-size: 18px !important;
-    padding: 4px 10px !important;
-  }
+  .data-table .status-danger { font-size: 18px !important; padding: 4px 10px !important; }
 }
 
-/* ✅ Pour le total des crédits en bas de page */
 .credits-total-container {
   font-size: 28px !important;
   padding: 20px !important;
@@ -1511,545 +947,321 @@ AUGMENTER LA TAILLE DE POLICE - PAGE CRÉDITS
   text-align: center !important;
   margin-top: 15px !important;
 }
+.credits-total-container strong { font-size: 30px !important; }
 
-.credits-total-container strong {
-  font-size: 30px !important;
-}
-
-/* ✅ Pour très petits écrans (< 380px) - suite */
 @media screen and (max-width: 380px) {
-  body {
-    font-size: 20px !important;
-  }
-  
-  .page-header .header-title h2 {
-    font-size: 20px !important;
-  }
-  
+  body { font-size: 20px !important; }
+  .page-header .header-title h2 { font-size: 20px !important; }
   .data-table th,
-  .data-table td {
-    font-size: 20px !important;
-    padding: 10px 12px !important;
-  }
-  
+  .data-table td { font-size: 20px !important; padding: 10px 12px !important; }
   .btn-add,
   .btn-edit,
   .btn-delete,
   .btn-save,
-  .btn-cancel {
-    font-size: 20px !important;
-    padding: 10px 16px !important;
-  }
+  .btn-cancel { font-size: 20px !important; padding: 10px 16px !important; }
 }
 
-/* ✅ Ajustement pour les pages spécifiques */
 @media(max-width:700px) {
-  /* Page Produits */
-  .product-card .product-name {
-    font-size: 24px !important;
-  }
-  
-  .product-card .product-price {
-    font-size: 24px !important;
-  }
-  
-  /* Page Ventes */
-  .vente-total {
-    font-size: 28px !important;
-  }
-  
-  /* Page Clients */
-  .client-name {
-    font-size: 24px !important;
-  }
-  
-  .client-phone {
-    font-size: 22px !important;
-  }
-  
-  /* Page Crédits */
-  .credit-amount {
+  .product-card .product-name { font-size: 24px !important; }
+  .product-card .product-price { font-size: 24px !important; }
+  .vente-total { font-size: 28px !important; }
+  .client-name { font-size: 24px !important; }
+  .client-phone { font-size: 22px !important; }
+  .credit-amount { font-size: 26px !important; }
+  .category-name { font-size: 24px !important; }
+}
+
+/* ============================================================
+   FORCER LES POLICES 24px SUR CREDITS ET VENTES (AJOUT)
+   ============================================================ */
+#creditsTableContainer .data-table th,
+#creditsTableContainer .data-table td,
+#ventesTableContainer .data-table th,
+#ventesTableContainer .data-table td {
+  font-size: 24px !important;
+  padding: 16px 14px !important;
+}
+#creditsTableContainer .data-table th,
+#ventesTableContainer .data-table th {
+  font-weight: 700 !important;
+  background: #f9fafb !important;
+}
+#creditsTableContainer .data-table td:first-child,
+#ventesTableContainer .data-table td:first-child { font-weight: 700 !important; }
+#creditsTableContainer .data-table td:nth-child(3),
+#ventesTableContainer .data-table td:nth-child(3) { font-weight: 700 !important; }
+#creditsTableContainer .data-table td strong,
+#ventesTableContainer .data-table td strong {
+  font-size: 26px !important;
+  font-weight: 700 !important;
+}
+
+#creditsSearchInput,
+#ventesSearchInput,
+#creditsVoiceDisplay,
+#ventesVoiceDisplay {
+  font-size: 24px !important;
+  padding: 14px 18px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+}
+#creditsPeriodSelect,
+#ventesPeriodSelect {
+  font-size: 24px !important;
+  padding: 14px 18px !important;
+  height: 60px !important;
+}
+#creditsTableContainer .btn-add,
+#ventesTableContainer .btn-add,
+#creditsTableContainer .btn-edit,
+#ventesTableContainer .btn-edit,
+#creditsTableContainer .btn-delete,
+#ventesTableContainer .btn-delete {
+  font-size: 22px !important;
+  padding: 10px 16px !important;
+  height: 48px !important;
+}
+#creditsTableContainer .btn-add i,
+#ventesTableContainer .btn-add i,
+#creditsTableContainer .btn-edit i,
+#ventesTableContainer .btn-edit i,
+#creditsTableContainer .btn-delete i,
+#ventesTableContainer .btn-delete i {
+  font-size: 22px !important;
+}
+
+#creditsClientDropdown div {
+  font-size: 24px !important;
+  padding: 12px !important;
+}
+#creditsClientDropdown div strong { font-size: 24px !important; }
+
+#creditsTableContainer + div,
+#ventesTableContainer + div {
+  font-size: 28px !important;
+  padding: 20px !important;
+}
+#creditsTableContainer + div strong,
+#ventesTableContainer + div strong { font-size: 30px !important; }
+
+#creditsPagination,
+#ventesPagination { font-size: 24px !important; }
+#creditsPagination button,
+#ventesPagination button {
+  font-size: 24px !important;
+  padding: 10px 18px !important;
+}
+
+@media screen and (min-width: 390px) and (max-width: 430px) {
+  #creditsSearchInput,
+  #ventesSearchInput,
+  #creditsVoiceDisplay,
+  #ventesVoiceDisplay {
     font-size: 26px !important;
+    padding: 16px 20px !important;
+    height: 64px !important;
   }
-  
-  /* Page Catégories */
-  .category-name {
-    font-size: 24px !important;
+  #creditsPeriodSelect,
+  #ventesPeriodSelect {
+    font-size: 26px !important;
+    padding: 16px 20px !important;
+    height: 64px !important;
   }
+  #creditsTableContainer .data-table th,
+  #creditsTableContainer .data-table td,
+  #ventesTableContainer .data-table th,
+  #ventesTableContainer .data-table td {
+    font-size: 26px !important;
+    padding: 18px 16px !important;
+  }
+  #creditsTableContainer .data-table td strong,
+  #ventesTableContainer .data-table td strong { font-size: 28px !important; }
 }
 
 /* ==================== RESPONSIVE ==================== */
 @media(max-width:1024px) {
-.sidebar { transform: translateX(-100%); z-index: 150; }
-.sidebar.open { transform: translateX(0); }
-.main-content { margin-left: 0 !important; padding: 16px 12px; }
-.mobile-menu-btn { display: flex !important; }
-.sidebar-overlay.active { display: block; }
-.pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
-.pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
-.pos-products-panel { height: auto; max-height: 50vh; }
+  .sidebar { transform: translateX(-100%); z-index: 150; }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0 !important; padding: 16px 12px; }
+  .mobile-menu-btn { display: flex !important; }
+  .sidebar-overlay.active { display: block; }
+  .pos-container { flex-direction: column; height: auto; min-height: calc(100vh - 160px); }
+  .pos-cart-panel { width: 100%; min-width: 100%; max-height: 45vh; }
+  .pos-products-panel { height: auto; max-height: 50vh; }
 
-.pos-cat-btn {
-padding: 4px 8px !important;
-font-size: 20px !important;
-gap: 4px !important;
-}
-.pos-cat-btn img {
-max-width: 50px !important;
-max-height: 50px !important;
-}
+  .pos-cat-btn { padding: 4px 8px !important; font-size: 20px !important; gap: 4px !important; }
+  .pos-cat-btn img { max-width: 50px !important; max-height: 50px !important; }
 
-.pos-cart-item-name {
-font-size: 20px !important;
-font-weight: 700 !important;
-}
-.pos-cart-item-price {
-font-size: 20px !important;
-}
-.pos-cart-item-total {
-font-size: 1rem !important;
-font-weight: 700 !important;
-}
-.pos-qty-btn {
-width: 34px !important;
-height: 34px !important;
-font-size: 0.85rem !important;
-}
-.pos-qty-value {
-font-size: 20px !important;
-}
-.pos-cart-total-row {
-font-size: 25px !important;
-}
-.pos-validate-btn,
-.pos-finalize-btn {
-padding: 14px 18px !important;
-font-size: 1.1rem !important;
-}
-.pos-payment-btn {
-padding: 12px 14px !important;
-font-size: 1rem !important;
-}
-.pos-payment-form input,
-.pos-payment-section input {
-padding: 12px !important;
-font-size: 1rem !important;
-}
+  .pos-cart-item-name { font-size: 20px !important; font-weight: 700 !important; }
+  .pos-cart-item-price { font-size: 20px !important; }
+  .pos-cart-item-total { font-size: 1rem !important; font-weight: 700 !important; }
+  .pos-qty-btn { width: 34px !important; height: 34px !important; font-size: 0.85rem !important; }
+  .pos-qty-value { font-size: 20px !important; }
+  .pos-cart-total-row { font-size: 25px !important; }
+  .pos-validate-btn,
+  .pos-finalize-btn { padding: 14px 18px !important; font-size: 1.1rem !important; }
+  .pos-payment-btn { padding: 12px 14px !important; font-size: 1rem !important; }
+  .pos-payment-form input,
+  .pos-payment-section input { padding: 12px !important; font-size: 1rem !important; }
 }
 
 @media(max-width:768px) {
-.login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
-.login-brand, .register-brand { padding: 24px 16px 16px; }
-.main-content { padding: 12px 8px; }
-.pos-container { gap: 10px; }
-.pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
-.pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-.pos-product-card { padding: 8px; }
-.pos-product-img { height: 70px; }
-.pos-cart-panel { max-height: 35vh; padding: 12px; }
-.pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
-padding: 14px !important;
-font-size: 1rem !important;
-}
+  .login-container, .register-container { flex-direction: column; width: 100%; max-width: 420px; }
+  .login-brand, .register-brand { padding: 24px 16px 16px; }
+  .main-content { padding: 12px 8px; }
+  .pos-container { gap: 10px; }
+  .pos-products-panel { padding: 10px; max-height: 55vh; min-height: 400px !important; }
+  .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .pos-product-card { padding: 8px; }
+  .pos-product-img { height: 70px; }
+  .pos-cart-panel { max-height: 35vh; padding: 12px; }
+  .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
+    padding: 14px !important;
+    font-size: 1rem !important;
+  }
 }
 
 /* ============================================================
-FORCER 3 LIGNES ET 5 COLONNES SUR TOUS LES TELEPHONES
-============================================================ */
+   FORCER 3 LIGNES ET 5 COLONNES SUR TOUS LES TELEPHONES
+   ============================================================ */
 @media(max-width:700px) {
-.main-content { padding: 8px 4px; }
-.pos-container { gap: 8px; }
+  .main-content { padding: 8px 4px; }
+  .pos-container { gap: 8px; }
 
-/* ✅ 5 COLONNES sur mobile */
-.pos-products-grid {
-grid-template-columns: repeat(5, 1fr) !important;
-gap: 5px !important;
-flex: 1;
-overflow-y: auto;
-min-height: 580px !important;
-max-height: 660px !important;
-padding: 4px !important;
-height: auto !important;
-align-content: start !important;
-}
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 5px !important;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 580px !important;
+    max-height: 660px !important;
+    padding: 4px !important;
+    height: auto !important;
+    align-content: start !important;
+  }
 
-.pos-product-card { 
-padding: 5px 2px !important; 
-min-height: 115px !important;
-border-radius: 8px !important;
-border-width: 1px !important;
-margin: 0 !important;
-display: flex !important;
-flex-direction: column !important;
-align-items: center !important;
-justify-content: center !important;
-}
-.pos-product-img { 
-height: 45px !important; 
-width: 100% !important;
-margin-bottom: 3px !important;
-border-radius: 6px !important;
-}
-.pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
-.pos-product-placeholder i { font-size: 16px !important; }
-.pos-product-name { 
-font-size: 11px !important;
-font-weight: 600 !important;
-margin-right: 0 !important;
-line-height: 1.1 !important;
-overflow: hidden !important;
-text-overflow: ellipsis !important;
-white-space: nowrap !important;
-max-width: 100% !important;
-text-align: center !important;
-}
-.pos-product-price { font-size: 13px !important; font-weight: 700 !important; }
-.pos-old-price { font-size: 9px !important; }
-.pos-promo-price { font-size: 13px !important; color: var(--danger) !important; }
+  .pos-product-card {
+    padding: 5px 2px !important;
+    min-height: 115px !important;
+    border-radius: 8px !important;
+    border-width: 1px !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .pos-product-img {
+    height: 45px !important;
+    width: 100% !important;
+    margin-bottom: 3px !important;
+    border-radius: 6px !important;
+  }
+  .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
+  .pos-product-placeholder i { font-size: 16px !important; }
+  .pos-product-name {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    margin-right: 0 !important;
+    line-height: 1.1 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
+    text-align: center !important;
+  }
+  .pos-product-price { font-size: 13px !important; font-weight: 700 !important; }
+  .pos-old-price { font-size: 9px !important; }
+  .pos-promo-price { font-size: 13px !important; color: var(--danger) !important; }
 
-/* ✅ Hauteur du panel pour afficher 3 lignes */
-.pos-products-panel {
-  min-height: 720px !important;
-  max-height: 82vh !important;
-  height: auto !important;
-  flex: 0 1 auto !important;
-}
+  .pos-products-panel {
+    min-height: 720px !important;
+    max-height: 82vh !important;
+    height: auto !important;
+    flex: 0 1 auto !important;
+  }
 
-/* ✅ Réduire la hauteur du panier */
-.pos-cart-panel { 
-  max-height: 20vh !important; 
-  min-height: 110px !important;
-}
+  .pos-cart-panel {
+    max-height: 20vh !important;
+    min-height: 110px !important;
+  }
 
-.pos-cart-item-name { font-size: 1.1rem !important; }
-.pos-cart-item-total { font-size: 1.05rem !important; }
-.pos-qty-btn { width: 36px !important; height: 36px !important; font-size: 1.2rem !important; }
-.pos-validate-btn, .pos-finalize-btn { padding: 16px 20px !important; font-size: 1.15rem !important; }
-.pos-payment-methods { flex-direction: column; gap: 6px; }
-.pos-payment-btn { padding: 16px; font-size: 0.95rem; }
-.pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
-padding: 16px !important;
-font-size: 1.05rem !important;
-}
-.pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
+  .pos-cart-item-name { font-size: 1.1rem !important; }
+  .pos-cart-item-total { font-size: 1.05rem !important; }
+  .pos-qty-btn { width: 36px !important; height: 36px !important; font-size: 1.2rem !important; }
+  .pos-validate-btn, .pos-finalize-btn { padding: 16px 20px !important; font-size: 1.15rem !important; }
+  .pos-payment-methods { flex-direction: column; gap: 6px; }
+  .pos-payment-btn { padding: 16px; font-size: 0.95rem; }
+  .pos-payment-section input, .pos-payment-form input, .pos-payment-form select {
+    padding: 16px !important;
+    font-size: 1.05rem !important;
+  }
+  .pos-payment-section label, .pos-payment-form label { font-size: 0.85rem; margin-bottom: 6px; }
 }
 
-/* ✅ Spécifique iPhone 13 Pro Max (390px - 430px) */
 @media screen and (min-width: 390px) and (max-width: 430px) {
-.pos-products-grid {
-grid-template-columns: repeat(5, 1fr) !important;
-gap: 6px !important;
-padding: 4px !important;
-min-height: 660px !important;
-max-height: 740px !important;
-}
-.pos-product-card {
-padding: 6px 3px !important;
-min-height: 130px !important;
-}
-.pos-product-img {
-height: 50px !important;
-}
-.pos-product-name {
-font-size: 14px !important;
-}
-.pos-product-price {
-font-size: 16px !important;
-}
-.pos-promo-price {
-font-size: 16px !important;
-}
-.pos-products-panel {
-  min-height: 820px !important;
-  max-height: 85vh !important;
-}
-.pos-cart-panel { 
-  max-height: 18vh !important; 
-  min-height: 100px !important;
-}
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 6px !important;
+    padding: 4px !important;
+    min-height: 660px !important;
+    max-height: 740px !important;
+  }
+  .pos-product-card { padding: 6px 3px !important; min-height: 130px !important; }
+  .pos-product-img { height: 50px !important; }
+  .pos-product-name { font-size: 14px !important; }
+  .pos-product-price { font-size: 16px !important; }
+  .pos-promo-price { font-size: 16px !important; }
+  .pos-products-panel { min-height: 820px !important; max-height: 85vh !important; }
+  .pos-cart-panel { max-height: 18vh !important; min-height: 100px !important; }
 }
 
-/* ✅ Pour les très petits écrans (< 380px) */
 @media screen and (max-width: 380px) {
-.pos-products-grid {
-grid-template-columns: repeat(5, 1fr) !important;
-gap: 3px !important;
-padding: 2px !important;
-min-height: 400px !important;
-max-height: 480px !important;
-}
-.pos-product-card {
-padding: 3px 1px !important;
-min-height: 85px !important;
-border-radius: 4px !important;
-}
-.pos-product-img {
-height: 34px !important;
-}
-.pos-product-name {
-font-size: 9px !important;
-}
-.pos-product-price {
-font-size: 11px !important;
-}
-.pos-products-panel {
-  min-height: 520px !important;
-  max-height: 68vh !important;
-}
-.pos-cart-panel { 
-  max-height: 18vh !important; 
-  min-height: 90px !important;
-}
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 3px !important;
+    padding: 2px !important;
+    min-height: 400px !important;
+    max-height: 480px !important;
+  }
+  .pos-product-card { padding: 3px 1px !important; min-height: 85px !important; border-radius: 4px !important; }
+  .pos-product-img { height: 34px !important; }
+  .pos-product-name { font-size: 9px !important; }
+  .pos-product-price { font-size: 11px !important; }
+  .pos-products-panel { min-height: 520px !important; max-height: 68vh !important; }
+  .pos-cart-panel { max-height: 18vh !important; min-height: 90px !important; }
 }
 
-/* ✅ Pour les écrans entre 481px et 600px (petites tablettes) */
 @media screen and (min-width: 481px) and (max-width: 600px) {
-.pos-products-grid {
-grid-template-columns: repeat(5, 1fr) !important;
-gap: 6px !important;
-padding: 4px !important;
-min-height: 520px !important;
-max-height: 600px !important;
-}
-.pos-product-card {
-padding: 6px 4px !important;
-min-height: 135px !important;
-}
-.pos-product-img {
-height: 55px !important;
-}
-.pos-product-name {
-font-size: 13px !important;
-}
-.pos-product-price {
-font-size: 15px !important;
-}
-.pos-products-panel {
-  min-height: 660px !important;
-  max-height: 75vh !important;
-}
-.pos-cart-panel { 
-  max-height: 22vh !important; 
-  min-height: 130px !important;
-}
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 6px !important;
+    padding: 4px !important;
+    min-height: 520px !important;
+    max-height: 600px !important;
+  }
+  .pos-product-card { padding: 6px 4px !important; min-height: 135px !important; }
+  .pos-product-img { height: 55px !important; }
+  .pos-product-name { font-size: 13px !important; }
+  .pos-product-price { font-size: 15px !important; }
+  .pos-products-panel { min-height: 660px !important; max-height: 75vh !important; }
+  .pos-cart-panel { max-height: 22vh !important; min-height: 130px !important; }
 }
 
-/* ✅ Mode paysage sur mobile */
+/* ============================================================
+   MODE PAYSAGE SUR MOBILE
+   ============================================================ */
 @media screen and (max-height: 500px) and (orientation: landscape) {
-.pos-products-grid {
-grid-template-columns: repeat(5, 1fr) !important;
-gap: 4px !important;
-min-height: 340px !important;
-max-height: 420px !important;
-}
-.pos-product-card {
-padding: 4px 3px !important;
-min-height: 80px !important;
-}
-.pos-product-img {
-height: 34px !important;
-}
-.pos-product-name {
-font-size: 9px !important;
-}
-.pos-product-price {
-font-size: 11px !important;
-}
-.pos-products-panel {
-  min-height: 420px !important;
-  max-height: 72vh !important;
-}
-.pos-cart-panel { 
-  max-height: 38vh !important; 
-  min-height: 90px !important;
-}
-}
-
-/* ============================================================
-ADAPTATION ORDINATEUR (>=1025px)
-============================================================ */
-@media(min-width: 1025px) {
-.pos-cart-item-name {
-font-size: 0.9rem !important;
-font-weight: 600 !important;
-}
-.pos-cart-item-price {
-font-size: 0.8rem !important;
-}
-.pos-cart-item-total {
-font-size: 0.9rem !important;
-font-weight: 700 !important;
-}
-.pos-qty-btn {
-width: 28px !important;
-height: 28px !important;
-font-size: 0.7rem !important;
-}
-.pos-qty-value {
-font-size: 0.9rem !important;
-}
-.pos-cart-total-row {
-font-size: 1.1rem !important;
-}
-
-.pos-cart-panel {
-width: 700px !important;
-min-width: 700px !important;
-max-width: 700px !important;
-}
-
-.pos-container {
-justify-content: center;
-}
-
-.pos-cat-btn {
-padding: 4px 8px !important;
-font-size: 20px !important;
-gap: 4px !important;
-}
-.pos-cat-btn img {
-max-width: 50px !important;
-max-height: 50px !important;
-}
-
-.pos-validate-btn,
-.pos-finalize-btn {
-padding: 14px 18px !important;
-font-size: 1.1rem !important;
-}
-.pos-payment-btn {
-padding: 12px 14px !important;
-font-size: 1rem !important;
-}
-.pos-payment-form input,
-.pos-payment-section input,
-.pos-payment-form select {
-padding: 12px !important;
-font-size: 1rem !important;
-}
-}
-
-/* ============================================================
-MODIFICATIONS SPÉCIFIQUES DEMANDÉES PAR L'UTILISATEUR
-============================================================ */
-
-.pos-product-name {
-margin-right: 10px !important;
-}
-
-.pos-cart-item-name {
-margin-right: 10px !important;
-}
-
-.pos-product-price {
-font-size: 17px !important;
-}
-
-.pos-container-full .pos-products-panel {
-display: none !important;
-}
-.pos-container-full {
-display: flex !important;
-flex-direction: column !important;
-height: 100% !important;
-min-height: 100vh !important;
-min-height: 100dvh !important;
-padding: 0 !important;
-gap: 0 !important;
-margin: 0 !important;
-}
-.pos-container-full .pos-cart-panel {
-width: 100% !important;
-max-width: 100% !important;
-min-width: 100% !important;
-height: 100% !important;
-max-height: 100% !important;
-flex: 1 1 100% !important;
-border-radius: 0 !important;
-padding: 16px !important;
-}
-.pos-container-full .pos-cart-panel .pos-payment-form {
-flex: 1 !important;
-overflow-y: auto !important;
-max-height: none !important;
-display: flex !important;
-flex-direction: column !important;
-}
-.pos-container-full .pos-payment-form .pos-payment-methods {
-display: flex !important;
-flex-wrap: wrap !important;
-gap: 8px !important;
-}
-.pos-container-full .pos-payment-form .pos-payment-btn {
-flex: 1 !important;
-min-width: 80px !important;
-}
-
-/* ============================================================
-FORCER L'INDICATEUR D'ÉTAPE EN HAUT ET LE PANIER À DROITE SUR PC
-============================================================ */
-
-.pos-container {
-display: flex !important;
-flex-direction: column !important;
-gap: 16px !important;
-height: calc(100vh - 180px) !important;
-min-height: 450px !important;
-}
-
-.pos-steps-nav {
-display: flex !important;
-justify-content: center !important;
-align-items: center !important;
-gap: 20px !important;
-margin-bottom: 4px !important;
-padding: 8px 16px !important;
-background: var(--gray-50) !important;
-border-radius: var(--radius) !important;
-width: 100% !important;
-flex-shrink: 0 !important;
-flex-wrap: wrap !important;
-order: -1 !important;
-}
-
-.pos-row {
-display: flex !important;
-flex: 1 !important;
-gap: 16px !important;
-min-height: 0 !important;
-flex-direction: row !important;
-}
-
-.pos-products-panel {
-flex: 1 !important;
-min-width: 200px !important;
-max-height: 100% !important;
-order: 0 !important;
-}
-
-.pos-cart-panel {
-width: 20% !important;
-min-width: 200px !important;
-max-width: 350px !important;
-max-height: 100% !important;
-order: 1 !important;
-margin-left: auto !important;
-}
-
-@media(max-width: 767px) {
-.pos-row {
-flex-direction: column !important;
-}
-.pos-cart-panel {
-width: 100% !important;
-max-width: 100% !important;
-min-width: 100% !important;
-max-height: 40vh !important;
-margin-left: 0 !important;
-order: 1 !important;
-}
-.pos-products-panel {
-max-height: 55vh !important;
-order: 0 !important;
-}
+  .pos-products-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 4px !important;
+    min-height: 340px !important;
+    max-height: 420px !important;
+  }
+  .pos-product-card { padding: 4px 2px !important; min-height: 90px !important; }
+  .pos-product-img { height: 40px !important; }
+  .pos-product-name { font-size: 10px !important; }
+  .pos-product-price { font-size: 12px !important; }
+  .pos-products-panel { min-height: 460px !important; max-height: 65vh !important; }
+  .pos-cart-panel { max-height: 25vh !important; min-height: 80px !important; }
 }
