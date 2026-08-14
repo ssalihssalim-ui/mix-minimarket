@@ -1,7 +1,8 @@
 // ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
 // Bouton X pour effacer la recherche
-// GARDE le champ ventesVoiceDisplay pour POS-AUDIO
+// Filtres vocaux : détection + effacement barre recherche
+// Recherche client dans description incluse
 // Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
@@ -32,6 +33,27 @@ function formatDateHeure(seconds) {
         minute: '2-digit'
     });
     return { date, time, full: date + ' ' + time };
+}
+
+// ========== DÉTECTION FILTRE PÉRIODE (pour voice) ==========
+function detectPeriodFilterVentes(text) {
+    var cleaned = text.toLowerCase().trim();
+    if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today") || cleaned.includes("ajourdhui") || cleaned.includes("aujourd")) {
+        return 'today';
+    }
+    if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours") || cleaned.includes("ce mois ci") || cleaned.includes("mois")) {
+        return 'month';
+    }
+    if (cleaned.includes("cette semaine") || cleaned.includes("cettesemaine") || cleaned.includes("semaine") || cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours")) {
+        return 'week';
+    }
+    if (cleaned.includes("cette année") || cleaned.includes("cetteannee") || cleaned.includes("cette annee") || cleaned.includes("annee") || cleaned.includes("année") || cleaned.includes("1 an") || cleaned.includes("1an")) {
+        return 'year';
+    }
+    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous") || cleaned.includes("toute les ventes") || cleaned.includes("tout les ventes")) {
+        return 'all';
+    }
+    return null;
 }
 
 // Génère l'affichage Facture (colonne séparée)
@@ -816,7 +838,7 @@ function cancelCommande(cid) {
     }
 }
 
-// ==================== VENTES (PRO AVEC CHAMP VOCAL) ====================
+// ==================== VENTES (PRO AVEC CHAMP VOCAL + FILTRES) ====================
 function loadVentesPage(c) {
     injectVentesStyles();
     
@@ -904,9 +926,13 @@ async function loadVentes() {
 }
 
 function applyVentesFilters() {
+    // Filtre par période
     var filtered = filterByPeriod(window.allVentesData, window.ventesPeriod);
-    filtered = filterBySearch(filtered, window.ventesSearch, ['clientName', 'items.nom']);
     
+    // Filtre par recherche - INCLUT LA DESCRIPTION
+    filtered = filterBySearch(filtered, window.ventesSearch, ['clientName', 'items.nom', 'description']);
+    
+    // Filtre par statut
     var statusFilter = document.getElementById('ventesStatusFilter');
     if (statusFilter && statusFilter.value !== 'all') {
         filtered = filtered.filter(function(d) {
@@ -925,6 +951,57 @@ function applyVentesFilters() {
     }
     window.filteredVentes = filtered;
     renderVentesTablePro();
+}
+
+// Fonction pour traiter la recherche vocale avec détection de filtre
+function processVentestSearchFromVoice(text) {
+    var searchField = document.getElementById('ventesSearchInput');
+    var periodSelect = document.getElementById('ventesPeriodSelect');
+    var voiceDisplay = document.getElementById('ventesVoiceDisplay');
+    
+    if (!searchField || !periodSelect) return;
+    
+    // Vérifier si c'est un filtre de date
+    var detectedFilter = detectPeriodFilterVentes(text);
+    if (detectedFilter) {
+        // Appliquer le filtre
+        periodSelect.value = detectedFilter;
+        window.ventesPeriod = detectedFilter;
+        window.currentPages.ventes = 1;
+        
+        // EFFACER la barre de recherche
+        searchField.value = '';
+        window.ventesSearch = '';
+        
+        if (voiceDisplay) {
+            var filterLabels = {
+                'today': '📅 Aujourd\'hui',
+                'week': '📅 Cette semaine',
+                'month': '📅 Ce mois',
+                'year': '📅 Cette année',
+                'all': '📅 Toutes les ventes'
+            };
+            voiceDisplay.value = filterLabels[detectedFilter] || '📅 Filtre appliqué';
+            setTimeout(function() { voiceDisplay.value = ''; }, 2000);
+        }
+        
+        // Appliquer les filtres
+        applyVentesFilters();
+        
+        // Mettre à jour le bouton X (caché car barre vide)
+        var clearBtn = document.getElementById('ventesClearBtn');
+        if (clearBtn) clearBtn.classList.add('hidden');
+        
+        return true;
+    }
+    
+    // Sinon, recherche normale
+    searchField.value = text;
+    window.ventesSearch = text;
+    window.currentPages.ventes = 1;
+    applyVentesFilters();
+    
+    return false;
 }
 
 function renderVentesTablePro() {
@@ -1338,8 +1415,13 @@ function clearSearch(target) {
     const searchField = document.getElementById(target + 'SearchInput');
     if (searchField) {
         searchField.value = '';
-        const event = new Event('keyup');
-        searchField.dispatchEvent(event);
+        if (target === 'ventes') {
+            window.ventesSearch = '';
+            applyVentesFilters();
+        } else if (target === 'commandes') {
+            window.commandesSearch = '';
+            applyCommandesFilters();
+        }
         const clearBtn = document.getElementById(target + 'ClearBtn');
         if (clearBtn) {
             clearBtn.classList.add('hidden');
@@ -1381,5 +1463,7 @@ window.sendWhatsApp = sendWhatsApp;
 window.clearSearch = clearSearch;
 window.handleSearchInput = handleSearchInput;
 window.injectVentesStyles = injectVentesStyles;
+window.detectPeriodFilterVentes = detectPeriodFilterVentes;
+window.processVentestSearchFromVoice = processVentestSearchFromVoice;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec champ vocal) chargé ✅');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec filtres vocaux + description) chargé ✅');
