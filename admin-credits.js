@@ -1,5 +1,5 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
-// Gestion des crédits – Complet, sans erreur
+// Gestion des crédits – Complet, avec police 24px sur mobile
 
 window.creditsPeriod = window.creditsPeriod || 'all';
 window.creditsSearch = window.creditsSearch || '';
@@ -63,18 +63,18 @@ async function loadCreditsPage(c) {
 
     c.innerHTML = '<div class="content-card">' +
         '<div class="card-header">' +
-        '<h3><i class="fas fa-credit-card"></i> Crédits</h3>' +
+        '<h3 style="font-size:24px;"><i class="fas fa-credit-card"></i> Crédits</h3>' +
         '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">' +
         '<div style="position:relative;">' +
-        '<input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher (client, description)..." style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; width:250px;" onkeyup="searchClientInCreditsDropdown(this.value)" onfocus="searchClientInCreditsDropdown(this.value)" autocomplete="off">' +
-        '<div id="creditsClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>' +
+        '<input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher (client, description)..." style="padding:12px 16px; border:2px solid #e2e8f0; border-radius:8px; width:250px; font-size:24px; height:56px;" onkeyup="searchClientInCreditsDropdown(this.value)" onfocus="searchClientInCreditsDropdown(this.value)" autocomplete="off">' +
+        '<div id="creditsClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 5px 15px rgba(0,0,0,0.1);font-size:24px;"></div>' +
         '</div>' +
-        '<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." style="padding:8px 12px; border:2px solid #16a34a; border-radius:8px; width:180px; background:#f0fdf4; color:#14532d; font-weight:600;" readonly>' +
-        '<select id="creditsPeriodSelect" style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px;" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">' + getPeriodOptions('all') + '</select>' +
-        '<button class="btn-add" onclick="loadCredits()"><i class="fas fa-sync"></i> Actualiser</button>' +
-        '<button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()"><i class="fas fa-check-square"></i> Sélectionner</button>' +
-        '<button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5;"><i class="fas fa-check-double"></i> Tout sélectionner</button>' +
-        '<button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c;"><i class="fas fa-trash"></i> Supprimer sélection</button>' +
+        '<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." style="padding:12px 16px; border:2px solid #16a34a; border-radius:8px; width:180px; background:#f0fdf4; color:#14532d; font-weight:600; font-size:24px; height:56px;" readonly>' +
+        '<select id="creditsPeriodSelect" style="padding:12px 16px; border:2px solid #e2e8f0; border-radius:8px; font-size:24px; height:56px;" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">' + getPeriodOptions('all') + '</select>' +
+        '<button class="btn-add" onclick="loadCredits()" style="font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-sync"></i> Actualiser</button>' +
+        '<button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-check-square"></i> Sélectionner</button>' +
+        '<button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5; font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-check-double"></i> Tout sélectionner</button>' +
+        '<button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:24px; padding:12px 20px; height:56px;"><i class="fas fa-trash"></i> Supprimer sélection</button>' +
         '</div></div>' +
         '<div id="creditsTableContainer"></div>' +
         '<div id="creditsPagination" style="margin-top:10px;"></div>' +
@@ -237,26 +237,26 @@ function renderCreditsTable() {
     var pageData = getPageData('credits', data);
 
     if (pageData.length === 0) {
-        cont.innerHTML = '<p style="text-align:center;padding:40px;">Aucun crédit trouvé</p>';
+        cont.innerHTML = '<p style="text-align:center;padding:40px;font-size:24px;">Aucun crédit trouvé</p>';
         document.getElementById('creditsPagination').innerHTML = '';
         return;
     }
 
     var tc = 0;
-    var h = '<div class="table-container"><table class="data-table" style="font-size:0.55rem;"><thead><tr>' +
-        makeSortableHeader('credits', 'factureNum', 'Facture', 'renderCreditsTable') +
-        makeSortableHeader('credits', 'createdAt', 'Date', 'renderCreditsTable') +
-        makeSortableHeader('credits', 'clientName', 'Client', 'renderCreditsTable') +
-        '<th>Articles</th>' +
-        makeSortableHeader('credits', 'total', 'Total', 'renderCreditsTable') +
-        makeSortableHeader('credits', 'amountGiven', 'Payé', 'renderCreditsTable') +
-        makeSortableHeader('credits', 'remainingAmount', 'Restant', 'renderCreditsTable') +
-        makeSortableHeader('credits', 'paymentMethod', 'Mode', 'renderCreditsTable') +
-        makeSortableHeader('credits', 'vendeur', 'Vendeur', 'renderCreditsTable') +
-        '<th>Actions</th>';
+    var h = '<div class="table-container" style="overflow-x:auto;"><table class="data-table" style="width:100%;border-collapse:collapse;font-size:24px;min-width:800px;"><thead><tr style="background:#f9fafb;">' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Facture</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Date</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Client</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Articles</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Total</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Payé</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Restant</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Mode</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Vendeur</th>' +
+        '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;">Actions</th>';
 
     if (window.creditSelectionMode) {
-        h += '<th style="width:40px;">☑️</th>';
+        h += '<th style="padding:14px 12px;text-align:left;font-weight:700;font-size:24px;border-bottom:2px solid #e2e8f0;width:40px;">☑️</th>';
     }
     h += '</thead><tbody>';
 
@@ -277,16 +277,16 @@ function renderCreditsTable() {
             articlesHtml = '-';
         }
 
-        var actions = '<button class="btn-edit" onclick="printFacture(\'' + d.id + '\')"><i class="fas fa-print"></i></button> ';
+        var actions = '<button class="btn-edit" onclick="printFacture(\'' + d.id + '\')" style="font-size:22px;padding:8px 12px;"><i class="fas fa-print"></i></button> ';
         if (!d.paid) {
-            actions += '<button class="btn-add" style="padding:4px 8px;font-size:0.65rem;" onclick="payerCredit(\'' + d.id + '\')">Payer</button> ';
+            actions += '<button class="btn-add" style="padding:8px 12px;font-size:22px;background:#2E7D32;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="payerCredit(\'' + d.id + '\')">Payer</button> ';
         }
 
         var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
         if (isAdmin) {
-            actions += '<button class="btn-edit" onclick="editCredit(\'' + d.id + '\')"><i class="fas fa-edit"></i></button> ';
+            actions += '<button class="btn-edit" onclick="editCredit(\'' + d.id + '\')" style="font-size:22px;padding:8px 12px;"><i class="fas fa-edit"></i></button> ';
             if (!window.creditSelectionMode) {
-                actions += '<button class="btn-delete" onclick="if(confirm(\'Supprimer définitivement ce crédit ?\')) deleteCredit(\'' + d.id + '\')"><i class="fas fa-trash"></i></button>';
+                actions += '<button class="btn-delete" onclick="if(confirm(\'Supprimer définitivement ce crédit ?\')) deleteCredit(\'' + d.id + '\')" style="font-size:22px;padding:8px 12px;color:#ef4444;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button>';
             }
         }
 
@@ -294,27 +294,26 @@ function renderCreditsTable() {
         var rowClass = isSelected ? ' style="background:#fef3c7; border-left:4px solid #d97706;"' : '';
 
         h += '<tr' + rowClass + '>' +
-            '<td>' + (d.factureNum || d.id.substring(0, 8)) + '</td>' +
-            '<td>' + dt + '</td>' +
-            '<td>' + escapeHtml(d.clientName || d.table || '-') + '</td>' +
-            '<td><small>' + articlesHtml + '</small></td>' +
-            '<td>' + d.total.toFixed(2) + '</td>' +
-            '<td>' + amountPaid.toFixed(2) + '</td>' +
-            '<td style="color:#ef4444;"><strong>' + reste.toFixed(2) + '</strong></td>' +
-            '<td>' + mode + '</td>' +
-            '<td>' + escapeHtml(d.vendeur || '-') + '</td>' +
-            '<td>' + actions + '</td>';
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;font-weight:700;">' + (d.factureNum || d.id.substring(0, 8)) + '</td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;font-weight:700;">' + dt + '</td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;font-weight:700;">' + escapeHtml(d.clientName || d.table || '-') + '</td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;"><small style="font-size:22px;">' + articlesHtml + '</small></td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + d.total.toFixed(2) + '</td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + amountPaid.toFixed(2) + '</td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;color:#ef4444;"><strong style="font-size:26px;">' + reste.toFixed(2) + '</strong></td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + mode + '</td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + escapeHtml(d.vendeur || '-') + '</td>' +
+            '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;">' + actions + '</td>';
 
         if (window.creditSelectionMode) {
             var checked = isSelected ? 'checked' : '';
-            h += '<td><input type="checkbox" class="credit-select-check" data-id="' + d.id + '" ' + checked + ' onchange="toggleCreditSelection(\'' + d.id + '\')"></td>';
+            h += '<td style="padding:14px 12px;font-size:24px;border-bottom:1px solid #e2e8f0;text-align:center;"><input type="checkbox" class="credit-select-check" data-id="' + d.id + '" ' + checked + ' onchange="toggleCreditSelection(\'' + d.id + '\')" style="transform:scale(1.5);"></td>';
         }
         h += '</tr>';
     });
 
     h += '</tbody></table></div>';
-    h += '<div style="margin-top:15px;padding:15px;background:#fef2f2;border-radius:12px;text-align:center;">' +
-        '<strong>Impayés: ' + tc.toFixed(2) + ' MAD</strong></div>';
+    h += '<div style="margin-top:15px;padding:20px;background:#fef2f2;border-radius:12px;text-align:center;font-size:28px;"><strong>Impayés: ' + tc.toFixed(2) + ' MAD</strong></div>';
 
     cont.innerHTML = h;
     document.getElementById('creditsPagination').innerHTML = getPaginationHTML('credits', data.length);
@@ -505,9 +504,9 @@ function searchClientInCreditsDropdown(query) {
     var h = '';
     results.forEach(function(c) {
         var clientNameSafe = (c.nom + ' ' + c.prenom).replace(/'/g, "\\'");
-        h += '<div onclick="selectCreditClient(\'' + clientNameSafe + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #f1f5f9;">' +
-            '<strong>' + escapeHtml(c.nom) + ' ' + escapeHtml(c.prenom) + '</strong>' +
-            '<span style="color:#94a3b8;font-size:0.65rem;display:block;">' + escapeHtml(c.description || c.telephone || '') + '</span></div>';
+        h += '<div onclick="selectCreditClient(\'' + clientNameSafe + '\')" style="padding:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:24px;">' +
+            '<strong style="font-size:24px;">' + escapeHtml(c.nom) + ' ' + escapeHtml(c.prenom) + '</strong>' +
+            '<span style="color:#94a3b8;font-size:20px;display:block;">' + escapeHtml(c.description || c.telephone || '') + '</span></div>';
     });
 
     if (dropdown) {
@@ -541,19 +540,19 @@ async function editCredit(id) {
         window.currentCollection = 'credits';
 
         var h = '<div class="form-row">' +
-            '<div class="form-group"><label>Client</label><input type="text" id="editCreditClient" value="' + escapeHtml(d.clientName || '') + '"></div>' +
-            '<div class="form-group"><label>Total (MAD)</label><input type="number" id="editCreditTotal" value="' + (d.total || 0) + '" step="0.01"></div>' +
+            '<div class="form-group"><label style="font-size:24px;">Client</label><input type="text" id="editCreditClient" value="' + escapeHtml(d.clientName || '') + '" style="font-size:24px;padding:14px;"></div>' +
+            '<div class="form-group"><label style="font-size:24px;">Total (MAD)</label><input type="number" id="editCreditTotal" value="' + (d.total || 0) + '" step="0.01" style="font-size:24px;padding:14px;"></div>' +
             '</div>' +
             '<div class="form-row">' +
-            '<div class="form-group"><label>Payé (MAD)</label><input type="number" id="editCreditPaid" value="' + (d.amountGiven || 0) + '" step="0.01"></div>' +
-            '<div class="form-group"><label>Restant (MAD)</label><input type="number" id="editCreditRemaining" value="' + (d.remainingAmount || 0) + '" step="0.01"></div>' +
+            '<div class="form-group"><label style="font-size:24px;">Payé (MAD)</label><input type="number" id="editCreditPaid" value="' + (d.amountGiven || 0) + '" step="0.01" style="font-size:24px;padding:14px;"></div>' +
+            '<div class="form-group"><label style="font-size:24px;">Restant (MAD)</label><input type="number" id="editCreditRemaining" value="' + (d.remainingAmount || 0) + '" step="0.01" style="font-size:24px;padding:14px;"></div>' +
             '</div>' +
             '<div class="form-row">' +
-            '<div class="form-group"><label>Mode de paiement</label><input type="text" id="editCreditMode" value="' + escapeHtml(d.paymentMethod || '') + '"></div>' +
-            '<div class="form-group"><label>Statut</label><select id="editCreditStatut"><option value="0" ' + (!d.paid ? 'selected' : '') + '>Impayé</option><option value="1" ' + (d.paid ? 'selected' : '') + '>Payé</option></select></div>' +
+            '<div class="form-group"><label style="font-size:24px;">Mode de paiement</label><input type="text" id="editCreditMode" value="' + escapeHtml(d.paymentMethod || '') + '" style="font-size:24px;padding:14px;"></div>' +
+            '<div class="form-group"><label style="font-size:24px;">Statut</label><select id="editCreditStatut" style="font-size:24px;padding:14px;"><option value="0" ' + (!d.paid ? 'selected' : '') + '>Impayé</option><option value="1" ' + (d.paid ? 'selected' : '') + '>Payé</option></select></div>' +
             '</div>' +
-            '<button class="btn-cancel" onclick="closeModal()">Annuler</button>' +
-            '<button class="btn-save" onclick="saveEditCredit()">Enregistrer</button>';
+            '<button class="btn-cancel" onclick="closeModal()" style="font-size:24px;padding:12px 22px;">Annuler</button>' +
+            '<button class="btn-save" onclick="saveEditCredit()" style="font-size:24px;padding:12px 22px;">Enregistrer</button>';
 
         openModal('Modifier Crédit ' + (d.factureNum || id.substring(0, 8)), h);
     } catch (e) {
@@ -648,4 +647,4 @@ window.payerCredit = payerCredit;
 window.closeCreditSelection = closeCreditSelection;
 window.buildClientDescriptionIndex = buildClientDescriptionIndex;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits chargé');
+console.log('🛒 Mixmax Minimarket - Admin Credits chargé (police 24px)');
