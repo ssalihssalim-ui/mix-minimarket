@@ -599,8 +599,8 @@ color: var(--text-primary);
 
 /* ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes */
 .pos-products-panel {
-  min-height: 720px !important;
-  max-height: 78vh !important;
+  min-height: 760px !important;
+  max-height: 80vh !important;
   height: auto !important;
 }
 
@@ -635,12 +635,12 @@ object-fit: contain;
 .pos-products-grid { 
   display: grid; 
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
-  gap: 10px; 
+  gap: 8px !important; 
   flex: 1; 
   overflow-y: auto; 
   padding-right: 4px; 
-  min-height: 520px !important;
-  max-height: 620px !important;
+  min-height: 580px !important;
+  max-height: 650px !important;
   height: auto !important;
 }
 
@@ -945,14 +945,15 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   /* ✅ Augmenter la hauteur de pos-products-panel pour iPhone 13 Pro Max */
   .pos-products-panel {
-    min-height: 750px !important;
-    max-height: 80vh !important;
+    min-height: 790px !important;
+    max-height: 82vh !important;
     height: auto !important;
   }
   
   .pos-products-grid {
-    min-height: 550px !important;
-    max-height: 650px !important;
+    min-height: 580px !important;
+    max-height: 680px !important;
+    gap: 6px !important;
   }
   
   .pos-product-card {
@@ -974,7 +975,7 @@ SAFE AREA POUR IPHONE (DYNAMIC ISLAND / NOTCH)
   
   /* ✅ Réduire la hauteur du panier */
   .pos-cart-panel {
-    max-height: 26vh !important;
+    max-height: 22vh !important;
     min-height: 120px !important;
   }
 }
@@ -1115,8 +1116,8 @@ grid-template-columns: repeat(5, 1fr) !important;
 gap: 4px !important;
 flex: 1;
 overflow-y: auto;
-min-height: 420px !important;
-max-height: 500px !important;
+min-height: 450px !important;
+max-height: 520px !important;
 padding: 2px !important;
 height: auto !important;
 }
@@ -1152,14 +1153,14 @@ max-width: 100% !important;
 
 /* ✅ Hauteur du panel pour afficher 3 lignes */
 .pos-products-panel {
-  min-height: 550px !important;
-  max-height: 65vh !important;
+  min-height: 560px !important;
+  max-height: 68vh !important;
   height: auto !important;
 }
 
 /* ✅ Réduire la hauteur du panier */
 .pos-cart-panel { 
-  max-height: 24vh !important; 
+  max-height: 22vh !important; 
   min-height: 120px !important;
 }
 
@@ -1180,10 +1181,10 @@ font-size: 1.05rem !important;
 @media screen and (min-width: 390px) and (max-width: 430px) {
 .pos-products-grid {
 grid-template-columns: repeat(5, 1fr) !important;
-gap: 5px !important;
+gap: 4px !important;
 padding: 3px !important;
-min-height: 550px !important;
-max-height: 650px !important;
+min-height: 580px !important;
+max-height: 680px !important;
 }
 .pos-product-card {
 padding: 5px 3px !important;
@@ -1199,12 +1200,12 @@ font-size: 12px !important;
 font-size: 14px !important;
 }
 .pos-products-panel {
-  min-height: 750px !important;
-  max-height: 80vh !important;
+  min-height: 790px !important;
+  max-height: 82vh !important;
   height: auto !important;
 }
 .pos-cart-panel { 
-  max-height: 26vh !important; 
+  max-height: 22vh !important; 
   min-height: 120px !important;
 }
 }
@@ -1237,7 +1238,7 @@ font-size: 11px !important;
   max-height: 60vh !important;
 }
 .pos-cart-panel { 
-  max-height: 22vh !important; 
+  max-height: 20vh !important; 
   min-height: 100px !important;
 }
 }
@@ -1248,8 +1249,8 @@ font-size: 11px !important;
 grid-template-columns: repeat(5, 1fr) !important;
 gap: 6px !important;
 padding: 4px !important;
-min-height: 460px !important;
-max-height: 550px !important;
+min-height: 480px !important;
+max-height: 560px !important;
 }
 .pos-product-card {
 padding: 6px 4px !important;
@@ -1265,11 +1266,11 @@ font-size: 13px !important;
 font-size: 15px !important;
 }
 .pos-products-panel {
-  min-height: 600px !important;
-  max-height: 70vh !important;
+  min-height: 620px !important;
+  max-height: 72vh !important;
 }
 .pos-cart-panel { 
-  max-height: 28vh !important; 
+  max-height: 24vh !important; 
   min-height: 130px !important;
 }
 }
