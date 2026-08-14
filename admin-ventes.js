@@ -1,6 +1,7 @@
-// ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET PRO ====================
-// Version : Design moderne - Facture/Date/Client séparés - Police 22px
-// Toutes les fonctionnalités originales conservées (vocal, WhatsApp, etc.)
+// ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET PRO FINAL ====================
+// Version : Facture/Date/Client en colonnes séparées
+// Bouton X pour effacer la recherche
+// Reconnaissance vocale des filtres de date
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -19,7 +20,7 @@ window.voiceRecognition = null;
 window.voiceIsListening = false;
 window.voiceCurrentTarget = null;
 
-// ========== FONCTIONS UTILITAIRES PRO ==========
+// ========== FONCTIONS UTILITAIRES ==========
 
 // Format date + heure en français
 function formatDateHeure(seconds) {
@@ -37,63 +38,59 @@ function formatDateHeure(seconds) {
     return { date, time, full: date + ' ' + time };
 }
 
-// Génère l'en-tête de cellule PRO - Facture, Date/Heure, Client SÉPARÉS
-function renderVenteCellHeader(vente) {
-    const dt = vente.createdAt ? formatDateHeure(vente.createdAt.seconds) : { date: '-', time: '-', full: '-' };
+// Génère l'affichage Facture (colonne séparée)
+function renderFactureCell(vente) {
     const factureNum = vente.factureNum || vente.id?.substring(0, 8) || '---';
+    return `
+        <div class="facture-cell">
+            <i class="fas fa-receipt"></i>
+            <span class="facture-number">#${factureNum}</span>
+        </div>
+    `;
+}
+
+// Génère l'affichage Date/Heure (colonne séparée)
+function renderDateCell(vente) {
+    const dt = vente.createdAt ? formatDateHeure(vente.createdAt.seconds) : { date: '-', time: '-', full: '-' };
+    return `
+        <div class="date-cell">
+            <div class="date-line">
+                <i class="far fa-calendar-alt"></i>
+                <span>${dt.date}</span>
+            </div>
+            <div class="time-line">
+                <i class="far fa-clock"></i>
+                <span>${dt.time}</span>
+            </div>
+        </div>
+    `;
+}
+
+// Génère l'affichage Client (colonne séparée)
+function renderClientCell(vente) {
     const clientName = vente.clientName || vente.table || 'Client inconnu';
-    
     return `
-        <div class="vente-cell-header-pro">
-            <div class="facture-row-pro">
-                <i class="fas fa-receipt"></i>
-                <span class="facture-number-pro">#${factureNum}</span>
-            </div>
-            <div class="date-row-pro">
-                <i class="far fa-calendar-alt"></i>
-                <span>${dt.date}</span>
-                <span class="time-separator">•</span>
-                <i class="far fa-clock"></i>
-                <span>${dt.time}</span>
-            </div>
-            <div class="client-row-pro">
-                <i class="fas fa-user-circle"></i>
-                <span>${escapeHtml(clientName)}</span>
-            </div>
+        <div class="client-cell">
+            <i class="fas fa-user-circle"></i>
+            <span>${escapeHtml(clientName)}</span>
         </div>
     `;
 }
 
-// Génère l'en-tête de cellule PRO pour Commandes
-function renderCommandeCellHeader(commande) {
-    const dt = commande.createdAt ? formatDateHeure(commande.createdAt.seconds) : { date: '-', time: '-', full: '-' };
+// Génère l'affichage Facture pour Commandes
+function renderCommandeFactureCell(commande) {
     const cmdId = commande.id?.substring(0, 8) || '---';
-    const clientName = commande.clientName || 'Client inconnu';
-    
     return `
-        <div class="commande-cell-header-pro">
-            <div class="facture-row-pro">
-                <i class="fas fa-shopping-basket"></i>
-                <span class="facture-number-pro">#CMD-${cmdId}</span>
-            </div>
-            <div class="date-row-pro">
-                <i class="far fa-calendar-alt"></i>
-                <span>${dt.date}</span>
-                <span class="time-separator">•</span>
-                <i class="far fa-clock"></i>
-                <span>${dt.time}</span>
-            </div>
-            <div class="client-row-pro">
-                <i class="fas fa-user-circle"></i>
-                <span>${escapeHtml(clientName)}</span>
-            </div>
+        <div class="facture-cell">
+            <i class="fas fa-shopping-basket"></i>
+            <span class="facture-number">#CMD-${cmdId}</span>
         </div>
     `;
 }
 
-// ========== STYLES CSS DYNAMIQUES À INJECTER ==========
+// ========== STYLES CSS DYNAMIQUES ==========
 function injectVentesStyles() {
-    const styleId = 'ventes-pro-styles';
+    const styleId = 'ventes-pro-styles-final';
     if (document.getElementById(styleId)) return;
     
     const styles = `
@@ -105,7 +102,7 @@ function injectVentesStyles() {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
             }
             
-            /* === EXCEPTIONS : petits éléments === */
+            /* === EXCEPTIONS === */
             #ventesPage .stat-label, #commandesPage .stat-label,
             #ventesPage .filter-group label, #commandesPage .filter-group label,
             #ventesPage .total-label, #commandesPage .total-label {
@@ -125,79 +122,72 @@ function injectVentesStyles() {
                 padding: 6px 16px !important;
             }
             
-            /* === EN-TÊTE CELLULE PRO - FACTURE SÉPARÉE === */
-            .vente-cell-header-pro,
-            .commande-cell-header-pro {
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                padding: 6px 0;
-                min-width: 240px;
-            }
-            
-            .facture-row-pro {
+            /* === COLONNES SÉPARÉES === */
+            .facture-cell {
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 font-weight: 800;
-                font-size: 24px !important;
+                font-size: 22px !important;
                 color: var(--text-primary);
-                letter-spacing: -0.3px;
-                background: var(--gray-50);
                 padding: 4px 12px;
                 border-radius: 8px;
                 border-left: 3px solid var(--accent);
+                background: var(--gray-50);
             }
             
-            .facture-row-pro i {
+            .facture-cell i {
                 color: var(--accent);
                 font-size: 20px !important;
             }
             
-            .facture-number-pro {
+            .facture-cell .facture-number {
                 color: var(--black);
                 font-weight: 900;
-                font-size: 24px !important;
+                font-size: 22px !important;
                 background: var(--white);
                 padding: 0 10px;
                 border-radius: 4px;
             }
             
-            .date-row-pro {
+            .date-cell {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                padding: 2px 0;
+            }
+            
+            .date-cell .date-line,
+            .date-cell .time-line {
                 display: flex;
                 align-items: center;
                 gap: 8px;
                 font-size: 20px !important;
                 color: var(--text-secondary);
                 font-weight: 500;
-                padding-left: 4px;
             }
             
-            .date-row-pro i {
+            .date-cell .date-line i,
+            .date-cell .time-line i {
                 font-size: 16px !important;
                 color: var(--accent);
                 opacity: 0.7;
+                width: 18px;
             }
             
-            .date-row-pro .time-separator {
-                color: var(--gray-300);
-                margin: 0 2px;
-            }
-            
-            .client-row-pro {
+            .client-cell {
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 font-weight: 700;
                 font-size: 22px !important;
                 color: var(--text-primary);
-                padding-left: 4px;
                 background: rgba(20, 184, 166, 0.05);
                 padding: 4px 12px;
                 border-radius: 8px;
             }
             
-            .client-row-pro i {
+            .client-cell i {
                 color: var(--accent);
                 font-size: 20px !important;
             }
@@ -251,6 +241,112 @@ function injectVentesStyles() {
                 font-size: 24px !important;
                 color: var(--black) !important;
                 letter-spacing: -0.3px;
+            }
+            
+            /* === BARRE DE RECHERCHE AVEC BOUTON X === */
+            .search-bar-pro {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--white);
+                border: 2px solid var(--border);
+                border-radius: 12px;
+                padding: 4px 4px 4px 18px;
+                transition: var(--transition);
+                flex: 1;
+                min-width: 220px;
+                position: relative;
+            }
+            
+            .search-bar-pro:focus-within {
+                border-color: var(--black);
+                box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04);
+            }
+            
+            .search-bar-pro i.fa-search {
+                color: var(--text-muted);
+                font-size: 20px !important;
+            }
+            
+            .search-bar-pro input {
+                flex: 1;
+                border: none;
+                background: transparent;
+                padding: 14px 8px;
+                font-size: 22px !important;
+                font-family: 'Inter', sans-serif;
+                outline: none;
+                color: var(--text-primary);
+                min-width: 100px;
+            }
+            
+            .search-bar-pro input::placeholder {
+                color: var(--text-muted);
+                font-weight: 400;
+                font-size: 20px !important;
+            }
+            
+            /* === BOUTON X POUR EFFACER === */
+            .search-clear-btn {
+                width: 35px !important;
+                height: 35px !important;
+                min-width: 35px !important;
+                border-radius: 50% !important;
+                border: none !important;
+                background: var(--gray-200) !important;
+                color: var(--text-secondary) !important;
+                font-size: 18px !important;
+                cursor: pointer !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                transition: var(--transition) !important;
+                padding: 0 !important;
+                margin: 0 2px !important;
+            }
+            
+            .search-clear-btn:hover {
+                background: var(--gray-300) !important;
+                color: var(--black) !important;
+                transform: scale(1.05);
+            }
+            
+            .search-clear-btn.hidden {
+                display: none !important;
+            }
+            
+            /* === BOUTON MICRO === */
+            .search-bar-pro .btn-add {
+                width: 44px !important;
+                height: 44px !important;
+                border-radius: 10px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 !important;
+                font-size: 18px !important;
+                background: var(--black) !important;
+                color: var(--white) !important;
+                border: none !important;
+                cursor: pointer !important;
+                transition: var(--transition) !important;
+                flex-shrink: 0;
+            }
+            
+            .search-bar-pro .btn-add:hover {
+                background: var(--primary-hover) !important;
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-sm);
+            }
+            
+            .search-bar-pro .btn-add.listening {
+                background: #ef4444 !important;
+                animation: pulse 1s infinite;
+            }
+            
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
             }
             
             /* === BOUTONS D'ACTION === */
@@ -313,52 +409,6 @@ function injectVentesStyles() {
                 background: var(--primary-hover);
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-sm);
-            }
-            
-            /* === BARRE DE RECHERCHE === */
-            #ventesPage .search-bar-pro,
-            #commandesPage .search-bar-pro {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                background: var(--white);
-                border: 2px solid var(--border);
-                border-radius: 12px;
-                padding: 4px 8px 4px 18px;
-                transition: var(--transition);
-                flex: 1;
-                min-width: 220px;
-            }
-            
-            #ventesPage .search-bar-pro:focus-within,
-            #commandesPage .search-bar-pro:focus-within {
-                border-color: var(--black);
-                box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04);
-            }
-            
-            #ventesPage .search-bar-pro i,
-            #commandesPage .search-bar-pro i {
-                color: var(--text-muted);
-                font-size: 20px !important;
-            }
-            
-            #ventesPage .search-bar-pro input,
-            #commandesPage .search-bar-pro input {
-                flex: 1;
-                border: none;
-                background: transparent;
-                padding: 14px 10px;
-                font-size: 22px !important;
-                font-family: 'Inter', sans-serif;
-                outline: none;
-                color: var(--text-primary);
-            }
-            
-            #ventesPage .search-bar-pro input::placeholder,
-            #commandesPage .search-bar-pro input::placeholder {
-                color: var(--text-muted);
-                font-weight: 400;
-                font-size: 20px !important;
             }
             
             /* === FILTRES === */
@@ -445,25 +495,34 @@ function injectVentesStyles() {
                     padding: 10px 12px !important;
                 }
                 
-                .facture-row-pro {
-                    font-size: 20px !important;
+                .facture-cell {
+                    font-size: 18px !important;
+                    padding: 2px 8px !important;
                 }
                 
-                .facture-number-pro {
-                    font-size: 20px !important;
+                .facture-cell .facture-number {
+                    font-size: 18px !important;
                 }
                 
-                .date-row-pro {
+                .date-cell .date-line,
+                .date-cell .time-line {
                     font-size: 16px !important;
                 }
                 
-                .client-row-pro {
+                .client-cell {
+                    font-size: 18px !important;
+                    padding: 2px 8px !important;
+                }
+                
+                .search-bar-pro input {
                     font-size: 18px !important;
                 }
                 
-                #ventesPage .search-bar-pro input,
-                #commandesPage .search-bar-pro input {
-                    font-size: 18px !important;
+                .search-clear-btn {
+                    width: 32px !important;
+                    height: 32px !important;
+                    min-width: 32px !important;
+                    font-size: 16px !important;
                 }
             }
             
@@ -474,29 +533,42 @@ function injectVentesStyles() {
                     padding: 8px 10px !important;
                 }
                 
-                .facture-row-pro {
-                    font-size: 16px !important;
-                    padding: 2px 8px !important;
+                .facture-cell {
+                    font-size: 15px !important;
+                    padding: 2px 6px !important;
                 }
                 
-                .facture-number-pro {
-                    font-size: 16px !important;
+                .facture-cell .facture-number {
+                    font-size: 15px !important;
                 }
                 
-                .date-row-pro {
-                    font-size: 14px !important;
+                .date-cell .date-line,
+                .date-cell .time-line {
+                    font-size: 13px !important;
                     gap: 4px !important;
                 }
                 
-                .client-row-pro {
-                    font-size: 15px !important;
-                    padding: 2px 8px !important;
+                .date-cell .date-line i,
+                .date-cell .time-line i {
+                    font-size: 12px !important;
+                    width: 14px !important;
                 }
                 
-                #ventesPage .search-bar-pro input,
-                #commandesPage .search-bar-pro input {
+                .client-cell {
+                    font-size: 15px !important;
+                    padding: 2px 6px !important;
+                }
+                
+                .search-bar-pro input {
                     font-size: 15px !important;
                     padding: 10px 6px !important;
+                }
+                
+                .search-clear-btn {
+                    width: 28px !important;
+                    height: 28px !important;
+                    min-width: 28px !important;
+                    font-size: 14px !important;
                 }
                 
                 #ventesPage .filter-group select,
@@ -512,8 +584,36 @@ function injectVentesStyles() {
 }
 
 // ============================================================
-// RECONNAISSANCE VOCALE - VERSION CORRIGÉE ET FONCTIONNELLE
+// RECONNAISSANCE VOCALE - AVEC FILTRES DE DATE
 // ============================================================
+
+// Mapping des mots-clés pour les filtres de date
+const dateFilterKeywords = {
+    'aujourd\'hui': 'today',
+    'aujourd hui': 'today',
+    'ajourdhui': 'today',
+    'ce mois': 'month',
+    'cemois': 'month',
+    'ce mois-ci': 'month',
+    'cette semaine': 'week',
+    'cettesemaine': 'week',
+    'cette année': 'year',
+    'cetteannee': 'year',
+    'cette annee': 'year',
+    'toute les ventes': 'all',
+    'toutes les ventes': 'all',
+    'tout': 'all'
+};
+
+function detectDateFilter(text) {
+    const lower = text.toLowerCase().trim();
+    for (const [keyword, value] of Object.entries(dateFilterKeywords)) {
+        if (lower.includes(keyword)) {
+            return value;
+        }
+    }
+    return null;
+}
 
 /**
  * Active/désactive la reconnaissance vocale
@@ -547,15 +647,13 @@ function toggleVoiceRecognition(target) {
     recognition.maxAlternatives = 1;
     
     // Indicateur visuel
-    const displayField = document.getElementById(target + 'VoiceDisplay');
     const searchField = document.getElementById(target + 'SearchInput');
+    const micBtn = document.querySelector(`#${target}Page .search-bar-pro .btn-add`);
     
-    if (displayField) {
-        displayField.value = '🎤 Écoute...';
-        displayField.style.borderColor = '#ef4444';
-        displayField.style.background = '#fef2f2';
-        displayField.style.color = '#dc2626';
-        displayField.style.fontWeight = '700';
+    if (micBtn) {
+        micBtn.classList.add('listening');
+        micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        micBtn.title = 'Arrêter l\'écoute';
     }
     
     window.voiceIsListening = true;
@@ -575,18 +673,62 @@ function toggleVoiceRecognition(target) {
         }
         
         const text = final || interim;
-        if (displayField) {
-            displayField.value = '🎤 ' + text;
+        
+        // Afficher dans le champ de recherche
+        if (searchField) {
+            searchField.value = text.trim();
+            // Déclencher l'événement pour la recherche
+            const event = new Event('keyup');
+            searchField.dispatchEvent(event);
         }
         
-        // Si résultat final, on applique la recherche
+        // Si résultat final, on traite
         if (final) {
-            if (searchField) {
-                searchField.value = final.trim();
-                // Déclencher l'événement de recherche
-                const event = new Event('keyup');
-                searchField.dispatchEvent(event);
+            const cleanText = final.trim();
+            
+            // Vérifier si c'est un filtre de date
+            const detectedFilter = detectDateFilter(cleanText);
+            if (detectedFilter) {
+                // Appliquer le filtre de date
+                const periodSelect = document.getElementById(target + 'PeriodSelect');
+                if (periodSelect) {
+                    periodSelect.value = detectedFilter;
+                    // Déclencher l'événement change
+                    const changeEvent = new Event('change');
+                    periodSelect.dispatchEvent(changeEvent);
+                }
+                // Effacer le texte de la barre de recherche
+                if (searchField) {
+                    searchField.value = '';
+                    const event = new Event('keyup');
+                    searchField.dispatchEvent(event);
+                }
+                // Afficher une notification
+                const filterLabels = {
+                    'today': 'Aujourd\'hui',
+                    'week': 'Cette semaine',
+                    'month': 'Ce mois',
+                    'year': 'Cette année',
+                    'all': 'Toutes les ventes'
+                };
+                showVoiceNotification(`📅 Filtre appliqué : ${filterLabels[detectedFilter] || detectedFilter}`);
+            } else {
+                // Recherche normale
+                if (searchField) {
+                    searchField.value = cleanText;
+                    const event = new Event('keyup');
+                    searchField.dispatchEvent(event);
+                }
+                showVoiceNotification(`🔍 Recherche : "${cleanText}"`);
             }
+            
+            // Effacer l'affichage vocal après 3 secondes
+            setTimeout(() => {
+                if (searchField && searchField.value === cleanText) {
+                    // On garde le texte, l'utilisateur peut le voir
+                }
+            }, 100);
+            
             stopVoiceRecognition();
         }
     };
@@ -602,60 +744,37 @@ function toggleVoiceRecognition(target) {
             case 'network': msg += 'Problème réseau'; break;
             default: msg += event.error;
         }
-        if (displayField) {
-            displayField.value = '🎤 ' + msg;
-            displayField.style.borderColor = '#ef4444';
-            displayField.style.background = '#fef2f2';
-            displayField.style.color = '#dc2626';
-        }
-        setTimeout(() => {
-            if (displayField) {
-                displayField.value = '🎤 Appuyez pour parler';
-                displayField.style.borderColor = '#16a34a';
-                displayField.style.background = '#f0fdf4';
-                displayField.style.color = '#14532d';
-            }
-        }, 3000);
+        showVoiceNotification(msg);
         window.voiceIsListening = false;
+        if (micBtn) {
+            micBtn.classList.remove('listening');
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            micBtn.title = 'Recherche vocale';
+        }
     };
     
     // Fin
     recognition.onend = function() {
         window.voiceIsListening = false;
-        if (displayField) {
-            const currentVal = displayField.value;
-            if (currentVal.includes('Écoute') || currentVal.includes('Erreur')) {
-                displayField.value = '🎤 Appuyez pour parler';
-                displayField.style.borderColor = '#16a34a';
-                displayField.style.background = '#f0fdf4';
-                displayField.style.color = '#14532d';
-            }
+        if (micBtn) {
+            micBtn.classList.remove('listening');
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            micBtn.title = 'Recherche vocale';
         }
-        // Réinitialiser le bouton
-        updateVoiceButton(target, false);
     };
     
     // Démarrer
     try {
         recognition.start();
-        updateVoiceButton(target, true);
     } catch (e) {
         console.error('Erreur démarrage vocal:', e);
         window.voiceIsListening = false;
-        if (displayField) {
-            displayField.value = '🎤 Erreur démarrage';
-            displayField.style.borderColor = '#ef4444';
-            displayField.style.background = '#fef2f2';
-            displayField.style.color = '#dc2626';
+        if (micBtn) {
+            micBtn.classList.remove('listening');
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            micBtn.title = 'Recherche vocale';
         }
-        setTimeout(() => {
-            if (displayField) {
-                displayField.value = '🎤 Appuyez pour parler';
-                displayField.style.borderColor = '#16a34a';
-                displayField.style.background = '#f0fdf4';
-                displayField.style.color = '#14532d';
-            }
-        }, 2000);
+        showVoiceNotification('❌ Erreur de démarrage');
     }
 }
 
@@ -672,35 +791,78 @@ function stopVoiceRecognition() {
     window.voiceIsListening = false;
     
     const target = window.voiceCurrentTarget || 'ventes';
-    const displayField = document.getElementById(target + 'VoiceDisplay');
-    if (displayField) {
-        displayField.value = '🎤 Appuyez pour parler';
-        displayField.style.borderColor = '#16a34a';
-        displayField.style.background = '#f0fdf4';
-        displayField.style.color = '#14532d';
+    const micBtn = document.querySelector(`#${target}Page .search-bar-pro .btn-add`);
+    if (micBtn) {
+        micBtn.classList.remove('listening');
+        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        micBtn.title = 'Recherche vocale';
     }
-    updateVoiceButton(target, false);
 }
 
 /**
- * Met à jour le bouton micro
+ * Affiche une notification vocale
  */
-function updateVoiceButton(target, isListening) {
-    const searchBar = document.querySelector('.search-bar-pro');
-    if (!searchBar) return;
-    const micBtn = searchBar.querySelector('.btn-add');
-    if (!micBtn) return;
+function showVoiceNotification(message) {
+    // Créer ou récupérer la notification
+    let notif = document.getElementById('voiceNotification');
+    if (!notif) {
+        notif = document.createElement('div');
+        notif.id = 'voiceNotification';
+        notif.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--black);
+            color: var(--white);
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: 600;
+            z-index: 9999;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            font-family: 'Inter', sans-serif;
+        `;
+        document.body.appendChild(notif);
+    }
     
-    if (isListening) {
-        micBtn.style.background = '#ef4444';
-        micBtn.style.color = '#fff';
-        micBtn.innerHTML = '<i class="fas fa-stop"></i>';
-        micBtn.title = 'Arrêter l\'écoute';
-    } else {
-        micBtn.style.background = 'var(--black)';
-        micBtn.style.color = 'var(--white)';
-        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-        micBtn.title = 'Recherche vocale';
+    notif.textContent = message;
+    notif.style.opacity = '1';
+    
+    clearTimeout(window.voiceNotifTimeout);
+    window.voiceNotifTimeout = setTimeout(() => {
+        notif.style.opacity = '0';
+    }, 3000);
+}
+
+// Fonction pour effacer la recherche
+function clearSearch(target) {
+    const searchField = document.getElementById(target + 'SearchInput');
+    if (searchField) {
+        searchField.value = '';
+        const event = new Event('keyup');
+        searchField.dispatchEvent(event);
+        // Masquer le bouton X
+        const clearBtn = document.getElementById(target + 'ClearBtn');
+        if (clearBtn) {
+            clearBtn.classList.add('hidden');
+        }
+    }
+}
+
+// Fonction pour gérer l'affichage du bouton X
+function handleSearchInput(target) {
+    const searchField = document.getElementById(target + 'SearchInput');
+    const clearBtn = document.getElementById(target + 'ClearBtn');
+    if (searchField && clearBtn) {
+        if (searchField.value.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
     }
 }
 
@@ -717,13 +879,14 @@ function loadCommandesPage(c) {
                         <i class="fas fa-search"></i>
                         <input type="text" id="commandesSearchInput" 
                                placeholder="Rechercher (client, email, tél, produit)..."
-                               onkeyup="window.commandesSearch = this.value; window.currentPages.commandes=1; applyCommandesFilters();">
+                               onkeyup="window.commandesSearch = this.value; window.currentPages.commandes=1; handleSearchInput('commandes'); applyCommandesFilters();">
+                        <button class="search-clear-btn hidden" id="commandesClearBtn" onclick="clearSearch('commandes')" title="Effacer la recherche">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <button class="btn-add" onclick="toggleVoiceRecognition('commandes')" title="Recherche vocale">
                             <i class="fas fa-microphone"></i>
                         </button>
                     </div>
-                    <input type="text" id="commandesVoiceDisplay" placeholder="🎤 Appuyez pour parler" 
-                           style="display:none;">
                     <div class="filter-group">
                         <label><i class="far fa-calendar-alt"></i> Période</label>
                         <select id="commandesPeriodSelect" onchange="window.commandesPeriod = this.value; window.currentPages.commandes=1; applyCommandesFilters();">
@@ -806,7 +969,9 @@ function renderCommandesTablePro() {
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="min-width:260px;"><i class="fas fa-file-invoice"></i> Détails</th>
+                        <th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
+                        <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
+                        <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
                         <th><i class="fas fa-envelope"></i> Email</th>
                         <th><i class="fas fa-phone"></i> Tél</th>
                         <th><i class="fas fa-box"></i> Articles</th>
@@ -820,7 +985,19 @@ function renderCommandesTablePro() {
     `;
     
     pageData.forEach(function(d) {
-        const headerHtml = renderCommandeCellHeader(d);
+        const factureHtml = renderCommandeFactureCell(d);
+        const dt = d.createdAt ? formatDateHeure(d.createdAt.seconds) : { date: '-', time: '-', full: '-' };
+        const dateHtml = `
+            <div class="date-cell">
+                <div class="date-line"><i class="far fa-calendar-alt"></i> ${dt.date}</div>
+                <div class="time-line"><i class="far fa-clock"></i> ${dt.time}</div>
+            </div>
+        `;
+        const clientHtml = `
+            <div class="client-cell">
+                <i class="fas fa-user-circle"></i> ${escapeHtml(d.clientName || 'Client inconnu')}
+            </div>
+        `;
         var arts = d.items ? d.items.map(function(it) { 
             return '<strong>' + it.quantite + 'x</strong> ' + escapeHtml(it.nom); 
         }).join('<br>') : '-';
@@ -873,7 +1050,9 @@ function renderCommandesTablePro() {
         
         h += `
             <tr>
-                <td>${headerHtml}</td>
+                <td>${factureHtml}</td>
+                <td>${dateHtml}</td>
+                <td>${clientHtml}</td>
                 <td>${escapeHtml(d.clientEmail || '-')}</td>
                 <td>${escapeHtml(d.clientTelephone || '-')}</td>
                 <td>${arts}</td>
@@ -898,7 +1077,7 @@ function renderCommandesTablePro() {
     document.getElementById('commandesPagination').innerHTML = getPaginationHTML('commandes', data.length);
 }
 
-// Fonctions commandes (inchangées - conservées de l'original)
+// Fonctions commandes (inchangées)
 async function validateCommande(cid) {
     if (!confirm('Valider cette commande ?')) return;
     await CacheDB.write('commandes', cid, {
@@ -957,13 +1136,14 @@ function loadVentesPage(c) {
                         <i class="fas fa-search"></i>
                         <input type="text" id="ventesSearchInput" 
                                placeholder="Rechercher (client, produit)..."
-                               onkeyup="window.ventesSearch = this.value; window.currentPages.ventes=1; applyVentesFilters();">
+                               onkeyup="window.ventesSearch = this.value; window.currentPages.ventes=1; handleSearchInput('ventes'); applyVentesFilters();">
+                        <button class="search-clear-btn hidden" id="ventesClearBtn" onclick="clearSearch('ventes')" title="Effacer la recherche">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <button class="btn-add" onclick="toggleVoiceRecognition('ventes')" title="Recherche vocale">
                             <i class="fas fa-microphone"></i>
                         </button>
                     </div>
-                    <input type="text" id="ventesVoiceDisplay" placeholder="🎤 Appuyez pour parler" 
-                           style="display:none;">
                     <div class="filter-group">
                         <label><i class="far fa-calendar-alt"></i> Période</label>
                         <select id="ventesPeriodSelect" onchange="window.ventesPeriod = this.value; window.currentPages.ventes=1; applyVentesFilters();">
@@ -1084,7 +1264,9 @@ function renderVentesTablePro() {
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="min-width:260px;"><i class="fas fa-file-invoice"></i> Détails</th>
+                        <th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
+                        <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
+                        <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
                         ${isAdmin ? `<th><i class="fas fa-box"></i> Articles</th><th><i class="fas fa-cog"></i> Options</th>` : ''}
                         ${isAdmin ? `<th><i class="fas fa-coins"></i> Achat</th><th><i class="fas fa-chart-line"></i> Profit</th>` : ''}
                         <th><i class="fas fa-tag"></i> Total</th>
@@ -1102,7 +1284,10 @@ function renderVentesTablePro() {
     `;
     
     pageData.forEach(function(d, index) {
-        const headerHtml = renderVenteCellHeader(d);
+        const factureHtml = renderFactureCell(d);
+        const dateHtml = renderDateCell(d);
+        const clientHtml = renderClientCell(d);
+        
         var arts = d.items ? d.items.map(function(it) { 
             return '<strong>' + it.quantite + 'x</strong> ' + escapeHtml(it.nom); 
         }).join('<br>') : '-';
@@ -1158,7 +1343,9 @@ function renderVentesTablePro() {
         var rowClass = isSelected ? ' style="background:#fef3c7; border-left:4px solid #d97706;"' : '';
         
         h += `<tr${rowClass}>
-            <td>${headerHtml}</td>
+            <td>${factureHtml}</td>
+            <td>${dateHtml}</td>
+            <td>${clientHtml}</td>
             ${isAdmin ? `<td>${arts}</td><td>${opts}</td>` : ''}
             ${isAdmin ? `<td>${(d.achat || 0).toFixed(2)}</td><td style="color:#2E7D32;font-weight:700;">${(d.profit || 0).toFixed(2)}</td>` : ''}
             <td><span class="amount-total">${(d.total || 0).toFixed(2)} MAD</span></td>
@@ -1200,7 +1387,7 @@ function renderVentesTablePro() {
     document.getElementById('ventesPagination').innerHTML = getPaginationHTML('ventes', data.length);
 }
 
-// ==================== ÉDITER VENTE (inchangé) ====================
+// ==================== ÉDITER VENTE ====================
 function editVente(did) {
     db.collection('ventes').doc(did).get().then(function(doc) {
         if (doc.exists) {
@@ -1343,7 +1530,7 @@ function imprimerFacture(d, id) {
     setTimeout(function() { w.print(); }, 500);
 }
 
-// ==================== WHATSAPP (inchangé - conservé) ====================
+// ==================== WHATSAPP ====================
 async function sendWhatsApp(did) {
     try {
         const doc = await db.collection('ventes').doc(did).get();
@@ -1469,10 +1656,11 @@ window.imprimerFacture = imprimerFacture;
 window.sendWhatsApp = sendWhatsApp;
 window.toggleVoiceRecognition = toggleVoiceRecognition;
 window.stopVoiceRecognition = stopVoiceRecognition;
-window.formatDateHeure = formatDateHeure;
-window.renderVenteCellHeader = renderVenteCellHeader;
-window.renderCommandeCellHeader = renderCommandeCellHeader;
+window.clearSearch = clearSearch;
+window.handleSearchInput = handleSearchInput;
 window.injectVentesStyles = injectVentesStyles;
+window.showVoiceNotification = showVoiceNotification;
 
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO V2 chargé ✅');
-console.log('🎤 Reconnaissance vocale activée - Cliquez sur le micro pour parler');
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO FINAL chargé ✅');
+console.log('🎤 Reconnaissance vocale avec filtres de date activée');
+console.log('❌ Bouton X pour effacer la recherche (35px)');
