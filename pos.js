@@ -498,8 +498,8 @@ var panelPadding = isMobile ? '8px' : '16px';
 
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
     stepIndicator +
-    // ✅ Augmenter la hauteur de pos-products-panel de 50px pour afficher 4 produits
-    '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; flex:1; min-width:200px; min-height:520px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+    // ✅ Augmenter la hauteur de pos-products-panel pour afficher 3 lignes
+    '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; flex:1; min-width:200px; min-height:650px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
     '<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 10px;position:relative;height:'+(isMobile?'38px':'44px')+';">' +
         '<i class="fas fa-search" style="color:#94a3b8;margin-right:6px;font-size:'+(isMobile?'16px':'20px')+';"></i>' +
         '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:'+(isMobile?'16px':'24px')+';padding-right:30px;height:'+(isMobile?'38px':'44px')+';">' +
