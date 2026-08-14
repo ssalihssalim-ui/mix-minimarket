@@ -1,7 +1,6 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
-// Recherche dans description client + remplacement par nom/prénom
-// Boutons d'action corrigés - Design identique à la page Ventes
+// BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
 // Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
@@ -59,7 +58,7 @@ function detectPeriodFilterCredits(text) {
     if (cleaned.includes("cette année") || cleaned.includes("cetteannee") || cleaned.includes("cette annee") || cleaned.includes("annee") || cleaned.includes("année") || cleaned.includes("1 an") || cleaned.includes("1an")) {
         return 'year';
     }
-    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous") || cleaned.includes("toute les ventes") || cleaned.includes("tout les credits") || cleaned.includes("tout les crédits")) {
+    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous") || cleaned.includes("toute les credits") || cleaned.includes("tout les crédits")) {
         return 'all';
     }
     return null;
@@ -98,12 +97,10 @@ function filterCreditsBySearchWithDescription(data, query) {
         var match = false;
         var clientInfo = null;
         
-        // 1. Chercher dans le nom du client
         if (credit.clientName && credit.clientName.toLowerCase().indexOf(q) !== -1) {
             match = true;
         }
         
-        // 2. Chercher dans les items
         if (!match && credit.items) {
             for (var i = 0; i < credit.items.length; i++) {
                 if (credit.items[i].nom && credit.items[i].nom.toLowerCase().indexOf(q) !== -1) {
@@ -113,7 +110,6 @@ function filterCreditsBySearchWithDescription(data, query) {
             }
         }
         
-        // 3. Chercher dans la description du client (si clientId existe)
         if (!match && credit.clientId && clientsMap[credit.clientId]) {
             var client = clientsMap[credit.clientId];
             var description = client.description || '';
@@ -123,7 +119,6 @@ function filterCreditsBySearchWithDescription(data, query) {
             }
         }
         
-        // 4. Chercher dans la description du client (si clientName existe mais pas clientId)
         if (!match && credit.clientName && !credit.clientId) {
             for (var id in clientsMap) {
                 var c = clientsMap[id];
@@ -140,7 +135,6 @@ function filterCreditsBySearchWithDescription(data, query) {
         }
         
         if (match) {
-            // Si on a trouvé un client via description, remplacer clientName par nom+prénom
             if (clientInfo) {
                 credit._clientDisplayName = (clientInfo.nom || '') + ' ' + (clientInfo.prenom || '');
             } else if (credit.clientId && clientsMap[credit.clientId]) {
@@ -184,7 +178,7 @@ function renderCreditDateCell(credit) {
     `;
 }
 
-// Génère l'affichage Client (colonne séparée) - utilise _clientDisplayName si présent
+// Génère l'affichage Client (colonne séparée)
 function renderCreditClientCell(credit) {
     var clientName = credit._clientDisplayName || credit.clientName || credit.table || 'Client inconnu';
     return `
@@ -195,7 +189,7 @@ function renderCreditClientCell(credit) {
     `;
 }
 
-// ========== STYLES CSS DYNAMIQUES (identique à Ventes) ==========
+// ========== STYLES CSS DYNAMIQUES ==========
 function injectCreditsStyles() {
     const styleId = 'credits-pro-styles-final';
     if (document.getElementById(styleId)) return;
@@ -441,7 +435,7 @@ function injectCreditsStyles() {
                 display: none !important;
             }
             
-            /* === BOUTONS D'ACTION CORRIGÉS === */
+            /* === BOUTONS D'ACTION CORRIGÉS - AVEC ICÔNES === */
             #creditsPage .action-buttons {
                 display: flex !important;
                 align-items: center !important;
@@ -464,7 +458,7 @@ function injectCreditsStyles() {
                 justify-content: center !important;
                 padding: 0 !important;
                 font-size: 18px !important;
-                transition: var(--transition) !important;
+                transition: all 0.2s ease !important;
                 border: none !important;
                 background: var(--gray-50) !important;
                 color: var(--text-secondary) !important;
@@ -473,11 +467,13 @@ function injectCreditsStyles() {
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
             }
             
+            /* === ICÔNES DES BOUTONS === */
             #creditsPage .action-buttons .btn-edit i,
             #creditsPage .action-buttons .btn-delete i,
             #creditsPage .action-buttons .btn-add i {
-                font-size: 18px !important;
+                font-size: 20px !important;
                 pointer-events: none !important;
+                line-height: 1 !important;
             }
             
             #creditsPage .action-buttons .btn-edit:hover {
@@ -488,7 +484,7 @@ function injectCreditsStyles() {
             }
             
             #creditsPage .action-buttons .btn-delete {
-                color: var(--danger) !important;
+                color: #ef4444 !important;
                 background: rgba(239, 68, 68, 0.08) !important;
             }
             
@@ -678,6 +674,12 @@ function injectCreditsStyles() {
                     font-size: 14px !important;
                     border-radius: 8px !important;
                 }
+                
+                #creditsPage .action-buttons .btn-edit i,
+                #creditsPage .action-buttons .btn-delete i,
+                #creditsPage .action-buttons .btn-add i {
+                    font-size: 16px !important;
+                }
             }
             
             @media(max-width:500px) {
@@ -774,7 +776,6 @@ function injectCreditsStyles() {
 async function loadCreditsPage(c) {
     injectCreditsStyles();
     
-    // Charger les clients pour la recherche description
     await loadClientsForSearchCredits();
     
     window.creditsPeriod = 'all';
@@ -828,7 +829,7 @@ async function loadCreditsPage(c) {
     loadCredits();
 }
 
-// Fonction pour gérer la recherche avec description
+// ========== FONCTIONS RECHERCHE ==========
 function handleCreditsSearch(value) {
     window.creditsSearch = value;
     window.currentPages.credits = 1;
@@ -836,7 +837,6 @@ function handleCreditsSearch(value) {
     applyCreditsFilters();
 }
 
-// Fonction pour effacer la recherche
 function clearCreditsSearch() {
     var searchField = document.getElementById('creditsSearchInput');
     if (searchField) {
@@ -850,7 +850,6 @@ function clearCreditsSearch() {
     }
 }
 
-// Fonction pour traiter la recherche vocale avec détection de filtre
 function processCreditsSearchFromVoice(text) {
     var searchField = document.getElementById('creditsSearchInput');
     var periodSelect = document.getElementById('creditsPeriodSelect');
@@ -858,15 +857,12 @@ function processCreditsSearchFromVoice(text) {
     
     if (!searchField || !periodSelect) return;
     
-    // Vérifier si c'est un filtre de date
     var detectedFilter = detectPeriodFilterCredits(text);
     if (detectedFilter) {
-        // Appliquer le filtre
         periodSelect.value = detectedFilter;
         window.creditsPeriod = detectedFilter;
         window.currentPages.credits = 1;
         
-        // EFFACER la barre de recherche
         searchField.value = '';
         window.creditsSearch = '';
         
@@ -882,17 +878,14 @@ function processCreditsSearchFromVoice(text) {
             setTimeout(function() { voiceDisplay.value = ''; }, 2000);
         }
         
-        // Appliquer les filtres
         applyCreditsFilters();
         
-        // Mettre à jour le bouton X (caché car barre vide)
         var clearBtn = document.getElementById('creditsClearBtn');
         if (clearBtn) clearBtn.classList.add('hidden');
         
         return true;
     }
     
-    // Sinon, recherche normale
     searchField.value = text;
     window.creditsSearch = text;
     window.currentPages.credits = 1;
@@ -913,6 +906,7 @@ function handleSearchInputCredits(target) {
     }
 }
 
+// ========== CHARGEMENT CRÉDITS ==========
 async function loadCredits() {
     var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
     var vendeurCaissier = '';
@@ -965,11 +959,10 @@ async function loadCredits() {
     applyCreditsFilters();
 }
 
+// ========== FILTRES ==========
 function applyCreditsFilters() {
-    // Filtre par période
     var filtered = filterByPeriod(window.allCreditsData, window.creditsPeriod);
     
-    // Filtre par recherche - AVEC RECHERCHE DESCRIPTION
     if (window.creditsSearch && window.creditsSearch.trim() !== '') {
         filtered = filterCreditsBySearchWithDescription(filtered, window.creditsSearch);
     } else {
@@ -992,6 +985,7 @@ function applyCreditsFilters() {
     renderCreditsTablePro();
 }
 
+// ========== RENDU TABLEAU ==========
 function renderCreditsTablePro() {
     var cont = document.getElementById('creditsTableContainer');
     if (!cont) return;
@@ -1065,9 +1059,10 @@ function renderCreditsTablePro() {
         var mode = d.paymentMethod || '-';
         var amountPaid = d.amountGiven || 0;
 
+        // ✅ BOUTONS AVEC ICÔNES CORRIGÉES
         var actions = `
             <div class="action-buttons">
-                <button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer">
+                <button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer / PDF">
                     <i class="fas fa-print"></i>
                 </button>
         `;
@@ -1453,4 +1448,4 @@ window.renderCreditFactureCell = renderCreditFactureCell;
 window.renderCreditDateCell = renderCreditDateCell;
 window.renderCreditClientCell = renderCreditClientCell;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits PRO chargé (design identique à Ventes) ✅');
+console.log('🛒 Mixmax Minimarket - Admin Credits PRO (avec icônes corrigées) chargé ✅');
