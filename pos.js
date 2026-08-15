@@ -1,9 +1,10 @@
-// ==================== POS.JS - 5 COLONNES SUR MOBILE ====================
-// Mixmax Minimarket – Point de vente complet avec virtualisation
-// ✅ 5 colonnes sur mobile (< 700px)
-// ✅ Nom produit 22px bold uppercase, Prix produit 24px sur mobile
-// ✅ Nom panier 22px, Prix panier 24px
-// ✅ Bouton Valider 26px / hauteur 60px
+// ==================== POS.JS - MIXMAX MINIMARKET (COMPLET + VOCAL PWA) ====================
+// ✅ Reconnaissance vocale compatible Safari, iOS, PWA
+// ✅ Microphone fonctionnel en application (PWA)
+// ✅ Police 28px pour le nom client, 30px montant donné, 40px montant rendu
+// ✅ Boutons agrandis pour les modes de paiement
+// ✅ Gestion des crédits clients
+// ✅ Sélection automatique du client
 
 var posCart = [];
 var posStep = 1;
@@ -48,6 +49,12 @@ var posHasMoreProducts = false;
 var clientCreditsCache = {};
 var clientSearchTimeout = null;
 
+// ==================== VARIABLES VOCALES PWA ====================
+var posVoiceSearchActive = false;
+var posVoiceRecognition = null;
+var posVoiceTimeout = null;
+var posVoiceStream = null;
+
 function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
 function toDate(val) { if(!val) return null; if(val.toDate) return val.toDate(); if(val.seconds) return new Date(val.seconds*1000); if(typeof val==='string') return new Date(val); if(val instanceof Date) return val; return null; }
 
@@ -56,69 +63,351 @@ function fastSearch(query) { if(!query) return posProductsList; buildProductInde
 function posEnrichirItemsAvecPrixAchat(items){ return items.map(function(item){ var produit=posProductsList.find(function(p){ return p.id===item.id; }); var prixAchat=(produit&&produit.prixAchat!=null)?produit.prixAchat:(item.prixAchat||0); return Object.assign({},item,{prixAchat:prixAchat}); }); }
 function isOnPOSPage(){ var pt=document.getElementById('pageTitle')?.textContent||''; return pt==='POS'||pt==='Dashboard'; }
 
-function setStaticBackButtonVisibility(visible) {
-var btn = document.getElementById('posStaticBackBtn');
-if (btn) {
-btn.style.display = visible ? 'block' : 'none';
-}
+// ✅ Détecter si on est en mode PWA
+function isPWA() {
+    return window.navigator.standalone === true || 
+           window.matchMedia('(display-mode: standalone)').matches ||
+           window.matchMedia('(display-mode: fullscreen)').matches;
 }
 
-async function loadClientCredits(clientId) {
-if (!clientId) return 0;
-if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
-try {
-const snapshot = await db.collection('credits')
-.where('clientId', '==', clientId)
-.where('paid', '==', false)
-.get();
-let total = 0;
-snapshot.forEach(doc => {
-const data = doc.data();
-total += data.remainingAmount || data.total || 0;
-});
-clientCreditsCache[clientId] = total;
-return total;
-} catch(e) {
-console.warn('Erreur chargement crédits client:', e);
-return 0;
+// ✅ Détecter si on est sur iOS
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+
+// ==================== BOUTON RETOUR STATIQUE ====================
+function setStaticBackButtonVisibility(visible) {
+    var btn = document.getElementById('posStaticBackBtn');
+    if (btn) {
+        btn.style.display = visible ? 'block' : 'none';
+    }
+}
+
+// ==================== RECONNAISSANCE VOCALE COMPATIBLE PWA + SAFARI ====================
+function posToggleVoiceSearch() {
+    var isPwa = isPWA();
+    console.log('📱 Mode PWA:', isPwa);
+    console.log('📱 iOS:', isIOS());
+    
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        // En PWA, proposer d'ouvrir dans Safari
+        if (isPwa && isIOS()) {
+            if (confirm('📱 Pour utiliser le microphone dans l\'application, ouvrir dans Safari ?\n\nLe microphone fonctionne mieux dans Safari.')) {
+                openInSafariForVoice();
+            }
+            return;
+        }
+        alert('❌ La reconnaissance vocale n\'est pas supportée par ce navigateur.');
+        return;
+    }
+    
+    // ✅ Demander la permission microphone AVANT de démarrer
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        var constraints = {
+            audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            }
+        };
+        
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(function(stream) {
+                console.log('✅ Microphone autorisé');
+                posVoiceStream = stream;
+                startVoiceRecognition();
+            })
+            .catch(function(err) {
+                console.error('❌ Permission microphone refusée:', err.name, err.message);
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    if (isPwa) {
+                        alert('⚠️ Pour utiliser le microphone dans l\'application PWA sur iOS:\n\n' +
+                              '1️⃣ Ouvrez Safari (pas l\'application PWA)\n' +
+                              '2️⃣ Allez sur le site web\n' +
+                              '3️⃣ Autorisez le microphone\n' +
+                              '4️⃣ Revenez dans l\'application PWA\n\n' +
+                              '📱 Ou: Réglages > Safari > Microphone > Autoriser');
+                    } else {
+                        alert('⚠️ Autorisez l\'accès au microphone dans les réglages de Safari.\n\n' +
+                              '📱 Réglages > Safari > Microphone > Autoriser');
+                    }
+                } else if (err.name === 'NotFoundError') {
+                    alert('❌ Aucun microphone détecté sur votre appareil.');
+                } else {
+                    alert('❌ Erreur microphone: ' + err.message);
+                }
+            });
+    } else {
+        alert('❌ Ce navigateur ne supporte pas l\'accès au microphone.\n' +
+              '📱 Utilisez Safari sur iOS 14.5+');
+    }
+}
+
+function startVoiceRecognition() {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        alert('Reconnaissance vocale non supportée');
+        return;
+    }
+    
+    if (posVoiceRecognition) {
+        try { posVoiceRecognition.stop(); } catch(e) {}
+        posVoiceRecognition = null;
+    }
+    
+    posVoiceRecognition = new SpeechRecognition();
+    posVoiceRecognition.lang = 'fr-FR';
+    posVoiceRecognition.continuous = false;
+    posVoiceRecognition.interimResults = true;
+    posVoiceRecognition.maxAlternatives = 1;
+    
+    var micBtn = document.getElementById('posMicBtn');
+    if (micBtn) {
+        micBtn.classList.add('listening');
+        micBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+    }
+    
+    posVoiceSearchActive = true;
+    showVoiceResult('🎤 Écoute...');
+    
+    if (posVoiceTimeout) clearTimeout(posVoiceTimeout);
+    posVoiceTimeout = setTimeout(function() {
+        if (posVoiceSearchActive) {
+            stopVoiceRecognition();
+            showVoiceResult('⏱️ Délai dépassé');
+        }
+    }, 15000);
+    
+    posVoiceRecognition.onresult = function(event) {
+        var last = event.results.length - 1;
+        var transcript = event.results[last][0].transcript.trim();
+        
+        if (event.results[last].isFinal) {
+            posVoiceSearchActive = false;
+            stopVoiceRecognition();
+            var input = document.getElementById('posSearchInput');
+            if (input) {
+                input.value = transcript;
+                posSearchProducts(transcript);
+            }
+            showVoiceResult('🔍 "' + transcript + '"');
+            if (micBtn) {
+                micBtn.classList.remove('listening');
+                micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            }
+        } else {
+            showVoiceResult('✍️ ' + transcript);
+        }
+    };
+    
+    posVoiceRecognition.onerror = function(event) {
+        console.error('❌ Erreur voice:', event.error);
+        posVoiceSearchActive = false;
+        stopVoiceRecognition();
+        
+        var errorMsg = '❌ ';
+        switch(event.error) {
+            case 'not-allowed':
+                errorMsg += 'Microphone non autorisé.\n📱 Réglages > Safari > Microphone > Autoriser';
+                break;
+            case 'audio-capture':
+                errorMsg += 'Impossible d\'accéder au microphone.\n🔌 Vérifiez vos écouteurs/Bluetooth.';
+                break;
+            case 'network':
+                errorMsg += 'Erreur réseau. Vérifiez votre connexion.';
+                break;
+            case 'no-speech':
+                errorMsg += 'Aucune parole détectée. Réessayez.';
+                break;
+            case 'service-not-allowed':
+                errorMsg += 'Service non autorisé.\n📱 Réessayez dans Safari (pas l\'application PWA)';
+                break;
+            default:
+                errorMsg += event.error;
+        }
+        showVoiceResult(errorMsg);
+        
+        if (micBtn) {
+            micBtn.classList.remove('listening');
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        }
+    };
+    
+    posVoiceRecognition.onend = function() {
+        posVoiceSearchActive = false;
+        if (posVoiceTimeout) clearTimeout(posVoiceTimeout);
+        if (micBtn) {
+            micBtn.classList.remove('listening');
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        }
+        if (posVoiceStream) {
+            try {
+                posVoiceStream.getTracks().forEach(function(track) { track.stop(); });
+                posVoiceStream = null;
+            } catch(e) {}
+        }
+    };
+    
+    try {
+        posVoiceRecognition.start();
+        if (navigator.vibrate) {
+            navigator.vibrate(100);
+        }
+    } catch(e) {
+        console.error('❌ Erreur démarrage:', e);
+        posVoiceSearchActive = false;
+        if (micBtn) {
+            micBtn.classList.remove('listening');
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        }
+        showVoiceResult('❌ Erreur: ' + e.message);
+    }
+}
+
+function stopVoiceRecognition() {
+    if (posVoiceRecognition) {
+        try { posVoiceRecognition.stop(); } catch(e) {}
+        posVoiceRecognition = null;
+    }
+    posVoiceSearchActive = false;
+    if (posVoiceTimeout) clearTimeout(posVoiceTimeout);
+    
+    if (posVoiceStream) {
+        try {
+            posVoiceStream.getTracks().forEach(function(track) { track.stop(); });
+            posVoiceStream = null;
+        } catch(e) {}
+    }
+    
+    var micBtn = document.getElementById('posMicBtn');
+    if (micBtn) {
+        micBtn.classList.remove('listening');
+        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+    }
+}
+
+function showVoiceResult(message) {
+    var el = document.getElementById('posVoiceResult');
+    if (!el) {
+        var div = document.createElement('div');
+        div.id = 'posVoiceResult';
+        div.style.cssText = 'position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.88); color:#fff; padding:16px 28px; border-radius:16px; font-size:24px; font-weight:600; z-index:9999; text-align:center; max-width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.4); pointer-events:none; opacity:0; transition:opacity 0.3s ease; display:none;';
+        document.body.appendChild(div);
+        el = div;
+    }
+    if (el) {
+        el.textContent = message;
+        el.style.display = 'block';
+        el.style.opacity = '1';
+        clearTimeout(el._timeout);
+        el._timeout = setTimeout(function() {
+            el.style.opacity = '0';
+            setTimeout(function() { 
+                if (el) { 
+                    el.style.display = 'none';
+                    el.textContent = '';
+                } 
+            }, 400);
+        }, 3500);
+    }
+}
+
+function openInSafariForVoice() {
+    var url = window.location.href;
+    if (url.indexOf('?') === -1) {
+        url += '?from=pwa&voice=true';
+    } else {
+        url += '&from=pwa&voice=true';
+    }
+    var safariUrl = 'x-web-search://' + url;
+    window.location.href = safariUrl;
+    
+    setTimeout(function() {
+        alert('📱 Pour utiliser le microphone, ouvrez cette page dans Safari.\n\n' +
+              '1️⃣ Appuyez sur le bouton "Partager"\n' +
+              '2️⃣ Sélectionnez "Ouvrir dans Safari"\n\n' +
+              '🔊 Le microphone fonctionne dans Safari.');
+    }, 1000);
+}
+
+// Exposer les fonctions vocales
+window.posToggleVoiceSearch = posToggleVoiceSearch;
+window.stopVoiceRecognition = stopVoiceRecognition;
+window.showVoiceResult = showVoiceResult;
+window.isPWA = isPWA;
+window.isIOS = isIOS;
+
+// ==================== CHARGEMENT DES CRÉDITS CLIENT ====================
+async function loadClientCredits(clientId) {
+    if (!clientId) return 0;
+    if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
+    
+    try {
+        const snapshot = await db.collection('credits')
+            .where('clientId', '==', clientId)
+            .where('paid', '==', false)
+            .get();
+        
+        let total = 0;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            total += data.remainingAmount || data.total || 0;
+        });
+        
+        clientCreditsCache[clientId] = total;
+        return total;
+    } catch(e) {
+        console.warn('Erreur chargement crédits client:', e);
+        return 0;
+    }
 }
 
 async function updateClientCreditDisplay(clientId) {
-var displayEl = document.getElementById('clientCreditDisplay');
-if (!displayEl) return;
-if (!clientId) {
-displayEl.textContent = '';
-displayEl.style.display = 'none';
-return;
-}
-var total = await loadClientCredits(clientId);
-if (total > 0) {
-displayEl.textContent = '💳 Crédit: ' + total.toFixed(2) + ' MAD';
-displayEl.style.display = 'block';
-displayEl.style.color = '#ef4444';
-displayEl.style.fontWeight = '700';
-displayEl.style.fontSize = '28px';
-} else {
-displayEl.textContent = '✅ Aucun crédit';
-displayEl.style.display = 'block';
-displayEl.style.color = '#16a34a';
-displayEl.style.fontWeight = '700';
-displayEl.style.fontSize = '28px';
-}
+    var displayEl = document.getElementById('clientCreditDisplay');
+    if (!displayEl) return;
+    
+    if (!clientId) {
+        displayEl.textContent = '';
+        displayEl.style.display = 'none';
+        return;
+    }
+    
+    var total = await loadClientCredits(clientId);
+    if (total > 0) {
+        displayEl.textContent = '💳 Crédit: ' + total.toFixed(2) + ' MAD';
+        displayEl.style.display = 'block';
+        displayEl.style.color = '#ef4444';
+        displayEl.style.fontWeight = '700';
+        displayEl.style.fontSize = '28px';
+    } else {
+        displayEl.textContent = '✅ Aucun crédit';
+        displayEl.style.display = 'block';
+        displayEl.style.color = '#16a34a';
+        displayEl.style.fontWeight = '700';
+        displayEl.style.fontSize = '28px';
+    }
 }
 
+// ==================== CHARGEMENT ====================
 async function loadPosPage(c){
 posResetCart(); posStep=1; posCommandesFilterText=''; posCommandesSortField='createdAt'; posCommandesSortOrder='desc'; posSearchQuery=''; productIndexBuilt=false; posProductOffset=0;
 posCategoriesList=[]; posProductsList=[]; posAllClients=[]; posFilteredClients=[];
 c.innerHTML='<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#2E7D32;"></i><p style="margin-top:15px;color:#64748b;">Chargement du POS...</p></div>';
+
 setStaticBackButtonVisibility(false);
+
 try{
 let cc=await CacheDB.getAll('categories'),cp=await CacheDB.getAll('products'),cl=await CacheDB.getAll('clients');
 if(cc.length){ posCategoriesList=cc.map(x=>({id:x.id,nom:x.nom,imageBase64:x.imageBase64,recette:x.recette||false,ordre:x.ordre||0})); }
 if(cp.length){ posProductsList=cp.filter(x=>x.disponible!==false).map(x=>({...x,description:x.description||''})); productIndexBuilt=false; }
 if(cl.length){ posAllClients=cl.map(x=>({id:x.id,nom:x.nom,prenom:x.prenom,telephone:x.telephone,description:x.description||''})); posFilteredClients=[...posAllClients]; }
 if(isOnPOSPage()) renderPOS();
+
 if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
 if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
 }catch(e){ console.error(e); }
@@ -129,6 +418,7 @@ posCategoriesList=[]; cs.forEach(d=>{ let cat={id:d.id,nom:d.data().nom,imageBas
 posProductsList=[]; ps.forEach(d=>{ let dd=d.data(); if(dd.disponible!==false){ let prod={id:d.id,nom:dd.nom||'',description:dd.description||'',prixVente:dd.prixVente||0,prixPromo:dd.prixPromo||0,prixAchat:dd.prixAchat||0,stock:dd.stock,categorie:dd.categorie||'',categories:dd.categories||[],imageBase64:dd.imageBase64||'',favori:dd.favori||false}; posProductsList.push(prod); CacheDB.set('products',d.id,prod); } }); productIndexBuilt=false;
 posAllClients=[]; cl.forEach(d=>{ let data=d.data(),cli={id:d.id,nom:data.nom,prenom:data.prenom,telephone:data.telephone,description:data.description||''}; posAllClients.push(cli); CacheDB.set('clients',d.id,cli); }); posFilteredClients=[...posAllClients];
 if(isOnPOSPage()) renderPOS();
+
 if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
 if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
 }catch(e){ console.error(e); }
@@ -136,6 +426,7 @@ if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
 await posChargerCommandesTables(); await posChargerCommandesEnLigneCount();
 var cmdData=localStorage.getItem('posCommandeData'),payData=localStorage.getItem('posPayerVente');
 var creditData = localStorage.getItem('posPayerCredit');
+
 if(cmdData){ var cmd=JSON.parse(cmdData); localStorage.removeItem('posCommandeData'); posCart=[]; if(cmd.items){ posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||item.prixUnitaire||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(cmd.clientId&&cmd.clientName) posCurrentClient={id:cmd.clientId,name:cmd.clientName}; posCurrentTable=cmd.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posCommandeId=cmd.commandeId; if(isOnPOSPage()) renderPOS(); return; }
 if(payData){ var v=JSON.parse(payData); localStorage.removeItem('posPayerVente'); posCart=[]; if(v.items){ posEnrichirItemsAvecPrixAchat(v.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||0,quantite:item.quantite||1,categorie:'',imageBase64:'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(v.clientId&&v.clientName) posCurrentClient={id:v.clientId,name:v.clientName}; posCurrentTable=v.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posVenteId=v.venteId; if(isOnPOSPage()) renderPOS(); return; }
 if(creditData){
@@ -171,42 +462,43 @@ if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButto
 
 function posSearchProducts(query){ clearTimeout(window._searchTimeout); window._searchTimeout=setTimeout(function(){ posProductOffset=0; posSearchQuery=query.toLowerCase().trim(); if(isOnPOSPage()) filterProductGrid(); },150); }
 
+// ==================== EFFACER LA RECHERCHE ====================
 function clearPosSearch() {
-var input = document.getElementById('posSearchInput');
-if (input) {
-input.value = '';
-posSearchQuery = '';
-posProductOffset = 0;
-if (isOnPOSPage()) {
-filterProductGrid();
-}
-input.focus();
-var clearBtn = document.getElementById('posSearchClearBtn');
-if (clearBtn) clearBtn.style.display = 'none';
-}
+    var input = document.getElementById('posSearchInput');
+    if (input) {
+        input.value = '';
+        posSearchQuery = '';
+        posProductOffset = 0;
+        if (isOnPOSPage()) {
+            filterProductGrid();
+        }
+        input.focus();
+        var clearBtn = document.getElementById('posSearchClearBtn');
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
 }
 
+// ==================== EFFACER LA RECHERCHE CLIENT ====================
 function clearClientSearch() {
-var input = document.getElementById('posClientSearchInput');
-if (input) {
-input.value = '';
-posCurrentClient = null;
-posCurrentTable = '';
-var dropdown = document.getElementById('posClientDropdown');
-if (dropdown) dropdown.style.display = 'none';
-var creditDisplay = document.getElementById('clientCreditDisplay');
-if (creditDisplay) creditDisplay.style.display = 'none';
-updatePaymentButtons();
-if (isOnPOSPage()) renderPOS();
-input.focus();
-var clearBtn = document.getElementById('posClientClearBtn');
-if (clearBtn) clearBtn.style.display = 'none';
-}
+    var input = document.getElementById('posClientSearchInput');
+    if (input) {
+        input.value = '';
+        posCurrentClient = null;
+        posCurrentTable = '';
+        var dropdown = document.getElementById('posClientDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+        var creditDisplay = document.getElementById('clientCreditDisplay');
+        if (creditDisplay) creditDisplay.style.display = 'none';
+        updatePaymentButtons();
+        if (isOnPOSPage()) renderPOS();
+        input.focus();
+        var clearBtn = document.getElementById('posClientClearBtn');
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
 }
 
 function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProductGrid(); }
 
-// ==================== FILTER PRODUCT GRID AVEC 5 COLONNES SUR MOBILE ====================
 function filterProductGrid(){
 if(!isOnPOSPage() || posStep !== 1) return;
 var grid=document.getElementById('posProductGrid')||document.querySelector('.pos-products-grid'); if(!grid) return;
@@ -223,30 +515,11 @@ var totalProducts = f.length;
 var displayProducts = f.slice(0, posProductOffset + posProductBatchSize);
 posHasMoreProducts = (posProductOffset + posProductBatchSize) < totalProducts;
 
-// ✅ Détection mobile pour 5 colonnes
-var isMobile = window.innerWidth < 700;
-var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(120px, 1fr))';
-grid.style.gridTemplateColumns = gridCols;
-grid.style.overflowX = 'auto';
-grid.style.flexWrap = 'nowrap';
-
 var html='';
 if(totalProducts===0){ html+='<div style="grid-column:1/-1;text-align:center;padding:40px 10px;"><i class="fas fa-search" style="font-size:2.5rem;color:#94a3b8;"></i><p style="color:#94a3b8;">'+(posSearchQuery?'Aucun produit pour "'+escapeHtml(posSearchQuery)+'"':'Aucun produit')+'</p>'+(posSearchQuery?'<button class="btn-add" onclick="clearPosSearch()">Effacer</button>':'')+'</div>'; }
 else{
 if(posSearchQuery) html+='<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">'+totalProducts+' résultat'+(totalProducts>1?'s':'')+'</div>';
-for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>');
-// ✅ Style adapté pour mobile (5 colonnes) - Nom 22px bold uppercase, Prix 24px
-var cardStyle = isMobile ? 'padding:4px 2px;min-height:90px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
-var imgStyle = isMobile ? 'height:35px;width:100%;margin-bottom:2px;border-radius:6px;' : 'height:80px;margin-bottom:6px;';
-var nameStyle = isMobile ? 'font-size:22px !important;font-weight:700 !important;text-transform:uppercase;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
-var priceStyle = isMobile ? 'font-size:24px !important;font-weight:700;display:block;text-align:center;margin-top:2px;' : 'font-size:0.82rem;font-weight:700;';
-
-html+='<div class="pos-product-card '+sc+'" style="'+cardStyle+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+
-(p.imageBase64?'<div class="pos-product-img" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;flex-shrink:0;"><img src="'+escapeHtml(p.imageBase64)+'" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;"></div>':'<div class="pos-product-img pos-product-placeholder" style="width:100%;'+imgStyle+'overflow:hidden;background:var(--gray-200);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-box" style="'+(isMobile?'font-size:16px;':'font-size:24px;')+'"></i></div>')+
-'<div class="pos-product-info" style="display:flex;flex-direction:column;align-items:center;width:100%;flex:1;justify-content:center;">'+
-'<span class="pos-product-name" style="'+nameStyle+'">'+dn+stt+'</span>'+
-'<span class="pos-product-price" style="'+priceStyle+'">'+(hp?'<span class="pos-old-price" style="'+(isMobile?'font-size:16px;':'')+'text-decoration:line-through;color:#94a3b8;">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price" style="'+(isMobile?'font-size:24px;color:#ef4444;':'')+'">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD</span>')+'</span>'+
-'</div></div>'; }
+for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>'); html+='<div class="pos-product-card '+sc+'" onclick="posAddToCartOrOpenOptions(\''+p.id+'\')">'+(p.imageBase64?'<div class="pos-product-img"><img src="'+escapeHtml(p.imageBase64)+'" loading="lazy" alt=""></div>':'<div class="pos-product-img pos-product-placeholder"><i class="fas fa-box"></i></div>')+'<div class="pos-product-info"><span class="pos-product-name">'+dn+stt+'</span><span class="pos-product-price">'+(hp?'<span class="pos-old-price">'+p.prixVente.toFixed(2)+'</span> <span class="pos-promo-price">'+pr.toFixed(2)+' MAD</span>':pr.toFixed(2)+' MAD')+'</span></div></div>'; }
 if(posHasMoreProducts){ html+='<div style="grid-column:1/-1;text-align:center;padding:10px;"><button class="btn-add" onclick="loadMoreProducts()" style="font-size:0.8rem;">Afficher plus ('+(totalProducts-displayProducts.length)+' produits restants)</button></div>'; }
 }
 grid.innerHTML=html;
@@ -254,13 +527,14 @@ updateClearButtonVisibility();
 }
 
 function updateClearButtonVisibility() {
-var clearBtn = document.getElementById('posSearchClearBtn');
-var input = document.getElementById('posSearchInput');
-if (clearBtn && input) {
-clearBtn.style.display = (input.value && input.value.length > 0) ? 'flex' : 'none';
-}
+    var clearBtn = document.getElementById('posSearchClearBtn');
+    var input = document.getElementById('posSearchInput');
+    if (clearBtn && input) {
+        clearBtn.style.display = (input.value && input.value.length > 0) ? 'flex' : 'none';
+    }
 }
 
+// ==================== COMMANDES TABLES ====================
 async function posChargerCommandesTables(){ try{ var snap=await db.collection('commandes').where('statut','==','en_attente').where('source','==','menu_tactile').get(); posCommandesTables=[]; snap.forEach(function(doc){ var d=doc.data();d.id=doc.id;posCommandesTables.push(d); }); posCommandesTables.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); posCommandesTablesCount=posCommandesTables.length; }catch(e){ posCommandesTablesCount=0; } }
 async function posChargerCommandesEnLigneCount(){ try{ var snap=await db.collection('commandes').where('statut','==','en_attente').where('source','==','client').get(); posCommandesEnLigneCount=snap.size; }catch(e){ posCommandesEnLigneCount=0; } }
 function posTriCommandesTables(field){ posCommandesSortOrder=(posCommandesSortField===field)?(posCommandesSortOrder==='asc'?'desc':'asc'):'asc'; posCommandesSortField=field; posAfficherCommandesTables(); }
@@ -279,100 +553,111 @@ html+='</tbody></table></div>'; openModal('🛎️ Commandes tables ('+fd.length
 function posChargerCommandeTable(cid){ var cmd=posCommandesTables.find(function(c){ return c.id===cid; }); if(!cmd) return; posCart=[]; posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixUnitaire||item.prixVente||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); posCurrentTable='Table '+(cmd.table||'?'); posCurrentClient=null; posPaymentMethod='espece'; posDiscountMAD=0; window.posCommandeId=cid; closeModal(); posStep=2; if(isOnPOSPage()) renderPOS(); }
 async function posPayerCommandeTable(cid){ if(!confirm('Marquer comme payée ?')) return; try{ await CacheDB.write('commandes',cid,{statut:'payé',paidAt:firebase.firestore.FieldValue.serverTimestamp()},'update'); alert('✅ Payée !'); await posChargerCommandesTables(); closeModal(); if(isOnPOSPage()) renderPOS(); CacheDB.sync(); }catch(e){ alert('❌ '+e.message); } }
 
+// ==================== PANIER ====================
 function posResetCart(){ posCart=[]; posStep=1; posSelectedCategory='all'; posCurrentClient=null; posCurrentTable=''; posPaymentMethod='espece'; posAmountGiven=0; posDiscountMAD=0; posSearchQuery=''; posProductOffset=0; posFilteredClients=posAllClients.slice(); clientCreditsCache = {}; delete window.posCommandeId; delete window.posVenteId; var si=document.getElementById('posSearchInput'); if(si) si.value=''; if(isOnPOSPage()) renderPOS(); }
 
-function posSearchClient(query){
-var q = query.toLowerCase().trim();
-posCurrentClient = null;
-var dropdown = document.getElementById('posClientDropdown');
-var clearBtn = document.getElementById('posClientClearBtn');
-if (!q) {
-posFilteredClients = posAllClients.slice();
-if (dropdown) dropdown.style.display = 'none';
-document.getElementById('clientCreditDisplay').style.display = 'none';
-if (clearBtn) clearBtn.style.display = 'none';
-updatePaymentButtons();
-if (isOnPOSPage()) renderPOS();
-return;
-}
-if (clearBtn) clearBtn.style.display = 'flex';
-posFilteredClients = posAllClients.filter(function(c){
-return (c.nom||'').toLowerCase().indexOf(q)!==-1 ||
-(c.prenom||'').toLowerCase().indexOf(q)!==-1 ||
-(c.telephone||'').toLowerCase().indexOf(q)!==-1 ||
-(c.description||'').toLowerCase().indexOf(q)!==-1;
-});
-if (posFilteredClients.length === 1) {
-var client = posFilteredClients[0];
-posCurrentClient = { id: client.id, name: client.nom + ' ' + client.prenom };
-var input = document.getElementById('posClientSearchInput');
-if (input) input.value = posCurrentClient.name;
-if (dropdown) dropdown.style.display = 'none';
-if (clearBtn) clearBtn.style.display = 'flex';
-updateClientCreditDisplay(client.id);
-updatePaymentButtons();
-if (isOnPOSPage()) renderPOS();
-setTimeout(function() {
-if (posStep === 1 && isOnPOSPage()) {
-posGoToStep2();
-}
-}, 300);
-return;
-}
-if (posFilteredClients.length > 0) {
-renderClientDropdown();
-} else {
-if (dropdown) dropdown.style.display = 'none';
-}
-}
-
-function renderClientDropdown(){
-var d = document.getElementById('posClientDropdown');
-if (!d) return;
-var h = '';
-if (posFilteredClients.length === 0) {
-h = '<div style="padding:8px;color:#94a3b8;text-align:center;font-size:24px;">Aucun</div>';
-} else {
-posFilteredClients.forEach(function(c){
-h += '<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:24px;">'+
-escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+
-' <span style="color:#94a3b8;font-size:20px;">('+(c.telephone||'')+')</span></div>';
-});
-}
-d.innerHTML = h;
-d.style.display = 'block';
+// ==================== RECHERCHE CLIENT ====================
+function posSearchClient(query){ 
+    var q = query.toLowerCase().trim(); 
+    posCurrentClient = null;
+    var dropdown = document.getElementById('posClientDropdown');
+    var clearBtn = document.getElementById('posClientClearBtn');
+    
+    if (!q) { 
+        posFilteredClients = posAllClients.slice(); 
+        if (dropdown) dropdown.style.display = 'none'; 
+        document.getElementById('clientCreditDisplay').style.display = 'none'; 
+        if (clearBtn) clearBtn.style.display = 'none';
+        updatePaymentButtons(); 
+        if (isOnPOSPage()) renderPOS();
+        return; 
+    }
+    
+    if (clearBtn) clearBtn.style.display = 'flex';
+    
+    posFilteredClients = posAllClients.filter(function(c){ 
+        return (c.nom||'').toLowerCase().indexOf(q)!==-1 || 
+               (c.prenom||'').toLowerCase().indexOf(q)!==-1 || 
+               (c.telephone||'').toLowerCase().indexOf(q)!==-1 || 
+               (c.description||'').toLowerCase().indexOf(q)!==-1; 
+    });
+    
+    if (posFilteredClients.length === 1) {
+        var client = posFilteredClients[0];
+        posCurrentClient = { id: client.id, name: client.nom + ' ' + client.prenom };
+        var input = document.getElementById('posClientSearchInput');
+        if (input) input.value = posCurrentClient.name;
+        if (dropdown) dropdown.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'flex';
+        updateClientCreditDisplay(client.id);
+        updatePaymentButtons();
+        if (isOnPOSPage()) renderPOS();
+        
+        setTimeout(function() {
+            if (posStep === 1 && isOnPOSPage()) {
+                posGoToStep2();
+            }
+        }, 300);
+        return;
+    }
+    
+    if (posFilteredClients.length > 0) {
+        renderClientDropdown();
+    } else {
+        if (dropdown) dropdown.style.display = 'none';
+    }
 }
 
-function posSelectClientFromDropdown(cid,cn){
-posCurrentClient={id:cid,name:cn};
-posCurrentTable='';
-var s=document.getElementById('posClientSearchInput');
-var t=document.getElementById('posTableNum');
-var d=document.getElementById('posClientDropdown');
-var clearBtn=document.getElementById('posClientClearBtn');
-if(s) s.value=cn;
-if(t) t.value='';
-if(d) d.style.display='none';
-if(clearBtn) clearBtn.style.display='flex';
-updatePaymentButtons();
-updateClientCreditDisplay(cid);
-if(isOnPOSPage()) renderPOS();
-setTimeout(function() {
-if (posStep === 1 && isOnPOSPage()) {
-posGoToStep2();
-}
-}, 300);
+function renderClientDropdown(){ 
+    var d = document.getElementById('posClientDropdown'); 
+    if (!d) return; 
+    var h = ''; 
+    if (posFilteredClients.length === 0) {
+        h = '<div style="padding:8px;color:#94a3b8;text-align:center;font-size:24px;">Aucun</div>'; 
+    } else {
+        posFilteredClients.forEach(function(c){ 
+            h += '<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:24px;">'+
+                 escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+
+                 ' <span style="color:#94a3b8;font-size:20px;">('+(c.telephone||'')+')</span></div>'; 
+        }); 
+    }
+    d.innerHTML = h; 
+    d.style.display = 'block'; 
 }
 
-document.addEventListener('click',function(e){
-var d=document.getElementById('posClientDropdown');
-var s=document.getElementById('posClientSearchInput');
-if(d && s && !s.contains(e.target) && !d.contains(e.target)) {
-d.style.display='none';
-if (posCurrentClient && posCurrentClient.name) {
-s.value = posCurrentClient.name;
+function posSelectClientFromDropdown(cid,cn){ 
+    posCurrentClient={id:cid,name:cn}; 
+    posCurrentTable=''; 
+    var s=document.getElementById('posClientSearchInput');
+    var t=document.getElementById('posTableNum');
+    var d=document.getElementById('posClientDropdown');
+    var clearBtn=document.getElementById('posClientClearBtn');
+    
+    if(s) s.value=cn; 
+    if(t) t.value=''; 
+    if(d) d.style.display='none'; 
+    if(clearBtn) clearBtn.style.display='flex';
+    
+    updatePaymentButtons(); 
+    updateClientCreditDisplay(cid);
+    if(isOnPOSPage()) renderPOS();
+    
+    setTimeout(function() {
+        if (posStep === 1 && isOnPOSPage()) {
+            posGoToStep2();
+        }
+    }, 300);
 }
-}
+
+document.addEventListener('click',function(e){ 
+    var d=document.getElementById('posClientDropdown');
+    var s=document.getElementById('posClientSearchInput'); 
+    if(d && s && !s.contains(e.target) && !d.contains(e.target)) {
+        d.style.display='none';
+        if (posCurrentClient && posCurrentClient.name) {
+            s.value = posCurrentClient.name;
+        }
+    } 
 });
 
 function updatePaymentButtons(){ setTimeout(function(){ var cb=document.getElementById('posCreditBtn'),pb=document.getElementById('posPartielBtn'),cc=posCurrentClient&&posCurrentClient.id; if(cb){ cb.disabled=!cc; cb.style.opacity=cc?'1':'0.4'; } if(pb){ pb.disabled=!cc; pb.style.opacity=cc?'1':'0.4'; } },300); }
@@ -381,86 +666,23 @@ function posSetTable(v){ posCurrentTable=v.trim(); if(posCurrentTable){ posCurre
 function posAddToCartOrOpenOptions(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } var cat=posCategoriesList.find(function(c){ return c.nom===p.categorie; }),isRecette=cat&&cat.recette===true; if(isRecette){ posCurrentProductId=pid; posOpenOptionsModal(pid); }else{ var ex=posCart.find(function(x){ return x.id===pid; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:[],epice:'Normal',sel:'Normal'}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); updateCartOnly(); } }
 async function posOpenOptionsModal(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } if(typeof allStockData==='undefined'||allStockData.length===0){ try{ var snap=await db.collection('stock').orderBy('nom').get(); allStockData=[]; snap.forEach(function(d){ var dd=d.data();dd.id=d.id;allStockData.push(dd); }); }catch(e){} } try{ var doc=await db.collection('products').doc(pid).get(); posCurrentProductIngredients=doc.exists?(doc.data().ingredients||[]):[]; }catch(e){ posCurrentProductIngredients=[]; } var grouped={}; posCurrentProductIngredients.forEach(function(ing){ var si=allStockData.find(function(s){ return s.id===ing.idStock; }),cat=si?si.categorie:'Autre'; if(!grouped[cat]) grouped[cat]=[]; grouped[cat].push(ing.nom); }); var order=['Sauces','Légumes','Fruits','Viande','Poulet','Poisson'],sortedCats=Object.keys(grouped).sort(function(a,b){ var ia=order.indexOf(a),ib=order.indexOf(b); if(ia!==-1&&ib!==-1) return ia-ib; if(ia!==-1) return -1; if(ib!==-1) return 1; return a.localeCompare(b); }); posCurrentProductId=pid; var h='<h4>'+escapeHtml(p.nom)+'</h4>'; if(sortedCats.length===0) h+='<div style="color:#94a3b8;">Aucun ingrédient</div>'; else sortedCats.forEach(function(cat){ h+='<div style="margin-bottom:10px;"><label style="font-weight:600;">🥫 '+escapeHtml(cat)+'</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; grouped[cat].forEach(function(ing){ h+='<label style="display:flex;align-items:center;gap:3px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="checkbox" class="pos-interdit-check" value="'+escapeHtml(ing)+'"> '+escapeHtml(ing)+'</label>'; }); h+='</div></div>'; }); h+='<div><label>🌶️ Épices:</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; posEpicesList.forEach(function(s,idx){ h+='<label style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="radio" name="pos-epice" value="'+s+'" '+(idx===0?'checked':'')+'> '+s+'</label>'; }); h+='</div></div><div><label>🧂 Sel:</label><div style="display:flex;flex-wrap:wrap;gap:4px;">'; posSelList.forEach(function(s,idx){ h+='<label style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.7rem;"><input type="radio" name="pos-sel" value="'+s+'" '+(idx===0?'checked':'')+'> '+s+'</label>'; }); h+='</div></div>'; h+='<div style="text-align:right;margin-top:15px;"><button class="btn-cancel" onclick="closeModal()">Annuler</button> <button class="btn-save" onclick="posConfirmOptions()">Ajouter</button></div>'; openModal('Personnaliser',h); }
 function posConfirmOptions(){ var interdits=[]; document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb){ interdits.push(cb.value); }); var epice=(document.querySelector('input[name="pos-epice"]:checked')||{}).value||'Normal',sel=(document.querySelector('input[name="pos-sel"]:checked')||{}).value||'Normal',p=posProductsList.find(function(x){ return x.id===posCurrentProductId; }); if(!p){ closeModal(); return; } var ex=posCart.find(function(x){ return x.id===posCurrentProductId; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); closeModal(); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:interdits,epice:epice,sel:sel}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); closeModal(); updateCartOnly(); }
-
-// ==================== UPDATE CART ONLY AVEC BOUTONS AMÉLIORÉS ====================
-function updateCartOnly(){
-if(!isOnPOSPage()) return;
-var ci=document.querySelector('.pos-cart-items');
-if(!ci) return;
-var html='';
-if(posCart.length===0) {
-html='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>';
-} else {
-// Détection mobile pour les styles
-var isMobile = window.innerWidth < 700;
-var btnSize = isMobile ? '40px' : '28px';
-var fontSize = isMobile ? '1.2rem' : '0.7rem';
-var qtySize = isMobile ? '1.3rem' : '0.85rem';
-// ✅ Nom panier 22px, Prix panier 24px
-var nameSize = isMobile ? '22px' : '0.85rem';
-var priceSize = isMobile ? '0.7rem' : '0.7rem';
-var totalSize = isMobile ? '24px' : '0.8rem';
-
-for(var k=0;k<posCart.length;k++){
-var it=posCart[k],opts='';
-if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>';
-if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>';
-if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>';
-
-html+='<div class="pos-cart-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border);gap:8px;">' +
-'<div class="pos-cart-item-info" style="flex:1;min-width:0;">' +
-'<span class="pos-cart-item-name" style="font-size:'+nameSize+';font-weight:600;display:block;margin-right:10px;word-break:break-word;">'+escapeHtml(it.nom)+opts+'</span>' +
-'<span class="pos-cart-item-price" style="font-size:'+priceSize+';color:var(--text-secondary);">'+it.prixUnitaire.toFixed(2)+' MAD/u</span>' +
-'</div>' +
-'<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:6px;flex-shrink:0;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-minus"></i></button>' +
-'<span class="pos-qty-value" style="font-size:'+qtySize+';font-weight:700;min-width:32px;text-align:center;">'+it.quantite+'</span>' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
-'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:1.1rem;transition:all 0.2s;"><i class="fas fa-times"></i></button>' +
-'</div>' +
-'<span class="pos-cart-item-total" style="font-size:'+totalSize+';font-weight:700;min-width:80px;text-align:right;flex-shrink:0;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
-'</div>';
-}
-}
-ci.innerHTML=html;
-var badge=document.querySelector('.pos-cart-badge');
-if(badge) badge.textContent=posCart.length;
-var tr=document.querySelector('.pos-cart-total-row span:last-child');
-if(tr){
-var st=posCalculateTotal(),t=st-posDiscountMAD;
-tr.textContent=t.toFixed(2)+' MAD';
-}
-var vb=document.querySelector('.pos-validate-btn');
-if(vb) {
-vb.disabled=posCart.length===0;
-// ✅ Bouton Valider: 26px font-size, hauteur 60px
-vb.style.height = '60px';
-vb.style.fontSize = '26px';
-vb.style.fontWeight = '700';
-vb.style.padding = '16px';
-vb.style.borderRadius = '12px';
-vb.style.background = '#2E7D32';
-vb.style.color = '#fff';
-vb.style.border = 'none';
-vb.style.cursor = 'pointer';
-vb.style.transition = 'all 0.2s';
-}
-}
+function updateCartOnly(){ if(!isOnPOSPage()) return; var ci=document.querySelector('.pos-cart-items'); if(!ci) return; var html=''; if(posCart.length===0) html='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>'; else for(var k=0;k<posCart.length;k++){ var it=posCart[k],opts=''; if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>'; if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>'; html+='<div class="pos-cart-item"><div class="pos-cart-item-info"><span class="pos-cart-item-name">'+escapeHtml(it.nom)+opts+'</span><span class="pos-cart-item-price">'+it.prixUnitaire.toFixed(2)+' MAD/u</span></div><div class="pos-cart-item-actions"><button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)"><i class="fas fa-minus"></i></button><span class="pos-qty-value">'+it.quantite+'</span><button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)"><i class="fas fa-plus"></i></button><button class="pos-remove-btn" onclick="posRemoveItem('+k+')"><i class="fas fa-times"></i></button></div><span class="pos-cart-item-total">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span></div>'; } ci.innerHTML=html; var badge=document.querySelector('.pos-cart-badge'); if(badge) badge.textContent=posCart.length; var tr=document.querySelector('.pos-cart-total-row span:last-child'); if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } var vb=document.querySelector('.pos-validate-btn'); if(vb) vb.disabled=posCart.length===0; }
 function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('factureCounter'))||0; factureCounter++; localStorage.setItem('factureCounter',factureCounter); return 'FACT-'+new Date().getFullYear()+'-'+String(factureCounter).padStart(5,'0'); }
 
+// ==================== RENDU ====================
 function renderPOS(){
 if(!isOnPOSPage()) return;
 var now=Date.now(); if(now-posLastRenderTime<100&&posCart.length>0) return; posLastRenderTime=now;
 var c=document.getElementById('dynamicContent'); if(!c) return;
 if(posCart.length===0&&posStep===1){ buildFullPOS(c); return; }
-if(document.querySelector('.pos-container')&&posStep===1&&posCart.length>0){
-var productPanel = document.querySelector('.pos-products-panel');
-if (productPanel) productPanel.style.display = 'flex';
-updateCartOnly();
-filterProductGrid();
-var tr=document.querySelector('.pos-cart-total-row span:last-child');
-if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; }
-return;
+if(document.querySelector('.pos-container')&&posStep===1&&posCart.length>0){ 
+    var productPanel = document.querySelector('.pos-products-panel');
+    if (productPanel) productPanel.style.display = 'flex';
+    updateCartOnly(); 
+    filterProductGrid(); 
+    var tr=document.querySelector('.pos-cart-total-row span:last-child'); 
+    if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; } 
+    return; 
 }
 buildFullPOS(c);
 }
@@ -468,158 +690,158 @@ buildFullPOS(c);
 function buildFullPOS(c){
 if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#2E7D32;"></i><p>Chargement...</p></div>'; return; }
 var st=posCalculateTotal(),t=st-posDiscountMAD;
-var isMobile = window.innerWidth < 700;
-var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
 
 // ===== INDICATEUR D'ÉTAPE (CLICABLE) =====
-var stepSize = isMobile ? '22px' : '28px';
-var stepNumberSize = isMobile ? '22px' : '28px';
-var stepNumberSize2 = isMobile ? '26px' : '38px';
-var stepGap = isMobile ? '12px' : '20px';
-
-var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:'+stepGap+'; margin-bottom:4px; padding:4px 12px; background:var(--gray-50); border-radius:var(--radius); cursor:default;">' +
-'<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:6px; font-size:'+stepSize+'; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(1)">' +
-'<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:'+stepNumberSize2+'; height:'+stepNumberSize2+'; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:'+stepNumberSize+';">1</span>' +
-'<span style="font-size:'+stepSize+';">🛒</span> Panier' +
-'</div>' +
-'<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" style="display:flex; align-items:center; gap:6px; font-size:'+stepSize+'; font-weight:600; color:' + (posStep === 2 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(2)">' +
-'<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:'+stepNumberSize2+'; height:'+stepNumberSize2+'; border-radius:50%; background:' + (posStep === 2 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 2 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:'+stepNumberSize+';">2</span>' +
-'<span style="font-size:'+stepSize+';">💳</span> Paiement' +
-'</div>' +
+var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-content:center; gap:20px; margin-bottom:12px; padding:8px; background:var(--gray-50); border-radius:var(--radius); cursor:default;">' +
+    '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 1 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(1)">' +
+        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 1 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 1 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">1</span>' +
+        '🛒 Panier' +
+    '</div>' +
+    '<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:600; color:' + (posStep === 2 ? 'var(--black)' : 'var(--text-muted)') + '; cursor:pointer;" onclick="posNaviguerEtape(2)">' +
+        '<span class="step-number" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:' + (posStep === 2 ? 'var(--black)' : 'var(--gray-200)') + '; color:' + (posStep === 2 ? 'var(--white)' : 'var(--text-muted)') + '; font-size:0.75rem;">2</span>' +
+        '💳 Paiement' +
+    '</div>' +
 '</div>';
 
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
 
-// Styles pour mobile (5 colonnes)
-var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(120px, 1fr))';
-var gridGap = isMobile ? '4px' : '10px';
-var gridPadding = isMobile ? '2px' : '4px';
-var panelPadding = isMobile ? '8px' : '16px';
-
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '">' +
-stepIndicator +
-// ✅ Augmenter la hauteur de pos-products-panel de 50px pour afficher 4 produits
-'<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; flex:1; min-width:200px; min-height:520px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-'<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 10px;position:relative;height:'+(isMobile?'38px':'44px')+';">' +
-'<i class="fas fa-search" style="color:#94a3b8;margin-right:6px;font-size:'+(isMobile?'16px':'20px')+';"></i>' +
-'<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:'+(isMobile?'16px':'24px')+';padding-right:30px;height:'+(isMobile?'38px':'44px')+';">' +
-'<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:'+(isMobile?'20px':'24px')+';align-items:center;justify-content:center;" title="Effacer la recherche"><i class="fas fa-times-circle"></i></button>' +
-'</div>' +
-'<button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:'+(isMobile?'40px':'46px')+';height:'+(isMobile?'40px':'46px')+';cursor:pointer;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
-'<div style="display:flex;gap:4px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:4px 10px;font-weight:600;font-size:'+(isMobile?'0.6rem':'0.7rem')+';">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:4px 10px;font-weight:600;font-size:'+(isMobile?'0.6rem':'0.7rem')+';">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesEnLigneCount+'</span></button></div>' +
-'</div><div class="pos-categories-bar"><button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')"><i class="fas fa-th-large"></i> Tous</button>';
+    stepIndicator +
+    '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:16px; flex:1; min-width:280px; background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:100%; overflow:hidden;"><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+    '<div style="flex:1;min-width:160px;display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:40px;padding:2px 12px;position:relative;">' +
+        '<i class="fas fa-search" style="color:#94a3b8;margin-right:6px;"></i>' +
+        '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;font-size:16px;padding-right:30px;">' +
+        '<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:1.1rem;align-items:center;justify-content:center;" title="Effacer la recherche"><i class="fas fa-times-circle"></i></button>' +
+    '</div>' +
+    // ✅ BOUTON MICROPHONE AMÉLIORÉ POUR PWA
+    '<button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #16a34a;border-radius:50%;width:60px;height:60px;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:all 0.3s ease;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
+    '<div style="display:flex;gap:4px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:5px 12px;font-weight:600;font-size:0.7rem;">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 6px;">'+posCommandesEnLigneCount+'</span></button></div>' +
+    '</div><div class="pos-categories-bar"><button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')"><i class="fas fa-th-large"></i> Tous</button>';
 var sortedCategories = posCategoriesList.slice().sort(function(a, b) {
-var ordreA = (a.ordre !== undefined && a.ordre !== null) ? parseInt(a.ordre) : 9999;
-var ordreB = (b.ordre !== undefined && b.ordre !== null) ? parseInt(b.ordre) : 9999;
-if (ordreA !== ordreB) return ordreA - ordreB;
-return (a.nom || '').localeCompare(b.nom || '');
+    var ordreA = (a.ordre !== undefined && a.ordre !== null) ? parseInt(a.ordre) : 9999;
+    var ordreB = (b.ordre !== undefined && b.ordre !== null) ? parseInt(b.ordre) : 9999;
+    if (ordreA !== ordreB) return ordreA - ordreB;
+    return (a.nom || '').localeCompare(b.nom || '');
 });
-for(var i=0;i<sortedCategories.length;i++){
-var ca = sortedCategories[i];
-var ac = posSelectedCategory===ca.nom?'active':'';
-var ih = ca.imageBase64?'<img src="'+escapeHtml(ca.imageBase64)+'" loading="lazy">':'<i class="fas fa-folder"></i>';
-h+='<button class="pos-cat-btn '+ac+'" onclick="posFilterCategory(\''+escapeHtml(ca.nom).replace(/'/g,"\\'")+'\')" style="padding:'+(isMobile?'4px 8px':'12px 24px')+';font-size:'+(isMobile?'16px':'0.9rem')+';gap:'+(isMobile?'4px':'10px')+';">'+ih+' '+escapeHtml(ca.nom)+'</button>';
+for(var i=0;i<sortedCategories.length;i++){ 
+    var ca = sortedCategories[i];
+    var ac = posSelectedCategory===ca.nom?'active':'';
+    var ih = ca.imageBase64?'<img src="'+escapeHtml(ca.imageBase64)+'" loading="lazy">':'<i class="fas fa-folder"></i>'; 
+    h+='<button class="pos-cat-btn '+ac+'" onclick="posFilterCategory(\''+escapeHtml(ca.nom).replace(/'/g,"\\'")+'\')">'+ih+' '+escapeHtml(ca.nom)+'</button>'; 
 }
-h+='</div></div><div class="pos-products-grid" id="posProductGrid" style="grid-template-columns:'+gridCols+';gap:'+gridGap+';padding:'+gridPadding+';overflow-x:auto;flex-wrap:nowrap;"></div></div><div class="pos-cart-panel">';
+h+='</div></div><div class="pos-products-grid" id="posProductGrid"></div></div><div class="pos-cart-panel">';
 if(posStep===1){
-h+='<div class="pos-cart-header" style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;"><h3 style="font-size:'+(isMobile?'24px':'1rem')+';"><i class="fas fa-shopping-cart"></i> Panier <span class="pos-cart-badge" style="background:#2E7D32;color:#fff;border-radius:50%;padding:2px 10px;font-size:'+(isMobile?'20px':'0.7rem')+';">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()" style="font-size:'+(isMobile?'18px':'0.9rem')+';background:#ef4444;color:#fff;border:none;border-radius:8px;padding:'+(isMobile?'6px 12px':'8px 16px')+';cursor:pointer;"><i class="fas fa-trash-alt"></i> Vider</button></div><div class="pos-cart-items" style="max-height:'+(isMobile?'200px':'300px')+';overflow-y:auto;padding:4px;">';
-if(posCart.length===0){ h+='<div class="pos-cart-empty" style="text-align:center;padding:20px;color:#94a3b8;"><i class="fas fa-shopping-basket" style="font-size:'+(isMobile?'32px':'40px')+';"></i><p style="font-size:'+(isMobile?'20px':'1rem')+';">Panier vide</p></div>'; }
-else{
-for(var k=0;k<posCart.length;k++){
-var it=posCart[k],opts='';
-if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>';
-if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>';
-if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>';
-var btnSize = isMobile ? '36px' : '28px';
-var fontSize = isMobile ? '1.1rem' : '0.7rem';
-var qtySize = isMobile ? '1.2rem' : '0.85rem';
-// ✅ Nom panier 22px, Prix panier 24px
-var nameSize = isMobile ? '22px' : '0.85rem';
-var priceSize = isMobile ? '0.7rem' : '0.7rem';
-var totalSize = isMobile ? '24px' : '0.8rem';
-h+='<div class="pos-cart-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border);gap:8px;">' +
-'<div class="pos-cart-item-info" style="flex:1;min-width:0;">' +
-'<span class="pos-cart-item-name" style="font-size:'+nameSize+';font-weight:600;display:block;margin-right:10px;word-break:break-word;">'+escapeHtml(it.nom)+opts+'</span>' +
-'<span class="pos-cart-item-price" style="font-size:'+priceSize+';color:var(--text-secondary);">'+it.prixUnitaire.toFixed(2)+' MAD/u</span>' +
-'</div>' +
-'<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:6px;flex-shrink:0;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-minus"></i></button>' +
-'<span class="pos-qty-value" style="font-size:'+qtySize+';font-weight:700;min-width:32px;text-align:center;">'+it.quantite+'</span>' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
-'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:1.1rem;transition:all 0.2s;"><i class="fas fa-times"></i></button>' +
-'</div>' +
-'<span class="pos-cart-item-total" style="font-size:'+totalSize+';font-weight:700;min-width:80px;text-align:right;flex-shrink:0;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
-'</div>';
-}
-}
-h+='</div><div style="padding:8px 0;display:flex;gap:8px;align-items:center;"><label style="font-size:'+(isMobile?'20px':'1rem')+';">Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:6px;border:2px solid #e2e8f0;border-radius:6px;font-size:'+(isMobile?'20px':'1rem')+';"></div><div class="pos-cart-footer" style="padding:8px 0;">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;font-size:'+(isMobile?'20px':'1.1rem')+';"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;font-size:'+(isMobile?'20px':'1.1rem')+';"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:'+(isMobile?'28px':'30px')+';font-weight:700;padding:8px 0;border-top:2px solid var(--border);"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div>' +
-// ✅ Bouton Valider: 26px font-size, hauteur 60px
-'<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+' style="width:100%;padding:16px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-size:26px;font-weight:700;height:60px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fas fa-check-circle"></i> Valider</button></div>';
+h+='<div class="pos-cart-header"><h3><i class="fas fa-shopping-cart"></i> Panier <span class="pos-cart-badge">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()"><i class="fas fa-trash-alt"></i> Vider</button></div><div class="pos-cart-items">';
+if(posCart.length===0){ h+='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>'; }
+else{ for(var k=0;k<posCart.length;k++){ var it=posCart[k],opts=''; if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>'; if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#d97706;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>'; if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>'; h+='<div class="pos-cart-item"><div class="pos-cart-item-info"><span class="pos-cart-item-name">'+escapeHtml(it.nom)+opts+'</span><span class="pos-cart-item-price">'+it.prixUnitaire.toFixed(2)+' MAD/u</span></div><div class="pos-cart-item-actions"><button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)"><i class="fas fa-minus"></i></button><span class="pos-qty-value">'+it.quantite+'</span><button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)"><i class="fas fa-plus"></i></button><button class="pos-remove-btn" onclick="posRemoveItem('+k+')"><i class="fas fa-times"></i></button></div><span class="pos-cart-item-total">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span></div>'; } }
+h+='</div><div style="padding:8px 0;display:flex;gap:8px;"><label>Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:4px 8px;border:2px solid #e2e8f0;border-radius:6px;"></div><div class="pos-cart-footer">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div><button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+'><i class="fas fa-check-circle"></i> Valider</button></div>';
 }else{
 var canCredit=posCurrentClient&&posCurrentClient.id;
 var creditDisplay = '';
 if (posCurrentClient && posCurrentClient.id) {
-creditDisplay = '<div id="clientCreditDisplay" style="font-size:28px;font-weight:700;padding:4px 0;text-align:right;"></div>';
+    creditDisplay = '<div id="clientCreditDisplay" style="font-size:28px;font-weight:700;padding:4px 0;text-align:right;"></div>';
 }
 h+='<div class="pos-cart-header"><h3><i class="fas fa-credit-card"></i> Paiement</h3></div><div class="pos-payment-form"><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Client</label><div style="position:relative;">' +
-'<div style="display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:8px;padding:2px 12px;position:relative;">' +
-'<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;font-size:28px !important;font-weight:700 !important;padding-right:30px;">' +
-'<button id="posClientClearBtn" onclick="clearClientSearch()" style="display:'+((posCurrentClient && posCurrentClient.name) ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:1.3rem;align-items:center;justify-content:center;" title="Effacer le client"><i class="fas fa-times-circle"></i></button>' +
-'</div>' +
-'<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;"></div></div>'+creditDisplay+'</div><div style="margin:2px 0;font-size:0.7rem;text-align:center;">— OU —</div><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="padding:8px;background:#f8fafc;border-radius:8px;">' +
-'<div style="font-size:30px;font-weight:600;">Articles: '+posCart.length+'</div>' +
-(posDiscountMAD>0?'<div style="color:#ef4444;font-size:30px;">Remise: -'+posDiscountMAD.toFixed(2)+'</div>':'') +
-'<div style="font-size:30px;font-weight:700;">Total: '+t.toFixed(2)+' MAD</div></div></div><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="display:flex;gap:6px;">' +
-'<button class="pos-payment-btn '+(posPaymentMethod==='espece'?'active':'')+'" onclick="posSetPaymentMethod(\'espece\')" style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-money-bill-wave"></i> Espèces</button>' +
-'<button class="pos-payment-btn '+(posPaymentMethod==='credit'?'active':'')+'" onclick="posSetPaymentMethod(\'credit\')" id="posCreditBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-credit-card"></i> Crédit</button>' +
-'<button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-hand-holding-usd"></i> Partiel</button>' +
-'</div></div>';
+    '<div style="display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:8px;padding:2px 12px;position:relative;">' +
+        '<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:8px 0;width:100%;background:transparent;font-size:28px !important;font-weight:700 !important;padding-right:30px;">' +
+        '<button id="posClientClearBtn" onclick="clearClientSearch()" style="display:'+((posCurrentClient && posCurrentClient.name) ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:1.3rem;align-items:center;justify-content:center;" title="Effacer le client"><i class="fas fa-times-circle"></i></button>' +
+    '</div>' +
+    '<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;"></div></div>'+creditDisplay+'</div><div style="margin:2px 0;font-size:0.7rem;text-align:center;">— OU —</div><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="padding:8px;background:#f8fafc;border-radius:8px;">' +
+    '<div style="font-size:30px;font-weight:600;">Articles: '+posCart.length+'</div>' +
+    (posDiscountMAD>0?'<div style="color:#ef4444;font-size:30px;">Remise: -'+posDiscountMAD.toFixed(2)+'</div>':'') +
+    '<div style="font-size:30px;font-weight:700;">Total: '+t.toFixed(2)+' MAD</div></div></div><div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;"></div><div style="margin-bottom:4px;"><div style="display:flex;gap:6px;">' +
+    '<button class="pos-payment-btn '+(posPaymentMethod==='espece'?'active':'')+'" onclick="posSetPaymentMethod(\'espece\')" style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-money-bill-wave"></i> Espèces</button>' +
+    '<button class="pos-payment-btn '+(posPaymentMethod==='credit'?'active':'')+'" onclick="posSetPaymentMethod(\'credit\')" id="posCreditBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-credit-card"></i> Crédit</button>' +
+    '<button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled style="opacity:0.4;"')+' style="font-size:24px !important;font-weight:700 !important;padding:16px 20px;height:auto;min-height:65px;"><i class="fas fa-hand-holding-usd"></i> Partiel</button>' +
+    '</div></div>';
 if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') {
-h+='<div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:8px;font-size:36px !important;font-weight:700 !important;"><div id="posChangeDisplay" style="font-size:40px;font-weight:700;padding:8px 0;margin-right:20px;"></div></div>';
+    h+='<div style="margin-bottom:4px;"><label style="font-size:20px;font-weight:600;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:8px;font-size:36px !important;font-weight:700 !important;"><div id="posChangeDisplay" style="font-size:40px;font-weight:700;padding:8px 0;margin-right:20px;"></div></div>';
 }
 h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()" style="width:100%;padding:16px;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-size:24px !important;font-weight:700 !important;min-height:65px;"><i class="fas fa-check-circle"></i> Finaliser</button></div>';
 }
 h+='</div></div>'; c.innerHTML=h;
 
+// ✅ Gérer le bouton statique
 setStaticBackButtonVisibility(posStep === 2);
 
-if(posStep===1) {
-filterProductGrid();
+// ✅ Ajouter le CSS pour le bouton microphone
+var style = document.createElement('style');
+style.textContent = `
+#posMicBtn.listening {
+    background: #ef4444 !important;
+    border-color: #dc2626 !important;
+    animation: pulseMic 1s infinite;
 }
+@keyframes pulseMic {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+#posVoiceResult {
+    position: fixed !important;
+    bottom: 30px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: rgba(0, 0, 0, 0.88) !important;
+    color: #fff !important;
+    padding: 16px 28px !important;
+    border-radius: 16px !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    z-index: 9999 !important;
+    text-align: center !important;
+    max-width: 90% !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+}
+#posVoiceResult.visible {
+    opacity: 1 !important;
+}
+`;
+document.head.appendChild(style);
+
+if(posStep===1) filterProductGrid();
 if(posStep===2) {
-setTimeout(function() {
-posCalculateChange();
-if (posCurrentClient && posCurrentClient.id) {
-updateClientCreditDisplay(posCurrentClient.id);
-var clearBtn = document.getElementById('posClientClearBtn');
-if (clearBtn) clearBtn.style.display = 'flex';
-}
-}, 200);
+    setTimeout(function() {
+        posCalculateChange();
+        if (posCurrentClient && posCurrentClient.id) {
+            updateClientCreditDisplay(posCurrentClient.id);
+            var clearBtn = document.getElementById('posClientClearBtn');
+            if (clearBtn) clearBtn.style.display = 'flex';
+        }
+    }, 200);
 }
 }
 
+// ==================== NAVIGATION ENTRE ÉTAPES ====================
 function posNaviguerEtape(etape) {
-console.log('🔄 Navigation vers étape', etape);
-if (etape === 1) {
-posGoToStep1();
-} else if (etape === 2) {
-posGoToStep2();
-}
+    console.log('🔄 Navigation vers étape', etape);
+    if (etape === 1) {
+        posGoToStep1();
+    } else if (etape === 2) {
+        posGoToStep2();
+    }
 }
 
+// ==================== MÉTIER ====================
 function posFilterCategory(ca){ posSelectedCategory=ca; posProductOffset=0; var si=document.getElementById('posSearchInput'); if(si) posSearchQuery=si.value.toLowerCase().trim(); if(isOnPOSPage()) filterProductGrid(); }
 function posUpdateDiscountMAD(v){ posDiscountMAD=parseFloat(v)||0; if(posDiscountMAD<0) posDiscountMAD=0; if(isOnPOSPage()) renderPOS(); }
 function posUpdateQty(i,ch){ var it=posCart[i]; if(!it) return; var p=posProductsList.find(function(x){ return x.id===it.id; }),nq=it.quantite+ch; if(nq<=0) posCart.splice(i,1); else{ if(p&&p.stock!==undefined&&nq>p.stock){ alert('Max: '+p.stock); return; } it.quantite=nq; } updateCartOnly(); }
 function posRemoveItem(i){ posCart.splice(i,1); updateCartOnly(); }
 function posCalculateTotal(){ var t=0; for(var i=0;i<posCart.length;i++) t+=posCart[i].prixUnitaire*posCart[i].quantite; return t; }
 
+// ==================== GESTION DES ÉTAPES ====================
 function posGoToStep2(){
 posStep = 2;
 window.posStep = 2;
 setStaticBackButtonVisibility(true);
+
 if (posCurrentClient && posCurrentClient.id) {
-updateClientCreditDisplay(posCurrentClient.id);
+    updateClientCreditDisplay(posCurrentClient.id);
 }
+
 if (typeof window.setVoiceMode === 'function') {
 if (typeof window.lastAddedProductId !== 'undefined') { window.lastAddedProductId = null; }
 window.setVoiceMode('payment', '🎤 Mode paiement', null);
@@ -629,42 +851,48 @@ if(isOnPOSPage()) renderPOS();
 
 function posGoToStep1(){
 console.log('🔄 Retour à l\'étape 1 (panier)');
+
 posStep = 1;
 window.posStep = 1;
+
 delete window.posCommandeId;
 delete window.posVenteId;
+
 setStaticBackButtonVisibility(false);
+
 if (typeof window.setVoiceMode === 'function') {
 window.setVoiceMode('search', '🎤 Recherche vocale active', null);
 }
+
 if (typeof showVoiceResult === 'function') {
 showVoiceResult('↩️ Retour au panier');
 }
+
 var c = document.getElementById('dynamicContent');
 if (c && isOnPOSPage()) {
-buildFullPOS(c);
+    buildFullPOS(c);
 }
 }
 
 function posSetPaymentMethod(m){ if((m==='credit'||m==='partiel')&&(!posCurrentClient||!posCurrentClient.id)){ alert('Client requis'); return; } posPaymentMethod=m; posAmountGiven=0; if(isOnPOSPage()) renderPOS(); }
 
-function posCalculateChange(){
-var ai=document.getElementById('posAmountGiven');
-var cd=document.getElementById('posChangeDisplay');
-if(!ai||!cd) return;
-var st=posCalculateTotal();
-var t=st-posDiscountMAD;
-posAmountGiven=parseFloat(ai.value)||0;
-var c=posAmountGiven-t;
-if(posAmountGiven>0) {
-if(c>=0) {
-cd.innerHTML='<div style="font-size:40px;font-weight:700;color:#16a34a;display:flex;align-items:center;justify-content:flex-start;"><span>✅ Rendu</span><span style="margin-left:20px;margin-right:20px;">'+c.toFixed(2)+' MAD</span></div>';
-} else {
-cd.innerHTML='<div style="font-size:40px;font-weight:700;color:#ef4444;display:flex;align-items:center;justify-content:flex-start;"><span>❌ Manquant</span><span style="margin-left:20px;margin-right:20px;">'+Math.abs(c).toFixed(2)+' MAD</span></div>';
-}
-} else {
-cd.innerHTML='';
-}
+function posCalculateChange(){ 
+    var ai=document.getElementById('posAmountGiven');
+    var cd=document.getElementById('posChangeDisplay');
+    if(!ai||!cd) return; 
+    var st=posCalculateTotal();
+    var t=st-posDiscountMAD; 
+    posAmountGiven=parseFloat(ai.value)||0; 
+    var c=posAmountGiven-t; 
+    if(posAmountGiven>0) {
+        if(c>=0) {
+            cd.innerHTML='<div style="font-size:40px;font-weight:700;color:#16a34a;display:flex;align-items:center;justify-content:flex-start;"><span>✅ Rendu</span><span style="margin-left:20px;margin-right:20px;">'+c.toFixed(2)+' MAD</span></div>';
+        } else {
+            cd.innerHTML='<div style="font-size:40px;font-weight:700;color:#ef4444;display:flex;align-items:center;justify-content:flex-start;"><span>❌ Manquant</span><span style="margin-left:20px;margin-right:20px;">'+Math.abs(c).toFixed(2)+' MAD</span></div>';
+        }
+    } else { 
+        cd.innerHTML=''; 
+    }
 }
 
 async function updateClientFidelityAsync(clientId,total,profitTotal){ try{ if(!fideliteSettingsCache){ var fDoc=await db.collection('settings').doc('fidelite').get(); fideliteSettingsCache=fDoc.exists?fDoc.data():{active:true,pointsParVente:1}; } if(!fideliteSettingsCache.active) return; var cr=await db.collection('clients').doc(clientId).get(); if(!cr.exists) return; var cd=cr.data(),points=parseInt(fideliteSettingsCache.pointsParVente)||1; await CacheDB.write('clients',clientId,{ca:(cd.ca||0)+total,profit:(cd.profit||0)+profitTotal,pointsFidelite:(cd.pointsFidelite||0)+points,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},'update'); }catch(e){ console.warn(e); } }
@@ -707,7 +935,7 @@ for(var i=0;i<posCart.length;i++){ var it=posCart[i]; batch.update(db.collection
 await batch.commit();
 if(posCurrentClient && posCurrentClient.id && paid) updateClientFidelityAsync(posCurrentClient.id, t, profitTotal);
 if (posCurrentClient && posCurrentClient.id) {
-clientCreditsCache[posCurrentClient.id] = undefined;
+    clientCreditsCache[posCurrentClient.id] = undefined;
 }
 var venteId = ventesRef.id;
 if (typeof window.sendWhatsApp === 'function') {
@@ -728,8 +956,11 @@ finally { isFinalizing=false; if(fb){ fb.disabled=false; fb.innerHTML='<i class=
 function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userData.role==='caissier'||window.currentUserData.userData.role==='admin')){ if(posCart.length>0&&posStep===1){ if(!confirm('⚠️ '+posCart.length+' article(s) dans le panier. Garder ?')) posResetCart(); } navigateTo('pos'); } }
 if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; document.addEventListener('keydown',function(event){ if(event.key==='Escape'){ var cp=document.getElementById('pageTitle')?.textContent||''; if(cp!=='POS'&&cp!=='Dashboard'&&cp!=='') goBackToPOS(); } if(event.ctrlKey&&(event.key==='p'||event.key==='P')){ event.preventDefault(); if((document.getElementById('pageTitle')?.textContent||'')!=='POS') navigateTo('pos'); } }); }
 
+// Exports
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.clearPosSearch=clearPosSearch; window.clearClientSearch=clearClientSearch; window.updateClearButtonVisibility=updateClearButtonVisibility; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.loadClientCredits=loadClientCredits; window.updateClientCreditDisplay=updateClientCreditDisplay; window.posCalculateChange=posCalculateChange; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom produit 22px bold uppercase, Prix produit 24px, Nom panier 22px, Prix panier 24px, Valider 26px/60px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (🎤 Micro PWA + Safari compatible, polices 28/30/36/40px)');
+console.log('📱 Mode PWA:', isPWA());
+console.log('📱 iOS:', isIOS());
