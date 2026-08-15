@@ -1,17 +1,15 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Gemini Only) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Google Cloud Vision) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec Google Gemini (gratuit)
-// ✅ Utilisation du modèle gemini-1.5-flash (disponible avec les clés AQ.)
-// ✅ Accepte les clés API commençant par AQ. ou AIzaSy
+// ✅ Module Achats fournisseurs avec Google Cloud Vision (OCR)
+// ✅ Utilise votre clé AQ. (valide pour Vision)
 
 // ====================================================
-//  🔑  CONFIGURATION GEMINI (votre clé AQ. est utilisée)
+//  🔑  CONFIGURATION GOOGLE CLOUD VISION
 // ====================================================
-// ⚠️ NE PAS CHANGER le modèle : gemini-1.5-flash est le seul disponible avec cette clé
-const GEMINI_API_KEY = 'AQ.Ab8RN6LVuCpkDRWZ1JyuM9Qr6Vffp8OdXQ51f_7LvW6TlD4tOg';
-const GEMINI_MODEL = 'gemini-1.5-flash';   // ← NE PAS METTRE gemini-1.5-pro
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+// Utilisez votre clé AQ. (elle fonctionne pour Vision)
+const VISION_API_KEY = 'AQ.Ab8RN6LVuCpkDRWZ1JyuM9Qr6Vffp8OdXQ51f_7LvW6TlD4tOg';
+const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`;
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -626,7 +624,7 @@ function openAchatModalForm() {
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
                 <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Gemini)</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture</button>
             </div>
         </div>
     `;
@@ -725,7 +723,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC GEMINI ====================
+// ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE CLOUD VISION ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -752,50 +750,37 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🤖 Analyse avec Google Gemini...</p>
+                <p style="font-size:22px;color:#64748b;">🔍 Reconnaissance avec Google Cloud Vision...</p>
             </div>`;
         }
-        reconnaitreFactureGemini(imgData);
+        reconnaitreFactureVision(imgData);
     };
     reader.readAsDataURL(file);
 }
 
-async function reconnaitreFactureGemini(imgData) {
+async function reconnaitreFactureVision(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
-        // Vérification de la clé
-        if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 10) {
-            alert('❌ Clé API Gemini manquante ou invalide.');
+        // Vérifier la clé
+        if (!VISION_API_KEY || VISION_API_KEY.length < 10) {
+            alert('❌ Clé API Vision manquante ou invalide.');
             return;
         }
 
-        // Construire la requête
+        // Construire la requête Vision
         var requestBody = {
-            contents: [{
-                parts: [
-                    {
-                        text: `Tu es un assistant spécialisé dans l'extraction de données de factures fournisseurs.
-Voici une photo d'une facture. Extrais-moi la liste des produits achetés avec leur quantité.
-Retourne-moi les données UNIQUEMENT au format JSON, sans aucun autre texte.
-Le JSON doit être un tableau d'objets, chaque objet ayant les propriétés "nom" et "quantite".
-Exemple de format attendu :
-[
-    { "nom": "Coca-Cola 1.5L", "quantite": 5 },
-    { "nom": "Fanta Orange", "quantite": 3 }
-]
-Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau vide.`
-                    },
-                    {
-                        inline_data: {
-                            mime_type: "image/jpeg",
-                            data: imgData.split(',')[1]
-                        }
-                    }
-                ]
+            requests: [{
+                image: {
+                    content: imgData.split(',')[1]
+                },
+                features: [{
+                    type: "TEXT_DETECTION",
+                    maxResults: 50
+                }]
             }]
         };
 
-        var response = await fetch(GEMINI_URL, {
+        var response = await fetch(VISION_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
@@ -803,42 +788,25 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
 
         if (!response.ok) {
             var errorData = await response.json();
-            var errorMsg = errorData.error?.message || response.statusText;
-            // Message d'erreur plus clair
-            if (response.status === 404) {
-                throw new Error(`Le modèle ${GEMINI_MODEL} n'est pas disponible avec votre clé. Vérifiez que vous utilisez la bonne URL.`);
-            }
-            throw new Error(`${response.status} - ${errorMsg}`);
+            throw new Error(`${response.status} - ${errorData.error?.message || response.statusText}`);
         }
 
         var data = await response.json();
-        console.log('Réponse Gemini :', data);
+        console.log('Réponse Vision :', data);
 
-        var texte = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        console.log('Texte généré :', texte);
-
-        // Nettoyer et parser JSON
-        var cleaned = texte.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        var produits = [];
-
-        try {
-            produits = JSON.parse(cleaned);
-            if (!Array.isArray(produits)) throw new Error('Pas un tableau');
-        } catch(e) {
-            console.warn('Parsing JSON échoué, tentative regex :', e);
-            var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
-            var match;
-            while ((match = regex.exec(cleaned)) !== null) {
-                produits.push({ nom: match[1].trim(), quantite: parseInt(match[2]) });
-            }
-        }
+        // Extraire le texte
+        var textAnnotations = data.responses?.[0]?.textAnnotations;
+        var texte = textAnnotations && textAnnotations.length > 0 ? textAnnotations[0].description : '';
+        console.log('Texte extrait :', texte);
 
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Produits extraits :</strong><br>${escapeHtml(JSON.stringify(produits, null, 2))}
+                <strong>📄 Texte extrait (Vision) :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
 
+        // Parser le texte pour trouver produits et quantités
+        var produits = parserTexteFacture(texte);
         if (produits.length > 0) {
             remplirQuantites(produits);
         } else {
@@ -846,14 +814,38 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
         }
 
     } catch(e) {
-        console.error('Erreur Gemini :', e);
+        console.error('Erreur Vision :', e);
         if (container) {
             container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
-                ❌ Erreur Gemini : ${e.message}
+                ❌ Erreur Vision : ${e.message}
             </div>`;
         }
-        alert('❌ Erreur Gemini : ' + e.message);
+        alert('❌ Erreur Vision : ' + e.message);
     }
+}
+
+// ==================== FONCTIONS DE PARSING ====================
+function parserTexteFacture(texte) {
+    var lignes = texte.split('\n').filter(l => l.trim().length > 3);
+    var produits = [];
+    for (var ligne of lignes) {
+        // Motif : nom + quantité (nombre à la fin)
+        var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
+        if (match) {
+            var nom = match[1].trim();
+            var qte = parseFloat(match[2].replace(',', '.'));
+            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
+            continue;
+        }
+        // Alternative : colonnes séparées par plusieurs espaces
+        var parts = ligne.split(/\s{2,}/);
+        if (parts.length >= 2) {
+            var nom = parts[0].trim();
+            var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
+            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
+        }
+    }
+    return produits;
 }
 
 function remplirQuantites(produits) {
@@ -885,4 +877,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Gemini flash)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Google Cloud Vision)');
