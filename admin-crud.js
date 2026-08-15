@@ -1,10 +1,11 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (COMPLET AVEC ACHATS & OCR) ====================
 // Contient : Catégories (avec ordre), Produits (catégories multiples), Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Tableaux plus lisibles avec padding augmenté
 // ✅ Champs de recherche agrandis
 // ✅ Boutons plus grands et plus accessibles
-// ✅ [NOUVEAU] Module Achats fournisseurs avec OCR et schéma personnalisable
+// ✅ Module Achats fournisseurs avec OCR et schéma personnalisable
+// ✅ Affichage du texte OCR pour déboguer sur téléphone
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -172,7 +173,6 @@ function loadProductsPage(c) {
         '<input type="text" id="productSearchInput" placeholder="🔍 Rechercher un produit..." style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; width:280px; font-size:22px; min-height:60px;" onkeyup="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">' +
         '<select id="categoryFilter" onchange="filterProducts()" style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; font-size:22px; min-height:60px; min-width:200px;"><option value="">Toutes catégories</option></select>' +
         '<button class="btn-add" onclick="openProductForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Nouveau</button>' +
-        // ✅ BOUTON EFFECTUER DES ACHATS
         '<button class="btn-success" onclick="openAchatModal()" style="font-size:22px; padding:14px 24px; min-height:60px; background:#2563eb; color:#fff; border:none; border-radius:12px; cursor:pointer;"><i class="fas fa-shopping-cart"></i> Effectuer des achats</button>' +
         '</div></div>' +
         '<div class="table-container" style="overflow-x:auto;"><table class="data-table" id="productsTable" style="font-size:20px; width:100%;"><thead><tr style="font-size:22px;">' +
@@ -572,7 +572,6 @@ function openFournisseurForm(data) {
 function saveFournisseur() {
     var nom = document.getElementById('fourNom').value; if (!nom) { alert('Nom obligatoire'); return; }
     var categories = []; document.querySelectorAll('.four-cat-check:checked').forEach(function(cb) { categories.push(cb.value); });
-    // Récupérer le schéma
     var schemaText = document.getElementById('fourSchema').value;
     var factureSchema = null;
     try { factureSchema = JSON.parse(schemaText); } catch(e) { console.warn('Schéma JSON invalide'); }
@@ -601,7 +600,6 @@ var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 
 function openAchatModal() {
-    // Charger les fournisseurs si pas déjà fait
     if (typeof allFournisseursData === 'undefined' || allFournisseursData.length === 0) {
         loadFournisseurs().then(function() { openAchatModalForm(); });
     } else {
@@ -630,7 +628,6 @@ function openAchatModalForm() {
         </div>
     `;
     openModal('Achats fournisseur', html);
-    // Remplir le select
     var select = document.getElementById('achatFournisseurSelect');
     if (select) {
         select.innerHTML = '<option value="">-- Choisir --</option>';
@@ -650,7 +647,6 @@ function chargerProduitsFournisseurAchat() {
     }
     fournisseurAchatSelectionne = allFournisseursData.find(f => f.id === fournisseurId);
     if (!fournisseurAchatSelectionne) return;
-    // Filtrer les produits par fournisseurId ou fournisseurNom
     var produits = window.allProductsData.filter(function(p) {
         return p.fournisseurId === fournisseurId || p.fournisseurNom === fournisseurAchatSelectionne.nom;
     });
@@ -696,20 +692,31 @@ async function validerAchats() {
         alert('Aucune quantité à ajouter.');
         return;
     }
-    if (!confirm('Ajouter ' + misesAJour.length + ' produit(s) au stock ?')) return;
+
+    // Affichage du détail avec multiplication par unité_boîte
+    var details = '';
+    for (var item of misesAJour) {
+        var produit = window.allProductsData.find(p => p.id === item.id);
+        var boxUnit = produit ? (produit.box_unit || 1) : 1;
+        var stockToAdd = item.quantite * boxUnit;
+        details += `${produit ? produit.nom : item.id} : ${item.quantite} boîte(s) × ${boxUnit} = ${stockToAdd} pièces\n`;
+    }
+    if (!confirm(`Ajouter au stock ?\n\n${details}`)) return;
 
     var batch = db.batch();
     for (var item of misesAJour) {
         var prodRef = db.collection('products').doc(item.id);
+        var produit = window.allProductsData.find(p => p.id === item.id);
+        var boxUnit = produit ? (produit.box_unit || 1) : 1;
+        var stockToAdd = item.quantite * boxUnit;
         batch.update(prodRef, {
-            stock: firebase.firestore.FieldValue.increment(item.quantite)
+            stock: firebase.firestore.FieldValue.increment(stockToAdd)
         });
     }
     try {
         await batch.commit();
         alert('✅ Stock mis à jour !');
         closeModal();
-        // Recharger la liste des produits
         if (typeof loadProducts === 'function') loadProducts();
         else if (typeof renderProductsTable === 'function') renderProductsTable();
     } catch(e) {
@@ -717,7 +724,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== SCAN DE FACTURE (OCR) ====================
+// ==================== SCAN DE FACTURE (OCR) AVEC AFFICHAGE POUR DÉBOGAGE ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -760,10 +767,20 @@ async function reconnaitreFacture(imgData) {
         });
         var texte = result.data.text;
         console.log('Texte OCR :', texte);
+
+        // ✅ Affichage du texte OCR dans une alerte (pour téléphone)
+        alert('📄 Texte OCR extrait :\n\n' + texte + '\n\nCopiez ce texte pour ajuster le schéma.');
+
+        // ✅ Affichage dans le container
+        var container = document.getElementById('produitsAchatContainer');
+        if (container) {
+            container.innerHTML = '<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;"><strong>Texte OCR :</strong><br>' + escapeHtml(texte) + '</div>';
+        }
+
         if (fournisseurAchatSelectionne && fournisseurAchatSelectionne.factureSchema) {
             parserFacture(texte, fournisseurAchatSelectionne.factureSchema);
         } else {
-            alert('Aucun schéma de facture défini pour ce fournisseur. Veuillez le configurer dans les fournisseurs.');
+            alert('Aucun schéma défini pour ce fournisseur.');
         }
     } catch(e) {
         alert('Erreur OCR : ' + e.message);
@@ -776,7 +793,10 @@ function parserFacture(texte, schema) {
     var dataRows = lignes.slice(start);
     var sep = schema.separator || 'tab';
     var colonnes = schema.columns;
+
     var produitsTrouves = [];
+    var detailsRows = '';
+
     dataRows.forEach(function(ligne) {
         var parts;
         if (sep === 'tab') parts = ligne.split('\t');
@@ -785,13 +805,18 @@ function parserFacture(texte, schema) {
         else parts = ligne.split(/\s+/);
         parts = parts.map(p => p.trim()).filter(p => p !== '');
         if (parts.length < colonnes.length) return;
+
         var rowData = {};
         colonnes.forEach(function(col) {
             if (col.index < parts.length) {
                 rowData[col.name] = parts[col.index];
             }
         });
+
+        detailsRows += 'Ligne parsée : ' + JSON.stringify(rowData) + '\n';
+
         if (rowData.produit && rowData.quantite) {
+            // Recherche approximative du produit
             var produit = produitsAchatList.find(p => 
                 p.nom.toLowerCase().includes(rowData.produit.toLowerCase()) || 
                 rowData.produit.toLowerCase().includes(p.nom.toLowerCase())
@@ -804,10 +829,14 @@ function parserFacture(texte, schema) {
             }
         }
     });
+
+    alert('🔍 Détail du parsing :\n' + detailsRows + '\nProduits reconnus : ' + produitsTrouves.length);
+
     if (produitsTrouves.length === 0) {
-        alert('Aucun produit reconnu dans la facture. Vérifiez le schéma.');
+        alert('Aucun produit reconnu. Vérifiez que les noms de produits dans le système correspondent à ceux de la facture.');
         return;
     }
+
     var inputs = document.querySelectorAll('.achat-stock-input');
     inputs.forEach(function(input) {
         var prodId = input.getAttribute('data-produit-id');
@@ -825,4 +854,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + module achats avec OCR)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + module achats avec OCR + débogage)');
