@@ -10,7 +10,7 @@
 // ====================================================
 // Obtenez votre clé sur https://aistudio.google.com/apikey
 // Exemple : AIzaSyD-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-const GEMINI_API_KEY = 'VOTRE_CLE_API_GEMINI_ICI';   // ← mettez votre vraie clé ici
+const GEMINI_API_KEY = 'AIzaSyC-_FlqCsTtJCFUhv8c_20lmZVe4eo1ZVI';   // ← mettez votre vraie clé ici
 const GEMINI_MODEL = 'gemini-1.5-pro';               // ou 'gemini-1.5-flash' si disponible
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
