@@ -1,14 +1,18 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Gemini Only) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec reconnaissance par Google Gemini Flash (gratuit)
-// ✅ Clé API intégrée
+// ✅ Module Achats fournisseurs avec reconnaissance par Google Gemini (gratuit)
+// ✅ Utilisation du modèle gemini-1.5-pro (stable)
+// ✅ Vérification de la clé API (doit commencer par AIzaSy)
 
 // ====================================================
-//  🔑  CONFIGURATION GEMINI (clé fournie)
+//  🔑  CONFIGURATION GEMINI (remplacez par votre clé AIzaSy...)
 // ====================================================
-const GEMINI_API_KEY = 'AQ.Ab8RN6KKFNpHxjcj1Y8Y2tv3vonqapAafi2gAVxH7gA691IdMw';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY;
+// Obtenez votre clé sur https://aistudio.google.com/apikey
+// Exemple : AIzaSyD-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+const GEMINI_API_KEY = 'VOTRE_CLE_API_GEMINI_ICI';   // ← mettez votre vraie clé ici
+const GEMINI_MODEL = 'gemini-1.5-pro';               // ou 'gemini-1.5-flash' si disponible
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -724,10 +728,12 @@ async function validerAchats() {
 
 // ==================== RECONNAISSANCE DE FACTURE AVEC GEMINI ====================
 function ouvrirCameraFacture() {
+    // Vérifier que la caméra est supportée
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
         return;
     }
+    // Créer un input pour la caméra
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -749,7 +755,7 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🤖 Analyse avec Google Gemini Flash...</p>
+                <p style="font-size:22px;color:#64748b;">🤖 Analyse avec Google Gemini...</p>
             </div>`;
         }
         reconnaitreFactureGemini(imgData);
@@ -760,7 +766,13 @@ function traiterFacture(file) {
 async function reconnaitreFactureGemini(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
-        // Construire la requête
+        // Vérification de la clé API
+        if (!GEMINI_API_KEY || GEMINI_API_KEY === 'VOTRE_CLE_API_GEMINI_ICI' || !GEMINI_API_KEY.startsWith('AIza')) {
+            alert('❌ Clé API Gemini invalide. Obtenez une clé sur https://aistudio.google.com/apikey (doit commencer par AIzaSy)');
+            return;
+        }
+
+        // Construction de la requête
         var requestBody = {
             contents: [{
                 parts: [
@@ -794,7 +806,8 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
 
         if (!response.ok) {
             var errorData = await response.json();
-            throw new Error(`Gemini erreur ${response.status}: ${errorData.error?.message || response.statusText}`);
+            var errorMsg = errorData.error?.message || response.statusText;
+            throw new Error(`${response.status} - ${errorMsg}`);
         }
 
         var data = await response.json();
@@ -821,7 +834,7 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
 
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Produits extraits (Gemini) :</strong><br>${escapeHtml(JSON.stringify(produits, null, 2))}
+                <strong>📄 Produits extraits :</strong><br>${escapeHtml(JSON.stringify(produits, null, 2))}
             </div>`;
         }
 
@@ -838,7 +851,7 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
                 ❌ Erreur Gemini : ${e.message}
             </div>`;
         }
-        alert('❌ Erreur Gemini : ' + e.message);
+        alert('❌ Erreur Gemini : ' + e.message + '\n\nVérifiez votre clé API (doit commencer par AIzaSy) et que le modèle gemini-1.5-pro est disponible.');
     }
 }
 
@@ -871,4 +884,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Gemini Flash)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Gemini)');
