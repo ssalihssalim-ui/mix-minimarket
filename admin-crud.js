@@ -1,9 +1,9 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (OCR.space) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec reconnaissance OCR.space (gratuit, sans clé)
-// ✅ 500 requêtes/jour gratuites
-// ✅ Gestion d'erreur robuste
+// ✅ Module Achats fournisseurs avec reconnaissance OCR
+// ✅ Priorité : OCR.space (gratuit, sans clé)
+// ✅ Fallback : Tesseract.js (local) si OCR.space échoue
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -717,7 +717,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC OCR.space ====================
+// ==================== RECONNAISSANCE DE FACTURE ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -744,84 +744,94 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🔍 Envoi à l'IA d'OCR.space (gratuit)...</p>
+                <p style="font-size:22px;color:#64748b;">🔍 Reconnaissance OCR en cours...</p>
             </div>`;
         }
-        reconnaitreFactureOcrSpace(imgData);
+        // Tentative OCR.space d'abord
+        reconnaitreFactureOcrSpace(imgData).catch(function(err) {
+            console.warn('OCR.space échoué, fallback sur Tesseract.js :', err);
+            if (container) {
+                container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#b45309;font-size:18px;">
+                    ⚠️ OCR.space indisponible → bascule vers Tesseract.js (local)
+                </div>`;
+            }
+            reconnaitreFactureTesseract(imgData);
+        });
     };
     reader.readAsDataURL(file);
 }
 
+// ----- Méthode 1 : OCR.space (API gratuite) -----
 async function reconnaitreFactureOcrSpace(imgData) {
     var container = document.getElementById('produitsAchatContainer');
-    try {
-        // Extraire le base64 pur (sans le préfixe)
-        var base64Image = imgData.split(',')[1];
-        var formData = new FormData();
-        formData.append('apikey', 'helloworld');  // Clé publique gratuite
-        formData.append('base64Image', base64Image);
-        // Suppression du paramètre language pour éviter les erreurs
-        // formData.append('language', 'fr');
-        formData.append('isOverlayRequired', 'false');
-        formData.append('detectOrientation', 'true');
-        formData.append('scale', 'true');
-        formData.append('OCREngine', '1');        // Moteur 1 (plus fiable avec la clé gratuite)
+    var base64Image = imgData.split(',')[1];
+    var formData = new FormData();
+    formData.append('apikey', 'helloworld');
+    formData.append('base64Image', base64Image);
+    // formData.append('language', 'fr'); // Supprimé pour éviter erreur
+    formData.append('isOverlayRequired', 'false');
+    formData.append('detectOrientation', 'true');
+    formData.append('scale', 'true');
+    formData.append('OCREngine', '1'); // plus stable
 
-        var response = await fetch('https://api.ocr.space/parse/image', {
-            method: 'POST',
-            body: formData
-        });
+    var response = await fetch('https://api.ocr.space/parse/image', {
+        method: 'POST',
+        body: formData
+    });
+    var data = await response.json();
+    console.log('OCR.space réponse :', data);
 
-        var data = await response.json();
-        console.log('OCR.space réponse complète :', JSON.stringify(data));
-
-        // Vérifier si l'API a retourné une erreur
-        if (data && data.IsErroredOnProcessing) {
-            throw new Error(data.ErrorMessage || 'Erreur lors du traitement OCR');
-        }
-
-        // Vérifier que ParsedResults existe et contient du texte
-        if (!data || !data.ParsedResults || !Array.isArray(data.ParsedResults) || data.ParsedResults.length === 0) {
-            throw new Error('Aucun résultat OCR trouvé. Vérifiez votre image.');
-        }
-        var firstResult = data.ParsedResults[0];
-        if (!firstResult.ParsedText) {
-            throw new Error('Le texte extrait est vide. Image peut-être illisible.');
-        }
-
-        var texte = firstResult.ParsedText;
-        console.log('Texte extrait :', texte);
-
-        if (container) {
-            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Texte extrait :</strong><br>${escapeHtml(texte)}
-            </div>`;
-        }
-
-        // Parser le texte pour trouver les produits et quantités
-        var produits = parserTexteFacture(texte);
-        if (produits.length > 0) {
-            remplirQuantites(produits);
-        } else {
-            alert('❌ Aucun produit reconnu. Vérifiez la qualité de la photo.');
-        }
-
-    } catch(e) {
-        console.error('Erreur OCR :', e);
-        alert('❌ Erreur OCR : ' + e.message);
-        if (container) {
-            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
-                ❌ Erreur : ${escapeHtml(e.message)}
-            </div>`;
-        }
+    if (data.IsErroredOnProcessing) {
+        throw new Error(data.ErrorMessage || 'Erreur OCR.space');
+    }
+    if (!data.ParsedResults || !data.ParsedResults[0] || !data.ParsedResults[0].ParsedText) {
+        throw new Error('Aucun texte extrait');
+    }
+    var texte = data.ParsedResults[0].ParsedText;
+    if (container) {
+        container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
+            <strong>📄 Texte extrait (OCR.space) :</strong><br>${escapeHtml(texte)}
+        </div>`;
+    }
+    var produits = parserTexteFacture(texte);
+    if (produits.length > 0) {
+        remplirQuantites(produits);
+    } else {
+        throw new Error('Aucun produit reconnu');
     }
 }
 
+// ----- Méthode 2 : Tesseract.js (fallback local) -----
+async function reconnaitreFactureTesseract(imgData) {
+    if (typeof Tesseract === 'undefined') {
+        alert('Tesseract.js non chargé. Veuillez ajouter le script CDN.');
+        return;
+    }
+    var container = document.getElementById('produitsAchatContainer');
+    var result = await Tesseract.recognize(imgData, 'fra', {
+        tessedit_pageseg_mode: '6',
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789,.- '
+    });
+    var texte = result.data.text;
+    console.log('Tesseract texte :', texte);
+    if (container) {
+        container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
+            <strong>📄 Texte extrait (Tesseract) :</strong><br>${escapeHtml(texte)}
+        </div>`;
+    }
+    var produits = parserTexteFacture(texte);
+    if (produits.length > 0) {
+        remplirQuantites(produits);
+    } else {
+        alert('❌ Aucun produit reconnu par Tesseract non plus.');
+    }
+}
+
+// ==================== FONCTIONS DE PARSING ET REMPLISSAGE ====================
 function parserTexteFacture(texte) {
     var lignes = texte.split('\n').filter(l => l.trim().length > 3);
     var produits = [];
     for (var ligne of lignes) {
-        // Motif : nom + quantité (nombre à la fin)
         var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
         if (match) {
             var nom = match[1].trim();
@@ -829,7 +839,6 @@ function parserTexteFacture(texte) {
             if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
             continue;
         }
-        // Alternative : colonnes séparées par plusieurs espaces
         var parts = ligne.split(/\s{2,}/);
         if (parts.length >= 2) {
             var nom = parts[0].trim();
@@ -869,4 +878,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR.space)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR double)');
