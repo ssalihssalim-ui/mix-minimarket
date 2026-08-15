@@ -757,13 +757,14 @@ async function reconnaitreFactureOcrSpace(imgData) {
     try {
         var base64Image = imgData.split(',')[1];
         var formData = new FormData();
-        formData.append('apikey', 'helloworld');  // clé publique gratuite
+        formData.append('apikey', 'helloworld');
         formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
-        formData.append('language', 'fr');
+        // ✅ Essayer plusieurs combinaisons
+        formData.append('language', 'French');   // ou 'fr', 'fre', ou ne pas mettre
         formData.append('isOverlayRequired', 'false');
         formData.append('detectOrientation', 'true');
         formData.append('scale', 'true');
-        formData.append('OCREngine', '2');  // 2 = meilleure précision
+        formData.append('OCREngine', '1');        // 1 au lieu de 2 pour éviter les restrictions
 
         var response = await fetch('https://api.ocr.space/parse/image', {
             method: 'POST',
@@ -786,19 +787,17 @@ async function reconnaitreFactureOcrSpace(imgData) {
         var texte = data.ParsedResults[0].ParsedText;
         console.log('Texte OCR :', texte);
 
-        // Afficher le texte extrait
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
                 <strong>📄 Texte extrait :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
 
-        // Extraire les produits à partir du texte
         var produits = parserTexteFacture(texte);
         if (produits.length > 0) {
             remplirQuantites(produits);
         } else {
-            alert('❌ Aucun produit reconnu. Vérifiez la qualité de la photo ou le schéma du fournisseur.');
+            alert('❌ Aucun produit reconnu. Vérifiez la qualité de la photo.');
         }
 
     } catch(e) {
