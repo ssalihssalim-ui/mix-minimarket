@@ -759,7 +759,7 @@ async function reconnaitreFactureOcrSpace(imgData) {
         var formData = new FormData();
         formData.append('apikey', 'helloworld');  // clé publique gratuite
         formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
-        formData.append('language', 'fra');
+        formData.append('language', 'fr');
         formData.append('isOverlayRequired', 'false');
         formData.append('detectOrientation', 'true');
         formData.append('scale', 'true');
