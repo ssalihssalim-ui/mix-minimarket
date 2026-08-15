@@ -1,15 +1,24 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (OCR.space + Tesseract) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Gemini + OCR fallback) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec reconnaissance OCR
-// ✅ Priorité : OCR.space (gratuit, sans clé)
-// ✅ Fallback : Tesseract.js (local) si OCR.space échoue
-// ✅ Amélioration de la correspondance des produits (normalisation + Levenshtein)
+// ✅ Module Achats fournisseurs avec reconnaissance par Google Gemini (gratuit)
+// ✅ Gemini fait la correspondance avec les produits du fournisseur
+// ✅ Fallback sur OCR.space en cas d'échec
+
+// ====================================================
+//  🔑  CONFIGURATION GEMINI (mettez votre clé AIzaSy...)
+// ====================================================
+// Obtenez votre clé sur https://aistudio.google.com/apikey
+// ⚠️ La clé doit commencer par "AIzaSy"
+// Si vous n'avez pas encore de clé, créez-en une gratuitement (aucune carte bancaire nécessaire).
+const GEMINI_API_KEY = 'AIzaSy...';   // ← REMPLACEZ PAR VOTRE VRAIE CLÉ
+const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
 
-// ========== FONCTIONS UTILITAIRES POUR LA SÉLECTION DE CATÉGORIES ==========
+// ========== FONCTIONS UTILITAIRES ==========
 function updateSelectedCategories() {
     var select = document.getElementById('prodCategoriesSelect');
     var display = document.getElementById('selectedCategoriesDisplay');
@@ -619,7 +628,7 @@ function openAchatModalForm() {
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
                 <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (IA Gemini)</button>
             </div>
         </div>
     `;
@@ -718,7 +727,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE ====================
+// ==================== RECONNAISSANCE DE FACTURE AVEC GEMINI ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -745,124 +754,189 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🔍 Reconnaissance OCR en cours...</p>
+                <p style="font-size:22px;color:#64748b;">🤖 Envoi à l'IA Gemini pour analyse...</p>
             </div>`;
         }
-        // Tentative OCR.space d'abord
-        reconnaitreFactureOcrSpace(imgData).catch(function(err) {
-            console.warn('OCR.space échoué, fallback sur Tesseract.js :', err);
-            if (container) {
-                container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#b45309;font-size:18px;">
-                    ⚠️ OCR.space indisponible → bascule vers Tesseract.js (local)
-                </div>`;
-            }
-            reconnaitreFactureTesseract(imgData);
-        });
+        reconnaitreFactureGemini(imgData);
     };
     reader.readAsDataURL(file);
 }
 
-// ----- Méthode 1 : OCR.space (API gratuite) -----
-async function reconnaitreFactureOcrSpace(imgData) {
+async function reconnaitreFactureGemini(imgData) {
     var container = document.getElementById('produitsAchatContainer');
-    var base64Image = imgData.split(',')[1];
-    var formData = new FormData();
-    formData.append('apikey', 'helloworld');
-    formData.append('base64Image', base64Image);
-    // formData.append('language', 'fr'); // Supprimé pour éviter erreur
-    formData.append('isOverlayRequired', 'false');
-    formData.append('detectOrientation', 'true');
-    formData.append('scale', 'true');
-    formData.append('OCREngine', '1'); // plus stable
+    try {
+        // Vérifier la clé API
+        if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSy...' || GEMINI_API_KEY.length < 20) {
+            alert('❌ Clé API Gemini manquante ou invalide. Obtenez une clé sur https://aistudio.google.com/apikey');
+            return;
+        }
 
-    var response = await fetch('https://api.ocr.space/parse/image', {
-        method: 'POST',
-        body: formData
-    });
-    var data = await response.json();
-    console.log('OCR.space réponse :', data);
+        // 1. Récupérer la liste des noms de produits du fournisseur sélectionné
+        if (!fournisseurAchatSelectionne) {
+            alert('Veuillez d\'abord sélectionner un fournisseur.');
+            return;
+        }
+        var productNames = produitsAchatList.map(p => p.nom);
+        if (productNames.length === 0) {
+            alert('Aucun produit trouvé pour ce fournisseur. Vérifiez vos données.');
+            return;
+        }
+        var productListStr = productNames.join('", "');
 
-    if (data.IsErroredOnProcessing) {
-        throw new Error(data.ErrorMessage || 'Erreur OCR.space');
-    }
-    if (!data.ParsedResults || !data.ParsedResults[0] || !data.ParsedResults[0].ParsedText) {
-        throw new Error('Aucun texte extrait');
-    }
-    var texte = data.ParsedResults[0].ParsedText;
-    if (container) {
-        container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-            <strong>📄 Texte extrait (OCR.space) :</strong><br>${escapeHtml(texte)}
-        </div>`;
-    }
-    var produits = parserTexteFacture(texte);
-    if (produits.length > 0) {
-        remplirQuantites(produits);
-    } else {
-        throw new Error('Aucun produit reconnu');
-    }
-}
+        // 2. Construire le prompt pour Gemini
+        var prompt = `Voici une photo d'une facture fournisseur.
+            La liste des produits existants pour ce fournisseur est : ["${productListStr}"].
+            Extrais de la facture les quantités achetées pour chacun de ces produits.
+            Retourne UNIQUEMENT un tableau JSON où chaque objet a les propriétés "nom" (exactement le nom du produit tel que dans la liste ci-dessus) et "quantite" (nombre).
+            Si un produit de la liste n'apparaît pas, ne le mentionne pas.
+            Exemple de format attendu :
+            [
+                { "nom": "Coca-Cola 1.5L", "quantite": 5 },
+                { "nom": "Fanta Orange", "quantite": 3 }
+            ]
+            Si aucun produit n'est identifié, retourne un tableau vide.`;
 
-// ----- Méthode 2 : Tesseract.js (fallback local) -----
-async function reconnaitreFactureTesseract(imgData) {
-    if (typeof Tesseract === 'undefined') {
-        alert('Tesseract.js non chargé. Veuillez ajouter le script CDN.');
-        return;
-    }
-    var container = document.getElementById('produitsAchatContainer');
-    var result = await Tesseract.recognize(imgData, 'fra', {
-        tessedit_pageseg_mode: '6',
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789,.- '
-    });
-    var texte = result.data.text;
-    console.log('Tesseract texte :', texte);
-    if (container) {
-        container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-            <strong>📄 Texte extrait (Tesseract) :</strong><br>${escapeHtml(texte)}
-        </div>`;
-    }
-    var produits = parserTexteFacture(texte);
-    if (produits.length > 0) {
-        remplirQuantites(produits);
-    } else {
-        alert('❌ Aucun produit reconnu par Tesseract non plus.');
-    }
-}
+        // 3. Appeler l'API Gemini
+        var requestBody = {
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    {
+                        inline_data: {
+                            mime_type: "image/jpeg",
+                            data: imgData.split(',')[1]
+                        }
+                    }
+                ]
+            }]
+        };
 
-// ==================== FONCTIONS DE PARSING ET REMPLISSAGE AMÉLIORÉES ====================
-// Distance de Levenshtein pour la correspondance floue
-function levenshtein(a, b) {
-    if (a.length === 0) return b.length;
-    if (b.length === 0) return a.length;
-    var matrix = [];
-    for (var i = 0; i <= b.length; i++) { matrix[i] = [i]; }
-    for (var j = 0; j <= a.length; j++) { matrix[0][j] = j; }
-    for (i = 1; i <= b.length; i++) {
-        for (j = 1; j <= a.length; j++) {
-            if (b[i-1] === a[j-1]) {
-                matrix[i][j] = matrix[i-1][j-1];
-            } else {
-                matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+        var response = await fetch(GEMINI_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            var errorData = await response.json();
+            throw new Error(`Gemini erreur ${response.status}: ${errorData.error?.message || response.statusText}`);
+        }
+
+        var data = await response.json();
+        console.log('Réponse Gemini :', data);
+
+        var texte = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log('Texte brut :', texte);
+
+        // 4. Extraire le JSON
+        var cleaned = texte.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        var produitsExtraits = [];
+        try {
+            produitsExtraits = JSON.parse(cleaned);
+            if (!Array.isArray(produitsExtraits)) throw new Error('Pas un tableau');
+        } catch(e) {
+            console.warn('Parsing JSON échoué, tentative avec regex :', e);
+            // Fallback regex
+            var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
+            var match;
+            while ((match = regex.exec(cleaned)) !== null) {
+                produitsExtraits.push({ nom: match[1].trim(), quantite: parseInt(match[2]) });
             }
         }
+
+        // 5. Vérifier et remplir les champs
+        if (produitsExtraits.length === 0) {
+            alert('Aucun produit reconnu par l\'IA. Vérifiez la qualité de la photo.');
+            return;
+        }
+
+        // Afficher dans le container
+        if (container) {
+            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
+                <strong>🤖 Produits reconnus :</strong><br>${escapeHtml(JSON.stringify(produitsExtraits, null, 2))}
+            </div>`;
+        }
+
+        // Remplir les champs correspondants
+        var inputs = document.querySelectorAll('.achat-stock-input');
+        var remplis = 0;
+        var correspondances = [];
+        inputs.forEach(function(input) {
+            var prodId = input.getAttribute('data-produit-id');
+            var produit = window.allProductsData.find(p => p.id === prodId);
+            if (produit) {
+                var found = produitsExtraits.find(p => p.nom === produit.nom);
+                if (found) {
+                    input.value = found.quantite;
+                    remplis++;
+                    correspondances.push(`${produit.nom} → ${found.quantite}`);
+                }
+            }
+        });
+
+        var message = `✅ ${produitsExtraits.length} produit(s) reconnus.\n${remplis} pré-remplis.\n\n`;
+        if (correspondances.length > 0) message += correspondances.join('\n');
+        alert(message);
+
+    } catch(e) {
+        console.error('Erreur Gemini :', e);
+        if (container) {
+            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
+                ❌ Erreur Gemini : ${e.message}
+            </div>`;
+        }
+        // Fallback vers OCR.space
+        alert('Gemini a échoué, utilisation du fallback OCR.space (moins précis).');
+        reconnaitreFactureOcrSpace(imgData);
     }
-    return matrix[b.length][a.length];
 }
 
-function normaliserNom(str) {
-    // Supprimer les accents, mettre en minuscule, enlever les caractères spéciaux, espaces multiples
-    if (!str) return '';
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, ' ')   // on garde les lettres et chiffres, tout le reste devient espace
-        .replace(/\s+/g, ' ')        // réduire les espaces multiples
-        .trim();
+// ----- Fallback OCR.space (en cas d'échec de Gemini) -----
+async function reconnaitreFactureOcrSpace(imgData) {
+    var container = document.getElementById('produitsAchatContainer');
+    try {
+        var base64Image = imgData.split(',')[1];
+        var formData = new FormData();
+        formData.append('apikey', 'helloworld');
+        formData.append('base64Image', base64Image);
+        formData.append('isOverlayRequired', 'false');
+        formData.append('detectOrientation', 'true');
+        formData.append('scale', 'true');
+        formData.append('OCREngine', '1');
+
+        var response = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            body: formData
+        });
+        var data = await response.json();
+        console.log('OCR.space réponse :', data);
+        if (data.IsErroredOnProcessing) throw new Error(data.ErrorMessage);
+        if (!data.ParsedResults || !data.ParsedResults[0] || !data.ParsedResults[0].ParsedText) {
+            throw new Error('Aucun texte extrait');
+        }
+        var texte = data.ParsedResults[0].ParsedText;
+        if (container) {
+            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
+                <strong>📄 Texte extrait (OCR.space) :</strong><br>${escapeHtml(texte)}
+            </div>`;
+        }
+        // Parser le texte et remplir (avec correspondance floue)
+        var produits = parserTexteFacture(texte);
+        if (produits.length > 0) {
+            remplirQuantites(produits);
+        } else {
+            alert('Aucun produit reconnu par OCR.space non plus.');
+        }
+    } catch(e) {
+        alert('Erreur OCR.space : ' + e.message);
+    }
 }
 
+// ==================== FONCTIONS DE PARSING ET REMPLISSAGE (pour fallback) ====================
 function parserTexteFacture(texte) {
     var lignes = texte.split('\n').filter(l => l.trim().length > 3);
     var produits = [];
     for (var ligne of lignes) {
-        // On essaie de capturer un nom suivi d'un nombre
         var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
         if (match) {
             var nom = match[1].trim();
@@ -870,7 +944,6 @@ function parserTexteFacture(texte) {
             if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
             continue;
         }
-        // Avec séparateurs multiples (tableau)
         var parts = ligne.split(/\s{2,}/);
         if (parts.length >= 2) {
             var nom = parts[0].trim();
@@ -885,50 +958,24 @@ function remplirQuantites(produits) {
     var inputs = document.querySelectorAll('.achat-stock-input');
     var remplis = 0;
     var correspondances = [];
-    var nonTrouves = [];
-
-    // Pour chaque produit reconnu, on cherche la meilleure correspondance
     produits.forEach(function(prod) {
-        var nomRecherche = normaliserNom(prod.nom);
-        var meilleurMatch = null;
-        var meilleurScore = 0;
-
-        // Parcourir tous les produits du fournisseur (window.allProductsData)
-        window.allProductsData.forEach(function(prodSys) {
-            var nomSys = normaliserNom(prodSys.nom);
-            // On calcule la distance de Levenshtein et on en déduit une similarité
-            var distance = levenshtein(nomRecherche, nomSys);
-            var maxLen = Math.max(nomRecherche.length, nomSys.length);
-            if (maxLen === 0) return;
-            var similarite = 1 - distance / maxLen;
-            // On favorise les correspondances exactes partielles si la distance est nulle
-            if (similarite > meilleurScore && similarite >= 0.5) {
-                meilleurScore = similarite;
-                meilleurMatch = prodSys;
-            }
-        });
-
-        if (meilleurMatch) {
-            // On remplit le champ correspondant
-            inputs.forEach(function(input) {
-                if (input.getAttribute('data-produit-id') === meilleurMatch.id) {
+        var nomProd = prod.nom.trim().toLowerCase();
+        inputs.forEach(function(input) {
+            var prodId = input.getAttribute('data-produit-id');
+            var produit = window.allProductsData.find(p => p.id === prodId);
+            if (produit) {
+                var nomSys = produit.nom.trim().toLowerCase();
+                // Correspondance simple (contient ou est contenu)
+                if (nomSys.includes(nomProd) || nomProd.includes(nomSys)) {
                     input.value = prod.quantite;
                     remplis++;
-                    correspondances.push(`${prod.nom} → ${meilleurMatch.nom} (${prod.quantite})`);
+                    correspondances.push(`${produit.nom} → ${prod.quantite}`);
                 }
-            });
-        } else {
-            nonTrouves.push(prod.nom);
-        }
+            }
+        });
     });
-
     var message = `✅ ${produits.length} produit(s) reconnus au total.\n${remplis} pré-remplis.\n\n`;
-    if (correspondances.length > 0) {
-        message += `Correspondances trouvées :\n${correspondances.join('\n')}\n\n`;
-    }
-    if (nonTrouves.length > 0) {
-        message += `⚠️ Produits non reconnus :\n${nonTrouves.join('\n')}\nVérifiez les noms dans votre base de produits.`;
-    }
+    if (correspondances.length > 0) message += correspondances.join('\n');
     alert(message);
 }
 
@@ -938,4 +985,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR double + correspondance floue)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (Gemini + fallback OCR)');
