@@ -3,8 +3,7 @@
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseurs avec reconnaissance OCR.space (gratuit, sans clé)
 // ✅ 500 requêtes/jour gratuites
-// ✅ L'image est envoyée à l'IA d'OCR.space qui extrait le texte
-// ✅ Le code parse le texte pour extraire les produits et quantités
+// ✅ Gestion d'erreur robuste
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -761,11 +760,12 @@ async function reconnaitreFactureOcrSpace(imgData) {
         var formData = new FormData();
         formData.append('apikey', 'helloworld');  // Clé publique gratuite
         formData.append('base64Image', base64Image);
-        formData.append('language', 'fr');        // Langue française
+        // Suppression du paramètre language pour éviter les erreurs
+        // formData.append('language', 'fr');
         formData.append('isOverlayRequired', 'false');
         formData.append('detectOrientation', 'true');
         formData.append('scale', 'true');
-        formData.append('OCREngine', '2');         // Moteur IA
+        formData.append('OCREngine', '1');        // Moteur 1 (plus fiable avec la clé gratuite)
 
         var response = await fetch('https://api.ocr.space/parse/image', {
             method: 'POST',
@@ -773,13 +773,23 @@ async function reconnaitreFactureOcrSpace(imgData) {
         });
 
         var data = await response.json();
-        console.log('OCR.space réponse :', data);
+        console.log('OCR.space réponse complète :', JSON.stringify(data));
 
-        if (data.IsErroredOnProcessing) {
-            throw new Error(data.ErrorMessage);
+        // Vérifier si l'API a retourné une erreur
+        if (data && data.IsErroredOnProcessing) {
+            throw new Error(data.ErrorMessage || 'Erreur lors du traitement OCR');
         }
 
-        var texte = data.ParsedResults[0].ParsedText;
+        // Vérifier que ParsedResults existe et contient du texte
+        if (!data || !data.ParsedResults || !Array.isArray(data.ParsedResults) || data.ParsedResults.length === 0) {
+            throw new Error('Aucun résultat OCR trouvé. Vérifiez votre image.');
+        }
+        var firstResult = data.ParsedResults[0];
+        if (!firstResult.ParsedText) {
+            throw new Error('Le texte extrait est vide. Image peut-être illisible.');
+        }
+
+        var texte = firstResult.ParsedText;
         console.log('Texte extrait :', texte);
 
         if (container) {
@@ -797,8 +807,13 @@ async function reconnaitreFactureOcrSpace(imgData) {
         }
 
     } catch(e) {
+        console.error('Erreur OCR :', e);
         alert('❌ Erreur OCR : ' + e.message);
-        console.error(e);
+        if (container) {
+            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
+                ❌ Erreur : ${escapeHtml(e.message)}
+            </div>`;
+        }
     }
 }
 
@@ -854,4 +869,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR.space - IA gratuite)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR.space)');
