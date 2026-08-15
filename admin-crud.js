@@ -1,18 +1,19 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Gemini Only) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseurs avec reconnaissance par Google Gemini Flash (gratuit)
-// ✅ Fallback sur DeepSeek-OCR (Space public) puis OCR.space si besoin
-// ✅ Extraction intelligente des tableaux de factures
+// ✅ Pas de fallback - utilise uniquement Gemini
+
+// ====================================================
+//  🔑  CONFIGURATION GEMINI (à remplacer par votre clé)
+// ====================================================
+// Pour obtenir une clé gratuite : https://aistudio.google.com/
+// Cliquez sur "Get API key" (aucune carte bancaire requise)
+const GEMINI_API_KEY = 'VOTRE_CLE_API_GEMINI_ICI';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY;
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
-
-// ═══════════════════════════════════════════════════════════════════
-//  🔑  CONFIGURATION GEMINI (remplacez par votre clé)
-// ═══════════════════════════════════════════════════════════════════
-const GEMINI_API_KEY = 'VOTRE_CLE_API_GEMINI_ICI';  // ← à remplacer
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY;
 
 // ========== FONCTIONS UTILITAIRES POUR LA SÉLECTION DE CATÉGORIES ==========
 function updateSelectedCategories() {
@@ -624,7 +625,7 @@ function openAchatModalForm() {
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
                 <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Gemini)</button>
             </div>
         </div>
     `;
@@ -723,7 +724,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE GEMINI FLASH ====================
+// ==================== RECONNAISSANCE DE FACTURE AVEC GEMINI ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -750,7 +751,7 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🤖 Analyse avec Google Gemini Flash (gratuit)...</p>
+                <p style="font-size:22px;color:#64748b;">🤖 Analyse avec Google Gemini Flash...</p>
             </div>`;
         }
         reconnaitreFactureGemini(imgData);
@@ -761,13 +762,13 @@ function traiterFacture(file) {
 async function reconnaitreFactureGemini(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
-        // Vérifier que la clé API est définie
+        // Vérifier la clé
         if (GEMINI_API_KEY === 'VOTRE_CLE_API_GEMINI_ICI') {
-            alert('⚠️ Veuillez configurer votre clé API Gemini dans le code (GEMINI_API_KEY)');
+            alert('⚠️ Veuillez configurer votre clé API Gemini (GEMINI_API_KEY)');
             return;
         }
 
-        // Construire la requête Gemini
+        // Construire la requête
         var requestBody = {
             contents: [{
                 parts: [
@@ -786,7 +787,7 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
                     {
                         inline_data: {
                             mime_type: "image/jpeg",
-                            data: imgData.split(',')[1]  // base64 pur
+                            data: imgData.split(',')[1]
                         }
                     }
                 ]
@@ -807,22 +808,18 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
         var data = await response.json();
         console.log('Réponse Gemini :', data);
 
-        // Extraire le texte généré
         var texte = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        console.log('Texte généré par Gemini :', texte);
+        console.log('Texte généré :', texte);
 
-        // Nettoyer le texte (enlever les balises markdown)
+        // Nettoyer et parser JSON
         var cleaned = texte.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         var produits = [];
 
         try {
             produits = JSON.parse(cleaned);
-            if (!Array.isArray(produits)) {
-                throw new Error('La réponse n\'est pas un tableau');
-            }
+            if (!Array.isArray(produits)) throw new Error('Pas un tableau');
         } catch(e) {
-            console.warn('Parsing JSON échoué, tentative avec regex :', e);
-            // Fallback : chercher des motifs "nom" et "quantite" dans le texte
+            console.warn('Parsing JSON échoué, tentative regex :', e);
             var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
             var match;
             while ((match = regex.exec(cleaned)) !== null) {
@@ -849,123 +846,20 @@ Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau 
                 ❌ Erreur Gemini : ${e.message}
             </div>`;
         }
-        // Fallback sur DeepSeek-OCR si Gemini échoue
-        await reconnaitreFactureDeepSeek(imgData);
+        alert('❌ Erreur Gemini : ' + e.message);
     }
-}
-
-// ----- Fallback DeepSeek-OCR (Space public) -----
-async function reconnaitreFactureDeepSeek(imgData) {
-    var container = document.getElementById('produitsAchatContainer');
-    try {
-        var response = await fetch(
-            "https://merterbak-DeepSeek-OCR-Demo.hf.space/run/predict",
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ "data": [ imgData ] })
-            }
-        );
-        if (!response.ok) throw new Error('DeepSeek échec HTTP');
-        var data = await response.json();
-        var texte = data.data ? data.data[0] : null;
-        if (!texte || texte.trim().length < 5) throw new Error('Pas de texte');
-        if (container) {
-            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Texte extrait (DeepSeek) :</strong><br>${escapeHtml(texte)}
-            </div>`;
-        }
-        var produits = parserTexteFacture(texte);
-        if (produits.length > 0) {
-            remplirQuantites(produits);
-        } else {
-            alert('⚠️ Aucun produit reconnu par DeepSeek.');
-        }
-    } catch(e) {
-        console.warn('DeepSeek échoué, fallback OCR.space:', e);
-        if (container) {
-            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#b45309;font-size:18px;">
-                ⚠️ DeepSeek‑OCR indisponible → bascule vers OCR.space
-            </div>`;
-        }
-        await reconnaitreFactureOcrSpace(imgData);
-    }
-}
-
-// ----- Fallback OCR.space (gratuit) -----
-async function reconnaitreFactureOcrSpace(imgData) {
-    var container = document.getElementById('produitsAchatContainer');
-    try {
-        var base64Image = imgData.split(',')[1];
-        var formData = new FormData();
-        formData.append('apikey', 'helloworld');
-        formData.append('base64Image', base64Image);
-        formData.append('isOverlayRequired', 'false');
-        formData.append('detectOrientation', 'true');
-        formData.append('scale', 'true');
-        formData.append('OCREngine', '2');
-
-        var response = await fetch('https://api.ocr.space/parse/image', {
-            method: 'POST',
-            body: formData
-        });
-        var data = await response.json();
-        if (data.IsErroredOnProcessing) throw new Error(data.ErrorMessage);
-        var texte = data.ParsedResults[0].ParsedText;
-        if (container) {
-            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Texte extrait (OCR.space) :</strong><br>${escapeHtml(texte)}
-            </div>`;
-        }
-        var produits = parserTexteFacture(texte);
-        if (produits.length > 0) {
-            remplirQuantites(produits);
-        } else {
-            alert('⚠️ Aucun produit reconnu par OCR.space.');
-        }
-    } catch(e) {
-        alert('❌ Erreur OCR.space : ' + e.message);
-    }
-}
-
-// ==================== FONCTIONS DE PARSING ET REMPLISSAGE ====================
-function parserTexteFacture(texte) {
-    var lignes = texte.split('\n').filter(l => l.trim().length > 3);
-    var produits = [];
-
-    for (var ligne of lignes) {
-        var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
-        if (match) {
-            var nom = match[1].trim();
-            var qte = parseFloat(match[2].replace(',', '.'));
-            if (nom && qte > 0) {
-                produits.push({ nom: nom, quantite: qte });
-                continue;
-            }
-        }
-        var parts = ligne.split(/\s{2,}/);
-        if (parts.length >= 2) {
-            var nom = parts[0].trim();
-            var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
-            if (nom && qte > 0) {
-                produits.push({ nom: nom, quantite: qte });
-            }
-        }
-    }
-    return produits;
 }
 
 function remplirQuantites(produits) {
     var inputs = document.querySelectorAll('.achat-stock-input');
     var remplis = 0;
     var correspondances = [];
-
     inputs.forEach(function(input) {
         var prodId = input.getAttribute('data-produit-id');
         var produit = window.allProductsData.find(p => p.id === prodId);
         if (produit) {
-            var found = produits.find(p => 
-                p.nom.toLowerCase().includes(produit.nom.toLowerCase()) || 
+            var found = produits.find(p =>
+                p.nom.toLowerCase().includes(produit.nom.toLowerCase()) ||
                 produit.nom.toLowerCase().includes(p.nom.toLowerCase())
             );
             if (found) {
@@ -975,10 +869,7 @@ function remplirQuantites(produits) {
             }
         }
     });
-
-    var message = `✅ ${produits.length} produit(s) reconnus au total.\n` +
-                  `${remplis} pré-remplis dans la liste.\n\n` +
-                  correspondances.join('\n');
+    var message = `✅ ${produits.length} produit(s) reconnus au total.\n${remplis} pré-remplis.\n\n${correspondances.join('\n')}`;
     alert(message);
 }
 
@@ -988,4 +879,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Gemini Flash + fallbacks)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Gemini Flash)');
