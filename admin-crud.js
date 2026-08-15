@@ -1,15 +1,10 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Google Cloud Vision) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (OCR.space) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec Google Cloud Vision (OCR)
-// ✅ Utilise votre clé AQ. (valide pour Vision)
-
-// ====================================================
-//  🔑  CONFIGURATION GOOGLE CLOUD VISION
-// ====================================================
-// Utilisez votre clé AQ. (elle fonctionne pour Vision)
-const VISION_API_KEY = 'AQ.Ab8RN6LVuCpkDRWZ1JyuM9Qr6Vffp8OdXQ51f_7LvW6TlD4tOg';
-const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`;
+// ✅ Module Achats fournisseurs avec reconnaissance OCR.space (gratuit, sans clé)
+// ✅ 500 requêtes/jour gratuites
+// ✅ L'image est envoyée à l'IA d'OCR.space qui extrait le texte
+// ✅ Le code parse le texte pour extraire les produits et quantités
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -723,7 +718,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE CLOUD VISION ====================
+// ==================== RECONNAISSANCE DE FACTURE AVEC OCR.space ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -750,81 +745,63 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🔍 Reconnaissance avec Google Cloud Vision...</p>
+                <p style="font-size:22px;color:#64748b;">🔍 Envoi à l'IA d'OCR.space (gratuit)...</p>
             </div>`;
         }
-        reconnaitreFactureVision(imgData);
+        reconnaitreFactureOcrSpace(imgData);
     };
     reader.readAsDataURL(file);
 }
 
-async function reconnaitreFactureVision(imgData) {
+async function reconnaitreFactureOcrSpace(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
-        // Vérifier la clé
-        if (!VISION_API_KEY || VISION_API_KEY.length < 10) {
-            alert('❌ Clé API Vision manquante ou invalide.');
-            return;
-        }
+        // Extraire le base64 pur (sans le préfixe)
+        var base64Image = imgData.split(',')[1];
+        var formData = new FormData();
+        formData.append('apikey', 'helloworld');  // Clé publique gratuite
+        formData.append('base64Image', base64Image);
+        formData.append('language', 'fr');        // Langue française
+        formData.append('isOverlayRequired', 'false');
+        formData.append('detectOrientation', 'true');
+        formData.append('scale', 'true');
+        formData.append('OCREngine', '2');         // Moteur IA
 
-        // Construire la requête Vision
-        var requestBody = {
-            requests: [{
-                image: {
-                    content: imgData.split(',')[1]
-                },
-                features: [{
-                    type: "TEXT_DETECTION",
-                    maxResults: 50
-                }]
-            }]
-        };
-
-        var response = await fetch(VISION_URL, {
+        var response = await fetch('https://api.ocr.space/parse/image', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+            body: formData
         });
 
-        if (!response.ok) {
-            var errorData = await response.json();
-            throw new Error(`${response.status} - ${errorData.error?.message || response.statusText}`);
+        var data = await response.json();
+        console.log('OCR.space réponse :', data);
+
+        if (data.IsErroredOnProcessing) {
+            throw new Error(data.ErrorMessage);
         }
 
-        var data = await response.json();
-        console.log('Réponse Vision :', data);
-
-        // Extraire le texte
-        var textAnnotations = data.responses?.[0]?.textAnnotations;
-        var texte = textAnnotations && textAnnotations.length > 0 ? textAnnotations[0].description : '';
+        var texte = data.ParsedResults[0].ParsedText;
         console.log('Texte extrait :', texte);
 
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Texte extrait (Vision) :</strong><br>${escapeHtml(texte)}
+                <strong>📄 Texte extrait :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
 
-        // Parser le texte pour trouver produits et quantités
+        // Parser le texte pour trouver les produits et quantités
         var produits = parserTexteFacture(texte);
         if (produits.length > 0) {
             remplirQuantites(produits);
         } else {
-            alert('⚠️ Aucun produit reconnu. Vérifiez la qualité de la photo.');
+            alert('❌ Aucun produit reconnu. Vérifiez la qualité de la photo.');
         }
 
     } catch(e) {
-        console.error('Erreur Vision :', e);
-        if (container) {
-            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
-                ❌ Erreur Vision : ${e.message}
-            </div>`;
-        }
-        alert('❌ Erreur Vision : ' + e.message);
+        alert('❌ Erreur OCR : ' + e.message);
+        console.error(e);
     }
 }
 
-// ==================== FONCTIONS DE PARSING ====================
 function parserTexteFacture(texte) {
     var lignes = texte.split('\n').filter(l => l.trim().length > 3);
     var produits = [];
@@ -877,4 +854,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Google Cloud Vision)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR.space - IA gratuite)');
