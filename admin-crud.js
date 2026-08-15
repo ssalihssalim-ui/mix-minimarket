@@ -1,9 +1,9 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec reconnaissance par DeepSeek‑OCR (gratuit, sans token)
-// ✅ Utilisation du Space public merterbak/DeepSeek-OCR-Demo
-// ⚠️ Limite d'usage (gratuit) : variable, selon la charge du Space
+// ✅ Module Achats fournisseurs avec reconnaissance par DeepSeek‑OCR (prioritaire)
+// ✅ Fallback automatique sur OCR.space (gratuit, sans carte bancaire)
+// ✅ Gestion robuste des erreurs (Space public, qualité photo, réseau)
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -590,7 +590,7 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS AVEC DEEPSEEK‑OCR (SANS TOKEN) ====================
+// ==================== MODULE ACHATS FOURNISSEURS ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 
@@ -618,7 +618,7 @@ function openAchatModalForm() {
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
                 <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (DeepSeek‑OCR)</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture</button>
             </div>
         </div>
     `;
@@ -717,7 +717,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC DEEPSEEK‑OCR (sans token) ====================
+// ==================== RECONNAISSANCE DE FACTURE : DEEPSEEK‑OCR + FALLBACK OCR.SPACE ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -744,56 +744,92 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🔍 Envoi à DeepSeek‑OCR (Space public)...</p>
+                <p style="font-size:22px;color:#64748b;">🔍 Analyse avec DeepSeek‑OCR...</p>
             </div>`;
         }
-        reconnaitreFactureDeepSeek(imgData);
+        // Priorité : DeepSeek-OCR
+        reconnaitreFactureDeepSeek(imgData).catch(function(err) {
+            console.warn('DeepSeek-OCR échoué, fallback OCR.space:', err);
+            if (container) {
+                container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#b45309;font-size:18px;">
+                    ⚠️ DeepSeek‑OCR indisponible → bascule vers OCR.space (gratuit)
+                </div>`;
+            }
+            return reconnaitreFactureOcrSpace(imgData);
+        });
     };
     reader.readAsDataURL(file);
 }
 
+// ----- Premier essai : DeepSeek-OCR (Space public) -----
 async function reconnaitreFactureDeepSeek(imgData) {
     var container = document.getElementById('produitsAchatContainer');
+    var response = await fetch(
+        "https://merterbak-DeepSeek-OCR-Demo.hf.space/run/predict",
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ "data": [ imgData ] })
+        }
+    );
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    var data = await response.json();
+    console.log('DeepSeek réponse :', data);
+    var texte = data.data ? data.data[0] : null;
+    if (!texte || texte.trim().length < 5) {
+        throw new Error('Pas de texte extrait (qualité photo insuffisante)');
+    }
+    if (container) {
+        container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
+            <strong>📄 Texte extrait (DeepSeek) :</strong><br>${escapeHtml(texte)}
+        </div>`;
+    }
+    var produits = parserTexteFacture(texte);
+    if (produits.length > 0) {
+        remplirQuantites(produits);
+    } else {
+        alert('⚠️ Aucun produit reconnu. Vérifiez que la facture est lisible.');
+    }
+}
+
+// ----- Fallback : OCR.space (gratuit, sans paramètre language) -----
+async function reconnaitreFactureOcrSpace(imgData) {
+    var container = document.getElementById('produitsAchatContainer');
     try {
-        // On envoie l'image en base64 (avec préfixe) au Space
-        var response = await fetch(
-            "https://merterbak-DeepSeek-OCR-Demo.hf.space/run/predict",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    "data": [
-                        imgData   // l'image complète (data:image/...)
-                    ]
-                })
-            }
-        );
+        var base64Image = imgData.split(',')[1];
+        var formData = new FormData();
+        formData.append('apikey', 'helloworld');
+        formData.append('base64Image', base64Image);          // ⚠️ SANS préfixe
+        formData.append('isOverlayRequired', 'false');
+        formData.append('detectOrientation', 'true');
+        formData.append('scale', 'true');
+        formData.append('OCREngine', '2');
 
+        var response = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            body: formData
+        });
         var data = await response.json();
-        console.log('Réponse DeepSeek-OCR :', data);
-
-        // La réponse est dans data.data[0] (texte brut)
-        var texte = data.data ? data.data[0] : 'Aucun texte reconnu';
-        console.log('Texte extrait :', texte);
-
+        console.log('OCR.space réponse :', data);
+        if (data.IsErroredOnProcessing) {
+            throw new Error(data.ErrorMessage);
+        }
+        var texte = data.ParsedResults[0].ParsedText;
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Texte extrait par DeepSeek‑OCR :</strong><br>${escapeHtml(texte)}
+                <strong>📄 Texte extrait (OCR.space) :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
-
-        // Utiliser la fonction de parsing existante
         var produits = parserTexteFacture(texte);
         if (produits.length > 0) {
             remplirQuantites(produits);
         } else {
-            alert('❌ Aucun produit reconnu. Vérifiez la qualité de la photo et que le Space est accessible.');
+            alert('⚠️ Aucun produit reconnu par OCR.space.');
         }
-
     } catch(e) {
-        alert('❌ Erreur réseau : ' + e.message);
+        alert('❌ Erreur OCR.space : ' + e.message);
         console.error(e);
     }
 }
@@ -860,4 +896,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + DeepSeek‑OCR sans token)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + DeepSeek‑OCR avec fallback)');
