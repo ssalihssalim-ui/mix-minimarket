@@ -4,6 +4,7 @@
 // ✅ Tableaux plus lisibles avec padding augmenté
 // ✅ Champs de recherche agrandis
 // ✅ Boutons plus grands et plus accessibles
+// ✅ [NOUVEAU] Module Achats fournisseurs avec OCR et schéma personnalisable
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -165,11 +166,15 @@ function calculatePrixAchat() {
     document.getElementById('prodPA').value = prixAchat.toFixed(2);
 }
 
+// ===== PAGE PRODUITS AVEC BOUTON ACHATS =====
 function loadProductsPage(c) {
     c.innerHTML = '<div class="content-card"><div class="card-header" style="flex-wrap:wrap; gap:12px;"><h3 style="font-size:28px;"><i class="fas fa-box"></i> Produits</h3><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">' +
         '<input type="text" id="productSearchInput" placeholder="🔍 Rechercher un produit..." style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; width:280px; font-size:22px; min-height:60px;" onkeyup="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">' +
         '<select id="categoryFilter" onchange="filterProducts()" style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; font-size:22px; min-height:60px; min-width:200px;"><option value="">Toutes catégories</option></select>' +
-        '<button class="btn-add" onclick="openProductForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Nouveau</button></div></div>' +
+        '<button class="btn-add" onclick="openProductForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Nouveau</button>' +
+        // ✅ BOUTON EFFECTUER DES ACHATS
+        '<button class="btn-success" onclick="openAchatModal()" style="font-size:22px; padding:14px 24px; min-height:60px; background:#2563eb; color:#fff; border:none; border-radius:12px; cursor:pointer;"><i class="fas fa-shopping-cart"></i> Effectuer des achats</button>' +
+        '</div></div>' +
         '<div class="table-container" style="overflow-x:auto;"><table class="data-table" id="productsTable" style="font-size:20px; width:100%;"><thead><tr style="font-size:22px;">' +
         '<th style="padding:14px 10px;">Img</th>' +
         makeSortableHeader('products', 'nom', 'Nom', 'loadProducts') + '<th style="padding:14px 10px;">Catégories</th>' +
@@ -497,7 +502,7 @@ function saveClient() {
 function editClient(id) { db.collection('clients').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'clients'; openClientForm(doc.data()); } }); }
 function deleteClient(id) { if (confirm('Supprimer ce client ?')) { CacheDB.write('clients', id, null, 'delete').then(function() { alert('Supprimé'); loadClients(); CacheDB.sync(); }); } }
 
-// ==================== FOURNISSEURS ====================
+// ==================== FOURNISSEURS (AVEC SCHÉMA DE FACTURE) ====================
 function loadFournisseursPage(c) {
     c.innerHTML = '<div class="content-card"><div class="card-header" style="flex-wrap:wrap; gap:12px;"><h3 style="font-size:28px;"><i class="fas fa-truck"></i> Fournisseurs</h3><button class="btn-add" onclick="openFournisseurForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Ajouter</button></div>' +
         '<div class="table-container" style="overflow-x:auto;"><table class="data-table" id="fournisseursTable" style="font-size:20px; width:100%;"><thead><tr style="font-size:22px;">' +
@@ -543,6 +548,7 @@ function renderFournisseursTable() {
     document.getElementById('fournisseursPagination').innerHTML = getPaginationHTML('fournisseurs', data.length);
 }
 
+// ===== FORMULAIRE FOURNISSEUR AVEC SCHÉMA JSON =====
 function openFournisseurForm(data) {
     data = data || {}; var selectedCategories = data.categories || [];
     var h = '';
@@ -554,6 +560,11 @@ function openFournisseurForm(data) {
     h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Catégories</label><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">';
     fournisseurCategoriesList.forEach(function(cat) { var checked = selectedCategories.indexOf(cat) !== -1 ? 'checked' : ''; h += '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:20px;"><input type="checkbox" class="four-cat-check" value="' + cat + '" ' + checked + ' style="width:22px; height:22px;"> ' + cat + '</label>'; });
     h += '</div></div></div>';
+    // ✅ CHAMP SCHÉMA DE FACTURE
+    var schemaStr = data.factureSchema ? JSON.stringify(data.factureSchema, null, 2) : '{\n  "type": "table",\n  "columns": [\n    { "name": "produit", "index": 0 },\n    { "name": "quantite", "index": 1 }\n  ],\n  "skipRows": 1,\n  "separator": "tab"\n}';
+    h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Schéma de facture (JSON)</label>' +
+        '<textarea id="fourSchema" style="width:100%;padding:14px;font-size:20px;border:2px solid #e2e8f0;border-radius:8px;" rows="8">' + escapeHtml(schemaStr) + '</textarea>' +
+        '<p style="font-size:16px;color:#64748b;margin-top:4px;">Définissez les colonnes et leur index (0 = première colonne). Séparateur possible : tab, comma, space.</p></div></div>';
     h += '<div style="display:flex; gap:12px; margin-top:20px;"><button class="btn-cancel" onclick="closeModal()" style="font-size:22px; padding:14px 28px;">Annuler</button><button class="btn-save" onclick="saveFournisseur()" style="font-size:22px; padding:14px 28px;">Enregistrer</button></div>';
     currentCollection = 'fournisseurs'; openModal(editingId ? 'Modifier Fournisseur' : 'Nouveau Fournisseur', h);
 }
@@ -561,7 +572,23 @@ function openFournisseurForm(data) {
 function saveFournisseur() {
     var nom = document.getElementById('fourNom').value; if (!nom) { alert('Nom obligatoire'); return; }
     var categories = []; document.querySelectorAll('.four-cat-check:checked').forEach(function(cb) { categories.push(cb.value); });
-    var d = { nom: nom, prenom: document.getElementById('fourPrenom').value, societe: document.getElementById('fourSociete').value, telephone: document.getElementById('fourTel').value, whatsapp: document.getElementById('fourWhatsapp').value, email: document.getElementById('fourEmail').value, adresse: document.getElementById('fourAdresse').value, ca: parseFloat(document.getElementById('fourCA').value) || 0, description: document.getElementById('fourDesc').value, categories: categories };
+    // Récupérer le schéma
+    var schemaText = document.getElementById('fourSchema').value;
+    var factureSchema = null;
+    try { factureSchema = JSON.parse(schemaText); } catch(e) { console.warn('Schéma JSON invalide'); }
+    var d = { 
+        nom: nom, 
+        prenom: document.getElementById('fourPrenom').value, 
+        societe: document.getElementById('fourSociete').value, 
+        telephone: document.getElementById('fourTel').value, 
+        whatsapp: document.getElementById('fourWhatsapp').value, 
+        email: document.getElementById('fourEmail').value, 
+        adresse: document.getElementById('fourAdresse').value, 
+        ca: parseFloat(document.getElementById('fourCA').value) || 0, 
+        description: document.getElementById('fourDesc').value, 
+        categories: categories,
+        factureSchema: factureSchema
+    };
     if (!editingId) d.createdAt = firebase.firestore.FieldValue.serverTimestamp();
     saveDocument('fournisseurs', d, function() { closeModal(); loadFournisseurs(); });
 }
@@ -569,4 +596,233 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + meilleure lisibilité)');
+// ==================== MODULE ACHATS FOURNISSEURS ====================
+var fournisseurAchatSelectionne = null;
+var produitsAchatList = [];
+
+function openAchatModal() {
+    // Charger les fournisseurs si pas déjà fait
+    if (typeof allFournisseursData === 'undefined' || allFournisseursData.length === 0) {
+        loadFournisseurs().then(function() { openAchatModalForm(); });
+    } else {
+        openAchatModalForm();
+    }
+}
+
+function openAchatModalForm() {
+    var html = `
+        <div style="padding:10px;">
+            <h3 style="font-size:28px;">📦 Effectuer des achats</h3>
+            <div style="margin:12px 0;">
+                <label style="font-size:22px;font-weight:600;">Fournisseur</label>
+                <select id="achatFournisseurSelect" style="width:100%;padding:14px;font-size:22px;border-radius:8px;border:2px solid #e2e8f0;" onchange="chargerProduitsFournisseurAchat()">
+                    <option value="">-- Choisir --</option>
+                </select>
+            </div>
+            <div id="produitsAchatContainer" style="margin-top:12px;max-height:400px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
+                <p style="text-align:center;color:#94a3b8;font-size:22px;">Choisissez un fournisseur</p>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
+                <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
+                <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture</button>
+            </div>
+        </div>
+    `;
+    openModal('Achats fournisseur', html);
+    // Remplir le select
+    var select = document.getElementById('achatFournisseurSelect');
+    if (select) {
+        select.innerHTML = '<option value="">-- Choisir --</option>';
+        allFournisseursData.forEach(function(f) {
+            select.innerHTML += '<option value="' + f.id + '">' + escapeHtml(f.nom) + ' ' + escapeHtml(f.prenom || '') + (f.societe ? ' (' + f.societe + ')' : '') + '</option>';
+        });
+    }
+}
+
+function chargerProduitsFournisseurAchat() {
+    var select = document.getElementById('achatFournisseurSelect');
+    var fournisseurId = select.value;
+    if (!fournisseurId) {
+        document.getElementById('produitsAchatContainer').innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:22px;">Choisissez un fournisseur</p>';
+        fournisseurAchatSelectionne = null;
+        return;
+    }
+    fournisseurAchatSelectionne = allFournisseursData.find(f => f.id === fournisseurId);
+    if (!fournisseurAchatSelectionne) return;
+    // Filtrer les produits par fournisseurId ou fournisseurNom
+    var produits = window.allProductsData.filter(function(p) {
+        return p.fournisseurId === fournisseurId || p.fournisseurNom === fournisseurAchatSelectionne.nom;
+    });
+    produitsAchatList = produits;
+    afficherProduitsAchat(produits);
+}
+
+function afficherProduitsAchat(produits) {
+    var container = document.getElementById('produitsAchatContainer');
+    if (!container) return;
+    if (!produits || produits.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:22px;">Aucun produit trouvé pour ce fournisseur.</p>';
+        return;
+    }
+    var html = '<table style="width:100%;font-size:20px;border-collapse:collapse;">';
+    html += '<thead><tr style="background:#f1f5f9;"><th style="padding:10px;text-align:left;">Produit</th><th style="padding:10px;text-align:center;">Stock actuel</th><th style="padding:10px;text-align:center;">Nouveau stock</th></tr></thead><tbody>';
+    produits.forEach(function(p) {
+        html += '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;">' + escapeHtml(p.nom) + '</td>';
+        html += '<td style="padding:10px;text-align:center;border-bottom:1px solid #e2e8f0;">' + (p.stock || 0) + '</td>';
+        html += '<td style="padding:10px;text-align:center;border-bottom:1px solid #e2e8f0;">';
+        html += '<input type="number" class="achat-stock-input" data-produit-id="' + p.id + '" value="0" min="0" style="width:80px;padding:8px;font-size:20px;border:2px solid #e2e8f0;border-radius:6px;">';
+        html += '</td></tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+async function validerAchats() {
+    if (!fournisseurAchatSelectionne) {
+        alert('Veuillez choisir un fournisseur.');
+        return;
+    }
+    var inputs = document.querySelectorAll('.achat-stock-input');
+    var misesAJour = [];
+    inputs.forEach(function(input) {
+        var qte = parseInt(input.value) || 0;
+        if (qte > 0) {
+            var produitId = input.getAttribute('data-produit-id');
+            misesAJour.push({ id: produitId, quantite: qte });
+        }
+    });
+    if (misesAJour.length === 0) {
+        alert('Aucune quantité à ajouter.');
+        return;
+    }
+    if (!confirm('Ajouter ' + misesAJour.length + ' produit(s) au stock ?')) return;
+
+    var batch = db.batch();
+    for (var item of misesAJour) {
+        var prodRef = db.collection('products').doc(item.id);
+        batch.update(prodRef, {
+            stock: firebase.firestore.FieldValue.increment(item.quantite)
+        });
+    }
+    try {
+        await batch.commit();
+        alert('✅ Stock mis à jour !');
+        closeModal();
+        // Recharger la liste des produits
+        if (typeof loadProducts === 'function') loadProducts();
+        else if (typeof renderProductsTable === 'function') renderProductsTable();
+    } catch(e) {
+        alert('❌ Erreur : ' + e.message);
+    }
+}
+
+// ==================== SCAN DE FACTURE (OCR) ====================
+function ouvrirCameraFacture() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Votre navigateur ne supporte pas la caméra.');
+        return;
+    }
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            traiterFacture(file);
+        }
+    };
+    input.click();
+}
+
+function traiterFacture(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var imgData = e.target.result;
+        var container = document.getElementById('produitsAchatContainer');
+        if (container) {
+            container.innerHTML = '<div style="text-align:center;"><img src="' + imgData + '" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;"><p style="font-size:22px;color:#64748b;">🔍 Reconnaissance en cours...</p></div>';
+        }
+        reconnaitreFacture(imgData);
+    };
+    reader.readAsDataURL(file);
+}
+
+async function reconnaitreFacture(imgData) {
+    if (typeof Tesseract === 'undefined') {
+        alert('La bibliothèque Tesseract n\'est pas chargée. Veuillez l\'ajouter.');
+        return;
+    }
+    try {
+        const result = await Tesseract.recognize(imgData, 'fra', {
+            logger: m => console.log(m)
+        });
+        var texte = result.data.text;
+        console.log('Texte OCR :', texte);
+        if (fournisseurAchatSelectionne && fournisseurAchatSelectionne.factureSchema) {
+            parserFacture(texte, fournisseurAchatSelectionne.factureSchema);
+        } else {
+            alert('Aucun schéma de facture défini pour ce fournisseur. Veuillez le configurer dans les fournisseurs.');
+        }
+    } catch(e) {
+        alert('Erreur OCR : ' + e.message);
+    }
+}
+
+function parserFacture(texte, schema) {
+    var lignes = texte.split('\n').filter(l => l.trim() !== '');
+    var start = schema.skipRows || 0;
+    var dataRows = lignes.slice(start);
+    var sep = schema.separator || 'tab';
+    var colonnes = schema.columns;
+    var produitsTrouves = [];
+    dataRows.forEach(function(ligne) {
+        var parts;
+        if (sep === 'tab') parts = ligne.split('\t');
+        else if (sep === 'comma') parts = ligne.split(',');
+        else if (sep === 'space') parts = ligne.split(/\s+/);
+        else parts = ligne.split(/\s+/);
+        parts = parts.map(p => p.trim()).filter(p => p !== '');
+        if (parts.length < colonnes.length) return;
+        var rowData = {};
+        colonnes.forEach(function(col) {
+            if (col.index < parts.length) {
+                rowData[col.name] = parts[col.index];
+            }
+        });
+        if (rowData.produit && rowData.quantite) {
+            var produit = produitsAchatList.find(p => 
+                p.nom.toLowerCase().includes(rowData.produit.toLowerCase()) || 
+                rowData.produit.toLowerCase().includes(p.nom.toLowerCase())
+            );
+            if (produit) {
+                var qte = parseFloat(rowData.quantite) || 0;
+                if (qte > 0) {
+                    produitsTrouves.push({ id: produit.id, nom: produit.nom, quantite: qte });
+                }
+            }
+        }
+    });
+    if (produitsTrouves.length === 0) {
+        alert('Aucun produit reconnu dans la facture. Vérifiez le schéma.');
+        return;
+    }
+    var inputs = document.querySelectorAll('.achat-stock-input');
+    inputs.forEach(function(input) {
+        var prodId = input.getAttribute('data-produit-id');
+        var found = produitsTrouves.find(p => p.id === prodId);
+        if (found) {
+            input.value = found.quantite;
+        }
+    });
+    alert('✅ ' + produitsTrouves.length + ' produit(s) reconnus et pré-remplis.');
+}
+
+// Exporter les fonctions d'achat
+window.openAchatModal = openAchatModal;
+window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
+window.validerAchats = validerAchats;
+window.ouvrirCameraFacture = ouvrirCameraFacture;
+
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + module achats avec OCR)');
