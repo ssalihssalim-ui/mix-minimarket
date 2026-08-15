@@ -2,14 +2,12 @@
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseurs avec reconnaissance par Google Gemini Flash (gratuit)
-// ✅ Pas de fallback - utilise uniquement Gemini
+// ✅ Clé API intégrée
 
 // ====================================================
-//  🔑  CONFIGURATION GEMINI (à remplacer par votre clé)
+//  🔑  CONFIGURATION GEMINI (clé fournie)
 // ====================================================
-// Pour obtenir une clé gratuite : https://aistudio.google.com/
-// Cliquez sur "Get API key" (aucune carte bancaire requise)
-const GEMINI_API_KEY = 'VOTRE_CLE_API_GEMINI_ICI';
+const GEMINI_API_KEY = 'AQ.Ab8RN6KKFNpHxjcj1Y8Y2tv3vonqapAafi2gAVxH7gA691IdMw';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY;
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
@@ -762,12 +760,6 @@ function traiterFacture(file) {
 async function reconnaitreFactureGemini(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
-        // Vérifier la clé
-        if (GEMINI_API_KEY === 'VOTRE_CLE_API_GEMINI_ICI') {
-            alert('⚠️ Veuillez configurer votre clé API Gemini (GEMINI_API_KEY)');
-            return;
-        }
-
         // Construire la requête
         var requestBody = {
             contents: [{
