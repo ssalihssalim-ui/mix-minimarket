@@ -1,11 +1,8 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (COMPLET AVEC ACHATS & OCR) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
 // Contient : Catégories (avec ordre), Produits (catégories multiples), Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Tableaux plus lisibles avec padding augmenté
-// ✅ Champs de recherche agrandis
-// ✅ Boutons plus grands et plus accessibles
-// ✅ Module Achats fournisseurs avec OCR et schéma personnalisable
-// ✅ Affichage du texte OCR pour déboguer sur téléphone
+// ✅ Module Achats fournisseurs avec OCR amélioré (prétraitement + nettoyage)
+// ✅ Fuzzy matching pour reconnaître les produits mal orthographiés
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -167,7 +164,6 @@ function calculatePrixAchat() {
     document.getElementById('prodPA').value = prixAchat.toFixed(2);
 }
 
-// ===== PAGE PRODUITS AVEC BOUTON ACHATS =====
 function loadProductsPage(c) {
     c.innerHTML = '<div class="content-card"><div class="card-header" style="flex-wrap:wrap; gap:12px;"><h3 style="font-size:28px;"><i class="fas fa-box"></i> Produits</h3><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">' +
         '<input type="text" id="productSearchInput" placeholder="🔍 Rechercher un produit..." style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; width:280px; font-size:22px; min-height:60px;" onkeyup="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">' +
@@ -548,7 +544,6 @@ function renderFournisseursTable() {
     document.getElementById('fournisseursPagination').innerHTML = getPaginationHTML('fournisseurs', data.length);
 }
 
-// ===== FORMULAIRE FOURNISSEUR AVEC SCHÉMA JSON =====
 function openFournisseurForm(data) {
     data = data || {}; var selectedCategories = data.categories || [];
     var h = '';
@@ -560,7 +555,6 @@ function openFournisseurForm(data) {
     h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Catégories</label><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">';
     fournisseurCategoriesList.forEach(function(cat) { var checked = selectedCategories.indexOf(cat) !== -1 ? 'checked' : ''; h += '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:20px;"><input type="checkbox" class="four-cat-check" value="' + cat + '" ' + checked + ' style="width:22px; height:22px;"> ' + cat + '</label>'; });
     h += '</div></div></div>';
-    // ✅ CHAMP SCHÉMA DE FACTURE
     var schemaStr = data.factureSchema ? JSON.stringify(data.factureSchema, null, 2) : '{\n  "type": "table",\n  "columns": [\n    { "name": "produit", "index": 0 },\n    { "name": "quantite", "index": 1 }\n  ],\n  "skipRows": 1,\n  "separator": "tab"\n}';
     h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Schéma de facture (JSON)</label>' +
         '<textarea id="fourSchema" style="width:100%;padding:14px;font-size:20px;border:2px solid #e2e8f0;border-radius:8px;" rows="8">' + escapeHtml(schemaStr) + '</textarea>' +
@@ -595,7 +589,7 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS ====================
+// ==================== MODULE ACHATS FOURNISSEURS AVEC OCR AMÉLIORÉ ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 
@@ -662,7 +656,7 @@ function afficherProduitsAchat(produits) {
         return;
     }
     var html = '<table style="width:100%;font-size:20px;border-collapse:collapse;">';
-    html += '<thead><tr style="background:#f1f5f9;"><th style="padding:10px;text-align:left;">Produit</th><th style="padding:10px;text-align:center;">Stock actuel</th><th style="padding:10px;text-align:center;">Nouveau stock</th></tr></thead><tbody>';
+    html += '<thead><tr style="background:#f1f5f9;"><th style="padding:10px;text-align:left;">Produit</th><th style="padding:10px;text-align:center;">Stock actuel</th><th style="padding:10px;text-align:center;">Nouveau stock (boîtes)</th></tr></thead><tbody>';
     produits.forEach(function(p) {
         html += '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;">' + escapeHtml(p.nom) + '</td>';
         html += '<td style="padding:10px;text-align:center;border-bottom:1px solid #e2e8f0;">' + (p.stock || 0) + '</td>';
@@ -692,14 +686,12 @@ async function validerAchats() {
         alert('Aucune quantité à ajouter.');
         return;
     }
-
-    // Affichage du détail avec multiplication par unité_boîte
     var details = '';
     for (var item of misesAJour) {
         var produit = window.allProductsData.find(p => p.id === item.id);
         var boxUnit = produit ? (produit.box_unit || 1) : 1;
         var stockToAdd = item.quantite * boxUnit;
-        details += `${produit ? produit.nom : item.id} : ${item.quantite} boîte(s) × ${boxUnit} = ${stockToAdd} pièces\n`;
+        details += `${produit.nom} : ${item.quantite} boîte(s) × ${boxUnit} = ${stockToAdd} pièces\n`;
     }
     if (!confirm(`Ajouter au stock ?\n\n${details}`)) return;
 
@@ -724,7 +716,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== SCAN DE FACTURE (OCR) AVEC AFFICHAGE POUR DÉBOGAGE ====================
+// ==================== OCR AMÉLIORÉ AVEC PRÉTRAITEMENT ET NETTOYAGE ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -749,11 +741,46 @@ function traiterFacture(file) {
         var imgData = e.target.result;
         var container = document.getElementById('produitsAchatContainer');
         if (container) {
-            container.innerHTML = '<div style="text-align:center;"><img src="' + imgData + '" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;"><p style="font-size:22px;color:#64748b;">🔍 Reconnaissance en cours...</p></div>';
+            container.innerHTML = '<div style="text-align:center;"><img src="' + imgData + '" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;"><p style="font-size:22px;color:#64748b;">🔍 Prétraitement et reconnaissance en cours...</p></div>';
         }
-        reconnaitreFacture(imgData);
+        // Prétraiter l'image avant OCR
+        preprocessImage(imgData, function(processedDataUrl) {
+            reconnaitreFacture(processedDataUrl);
+        });
     };
     reader.readAsDataURL(file);
+}
+
+function preprocessImage(imgData, callback) {
+    var img = new Image();
+    img.onload = function() {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        // Redimensionner pour améliorer la reconnaissance
+        var maxWidth = 1200;
+        var scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Convertir en niveaux de gris et augmenter le contraste
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = imageData.data;
+        for (var i = 0; i < data.length; i += 4) {
+            var r = data[i];
+            var g = data[i+1];
+            var b = data[i+2];
+            var gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            // Seuil pour binarisation (améliore la reconnaissance)
+            var threshold = 150;
+            var val = gray > threshold ? 255 : 0;
+            data[i] = val;
+            data[i+1] = val;
+            data[i+2] = val;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        callback(canvas.toDataURL('image/jpeg', 0.9));
+    };
+    img.src = imgData;
 }
 
 async function reconnaitreFacture(imgData) {
@@ -762,38 +789,60 @@ async function reconnaitreFacture(imgData) {
         return;
     }
     try {
-        const result = await Tesseract.recognize(imgData, 'fra', {
-            logger: m => console.log(m)
-        });
+        // Configuration avancée de Tesseract
+        const result = await Tesseract.recognize(
+            imgData,
+            'fra',
+            {
+                logger: m => console.log(m),
+                tessedit_pageseg_mode: '6', // Bloc de texte uniforme
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,- '
+            }
+        );
         var texte = result.data.text;
-        console.log('Texte OCR :', texte);
-
-        // ✅ Affichage du texte OCR dans une alerte (pour téléphone)
-        alert('📄 Texte OCR extrait :\n\n' + texte + '\n\nCopiez ce texte pour ajuster le schéma.');
-
-        // ✅ Affichage dans le container
+        console.log('Texte OCR brut:', texte);
+        
+        // Nettoyer le texte : supprimer les lignes trop courtes ou avec beaucoup de caractères spéciaux
+        var lignes = texte.split('\n').filter(l => l.trim().length > 5);
+        // Essayer de détecter le séparateur automatiquement
+        var sep = detectSeparateur(lignes);
+        // Si le fournisseur a un schéma, on l'utilise, sinon on essaie de deviner
+        var schema = fournisseurAchatSelectionne?.factureSchema || {
+            type: 'table',
+            columns: [{ name: 'produit', index: 0 }, { name: 'quantite', index: 1 }],
+            skipRows: 0,
+            separator: sep
+        };
+        // Afficher les lignes nettoyées dans l'interface
         var container = document.getElementById('produitsAchatContainer');
         if (container) {
-            container.innerHTML = '<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;"><strong>Texte OCR :</strong><br>' + escapeHtml(texte) + '</div>';
+            container.innerHTML = '<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;"><strong>Texte OCR nettoyé :</strong><br>' + escapeHtml(lignes.join('\n')) + '</div>';
         }
-
-        if (fournisseurAchatSelectionne && fournisseurAchatSelectionne.factureSchema) {
-            parserFacture(texte, fournisseurAchatSelectionne.factureSchema);
-        } else {
-            alert('Aucun schéma défini pour ce fournisseur.');
-        }
+        parserFactureAmeliore(lignes, schema);
     } catch(e) {
         alert('Erreur OCR : ' + e.message);
     }
 }
 
-function parserFacture(texte, schema) {
-    var lignes = texte.split('\n').filter(l => l.trim() !== '');
+function detectSeparateur(lignes) {
+    // Tester sur les 5 premières lignes non vides
+    var testLignes = lignes.slice(0, 5).filter(l => l.trim() !== '');
+    var tabCount = 0, spaceCount = 0, commaCount = 0;
+    for (var ligne of testLignes) {
+        if (ligne.includes('\t')) tabCount++;
+        if (ligne.includes(',')) commaCount++;
+        if (ligne.includes('  ')) spaceCount++;
+    }
+    if (tabCount > spaceCount && tabCount > commaCount) return 'tab';
+    if (commaCount > tabCount && commaCount > spaceCount) return 'comma';
+    return 'space';
+}
+
+function parserFactureAmeliore(lignes, schema) {
     var start = schema.skipRows || 0;
     var dataRows = lignes.slice(start);
-    var sep = schema.separator || 'tab';
+    var sep = schema.separator || 'space';
     var colonnes = schema.columns;
-
     var produitsTrouves = [];
     var detailsRows = '';
 
@@ -801,7 +850,7 @@ function parserFacture(texte, schema) {
         var parts;
         if (sep === 'tab') parts = ligne.split('\t');
         else if (sep === 'comma') parts = ligne.split(',');
-        else if (sep === 'space') parts = ligne.split(/\s+/);
+        else if (sep === 'space') parts = ligne.split(/\s{2,}/); // deux espaces ou plus
         else parts = ligne.split(/\s+/);
         parts = parts.map(p => p.trim()).filter(p => p !== '');
         if (parts.length < colonnes.length) return;
@@ -812,17 +861,13 @@ function parserFacture(texte, schema) {
                 rowData[col.name] = parts[col.index];
             }
         });
-
         detailsRows += 'Ligne parsée : ' + JSON.stringify(rowData) + '\n';
 
         if (rowData.produit && rowData.quantite) {
-            // Recherche approximative du produit
-            var produit = produitsAchatList.find(p => 
-                p.nom.toLowerCase().includes(rowData.produit.toLowerCase()) || 
-                rowData.produit.toLowerCase().includes(p.nom.toLowerCase())
-            );
+            // Recherche floue (fuzzy) sur les noms de produits
+            var produit = trouverProduitAvecFuzzy(rowData.produit);
             if (produit) {
-                var qte = parseFloat(rowData.quantite) || 0;
+                var qte = parseFloat(rowData.quantite.replace(',', '.')) || 0;
                 if (qte > 0) {
                     produitsTrouves.push({ id: produit.id, nom: produit.nom, quantite: qte });
                 }
@@ -830,10 +875,12 @@ function parserFacture(texte, schema) {
         }
     });
 
+    // Afficher le détail du parsing
     alert('🔍 Détail du parsing :\n' + detailsRows + '\nProduits reconnus : ' + produitsTrouves.length);
 
     if (produitsTrouves.length === 0) {
-        alert('Aucun produit reconnu. Vérifiez que les noms de produits dans le système correspondent à ceux de la facture.');
+        alert('Aucun produit reconnu. Vérifiez que les noms de produits dans le système correspondent à ceux de la facture.\n\n' +
+              'Conseil : Modifiez le schéma JSON pour ajuster les index des colonnes si nécessaire.');
         return;
     }
 
@@ -848,10 +895,43 @@ function parserFacture(texte, schema) {
     alert('✅ ' + produitsTrouves.length + ' produit(s) reconnus et pré-remplis.');
 }
 
+function trouverProduitAvecFuzzy(nomFacture) {
+    if (!nomFacture) return null;
+    var nomLower = nomFacture.toLowerCase().trim();
+    // D'abord une recherche exacte partielle
+    for (var p of produitsAchatList) {
+        if (p.nom.toLowerCase().includes(nomLower) || nomLower.includes(p.nom.toLowerCase())) {
+            return p;
+        }
+    }
+    // Sinon, rechercher avec une approche de similarité (Levenshtein simplifié)
+    var meilleurScore = 0;
+    var meilleurProduit = null;
+    for (var p of produitsAchatList) {
+        var pNom = p.nom.toLowerCase();
+        var score = similarite(nomLower, pNom);
+        if (score > meilleurScore && score > 0.5) {
+            meilleurScore = score;
+            meilleurProduit = p;
+        }
+    }
+    return meilleurProduit;
+}
+
+// Fonction de similarité simplifiée (nombre de caractères communs)
+function similarite(a, b) {
+    if (a.length === 0 || b.length === 0) return 0;
+    var common = 0;
+    for (var i = 0; i < a.length; i++) {
+        if (b.indexOf(a[i]) !== -1) common++;
+    }
+    return common / Math.max(a.length, b.length);
+}
+
 // Exporter les fonctions d'achat
 window.openAchatModal = openAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + module achats avec OCR + débogage)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + module achats avec OCR amélioré)');
