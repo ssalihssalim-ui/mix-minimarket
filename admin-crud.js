@@ -1,9 +1,10 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (OCR.space + Tesseract) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseurs avec reconnaissance OCR
 // ✅ Priorité : OCR.space (gratuit, sans clé)
 // ✅ Fallback : Tesseract.js (local) si OCR.space échoue
+// ✅ Amélioration de la correspondance des produits (normalisation + Levenshtein)
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -827,11 +828,41 @@ async function reconnaitreFactureTesseract(imgData) {
     }
 }
 
-// ==================== FONCTIONS DE PARSING ET REMPLISSAGE ====================
+// ==================== FONCTIONS DE PARSING ET REMPLISSAGE AMÉLIORÉES ====================
+// Distance de Levenshtein pour la correspondance floue
+function levenshtein(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    var matrix = [];
+    for (var i = 0; i <= b.length; i++) { matrix[i] = [i]; }
+    for (var j = 0; j <= a.length; j++) { matrix[0][j] = j; }
+    for (i = 1; i <= b.length; i++) {
+        for (j = 1; j <= a.length; j++) {
+            if (b[i-1] === a[j-1]) {
+                matrix[i][j] = matrix[i-1][j-1];
+            } else {
+                matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+function normaliserNom(str) {
+    // Supprimer les accents, mettre en minuscule, enlever les caractères spéciaux, espaces multiples
+    if (!str) return '';
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, ' ')   // on garde les lettres et chiffres, tout le reste devient espace
+        .replace(/\s+/g, ' ')        // réduire les espaces multiples
+        .trim();
+}
+
 function parserTexteFacture(texte) {
     var lignes = texte.split('\n').filter(l => l.trim().length > 3);
     var produits = [];
     for (var ligne of lignes) {
+        // On essaie de capturer un nom suivi d'un nombre
         var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
         if (match) {
             var nom = match[1].trim();
@@ -839,6 +870,7 @@ function parserTexteFacture(texte) {
             if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
             continue;
         }
+        // Avec séparateurs multiples (tableau)
         var parts = ligne.split(/\s{2,}/);
         if (parts.length >= 2) {
             var nom = parts[0].trim();
@@ -853,22 +885,50 @@ function remplirQuantites(produits) {
     var inputs = document.querySelectorAll('.achat-stock-input');
     var remplis = 0;
     var correspondances = [];
-    inputs.forEach(function(input) {
-        var prodId = input.getAttribute('data-produit-id');
-        var produit = window.allProductsData.find(p => p.id === prodId);
-        if (produit) {
-            var found = produits.find(p =>
-                p.nom.toLowerCase().includes(produit.nom.toLowerCase()) ||
-                produit.nom.toLowerCase().includes(p.nom.toLowerCase())
-            );
-            if (found) {
-                input.value = found.quantite;
-                remplis++;
-                correspondances.push(`${produit.nom} → ${found.quantite}`);
+    var nonTrouves = [];
+
+    // Pour chaque produit reconnu, on cherche la meilleure correspondance
+    produits.forEach(function(prod) {
+        var nomRecherche = normaliserNom(prod.nom);
+        var meilleurMatch = null;
+        var meilleurScore = 0;
+
+        // Parcourir tous les produits du fournisseur (window.allProductsData)
+        window.allProductsData.forEach(function(prodSys) {
+            var nomSys = normaliserNom(prodSys.nom);
+            // On calcule la distance de Levenshtein et on en déduit une similarité
+            var distance = levenshtein(nomRecherche, nomSys);
+            var maxLen = Math.max(nomRecherche.length, nomSys.length);
+            if (maxLen === 0) return;
+            var similarite = 1 - distance / maxLen;
+            // On favorise les correspondances exactes partielles si la distance est nulle
+            if (similarite > meilleurScore && similarite >= 0.5) {
+                meilleurScore = similarite;
+                meilleurMatch = prodSys;
             }
+        });
+
+        if (meilleurMatch) {
+            // On remplit le champ correspondant
+            inputs.forEach(function(input) {
+                if (input.getAttribute('data-produit-id') === meilleurMatch.id) {
+                    input.value = prod.quantite;
+                    remplis++;
+                    correspondances.push(`${prod.nom} → ${meilleurMatch.nom} (${prod.quantite})`);
+                }
+            });
+        } else {
+            nonTrouves.push(prod.nom);
         }
     });
-    var message = `✅ ${produits.length} produit(s) reconnus au total.\n${remplis} pré-remplis.\n\n${correspondances.join('\n')}`;
+
+    var message = `✅ ${produits.length} produit(s) reconnus au total.\n${remplis} pré-remplis.\n\n`;
+    if (correspondances.length > 0) {
+        message += `Correspondances trouvées :\n${correspondances.join('\n')}\n\n`;
+    }
+    if (nonTrouves.length > 0) {
+        message += `⚠️ Produits non reconnus :\n${nonTrouves.join('\n')}\nVérifiez les noms dans votre base de produits.`;
+    }
     alert(message);
 }
 
@@ -878,4 +938,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR double)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR double + correspondance floue)');
