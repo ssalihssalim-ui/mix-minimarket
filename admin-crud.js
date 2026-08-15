@@ -1,9 +1,9 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
 // Contient : Catégories (avec ordre), Produits (catégories multiples), Clients, Fournisseurs
-// Dépend de : admin.js (variables globales, fonctions utilitaires)
-// ✅ Sélection des catégories produits par liste déroulante multiple + badges
-// ✅ Fournisseur avec datalist (recherche)
-// ✅ Calcul automatique du profit depuis prix d'achat et prix de vente/promo
+// ✅ Police 24px sur toutes les pages d'administration
+// ✅ Tableaux plus lisibles avec padding augmenté
+// ✅ Champs de recherche agrandis
+// ✅ Boutons plus grands et plus accessibles
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -15,9 +15,9 @@ function updateSelectedCategories() {
     if (!select || !display) return;
     var selected = Array.from(select.selectedOptions).map(opt => opt.value);
     display.innerHTML = selected.map(function(cat) {
-        return '<span style="background:#111827; color:#fff; padding:4px 10px; border-radius:20px; font-size:0.75rem; display:inline-flex; align-items:center; gap:6px;">' +
+        return '<span style="background:#111827; color:#fff; padding:8px 14px; border-radius:24px; font-size:20px; display:inline-flex; align-items:center; gap:8px;">' +
             escapeHtml(cat) +
-            '<span onclick="event.stopPropagation(); this.parentElement.remove(); deselectCategory(\'' + escapeHtml(cat.replace(/'/g, "\\'")) + '\')" style="cursor:pointer; font-weight:bold; margin-left:4px;">×</span>' +
+            '<span onclick="event.stopPropagation(); this.parentElement.remove(); deselectCategory(\'' + escapeHtml(cat.replace(/'/g, "\\'")) + '\')" style="cursor:pointer; font-weight:bold; margin-left:6px; font-size:22px;">×</span>' +
             '</span>';
     }).join('');
 }
@@ -40,15 +40,15 @@ window.deselectCategory = deselectCategory;
 // ==================== CATÉGORIES (AVEC ORDRE) ====================
 function loadCategoriesPage(c) {
     c.innerHTML = '<div class="content-card">' +
-        '<div class="card-header"><h3><i class="fas fa-layer-group"></i> Catégories</h3><button class="btn-add" onclick="openCategoryForm()"><i class="fas fa-plus"></i> Nouvelle</button></div>' +
-        '<div class="table-container"><table class="data-table" id="categoriesTable"><thead><tr><th>Image</th>' +
+        '<div class="card-header"><h3 style="font-size:28px;"><i class="fas fa-layer-group"></i> Catégories</h3><button class="btn-add" onclick="openCategoryForm()" style="font-size:24px; padding:14px 24px;"><i class="fas fa-plus"></i> Nouvelle</button></div>' +
+        '<div class="table-container"><table class="data-table" id="categoriesTable" style="font-size:22px;"><thead><tr><th style="font-size:22px; padding:14px 10px;">Image</th>' +
         makeSortableHeader('categories', 'nom', 'Nom', 'loadCategories') +
         makeSortableHeader('categories', 'description', 'Description', 'loadCategories') +
         makeSortableHeader('categories', 'ordre', 'Ordre', 'loadCategories') +
         makeSortableHeader('categories', 'ca', 'CA', 'loadCategories') +
         makeSortableHeader('categories', 'profit', 'Profit', 'loadCategories') +
-        '<th>Nb Produits</th><th>Recette</th><th>Actions</th>' +
-        '</thead><tbody></tbody></div><div id="categoriesPagination"></div></div>';
+        '<th style="font-size:22px; padding:14px 10px;">Nb Produits</th><th style="font-size:22px; padding:14px 10px;">Recette</th><th style="font-size:22px; padding:14px 10px;">Actions</th>' +
+        '</thead><tbody style="font-size:22px;"></tbody></div><div id="categoriesPagination"></div></div>';
     loadCategories();
 }
 
@@ -69,16 +69,16 @@ async function renderCategoriesTable() {
     var pageData = getPageData('categories', data);
     tb.innerHTML = '';
     if (pageData.length === 0) {
-        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;">Aucune catégorie</td></tr>';
+        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;font-size:24px;">Aucune catégorie</td></tr>';
         document.getElementById('categoriesPagination').innerHTML = ''; return;
     }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i]; var pc = 0;
         try { var ps = await db.collection('products').where('categorie', '==', d.nom).get(); pc = ps.size; } catch (e) { }
-        var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:35px;height:35px;object-fit:cover;border-radius:6px;">' : '<i class="fas fa-folder fa-2x" style="color:#2E7D32;"></i>';
+        var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">' : '<i class="fas fa-folder fa-3x" style="color:#2E7D32;"></i>';
         var pcol = (d.profit || 0) >= 0 ? '#2E7D32' : '#dc2626';
-        var recetteBadge = d.recette ? '<span class="status-success">✅ Oui</span>' : '<span class="status-warning">❌ Non</span>';
-        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(d.description || '-') + '</td><td>' + (d.ordre || 0) + '</td><td>' + (d.ca || 0).toFixed(2) + ' MAD</td><td style="color:' + pcol + ';">' + (d.profit || 0).toFixed(2) + ' MAD</td><td>' + pc + '</td><td>' + recetteBadge + '</td><td><button class="btn-edit" onclick="editDocument(\'categories\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'categories\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        var recetteBadge = d.recette ? '<span class="status-success" style="font-size:20px; padding:6px 14px;">✅ Oui</span>' : '<span class="status-warning" style="font-size:20px; padding:6px 14px;">❌ Non</span>';
+        tb.innerHTML += '<tr><td style="padding:14px 10px;">' + im + '</td><td style="padding:14px 10px; font-size:24px; font-weight:600;"><strong>' + escapeHtml(d.nom || '') + '</strong></td><td style="padding:14px 10px; font-size:22px;">' + escapeHtml(d.description || '-') + '</td><td style="padding:14px 10px; font-size:22px;">' + (d.ordre || 0) + '</td><td style="padding:14px 10px; font-size:22px;">' + (d.ca || 0).toFixed(2) + ' MAD</td><td style="padding:14px 10px; font-size:22px; color:' + pcol + ';">' + (d.profit || 0).toFixed(2) + ' MAD</td><td style="padding:14px 10px; font-size:22px;">' + pc + '</td><td style="padding:14px 10px;">' + recetteBadge + '</td><td style="padding:14px 10px;"><button class="btn-edit" onclick="editDocument(\'categories\',\'' + d.id + '\')" style="font-size:22px; padding:10px 16px;"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'categories\',\'' + d.id + '\')" style="font-size:22px; padding:10px 16px;"><i class="fas fa-trash"></i></button></td></tr>';
     }
     document.getElementById('categoriesPagination').innerHTML = getPaginationHTML('categories', data.length);
 }
@@ -86,11 +86,11 @@ async function renderCategoriesTable() {
 function openCategoryForm(data) {
     data = data || {}; editCategoryData = data;
     var recetteChecked = data.recette ? 'checked' : '';
-    var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="catImage" onchange="previewImage(this,\'catPreview\')"><div id="catPreview">' + (data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:100px;">' : '') + '</div></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="catNom" value="' + escapeHtml(data.nom || '') + '" required></div><div class="form-group"><label>Ordre d\'affichage</label><input type="number" id="catOrdre" value="' + (data.ordre || 0) + '" min="0" step="1" placeholder="0 = fin de liste"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Description</label><textarea id="catDesc">' + escapeHtml(data.description || '') + '</textarea></div><div class="form-group"><label>CA</label><input type="number" id="catCA" value="' + (data.ca || 0) + '" step="0.01"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Profit</label><input type="number" id="catProfit" value="' + (data.profit || 0) + '" step="0.01"></div><div class="form-group"><label>Recette</label><div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="catRecette" ' + recetteChecked + ' style="width:20px; height:20px;"><span>Activer la personnalisation</span></div></div></div>' +
-        '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveCategory()">Enregistrer</button>';
+    var h = '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Image</label><input type="file" id="catImage" onchange="previewImage(this,\'catPreview\')" style="font-size:20px; padding:10px;"><div id="catPreview">' + (data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:120px;">' : '') + '</div></div></div>' +
+        '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Nom *</label><input type="text" id="catNom" value="' + escapeHtml(data.nom || '') + '" required style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Ordre d\'affichage</label><input type="number" id="catOrdre" value="' + (data.ordre || 0) + '" min="0" step="1" placeholder="0 = fin de liste" style="font-size:22px; padding:14px;"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Description</label><textarea id="catDesc" style="font-size:22px; padding:14px;">' + escapeHtml(data.description || '') + '</textarea></div><div class="form-group"><label style="font-size:22px;">CA</label><input type="number" id="catCA" value="' + (data.ca || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Profit</label><input type="number" id="catProfit" value="' + (data.profit || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Recette</label><div style="display:flex; align-items:center; gap:12px; margin-top:6px;"><input type="checkbox" id="catRecette" ' + recetteChecked + ' style="width:28px; height:28px;"><span style="font-size:22px;">Activer la personnalisation</span></div></div></div>' +
+        '<div style="display:flex; gap:12px; margin-top:20px;"><button class="btn-cancel" onclick="closeModal()" style="font-size:22px; padding:14px 28px;">Annuler</button><button class="btn-save" onclick="saveCategory()" style="font-size:22px; padding:14px 28px;">Enregistrer</button></div>';
     currentCollection = 'categories';
     openModal(editingId ? 'Modifier Catégorie' : 'Nouvelle Catégorie', h);
 }
@@ -142,11 +142,11 @@ function renderIngredientRow(index, ing) {
     ing = ing || {};
     var stockOptions = '<option value="">-- Choisir --</option>';
     if (typeof allStockData !== 'undefined') { allStockData.forEach(function(s) { var selected = (ing.idStock === s.id) ? 'selected' : ''; stockOptions += '<option value="' + s.id + '" ' + selected + '>' + escapeHtml(s.nom) + ' (' + (s.unite || '') + ')</option>'; }); }
-    return '<div class="ingredient-row" style="display:flex; gap:8px; align-items:center;">' +
-        '<select class="ingredient-select" style="flex:1; padding:10px; border:2px solid #e2e8f0; border-radius:8px;" onchange="updateIngredientUnit(this)">' + stockOptions + '</select>' +
-        '<input type="number" class="ingredient-qty" placeholder="Qté" value="' + (ing.quantite || '') + '" step="any" style="width:100px; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">' +
-        '<span class="ingredient-unit" style="min-width:60px; text-align:center;">' + (ing.unite || '') + '</span>' +
-        '<button type="button" class="btn-delete" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>';
+    return '<div class="ingredient-row" style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">' +
+        '<select class="ingredient-select" style="flex:1; padding:14px; border:2px solid #e2e8f0; border-radius:8px; font-size:20px;" onchange="updateIngredientUnit(this)">' + stockOptions + '</select>' +
+        '<input type="number" class="ingredient-qty" placeholder="Qté" value="' + (ing.quantite || '') + '" step="any" style="width:120px; padding:14px; border:2px solid #e2e8f0; border-radius:8px; font-size:20px;">' +
+        '<span class="ingredient-unit" style="min-width:80px; text-align:center; font-size:20px;">' + (ing.unite || '') + '</span>' +
+        '<button type="button" class="btn-delete" onclick="this.parentElement.remove()" style="font-size:22px; padding:12px 16px;"><i class="fas fa-times"></i></button></div>';
 }
 
 function addIngredientRow() { var container = document.getElementById('productIngredientsList'); if (container) { container.insertAdjacentHTML('beforeend', renderIngredientRow(container.children.length, {})); } }
@@ -166,18 +166,19 @@ function calculatePrixAchat() {
 }
 
 function loadProductsPage(c) {
-    c.innerHTML = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-box"></i> Produits</h3><div style="display:flex;gap:10px;flex-wrap:wrap;">' +
-        '<input type="text" id="productSearchInput" placeholder="🔍 Rechercher un produit..." style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; width:220px;" onkeyup="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">' +
-        '<select id="categoryFilter" onchange="filterProducts()"><option value="">Toutes catégories</option></select>' +
-        '<button class="btn-add" onclick="openProductForm()"><i class="fas fa-plus"></i> Nouveau</button></div></div>' +
-        '<div class="table-container"><table class="data-table" id="productsTable" style="font-size:0.7rem;"><thead><tr><th>Img</th>' +
-        makeSortableHeader('products', 'nom', 'Nom', 'loadProducts') + '<th>Catégories</th>' +
-        '<th>Marque</th><th>Prix boîte</th><th>Unités/boîte</th><th>Fournisseur</th>' +
+    c.innerHTML = '<div class="content-card"><div class="card-header" style="flex-wrap:wrap; gap:12px;"><h3 style="font-size:28px;"><i class="fas fa-box"></i> Produits</h3><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">' +
+        '<input type="text" id="productSearchInput" placeholder="🔍 Rechercher un produit..." style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; width:280px; font-size:22px; min-height:60px;" onkeyup="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">' +
+        '<select id="categoryFilter" onchange="filterProducts()" style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; font-size:22px; min-height:60px; min-width:200px;"><option value="">Toutes catégories</option></select>' +
+        '<button class="btn-add" onclick="openProductForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Nouveau</button></div></div>' +
+        '<div class="table-container" style="overflow-x:auto;"><table class="data-table" id="productsTable" style="font-size:20px; width:100%;"><thead><tr style="font-size:22px;">' +
+        '<th style="padding:14px 10px;">Img</th>' +
+        makeSortableHeader('products', 'nom', 'Nom', 'loadProducts') + '<th style="padding:14px 10px;">Catégories</th>' +
+        '<th style="padding:14px 10px;">Marque</th><th style="padding:14px 10px;">Prix boîte</th><th style="padding:14px 10px;">Unités/boîte</th><th style="padding:14px 10px;">Fournisseur</th>' +
         makeSortableHeader('products', 'prixAchat', 'Achat', 'loadProducts') + makeSortableHeader('products', 'prixVente', 'Vente', 'loadProducts') +
         makeSortableHeader('products', 'prixPromo', 'Promo', 'loadProducts') + makeSortableHeader('products', 'profit', 'Profit', 'loadProducts') +
         makeSortableHeader('products', 'stock', 'Stock', 'loadProducts') + makeSortableHeader('products', 'vendues', 'Vendues', 'loadProducts') +
         makeSortableHeader('products', 'ca', 'CA', 'loadProducts') + makeSortableHeader('products', 'disponible', 'Dispo', 'loadProducts') +
-        '<th>Temps</th><th>Desc</th><th>Actions</th></thead><tbody></tbody></div><div id="productsPagination"></div></div>';
+        '<th style="padding:14px 10px;">Temps</th><th style="padding:14px 10px;">Desc</th><th style="padding:14px 10px;">Actions</th></thead><tbody style="font-size:20px;"></tbody></div><div id="productsPagination"></div></div>';
     loadCategoriesInFilter(); loadProducts();
 }
 
@@ -216,20 +217,33 @@ function renderProductsTable() {
     }
     data = applySort('products', data, 'nom'); var pageData = getPageData('products', data);
     tb.innerHTML = '';
-    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="18" style="text-align:center;padding:30px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
+    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="18" style="text-align:center;padding:40px;font-size:24px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
-        var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:30px;height:30px;object-fit:cover;border-radius:4px;">' : '<i class="fas fa-box" style="color:#94a3b8;"></i>';
-        var disp = d.disponible !== false ? '<span class="status-success">Oui</span>' : '<span class="status-danger">Non</span>';
+        var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">' : '<i class="fas fa-box" style="color:#94a3b8; font-size:28px;"></i>';
+        var disp = d.disponible !== false ? '<span class="status-success" style="font-size:20px; padding:4px 12px;">Oui</span>' : '<span class="status-danger" style="font-size:20px; padding:4px 12px;">Non</span>';
         var profitVal = (d.profit !== undefined && !isNaN(d.profit)) ? d.profit : 0; var pc = profitVal >= 0 ? '#2E7D32' : '#dc2626';
         var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories.join(', ') : (d.categorie || '-');
         var fournisseurDisplay = d.fournisseurNom || d.fournisseurId || '-';
-        tb.innerHTML += '<tr><td>' + im + '</td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(categoriesDisplay) + '</td>' +
-            '<td>' + escapeHtml(d.brand || '-') + '</td>' +
-            '<td>' + ((d.box_price || 0).toFixed(2)) + '</td>' +
-            '<td>' + (d.box_unit || 1) + '</td>' +
-            '<td>' + escapeHtml(fournisseurDisplay) + '</td>' +
-            '<td>' + ((d.prixAchat || 0).toFixed(2)) + '</td><td>' + ((d.prixVente || 0).toFixed(2)) + '</td><td>' + ((d.prixPromo || 0).toFixed(2)) + '</td><td style="color:' + pc + ';">' + profitVal.toFixed(2) + '</td><td>' + (d.stock || 0) + '</td><td>' + (d.vendues || 0) + '</td><td>' + ((d.ca || 0).toFixed(2)) + '</td><td>' + disp + '</td><td>' + (d.tempsPrep || '-') + '</td><td>' + (d.description || '-') + '</td><td><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        tb.innerHTML += '<tr>' +
+            '<td style="padding:14px 10px;">' + im + '</td>' +
+            '<td style="padding:14px 10px; font-size:22px; font-weight:600;"><strong>' + escapeHtml(d.nom || '') + '</strong></td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(categoriesDisplay) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.brand || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + ((d.box_price || 0).toFixed(2)) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + (d.box_unit || 1) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(fournisseurDisplay) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + ((d.prixAchat || 0).toFixed(2)) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + ((d.prixVente || 0).toFixed(2)) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + ((d.prixPromo || 0).toFixed(2)) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; color:' + pc + '; font-weight:600;">' + profitVal.toFixed(2) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + (d.stock || 0) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + (d.vendues || 0) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + ((d.ca || 0).toFixed(2)) + '</td>' +
+            '<td style="padding:14px 10px;">' + disp + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + (d.tempsPrep || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + (d.description || '-') + '</td>' +
+            '<td style="padding:14px 10px;"><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-trash"></i></button></td></tr>';
     }
     document.getElementById('productsPagination').innerHTML = getPaginationHTML('products', data.length);
 }
@@ -244,17 +258,17 @@ async function openProductForm(data) {
         cs.forEach(function(d) {
             var catName = d.data().nom;
             var selected = preselected.includes(catName) ? 'selected' : '';
-            selectOptions += '<option value="' + escapeHtml(catName) + '" ' + selected + '>' + escapeHtml(catName) + '</option>';
+            selectOptions += '<option value="' + escapeHtml(catName) + '" ' + selected + ' style="font-size:20px; padding:10px;">' + escapeHtml(catName) + '</option>';
         });
     } catch (e) { }
 
     var categoriesHtml = 
         '<div class="form-group" style="min-width:100%;">' +
-            '<label>Catégories</label>' +
-            '<select id="prodCategoriesSelect" multiple size="5" style="width:100%; padding:8px; border:2px solid #e2e8f0; border-radius:8px; font-size:0.9rem;" onchange="updateSelectedCategories()">' +
+            '<label style="font-size:22px; font-weight:600;">Catégories</label>' +
+            '<select id="prodCategoriesSelect" multiple size="5" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:12px; font-size:20px; min-height:120px;" onchange="updateSelectedCategories()">' +
                 selectOptions +
             '</select>' +
-            '<div id="selectedCategoriesDisplay" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>' +
+            '<div id="selectedCategoriesDisplay" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:10px;"></div>' +
         '</div>';
 
     const fournisseurs = await loadFournisseursForForm();
@@ -272,34 +286,34 @@ async function openProductForm(data) {
         if (found) fournisseurValue = found.nom + (found.prenom ? ' ' + found.prenom : '') + (found.societe ? ' (' + found.societe + ')' : '');
     }
 
-    var ip = data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:100px;">' : '';
+    var ip = data.imageBase64 ? '<img src="' + data.imageBase64 + '" style="max-width:120px;">' : '';
     var dy = data.disponible !== false ? 'selected' : '', dn = data.disponible === false ? 'selected' : '';
 
-    var h = '<div class="form-row"><div class="form-group"><label>Image</label><input type="file" id="prodImage" onchange="previewImage(this,\'prodPreview\')"><div id="prodPreview">' + ip + '</div></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required></div></div>' +
+    var h = '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Image</label><input type="file" id="prodImage" onchange="previewImage(this,\'prodPreview\')" style="font-size:20px; padding:10px;"><div id="prodPreview">' + ip + '</div></div></div>' +
+        '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Nom *</label><input type="text" id="prodNom" value="' + escapeHtml(data.nom || '') + '" required style="font-size:22px; padding:14px;"></div></div>' +
         categoriesHtml +
         '<div class="form-row">' +
-            '<div class="form-group"><label>Marque</label><input type="text" id="prodBrand" value="' + escapeHtml(data.brand || '') + '"></div>' +
-            '<div class="form-group"><label>Prix boîte (MAD)</label><input type="number" id="prodBoxPrice" step="0.01" value="' + (data.box_price || 0) + '" oninput="calculatePrixAchat()"></div>' +
+            '<div class="form-group"><label style="font-size:22px;">Marque</label><input type="text" id="prodBrand" value="' + escapeHtml(data.brand || '') + '" style="font-size:22px; padding:14px;"></div>' +
+            '<div class="form-group"><label style="font-size:22px;">Prix boîte (MAD)</label><input type="number" id="prodBoxPrice" step="0.01" value="' + (data.box_price || 0) + '" oninput="calculatePrixAchat()" style="font-size:22px; padding:14px;"></div>' +
         '</div>' +
         '<div class="form-row">' +
-            '<div class="form-group"><label>Unités par boîte</label><input type="number" id="prodBoxUnit" step="1" min="1" value="' + (data.box_unit || 1) + '" oninput="calculatePrixAchat()"></div>' +
-            '<div class="form-group"><label>Prix d\'achat unitaire (calculé)</label><input type="number" id="prodPA" step="0.01" value="' + (data.prixAchat || 0) + '" readonly style="background:#f3f4f6;"></div>' +
+            '<div class="form-group"><label style="font-size:22px;">Unités par boîte</label><input type="number" id="prodBoxUnit" step="1" min="1" value="' + (data.box_unit || 1) + '" oninput="calculatePrixAchat()" style="font-size:22px; padding:14px;"></div>' +
+            '<div class="form-group"><label style="font-size:22px;">Prix d\'achat unitaire (calculé)</label><input type="number" id="prodPA" step="0.01" value="' + (data.prixAchat || 0) + '" readonly style="background:#f3f4f6; font-size:22px; padding:14px;"></div>' +
         '</div>' +
         '<div class="form-row">' +
             '<div class="form-group" style="min-width:100%;">' +
-                '<label>Fournisseur</label>' +
-                '<input list="fournisseurList" id="prodFournisseur" class="form-control" placeholder="Tapez un nom pour rechercher..." value="' + escapeHtml(fournisseurValue) + '" style="width:100%; padding:10px 14px; border:2px solid #e2e8f0; border-radius:8px; font-size:0.9rem;">' +
+                '<label style="font-size:22px;">Fournisseur</label>' +
+                '<input list="fournisseurList" id="prodFournisseur" class="form-control" placeholder="Tapez un nom pour rechercher..." value="' + escapeHtml(fournisseurValue) + '" style="width:100%; padding:14px; border:2px solid #e2e8f0; border-radius:12px; font-size:22px;">' +
                 '<datalist id="fournisseurList">' + datalistOptions + '</datalist>' +
             '</div>' +
         '</div>' +
-        '<div class="form-row"><div class="form-group"><label>Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01"></div><div class="form-group"><label>Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '"></div><div class="form-group"><label>Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min"></div></div>' +
-        '<div class="form-row"><div class="form-group"><label>Disponible</label><select id="prodDispo"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div><div class="form-group"><label>Description</label><textarea id="prodDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
-        '<div class="form-row" style="flex-direction:column;"><label style="font-weight:600; margin-bottom:10px;">🧾 Recette (ingrédients du stock)</label><div id="productIngredientsList" style="display:flex; flex-direction:column; gap:8px;">';
+        '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min" style="font-size:22px; padding:14px;"></div></div>' +
+        '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Disponible</label><select id="prodDispo" style="font-size:22px; padding:14px;"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div><div class="form-group"><label style="font-size:22px;">Description</label><textarea id="prodDesc" style="font-size:22px; padding:14px;">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
+        '<div class="form-row" style="flex-direction:column;"><label style="font-weight:600; font-size:22px; margin-bottom:12px;">🧾 Recette (ingrédients du stock)</label><div id="productIngredientsList" style="display:flex; flex-direction:column; gap:10px;">';
     if (data.ingredients && data.ingredients.length > 0) { data.ingredients.forEach(function(ing, idx) { h += renderIngredientRow(idx, ing); }); }
-    h += '</div><button type="button" class="btn-add" onclick="addIngredientRow()" style="margin-top:10px; width:auto;"><i class="fas fa-plus"></i> Ajouter un ingrédient</button></div>' +
-        '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveProduct()">Enregistrer</button>';
+    h += '</div><button type="button" class="btn-add" onclick="addIngredientRow()" style="margin-top:12px; width:auto; font-size:20px; padding:12px 20px;"><i class="fas fa-plus"></i> Ajouter un ingrédient</button></div>' +
+        '<div style="display:flex; gap:12px; margin-top:20px;"><button class="btn-cancel" onclick="closeModal()" style="font-size:22px; padding:14px 28px;">Annuler</button><button class="btn-save" onclick="saveProduct()" style="font-size:22px; padding:14px 28px;">Enregistrer</button></div>';
     currentCollection = 'products';
     openModal(editingId ? 'Modifier Produit' : 'Nouveau Produit', h);
 
@@ -346,7 +360,6 @@ function saveProduct() {
         fournisseurId = null;
     }
 
-    // Récupération des valeurs
     var prixAchat = parseFloat(document.getElementById('prodPA').value) || 0;
     var prixVente = parseFloat(document.getElementById('prodPV').value) || 0;
     var prixPromo = parseFloat(document.getElementById('prodPromo').value) || 0;
@@ -362,7 +375,7 @@ function saveProduct() {
             prixAchat: prixAchat,
             prixVente: prixVente,
             prixPromo: prixPromo,
-            profit: profit, // ← Profit calculé automatiquement
+            profit: profit,
             stock: parseInt(document.getElementById('prodStock').value) || 0,
             vendues: 0,
             ca: 0,
@@ -396,10 +409,10 @@ function saveProduct() {
 
 // ==================== CLIENTS ====================
 function loadClientsPage(c) {
-    c.innerHTML = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-users"></i> Clients</h3><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
-        '<div class="input-group" style="width:300px;min-width:200px;margin-bottom:0;background:#fff;border:2px solid var(--border);border-radius:12px;"><i class="fas fa-search" style="color:#94a3b8;"></i><input type="text" id="clientSearchInput" placeholder="Rechercher..." onkeyup="clientSearch(this.value)" style="border:none;padding:12px;"></div>' +
-        '<button class="btn-add" onclick="openClientForm()"><i class="fas fa-plus"></i> Ajouter</button></div></div>' +
-        '<div class="table-container"><table class="data-table" id="clientsTable" style="font-size:0.6rem;"><thead><tr>' +
+    c.innerHTML = '<div class="content-card"><div class="card-header" style="flex-wrap:wrap; gap:12px;"><h3 style="font-size:28px;"><i class="fas fa-users"></i> Clients</h3><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">' +
+        '<div class="input-group" style="width:350px;min-width:250px;margin-bottom:0;background:#fff;border:2px solid var(--border);border-radius:12px;"><i class="fas fa-search" style="color:#94a3b8; font-size:22px;"></i><input type="text" id="clientSearchInput" placeholder="Rechercher..." onkeyup="clientSearch(this.value)" style="border:none;padding:14px; font-size:22px; width:100%;"></div>' +
+        '<button class="btn-add" onclick="openClientForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Ajouter</button></div></div>' +
+        '<div class="table-container" style="overflow-x:auto;"><table class="data-table" id="clientsTable" style="font-size:20px; width:100%;"><thead><tr style="font-size:22px;">' +
         makeSortableHeader('clients', 'id', 'ID', 'loadClients') + makeSortableHeader('clients', 'nom', 'Nom', 'loadClients') +
         makeSortableHeader('clients', 'prenom', 'Prénom', 'loadClients') + makeSortableHeader('clients', 'username', 'Username', 'loadClients') +
         makeSortableHeader('clients', 'genre', 'Genre', 'loadClients') + makeSortableHeader('clients', 'adresse', 'Adresse', 'loadClients') +
@@ -409,7 +422,7 @@ function loadClientsPage(c) {
         makeSortableHeader('clients', 'profit', 'Profit', 'loadClients') + makeSortableHeader('clients', 'pointsFidelite', 'Points Fid', 'loadClients') +
         makeSortableHeader('clients', 'allergies', 'Allergies', 'loadClients') + makeSortableHeader('clients', 'aime', 'Aime', 'loadClients') +
         makeSortableHeader('clients', 'deteste', 'Déteste', 'loadClients') + makeSortableHeader('clients', 'createdAt', 'Date créé', 'loadClients') +
-        makeSortableHeader('clients', 'description', 'Description', 'loadClients') + '<th>Actions</th></thead><tbody></tbody></div><div id="clientsPagination"></div></div>';
+        makeSortableHeader('clients', 'description', 'Description', 'loadClients') + '<th style="padding:14px 10px;">Actions</th></thead><tbody style="font-size:20px;"></tbody></div><div id="clientsPagination"></div></div>';
     loadClients();
 }
 
@@ -427,11 +440,31 @@ function renderClientsTable() {
     if (clientSearchQuery) { data = data.filter(function(d) { return (d.nom || '').toLowerCase().indexOf(clientSearchQuery) !== -1 || (d.prenom || '').toLowerCase().indexOf(clientSearchQuery) !== -1 || (d.username || '').toLowerCase().indexOf(clientSearchQuery) !== -1 || (d.email || '').toLowerCase().indexOf(clientSearchQuery) !== -1 || (d.telephone || '').toLowerCase().indexOf(clientSearchQuery) !== -1 || (d.description || '').toLowerCase().indexOf(clientSearchQuery) !== -1; }); }
     data = applySort('clients', data, 'nom'); var pageData = getPageData('clients', data);
     tb.innerHTML = '';
-    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;">Aucun client</td></tr>'; document.getElementById('clientsPagination').innerHTML = ''; return; }
+    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:40px;font-size:24px;">Aucun client</td></tr>'; document.getElementById('clientsPagination').innerHTML = ''; return; }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var dateCreated = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('fr-FR') + ' ' + new Date(d.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
-        var row = '<tr><td><small>' + (d.id || '').substring(0, 6) + '</small></td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(d.prenom || '') + '</td><td>@' + escapeHtml(d.username || '') + '</td><td>' + escapeHtml(d.genre || '-') + '</td><td><small>' + escapeHtml(d.adresse || '-') + '</small></td><td><small>' + escapeHtml(d.email || '-') + '</small></td><td>' + escapeHtml(d.telephone || '-') + '</td><td>' + escapeHtml(d.whatsapp || '-') + '</td><td>' + escapeHtml(d.facebook || '-') + '</td><td>' + escapeHtml(d.instagram || '-') + '</td><td style="color:#2E7D32;font-weight:600;">' + (d.ca || 0).toFixed(2) + '</td><td style="color:#2E7D32;">' + (d.profit || 0).toFixed(2) + '</td><td style="color:#2E7D32;font-weight:600;">' + (d.pointsFidelite || 0) + '</td><td><small>' + (d.allergies ? d.allergies.join(', ') : '-') + '</small></td><td><small>' + (d.aime ? d.aime.join(', ') : '-') + '</small></td><td><small>' + (d.deteste ? d.deteste.join(', ') : '-') + '</small></td><td><small>' + dateCreated + '</small></td><td><small>' + escapeHtml(d.description || '-') + '</small></td><td><button class="btn-edit" onclick="editClient(\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteClient(\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        var row = '<tr>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.id || '').substring(0, 6) + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:22px; font-weight:600;"><strong>' + escapeHtml(d.nom || '') + '</strong></td>' +
+            '<td style="padding:14px 10px; font-size:22px;">' + escapeHtml(d.prenom || '') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">@' + escapeHtml(d.username || '') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.genre || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + escapeHtml(d.adresse || '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + escapeHtml(d.email || '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.telephone || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.whatsapp || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.facebook || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.instagram || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; color:#2E7D32; font-weight:600;">' + (d.ca || 0).toFixed(2) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; color:#2E7D32;">' + (d.profit || 0).toFixed(2) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; color:#2E7D32; font-weight:600;">' + (d.pointsFidelite || 0) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.allergies ? d.allergies.join(', ') : '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.aime ? d.aime.join(', ') : '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.deteste ? d.deteste.join(', ') : '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + dateCreated + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + escapeHtml(d.description || '-') + '</small></td>' +
+            '<td style="padding:14px 10px;"><button class="btn-edit" onclick="editClient(\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteClient(\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-trash"></i></button></td></tr>';
         tb.innerHTML += row;
     }
     document.getElementById('clientsPagination').innerHTML = getPaginationHTML('clients', data.length);
@@ -440,16 +473,16 @@ function renderClientsTable() {
 function openClientForm(data) {
     data = data || {};
     var h = '';
-    h += '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="cliNom" value="' + escapeHtml(data.nom || '') + '" required></div><div class="form-group"><label>Prénom *</label><input type="text" id="cliPrenom" value="' + escapeHtml(data.prenom || '') + '" required></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Username</label><input type="text" id="cliUsername" value="' + escapeHtml(data.username || '') + '"></div><div class="form-group"><label>Genre</label><select id="cliGenre"><option value="">-</option><option value="M" ' + (data.genre === 'M' ? 'selected' : '') + '>M</option><option value="F" ' + (data.genre === 'F' ? 'selected' : '') + '>F</option></select></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Adresse</label><input type="text" id="cliAdresse" value="' + escapeHtml(data.adresse || '') + '"></div><div class="form-group"><label>Email</label><input type="email" id="cliEmail" value="' + escapeHtml(data.email || '') + '"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Téléphone</label><input type="text" id="cliTel" value="' + escapeHtml(data.telephone || '') + '"></div><div class="form-group"><label>WhatsApp</label><input type="text" id="cliWhatsapp" value="' + escapeHtml(data.whatsapp || '') + '"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Facebook</label><input type="text" id="cliFacebook" value="' + escapeHtml(data.facebook || '') + '"></div><div class="form-group"><label>Instagram</label><input type="text" id="cliInstagram" value="' + escapeHtml(data.instagram || '') + '"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>CA</label><input type="number" id="cliCA" value="' + (data.ca || 0) + '" step="0.01"></div><div class="form-group"><label>Profit</label><input type="number" id="cliProfit" value="' + (data.profit || 0) + '" step="0.01"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Points Fidélité</label><input type="number" id="cliPoints" value="' + (data.pointsFidelite || 0) + '"></div><div class="form-group"><label>Description</label><textarea id="cliDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Allergies (virgules)</label><input type="text" id="cliAllergies" value="' + (data.allergies ? data.allergies.join(', ') : '') + '" placeholder="gluten, lactose"></div><div class="form-group"><label>Aime (virgules)</label><input type="text" id="cliAime" value="' + (data.aime ? data.aime.join(', ') : '') + '" placeholder="café, thé"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Déteste (virgules)</label><input type="text" id="cliDeteste" value="' + (data.deteste ? data.deteste.join(', ') : '') + '" placeholder="sucre, lactose"></div></div>';
-    h += '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveClient()">Enregistrer</button>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Nom *</label><input type="text" id="cliNom" value="' + escapeHtml(data.nom || '') + '" required style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Prénom *</label><input type="text" id="cliPrenom" value="' + escapeHtml(data.prenom || '') + '" required style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Username</label><input type="text" id="cliUsername" value="' + escapeHtml(data.username || '') + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Genre</label><select id="cliGenre" style="font-size:22px; padding:14px;"><option value="">-</option><option value="M" ' + (data.genre === 'M' ? 'selected' : '') + '>M</option><option value="F" ' + (data.genre === 'F' ? 'selected' : '') + '>F</option></select></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Adresse</label><input type="text" id="cliAdresse" value="' + escapeHtml(data.adresse || '') + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Email</label><input type="email" id="cliEmail" value="' + escapeHtml(data.email || '') + '" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Téléphone</label><input type="text" id="cliTel" value="' + escapeHtml(data.telephone || '') + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">WhatsApp</label><input type="text" id="cliWhatsapp" value="' + escapeHtml(data.whatsapp || '') + '" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Facebook</label><input type="text" id="cliFacebook" value="' + escapeHtml(data.facebook || '') + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Instagram</label><input type="text" id="cliInstagram" value="' + escapeHtml(data.instagram || '') + '" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">CA</label><input type="number" id="cliCA" value="' + (data.ca || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Profit</label><input type="number" id="cliProfit" value="' + (data.profit || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Points Fidélité</label><input type="number" id="cliPoints" value="' + (data.pointsFidelite || 0) + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Description</label><textarea id="cliDesc" style="font-size:22px; padding:14px;">' + escapeHtml(data.description || '') + '</textarea></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Allergies (virgules)</label><input type="text" id="cliAllergies" value="' + (data.allergies ? data.allergies.join(', ') : '') + '" placeholder="gluten, lactose" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Aime (virgules)</label><input type="text" id="cliAime" value="' + (data.aime ? data.aime.join(', ') : '') + '" placeholder="café, thé" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Déteste (virgules)</label><input type="text" id="cliDeteste" value="' + (data.deteste ? data.deteste.join(', ') : '') + '" placeholder="sucre, lactose" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div style="display:flex; gap:12px; margin-top:20px;"><button class="btn-cancel" onclick="closeModal()" style="font-size:22px; padding:14px 28px;">Annuler</button><button class="btn-save" onclick="saveClient()" style="font-size:22px; padding:14px 28px;">Enregistrer</button></div>';
     currentCollection = 'clients'; openModal(editingId ? 'Modifier Client' : 'Nouveau Client', h);
 }
 
@@ -466,14 +499,14 @@ function deleteClient(id) { if (confirm('Supprimer ce client ?')) { CacheDB.writ
 
 // ==================== FOURNISSEURS ====================
 function loadFournisseursPage(c) {
-    c.innerHTML = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-truck"></i> Fournisseurs</h3><button class="btn-add" onclick="openFournisseurForm()"><i class="fas fa-plus"></i> Ajouter</button></div>' +
-        '<div class="table-container"><table class="data-table" id="fournisseursTable" style="font-size:0.6rem;"><thead><tr>' +
+    c.innerHTML = '<div class="content-card"><div class="card-header" style="flex-wrap:wrap; gap:12px;"><h3 style="font-size:28px;"><i class="fas fa-truck"></i> Fournisseurs</h3><button class="btn-add" onclick="openFournisseurForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Ajouter</button></div>' +
+        '<div class="table-container" style="overflow-x:auto;"><table class="data-table" id="fournisseursTable" style="font-size:20px; width:100%;"><thead><tr style="font-size:22px;">' +
         makeSortableHeader('fournisseurs', 'id', 'ID', 'loadFournisseurs') + makeSortableHeader('fournisseurs', 'nom', 'Nom', 'loadFournisseurs') +
         makeSortableHeader('fournisseurs', 'prenom', 'Prénom', 'loadFournisseurs') + makeSortableHeader('fournisseurs', 'societe', 'Société', 'loadFournisseurs') +
         makeSortableHeader('fournisseurs', 'telephone', 'Tél', 'loadFournisseurs') + makeSortableHeader('fournisseurs', 'whatsapp', 'WhatsApp', 'loadFournisseurs') +
         makeSortableHeader('fournisseurs', 'email', 'Email', 'loadFournisseurs') + makeSortableHeader('fournisseurs', 'adresse', 'Adresse', 'loadFournisseurs') +
         makeSortableHeader('fournisseurs', 'description', 'Description', 'loadFournisseurs') + makeSortableHeader('fournisseurs', 'ca', 'CA', 'loadFournisseurs') +
-        '<th>Catégories</th>' + makeSortableHeader('fournisseurs', 'createdAt', 'Date créé', 'loadFournisseurs') + '<th>Actions</th></thead><tbody></tbody></div><div id="fournisseursPagination"></div></div>';
+        '<th style="padding:14px 10px;">Catégories</th>' + makeSortableHeader('fournisseurs', 'createdAt', 'Date créé', 'loadFournisseurs') + '<th style="padding:14px 10px;">Actions</th></thead><tbody style="font-size:20px;"></tbody></div><div id="fournisseursPagination"></div></div>';
     loadFournisseurs();
 }
 
@@ -487,12 +520,25 @@ function renderFournisseursTable() {
     var tb = document.querySelector('#fournisseursTable tbody'); if (!tb) return;
     var data = applySort('fournisseurs', allFournisseursData.slice(), 'nom'); var pageData = getPageData('fournisseurs', data);
     tb.innerHTML = '';
-    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;">Aucun fournisseur</td></tr>'; document.getElementById('fournisseursPagination').innerHTML = ''; return; }
+    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;font-size:24px;">Aucun fournisseur</td></tr>'; document.getElementById('fournisseursPagination').innerHTML = ''; return; }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var dateCreated = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('fr-FR') + ' ' + new Date(d.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
         var categories = d.categories ? d.categories.join(', ') : '-';
-        tb.innerHTML += '<tr><td><small>' + (d.id || '').substring(0, 6) + '</small></td><td><strong>' + escapeHtml(d.nom || '') + '</strong></td><td>' + escapeHtml(d.prenom || '') + '</td><td>' + escapeHtml(d.societe || '-') + '</td><td>' + escapeHtml(d.telephone || '-') + '</td><td>' + escapeHtml(d.whatsapp || '-') + '</td><td><small>' + escapeHtml(d.email || '-') + '</small></td><td><small>' + escapeHtml(d.adresse || '-') + '</small></td><td><small>' + escapeHtml(d.description || '-') + '</small></td><td>' + (d.ca || 0).toFixed(2) + ' MAD</td><td><small>' + escapeHtml(categories) + '</small></td><td><small>' + dateCreated + '</small></td><td><button class="btn-edit" onclick="editFournisseur(\'' + d.id + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteFournisseur(\'' + d.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        tb.innerHTML += '<tr>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.id || '').substring(0, 6) + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:22px; font-weight:600;"><strong>' + escapeHtml(d.nom || '') + '</strong></td>' +
+            '<td style="padding:14px 10px; font-size:22px;">' + escapeHtml(d.prenom || '') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.societe || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.telephone || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.whatsapp || '-') + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + escapeHtml(d.email || '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + escapeHtml(d.adresse || '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + escapeHtml(d.description || '-') + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;">' + (d.ca || 0).toFixed(2) + ' MAD</td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + escapeHtml(categories) + '</small></td>' +
+            '<td style="padding:14px 10px; font-size:20px;"><small>' + dateCreated + '</small></td>' +
+            '<td style="padding:14px 10px;"><button class="btn-edit" onclick="editFournisseur(\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteFournisseur(\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-trash"></i></button></td></tr>';
     }
     document.getElementById('fournisseursPagination').innerHTML = getPaginationHTML('fournisseurs', data.length);
 }
@@ -500,15 +546,15 @@ function renderFournisseursTable() {
 function openFournisseurForm(data) {
     data = data || {}; var selectedCategories = data.categories || [];
     var h = '';
-    h += '<div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="fourNom" value="' + escapeHtml(data.nom || '') + '" required></div><div class="form-group"><label>Prénom</label><input type="text" id="fourPrenom" value="' + escapeHtml(data.prenom || '') + '"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Société</label><input type="text" id="fourSociete" value="' + escapeHtml(data.societe || '') + '"></div><div class="form-group"><label>Téléphone</label><input type="text" id="fourTel" value="' + escapeHtml(data.telephone || '') + '"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>WhatsApp</label><input type="text" id="fourWhatsapp" value="' + escapeHtml(data.whatsapp || '') + '"></div><div class="form-group"><label>Email</label><input type="email" id="fourEmail" value="' + escapeHtml(data.email || '') + '"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Adresse</label><input type="text" id="fourAdresse" value="' + escapeHtml(data.adresse || '') + '"></div><div class="form-group"><label>CA</label><input type="number" id="fourCA" value="' + (data.ca || 0) + '" step="0.01"></div></div>';
-    h += '<div class="form-row"><div class="form-group"><label>Description</label><textarea id="fourDesc">' + escapeHtml(data.description || '') + '</textarea></div></div>';
-    h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label>Catégories</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px;">';
-    fournisseurCategoriesList.forEach(function(cat) { var checked = selectedCategories.indexOf(cat) !== -1 ? 'checked' : ''; h += '<label style="display:flex;align-items:center;gap:4px;padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.8rem;"><input type="checkbox" class="four-cat-check" value="' + cat + '" ' + checked + '> ' + cat + '</label>'; });
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Nom *</label><input type="text" id="fourNom" value="' + escapeHtml(data.nom || '') + '" required style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Prénom</label><input type="text" id="fourPrenom" value="' + escapeHtml(data.prenom || '') + '" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Société</label><input type="text" id="fourSociete" value="' + escapeHtml(data.societe || '') + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Téléphone</label><input type="text" id="fourTel" value="' + escapeHtml(data.telephone || '') + '" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">WhatsApp</label><input type="text" id="fourWhatsapp" value="' + escapeHtml(data.whatsapp || '') + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Email</label><input type="email" id="fourEmail" value="' + escapeHtml(data.email || '') + '" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Adresse</label><input type="text" id="fourAdresse" value="' + escapeHtml(data.adresse || '') + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">CA</label><input type="number" id="fourCA" value="' + (data.ca || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div></div>';
+    h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Description</label><textarea id="fourDesc" style="font-size:22px; padding:14px;">' + escapeHtml(data.description || '') + '</textarea></div></div>';
+    h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Catégories</label><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">';
+    fournisseurCategoriesList.forEach(function(cat) { var checked = selectedCategories.indexOf(cat) !== -1 ? 'checked' : ''; h += '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:20px;"><input type="checkbox" class="four-cat-check" value="' + cat + '" ' + checked + ' style="width:22px; height:22px;"> ' + cat + '</label>'; });
     h += '</div></div></div>';
-    h += '<button class="btn-cancel" onclick="closeModal()">Annuler</button><button class="btn-save" onclick="saveFournisseur()">Enregistrer</button>';
+    h += '<div style="display:flex; gap:12px; margin-top:20px;"><button class="btn-cancel" onclick="closeModal()" style="font-size:22px; padding:14px 28px;">Annuler</button><button class="btn-save" onclick="saveFournisseur()" style="font-size:22px; padding:14px 28px;">Enregistrer</button></div>';
     currentCollection = 'fournisseurs'; openModal(editingId ? 'Modifier Fournisseur' : 'Nouveau Fournisseur', h);
 }
 
@@ -523,4 +569,4 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (catégories multiples + ordre + sélecteur amélioré + champs box + fournisseur + profit auto)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + meilleure lisibilité)');
