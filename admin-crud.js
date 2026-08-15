@@ -2,8 +2,8 @@
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseurs avec OCR Tesseract optimisé pour les tableaux
-// ✅ Prétraitement d'image (niveaux de gris, contraste, redimensionnement)
-// ✅ Post-traitement intelligent (détection de séparateurs, extraction des colonnes)
+// ✅ Prétraitement d'image (contraste, binarisation)
+// ✅ Parsing robuste avec plusieurs méthodes (colonnes, regex, auto)
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -556,7 +556,7 @@ function openFournisseurForm(data) {
     h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Catégories</label><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">';
     fournisseurCategoriesList.forEach(function(cat) { var checked = selectedCategories.indexOf(cat) !== -1 ? 'checked' : ''; h += '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:20px;"><input type="checkbox" class="four-cat-check" value="' + cat + '" ' + checked + ' style="width:22px; height:22px;"> ' + cat + '</label>'; });
     h += '</div></div></div>';
-    var schemaStr = data.factureSchema ? JSON.stringify(data.factureSchema, null, 2) : '{\n  "type": "table",\n  "columns": [\n    { "name": "produit", "index": 0 },\n    { "name": "quantite", "index": 1 }\n  ],\n  "skipRows": 1,\n  "separator": "tab"\n}';
+    var schemaStr = data.factureSchema ? JSON.stringify(data.factureSchema, null, 2) : '{\n  "type": "table",\n  "columns": [\n    { "name": "produit", "index": 0 },\n    { "name": "quantite", "index": 1 }\n  ],\n  "skipRows": 1,\n  "separator": "space"\n}';
     h += '<div class="form-row"><div class="form-group" style="min-width:100%;"><label style="font-size:22px;">Schéma de facture (JSON)</label>' +
         '<textarea id="fourSchema" style="width:100%;padding:14px;font-size:20px;border:2px solid #e2e8f0;border-radius:8px;" rows="8">' + escapeHtml(schemaStr) + '</textarea>' +
         '<p style="font-size:16px;color:#64748b;margin-top:4px;">Définissez les colonnes et leur index (0 = première colonne). Séparateur possible : tab, comma, space.</p></div></div>';
@@ -758,14 +758,14 @@ function preprocessImageForOCR(imgData, callback) {
         var canvas = document.createElement('canvas');
         var ctx = canvas.getContext('2d');
         
-        // Redimensionnement (max 1500px de large)
-        var maxWidth = 1500;
+        // Redimensionner pour améliorer la reconnaissance
+        var maxWidth = 2000;
         var scale = Math.min(1, maxWidth / img.width);
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         
-        // Niveaux de gris + binarisation (seuil fixe, ajustable)
+        // Convertir en niveaux de gris et binariser (contraste élevé)
         var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         var data = imageData.data;
         for (var i = 0; i < data.length; i += 4) {
@@ -773,8 +773,8 @@ function preprocessImageForOCR(imgData, callback) {
             var g = data[i+1];
             var b = data[i+2];
             var gray = 0.299 * r + 0.587 * g + 0.114 * b;
-            // Seuil de binarisation (180 est un bon compromis)
-            var threshold = 180;
+            // Seuil de binarisation (160 pour meilleur contraste)
+            var threshold = 160;
             var val = gray > threshold ? 255 : 0;
             data[i] = val;
             data[i+1] = val;
@@ -782,7 +782,7 @@ function preprocessImageForOCR(imgData, callback) {
         }
         ctx.putImageData(imageData, 0, 0);
         
-        callback(canvas.toDataURL('image/jpeg', 0.9));
+        callback(canvas.toDataURL('image/jpeg', 0.95));
     };
     img.src = imgData;
 }
@@ -806,12 +806,11 @@ async function reconnaitreFacture(imgData) {
             'fra',
             {
                 logger: m => console.log(m),
-                // Mode de segmentation : 6 = bloc de texte uniforme (idéal pour tableaux)
-                tessedit_pageseg_mode: '6',
-                // Restreindre les caractères pour éviter les confusions (lettres, chiffres, points, virgules, tirets, espaces)
+                tessedit_pageseg_mode: '6', // Bloc de texte uniforme (tableau)
                 tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789,.- ',
-                // Utiliser le moteur LSTM (plus précis)
-                tessedit_ocr_engine_mode: '3'
+                tessedit_ocr_engine_mode: '3', // LSTM
+                tessedit_enable_dict: '0', // Pas de correction dictionnaire (conserve les noms de produits)
+                tessedit_enable_bigram_correction: '0'
             }
         );
         
@@ -820,13 +819,14 @@ async function reconnaitreFacture(imgData) {
         
         // Afficher le texte extrait
         if (container) {
-            container.innerHTML = '<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;"><strong>Texte OCR :</strong><br>' + escapeHtml(texte) + '</div>';
+            container.innerHTML += '<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;"><strong>Texte OCR :</strong><br>' + escapeHtml(texte) + '</div>';
         }
 
         // Vérifier si un schéma est défini pour le fournisseur
         if (fournisseurAchatSelectionne && fournisseurAchatSelectionne.factureSchema) {
-            // Nettoyer le texte avant parsing
+            // Nettoyer le texte
             var texteNet = nettoyerTexteOCR(texte);
+            // Parser avec le schéma
             parserFactureAmeliore(texteNet, fournisseurAchatSelectionne.factureSchema);
         } else {
             alert('⚠️ Aucun schéma de facture défini pour ce fournisseur.\n\n' +
@@ -840,9 +840,9 @@ async function reconnaitreFacture(imgData) {
 }
 
 function nettoyerTexteOCR(texte) {
-    // Nettoyer le texte : enlever les caractères spéciaux inutiles
+    // Nettoyer le texte : enlever les caractères spéciaux inutiles, réduire les espaces
     return texte
-        .replace(/[^A-Za-z0-9,.\- \n]/g, '') // Garder lettres, chiffres, points, virgules, tirets, espaces, sauts de ligne
+        .replace(/[^A-Za-z0-9,.\- \n]/g, '') // Garder seulement lettres, chiffres, points, virgules, tirets, espaces, sauts de ligne
         .replace(/\s{2,}/g, ' ') // Remplacer les espaces multiples par un seul
         .trim();
 }
@@ -851,84 +851,88 @@ function parserFactureAmeliore(texte, schema) {
     // Découper en lignes
     var lignes = texte.split('\n')
         .map(l => l.trim())
-        .filter(l => l.length > 0);
+        .filter(l => l.length > 3);
 
-    // Ignorer les lignes d'en-tête
-    var start = schema.skipRows || 0;
-    var dataRows = lignes.slice(start);
-    
-    var sep = schema.separator || 'space';
-    var colonnes = schema.columns;
-    
+    // Paramètres du schéma
+    var colonneProduit = -1;
+    var colonneQuantite = -1;
+    if (schema && schema.columns) {
+        for (var col of schema.columns) {
+            if (col.name === 'produit') colonneProduit = col.index;
+            if (col.name === 'quantite') colonneQuantite = col.index;
+        }
+    }
+
     var produitsTrouves = [];
-    var detailsRows = '';
     var debugInfo = '';
 
-    dataRows.forEach(function(ligne, idx) {
-        // Découper selon le séparateur
-        var parts;
-        if (sep === 'tab') {
-            parts = ligne.split('\t');
-        } else if (sep === 'comma') {
-            parts = ligne.split(',');
-        } else if (sep === 'space') {
-            // Pour les espaces, on essaie de détecter les colonnes par motifs
-            parts = ligne.split(/\s{2,}/); // deux espaces ou plus
-            if (parts.length < 2) {
-                parts = ligne.split(/\s+/); // fallback
-            }
-        } else {
-            parts = ligne.split(/\s+/);
-        }
-        
-        parts = parts.map(p => p.trim()).filter(p => p !== '');
-        
-        // Vérifier qu'on a assez de colonnes
-        if (parts.length < 2) return;
-        
-        var rowData = {};
-        colonnes.forEach(function(col) {
-            if (col.index < parts.length) {
-                var value = parts[col.index];
-                // Si la colonne est "quantite", extraire le nombre
-                if (col.name === 'quantite') {
-                    var qteMatch = value.match(/(\d+[,.]?\d*)/);
-                    if (qteMatch) value = qteMatch[1];
-                }
-                rowData[col.name] = value;
-            }
-        });
-        
-        debugInfo += 'Ligne ' + idx + ' : ' + JSON.stringify(rowData) + '\n';
-        detailsRows += 'Ligne parsée : ' + JSON.stringify(rowData) + '\n';
+    // Si le schéma a des index, on utilise la méthode par colonnes
+    if (colonneProduit >= 0 && colonneQuantite >= 0) {
+        var sep = schema.separator || 'space';
+        var start = schema.skipRows || 0;
+        var dataRows = lignes.slice(start);
 
-        // Si on a un nom de produit et une quantité
-        if (rowData.produit && rowData.quantite) {
-            // Recherche floue du produit
-            var produit = trouverProduitAvecFuzzy(rowData.produit);
-            if (produit) {
-                var qte = parseFloat(rowData.quantite.replace(',', '.')) || 0;
-                if (qte > 0) {
-                    produitsTrouves.push({ 
-                        id: produit.id, 
-                        nom: produit.nom, 
-                        quantite: qte 
-                    });
+        for (var ligne of dataRows) {
+            var parts;
+            if (sep === 'tab') parts = ligne.split('\t');
+            else if (sep === 'comma') parts = ligne.split(',');
+            else parts = ligne.split(/\s{2,}/); // deux espaces ou plus
+
+            parts = parts.map(p => p.trim()).filter(p => p !== '');
+            if (parts.length > Math.max(colonneProduit, colonneQuantite)) {
+                var nom = parts[colonneProduit] || '';
+                var qte = parseFloat((parts[colonneQuantite] || '').replace(',', '.'));
+                if (nom && qte > 0) {
+                    var produit = trouverProduitAvecFuzzy(nom);
+                    if (produit) {
+                        produitsTrouves.push({ id: produit.id, nom: produit.nom, quantite: qte });
+                        debugInfo += '✅ ' + nom + ' -> ' + qte + '\n';
+                    } else {
+                        debugInfo += '❌ Produit non trouvé pour : ' + nom + '\n';
+                    }
                 }
             }
         }
-    });
+    } else {
+        // Méthode alternative : chercher des motifs dans chaque ligne
+        for (var ligne of lignes) {
+            // Motif : (nom) + (quantité) - on cherche un nombre à la fin ou après un espace
+            var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
+            if (match) {
+                var nom = match[1].trim();
+                var qte = parseFloat(match[2].replace(',', '.'));
+                var produit = trouverProduitAvecFuzzy(nom);
+                if (produit && qte > 0) {
+                    produitsTrouves.push({ id: produit.id, nom: produit.nom, quantite: qte });
+                    debugInfo += '✅ ' + nom + ' -> ' + qte + '\n';
+                } else {
+                    debugInfo += '❌ Produit non trouvé pour : ' + nom + '\n';
+                }
+            } else {
+                // Essayer avec des espaces multiples
+                var parts = ligne.split(/\s{2,}/);
+                if (parts.length >= 2) {
+                    var nom = parts[0].trim();
+                    var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
+                    if (!isNaN(qte) && qte > 0) {
+                        var produit = trouverProduitAvecFuzzy(nom);
+                        if (produit) {
+                            produitsTrouves.push({ id: produit.id, nom: produit.nom, quantite: qte });
+                            debugInfo += '✅ ' + nom + ' -> ' + qte + '\n';
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Afficher le détail du parsing
-    alert('🔍 Détail du parsing :\n' + debugInfo + '\nProduits reconnus : ' + produitsTrouves.length);
+    alert('🔍 Résultat du parsing :\n' + debugInfo + '\nProduits reconnus : ' + produitsTrouves.length);
 
     if (produitsTrouves.length === 0) {
-        alert('❌ Aucun produit reconnu dans la facture.\n\n' +
-              'Vérifiez que :\n' +
-              '1️⃣ Le schéma JSON est correct (index des colonnes).\n' +
-              '2️⃣ Les noms de produits dans le système correspondent à ceux de la facture.\n' +
-              '3️⃣ La photo est nette et bien éclairée.\n\n' +
-              'Texte OCR nettoyé :\n' + texte.substring(0, 500) + '...');
+        alert('❌ Aucun produit reconnu.\n\n' +
+              'Vérifiez que le texte OCR contient bien des noms de produits suivis de quantités.\n\n' +
+              'Texte OCR extrait (premières lignes) :\n' + lignes.slice(0, 10).join('\n'));
         return;
     }
 
@@ -943,18 +947,8 @@ function parserFactureAmeliore(texte, schema) {
             remplis++;
         }
     });
-    
+
     alert('✅ ' + produitsTrouves.length + ' produit(s) reconnus et pré-remplis.');
-    
-    // Mettre à jour le message dans le container
-    var container = document.getElementById('produitsAchatContainer');
-    if (container) {
-        var existingContent = container.innerHTML;
-        container.innerHTML = existingContent + 
-            '<div style="margin-top:12px;padding:12px;background:#dcfce7;border-radius:8px;color:#16a34a;font-size:18px;">' +
-            '✅ ' + produitsTrouves.length + ' produit(s) reconnus et pré-remplis' +
-            '</div>';
-    }
 }
 
 function trouverProduitAvecFuzzy(nomFacture) {
@@ -970,7 +964,7 @@ function trouverProduitAvecFuzzy(nomFacture) {
     }
     
     // 2. Recherche avec suppression des mots inutiles (boîte, bouteille, etc.)
-    var motsInutiles = ['boite', 'boîte', 'bouteille', 'bte', 'bt', 'canette', 'pack', 'lot'];
+    var motsInutiles = ['boite', 'boîte', 'bouteille', 'bte', 'bt', 'canette', 'pack', 'lot', 'coca', 'cola', 'fanta', 'sprite'];
     var nomPropre = nomLower;
     for (var mot of motsInutiles) {
         nomPropre = nomPropre.replace(mot, '').trim();
@@ -1000,7 +994,6 @@ function trouverProduitAvecFuzzy(nomFacture) {
 
 function similarite(a, b) {
     if (a.length === 0 || b.length === 0) return 0;
-    // Nombre de caractères communs pondéré
     var common = 0;
     var aChars = a.split('');
     var bChars = b.split('');
