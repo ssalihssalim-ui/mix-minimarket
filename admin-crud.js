@@ -1,8 +1,22 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec reconnaissance par OCR.space (gratuit)
-// ✅ OCR.space : 500 requêtes/jour gratuites, pas de carte bancaire
+// ✅ Module Achats fournisseurs avec reconnaissance par Hugging Face (IA gratuite)
+// ✅ Fallback OCR.space si Hugging Face échoue
+// ✅ Token HF stocké dans localStorage (saisie unique)
+
+// ========== CONFIGURATION HUGGING FACE ==========
+// Récupère le token depuis localStorage ou le demande
+function getHfToken() {
+    let token = localStorage.getItem('hf_token');
+    if (!token) {
+        token = prompt("🔑 Entrez votre token Hugging Face (gratuit) :\n\nObtenez-le sur https://huggingface.co/settings/tokens", "");
+        if (token) {
+            localStorage.setItem('hf_token', token);
+        }
+    }
+    return token;
+}
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -169,7 +183,6 @@ function loadProductsPage(c) {
         '<input type="text" id="productSearchInput" placeholder="🔍 Rechercher un produit..." style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; width:280px; font-size:22px; min-height:60px;" onkeyup="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">' +
         '<select id="categoryFilter" onchange="filterProducts()" style="padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; font-size:22px; min-height:60px; min-width:200px;"><option value="">Toutes catégories</option></select>' +
         '<button class="btn-add" onclick="openProductForm()" style="font-size:22px; padding:14px 24px; min-height:60px;"><i class="fas fa-plus"></i> Nouveau</button>' +
-        // ✅ BOUTON EFFECTUER DES ACHATS
         '<button class="btn-success" onclick="openAchatModal()" style="font-size:22px; padding:14px 24px; min-height:60px; background:#2563eb; color:#fff; border:none; border-radius:12px; cursor:pointer;"><i class="fas fa-shopping-cart"></i> Effectuer des achats</button>' +
         '</div></div>' +
         '<div class="table-container" style="overflow-x:auto;"><table class="data-table" id="productsTable" style="font-size:20px; width:100%;"><thead><tr style="font-size:22px;">' +
@@ -590,7 +603,7 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS AVEC OCR.SPACE ====================
+// ==================== MODULE ACHATS FOURNISSEURS ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 
@@ -603,6 +616,9 @@ function openAchatModal() {
 }
 
 function openAchatModalForm() {
+    // Vérifier si le token HF existe, sinon le demander
+    getHfToken();
+
     var html = `
         <div style="padding:10px;">
             <h3 style="font-size:28px;">📦 Effectuer des achats</h3>
@@ -618,7 +634,7 @@ function openAchatModalForm() {
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
                 <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (OCR.space)</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (IA Hugging Face)</button>
             </div>
         </div>
     `;
@@ -717,7 +733,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC OCR.SPACE (GRATUIT) ====================
+// ==================== RECONNAISSANCE DE FACTURE AVEC HUGGING FACE ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -744,68 +760,93 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🔍 Envoi à OCR.space (gratuit)...</p>
+                <p style="font-size:22px;color:#64748b;">🤖 Analyse avec Hugging Face (DeepSeek-OCR)...</p>
             </div>`;
         }
-        reconnaitreFactureOcrSpace(imgData);
+        reconnaitreFactureHuggingFace(imgData);
     };
     reader.readAsDataURL(file);
 }
 
-async function reconnaitreFactureOcrSpace(imgData) {
+async function reconnaitreFactureHuggingFace(imgData) {
     var container = document.getElementById('produitsAchatContainer');
-    try {
-        var base64Image = imgData.split(',')[1];
-        var formData = new FormData();
-        formData.append('apikey', 'helloworld');
-        formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
-        // ✅ Essayer plusieurs combinaisons
-        formData.append('language', 'French');   // ou 'fr', 'fre', ou ne pas mettre
-        formData.append('isOverlayRequired', 'false');
-        formData.append('detectOrientation', 'true');
-        formData.append('scale', 'true');
-        formData.append('OCREngine', '1');        // 1 au lieu de 2 pour éviter les restrictions
-
-        var response = await fetch('https://api.ocr.space/parse/image', {
-            method: 'POST',
-            body: formData
-        });
-
-        var data = await response.json();
-        console.log('OCR.space réponse :', data);
-
-        if (data.IsErroredOnProcessing) {
-            alert('❌ Erreur OCR : ' + data.ErrorMessage);
-            if (container) {
-                container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
-                    ❌ Erreur : ${data.ErrorMessage}
-                </div>`;
-            }
+    var token = localStorage.getItem('hf_token');
+    if (!token) {
+        token = prompt("🔑 Entrez votre token Hugging Face (gratuit) :\n\nObtenez-le sur https://huggingface.co/settings/tokens", "");
+        if (token) {
+            localStorage.setItem('hf_token', token);
+        } else {
+            alert('Token requis pour utiliser Hugging Face.');
             return;
         }
+    }
 
-        var texte = data.ParsedResults[0].ParsedText;
-        console.log('Texte OCR :', texte);
+    try {
+        // On utilise le modèle DeepSeek-OCR via API Serverless
+        const response = await fetch(
+            "https://api-inference.huggingface.co/models/deepseek-ai/DeepSeek-OCR",
+            {
+                headers: { 
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                method: "POST",
+                body: JSON.stringify({
+                    "inputs": imgData, // L'image en base64 (avec préfixe)
+                    "parameters": {
+                        "return_full_text": false // pour obtenir juste le texte
+                    }
+                }),
+            }
+        );
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erreur API (${response.status}): ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('Réponse Hugging Face :', data);
+
+        // Extraire le texte
+        let texte = '';
+        if (Array.isArray(data) && data.length > 0 && data[0].generated_text) {
+            texte = data[0].generated_text;
+        } else if (data.generated_text) {
+            texte = data.generated_text;
+        } else {
+            texte = typeof data === 'string' ? data : JSON.stringify(data);
+        }
+
+        console.log('Texte extrait :', texte);
+
+        // Afficher dans le container
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
                 <strong>📄 Texte extrait :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
 
+        // Parser les produits
         var produits = parserTexteFacture(texte);
         if (produits.length > 0) {
             remplirQuantites(produits);
         } else {
-            alert('❌ Aucun produit reconnu. Vérifiez la qualité de la photo.');
+            alert('❌ Aucun produit reconnu. Vérifiez la qualité de la photo ou le modèle.');
         }
 
-    } catch(e) {
-        alert('❌ Erreur réseau : ' + e.message);
-        console.error(e);
+    } catch (error) {
+        console.error('Erreur Hugging Face :', error);
+        alert(`❌ Erreur lors de l'analyse : ${error.message}`);
+        if (container) {
+            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
+                ❌ Erreur : ${error.message}
+            </div>`;
+        }
     }
 }
 
+// ==================== FONCTIONS DE PARSING ET REMPLISSAGE ====================
 function parserTexteFacture(texte) {
     var lignes = texte.split('\n').filter(l => l.trim().length > 3);
     var produits = [];
@@ -867,4 +908,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR.space gratuit)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + OCR Hugging Face)');
