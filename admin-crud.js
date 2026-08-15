@@ -1,12 +1,18 @@
 // ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec reconnaissance par DeepSeek‑OCR (prioritaire)
-// ✅ Fallback automatique sur OCR.space (gratuit, sans carte bancaire)
-// ✅ Gestion robuste des erreurs (Space public, qualité photo, réseau)
+// ✅ Module Achats fournisseurs avec reconnaissance par Google Gemini Flash (gratuit)
+// ✅ Fallback sur DeepSeek-OCR (Space public) puis OCR.space si besoin
+// ✅ Extraction intelligente des tableaux de factures
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
+
+// ═══════════════════════════════════════════════════════════════════
+//  🔑  CONFIGURATION GEMINI (remplacez par votre clé)
+// ═══════════════════════════════════════════════════════════════════
+const GEMINI_API_KEY = 'VOTRE_CLE_API_GEMINI_ICI';  // ← à remplacer
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY;
 
 // ========== FONCTIONS UTILITAIRES POUR LA SÉLECTION DE CATÉGORIES ==========
 function updateSelectedCategories() {
@@ -717,7 +723,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE : DEEPSEEK‑OCR + FALLBACK OCR.SPACE ====================
+// ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE GEMINI FLASH ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -744,64 +750,156 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🔍 Analyse avec DeepSeek‑OCR...</p>
+                <p style="font-size:22px;color:#64748b;">🤖 Analyse avec Google Gemini Flash (gratuit)...</p>
             </div>`;
         }
-        // Priorité : DeepSeek-OCR
-        reconnaitreFactureDeepSeek(imgData).catch(function(err) {
-            console.warn('DeepSeek-OCR échoué, fallback OCR.space:', err);
-            if (container) {
-                container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#b45309;font-size:18px;">
-                    ⚠️ DeepSeek‑OCR indisponible → bascule vers OCR.space (gratuit)
-                </div>`;
-            }
-            return reconnaitreFactureOcrSpace(imgData);
-        });
+        reconnaitreFactureGemini(imgData);
     };
     reader.readAsDataURL(file);
 }
 
-// ----- Premier essai : DeepSeek-OCR (Space public) -----
-async function reconnaitreFactureDeepSeek(imgData) {
+async function reconnaitreFactureGemini(imgData) {
     var container = document.getElementById('produitsAchatContainer');
-    var response = await fetch(
-        "https://merterbak-DeepSeek-OCR-Demo.hf.space/run/predict",
-        {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ "data": [ imgData ] })
+    try {
+        // Vérifier que la clé API est définie
+        if (GEMINI_API_KEY === 'VOTRE_CLE_API_GEMINI_ICI') {
+            alert('⚠️ Veuillez configurer votre clé API Gemini dans le code (GEMINI_API_KEY)');
+            return;
         }
-    );
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    var data = await response.json();
-    console.log('DeepSeek réponse :', data);
-    var texte = data.data ? data.data[0] : null;
-    if (!texte || texte.trim().length < 5) {
-        throw new Error('Pas de texte extrait (qualité photo insuffisante)');
-    }
-    if (container) {
-        container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-            <strong>📄 Texte extrait (DeepSeek) :</strong><br>${escapeHtml(texte)}
-        </div>`;
-    }
-    var produits = parserTexteFacture(texte);
-    if (produits.length > 0) {
-        remplirQuantites(produits);
-    } else {
-        alert('⚠️ Aucun produit reconnu. Vérifiez que la facture est lisible.');
+
+        // Construire la requête Gemini
+        var requestBody = {
+            contents: [{
+                parts: [
+                    {
+                        text: `Tu es un assistant spécialisé dans l'extraction de données de factures fournisseurs.
+Voici une photo d'une facture. Extrais-moi la liste des produits achetés avec leur quantité.
+Retourne-moi les données UNIQUEMENT au format JSON, sans aucun autre texte.
+Le JSON doit être un tableau d'objets, chaque objet ayant les propriétés "nom" et "quantite".
+Exemple de format attendu :
+[
+    { "nom": "Coca-Cola 1.5L", "quantite": 5 },
+    { "nom": "Fanta Orange", "quantite": 3 }
+]
+Si tu ne vois pas clairement de produit avec une quantité, retourne un tableau vide.`
+                    },
+                    {
+                        inline_data: {
+                            mime_type: "image/jpeg",
+                            data: imgData.split(',')[1]  // base64 pur
+                        }
+                    }
+                ]
+            }]
+        };
+
+        var response = await fetch(GEMINI_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            var errorData = await response.json();
+            throw new Error(`Gemini erreur ${response.status}: ${errorData.error?.message || response.statusText}`);
+        }
+
+        var data = await response.json();
+        console.log('Réponse Gemini :', data);
+
+        // Extraire le texte généré
+        var texte = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log('Texte généré par Gemini :', texte);
+
+        // Nettoyer le texte (enlever les balises markdown)
+        var cleaned = texte.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        var produits = [];
+
+        try {
+            produits = JSON.parse(cleaned);
+            if (!Array.isArray(produits)) {
+                throw new Error('La réponse n\'est pas un tableau');
+            }
+        } catch(e) {
+            console.warn('Parsing JSON échoué, tentative avec regex :', e);
+            // Fallback : chercher des motifs "nom" et "quantite" dans le texte
+            var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
+            var match;
+            while ((match = regex.exec(cleaned)) !== null) {
+                produits.push({ nom: match[1].trim(), quantite: parseInt(match[2]) });
+            }
+        }
+
+        if (container) {
+            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
+                <strong>📄 Produits extraits (Gemini) :</strong><br>${escapeHtml(JSON.stringify(produits, null, 2))}
+            </div>`;
+        }
+
+        if (produits.length > 0) {
+            remplirQuantites(produits);
+        } else {
+            alert('⚠️ Aucun produit reconnu. Vérifiez la qualité de la photo.');
+        }
+
+    } catch(e) {
+        console.error('Erreur Gemini :', e);
+        if (container) {
+            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
+                ❌ Erreur Gemini : ${e.message}
+            </div>`;
+        }
+        // Fallback sur DeepSeek-OCR si Gemini échoue
+        await reconnaitreFactureDeepSeek(imgData);
     }
 }
 
-// ----- Fallback : OCR.space (gratuit, sans paramètre language) -----
+// ----- Fallback DeepSeek-OCR (Space public) -----
+async function reconnaitreFactureDeepSeek(imgData) {
+    var container = document.getElementById('produitsAchatContainer');
+    try {
+        var response = await fetch(
+            "https://merterbak-DeepSeek-OCR-Demo.hf.space/run/predict",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ "data": [ imgData ] })
+            }
+        );
+        if (!response.ok) throw new Error('DeepSeek échec HTTP');
+        var data = await response.json();
+        var texte = data.data ? data.data[0] : null;
+        if (!texte || texte.trim().length < 5) throw new Error('Pas de texte');
+        if (container) {
+            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
+                <strong>📄 Texte extrait (DeepSeek) :</strong><br>${escapeHtml(texte)}
+            </div>`;
+        }
+        var produits = parserTexteFacture(texte);
+        if (produits.length > 0) {
+            remplirQuantites(produits);
+        } else {
+            alert('⚠️ Aucun produit reconnu par DeepSeek.');
+        }
+    } catch(e) {
+        console.warn('DeepSeek échoué, fallback OCR.space:', e);
+        if (container) {
+            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#b45309;font-size:18px;">
+                ⚠️ DeepSeek‑OCR indisponible → bascule vers OCR.space
+            </div>`;
+        }
+        await reconnaitreFactureOcrSpace(imgData);
+    }
+}
+
+// ----- Fallback OCR.space (gratuit) -----
 async function reconnaitreFactureOcrSpace(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
         var base64Image = imgData.split(',')[1];
         var formData = new FormData();
         formData.append('apikey', 'helloworld');
-        formData.append('base64Image', base64Image);          // ⚠️ SANS préfixe
+        formData.append('base64Image', base64Image);
         formData.append('isOverlayRequired', 'false');
         formData.append('detectOrientation', 'true');
         formData.append('scale', 'true');
@@ -812,10 +910,7 @@ async function reconnaitreFactureOcrSpace(imgData) {
             body: formData
         });
         var data = await response.json();
-        console.log('OCR.space réponse :', data);
-        if (data.IsErroredOnProcessing) {
-            throw new Error(data.ErrorMessage);
-        }
+        if (data.IsErroredOnProcessing) throw new Error(data.ErrorMessage);
         var texte = data.ParsedResults[0].ParsedText;
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
@@ -830,7 +925,6 @@ async function reconnaitreFactureOcrSpace(imgData) {
         }
     } catch(e) {
         alert('❌ Erreur OCR.space : ' + e.message);
-        console.error(e);
     }
 }
 
@@ -840,7 +934,6 @@ function parserTexteFacture(texte) {
     var produits = [];
 
     for (var ligne of lignes) {
-        // Motif : nom + quantité (nombre à la fin)
         var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
         if (match) {
             var nom = match[1].trim();
@@ -850,7 +943,6 @@ function parserTexteFacture(texte) {
                 continue;
             }
         }
-        // Alternative : colonnes séparées par plusieurs espaces
         var parts = ligne.split(/\s{2,}/);
         if (parts.length >= 2) {
             var nom = parts[0].trim();
@@ -896,4 +988,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + DeepSeek‑OCR avec fallback)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (polices 24px + Gemini Flash + fallbacks)');
