@@ -1,11 +1,11 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (ChatGPT + OCR fallback) ====================
-// Contient : Catégories, Produits, Clients, Fournisseurs
-// ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec ChatGPT (via site web)
-// ✅ L'utilisateur copie/colle la réponse de ChatGPT
-// ✅ Parsing automatique pour mettre à jour le stock
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Version Pro Automatisée) ====================
+// ✅ OCR.space (gratuit) pour extraire le texte
+// ✅ Parsing intelligent des produits et quantités
+// ✅ Correspondance automatique avec votre base de produits
+// ✅ Pré-remplissage automatique des champs de stock
+// ✅ 100% automatique, sans intervention manuelle
 
-// ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
+// ========== INITIALISATION ==========
 window.productSearchQuery = window.productSearchQuery || '';
 
 // ========== FONCTIONS UTILITAIRES ==========
@@ -590,7 +590,7 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS (avec ChatGPT) ====================
+// ==================== MODULE ACHATS FOURNISSEURS (Version Pro Automatisée) ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 
@@ -615,26 +615,12 @@ function openAchatModalForm() {
             <div id="produitsAchatContainer" style="margin-top:12px;max-height:400px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
                 <p style="text-align:center;color:#94a3b8;font-size:22px;">Choisissez un fournisseur</p>
             </div>
-            
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
-                <button class="btn-add" onclick="envoyerImageAChatGPT()" style="font-size:22px;padding:14px 28px;background:#10a37f;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner avec ChatGPT</button>
+                <button class="btn-add" onclick="scannerFactureAuto()" style="font-size:22px;padding:14px 28px;background:#16a34a;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Auto)</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Fermer</button>
             </div>
-
-            <div style="margin-top:16px;">
-                <label style="font-size:22px;font-weight:600;">📝 Collez ici la réponse de ChatGPT :</label>
-                <textarea id="chatgptResponseTextarea" rows="8" style="width:100%;padding:14px;font-size:20px;border:2px solid #e2e8f0;border-radius:8px;" placeholder="Collez la réponse de ChatGPT ici..."></textarea>
-                <button class="btn-save" onclick="parserReponseChatGPT()" style="font-size:22px;padding:14px 28px;margin-top:10px;">✅ Analyser et remplir</button>
-            </div>
-            
-            <div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #86efac;">
-                <p style="font-size:18px;color:#166534;"><strong>💡 Instructions :</strong></p>
-                <p style="font-size:16px;color:#166534;">
-                    1. Cliquez sur "Scanner avec ChatGPT" → une nouvelle fenêtre s'ouvre.<br>
-                    2. Dans ChatGPT, posez votre question ou copiez/collez le prompt.<br>
-                    3. Copiez la réponse de ChatGPT et collez-la dans le champ ci-dessus.<br>
-                    4. Cliquez sur "Analyser et remplir" pour pré-remplir les quantités.
-                </p>
+            <div style="margin-top:8px;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #86efac;text-align:center;">
+                <p style="font-size:16px;color:#166534;">📸 Prenez une photo, tout est automatique !</p>
             </div>
         </div>
     `;
@@ -685,161 +671,6 @@ function afficherProduitsAchat(produits) {
     container.innerHTML = html;
 }
 
-function envoyerImageAChatGPT() {
-    if (!fournisseurAchatSelectionne) {
-        alert('Veuillez d\'abord sélectionner un fournisseur.');
-        return;
-    }
-
-    // Créer un input pour prendre une photo
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.onchange = function(e) {
-        var file = e.target.files[0];
-        if (file) {
-            var reader = new FileReader();
-            reader.onload = function(event) {
-                var imgData = event.target.result;
-                // Ouvrir ChatGPT avec l'image
-                ouvrirChatGPTAvecImage(imgData);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    input.click();
-}
-
-function ouvrirChatGPTAvecImage(imgData) {
-    // Récupérer la liste des produits du fournisseur
-    var productNames = produitsAchatList.map(p => p.nom);
-    var productListStr = productNames.map(function(n) { return '"' + n + '"'; }).join(', ');
-    
-    // Construire le prompt
-    var prompt = `Voici une photo d'une facture fournisseur.
-La liste des produits existants pour ce fournisseur est : [${productListStr}].
-Extrais de la facture les quantités achetées pour chacun de ces produits.
-Retourne UNIQUEMENT un tableau JSON où chaque objet a les propriétés "nom" (exactement le nom du produit tel que dans la liste ci-dessus) et "quantite" (nombre).
-Si un produit de la liste n'apparaît pas, ne le mentionne pas.
-Exemple de format attendu :
-[
-    { "nom": "Coca-Cola 1.5L", "quantite": 5 },
-    { "nom": "Fanta Orange", "quantite": 3 }
-]
-Si aucun produit n'est identifié, retourne un tableau vide.
-
-⚠️ Réponds UNIQUEMENT avec ce JSON, sans aucun autre texte.`;
-
-    // Créer un Blob avec la data URL
-    var imageBlob = dataURLToBlob(imgData);
-    
-    // Vérifier si le navigateur supporte la fonctionnalité
-    var link = document.createElement('a');
-    // On utilise l'API Clipboard pour copier l'image (alternative)
-    // Sinon on ouvre ChatGPT avec le prompt seulement
-    
-    // Méthode simple : ouvrir ChatGPT dans un nouvel onglet avec le prompt
-    var chatGPTUrl = 'https://chat.openai.com/';
-    var newWindow = window.open(chatGPTUrl, '_blank');
-    
-    // Afficher une notification avec le prompt à copier
-    var container = document.getElementById('produitsAchatContainer');
-    if (container) {
-        container.innerHTML += `
-            <div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;border:1px solid #f59e0b;">
-                <p style="font-size:18px;font-weight:600;color:#92400e;">📋 Copiez ce prompt dans ChatGPT :</p>
-                <textarea style="width:100%;padding:12px;font-size:16px;border:1px solid #e2e8f0;border-radius:8px;height:200px;" readonly>${escapeHtml(prompt)}</textarea>
-                <p style="font-size:16px;color:#92400e;margin-top:8px;">
-                    ✅ Envoyez l'image avec ce prompt dans la conversation ChatGPT, puis copiez la réponse dans le champ ci-dessous.
-                </p>
-            </div>
-        `;
-    }
-    
-    // Créer un lien de téléchargement pour l'image (facultatif)
-    if (imageBlob) {
-        var downloadLink = document.createElement('a');
-        downloadLink.href = URL.createObjectURL(imageBlob);
-        downloadLink.download = 'facture.jpg';
-        downloadLink.click();
-        setTimeout(function() { URL.revokeObjectURL(downloadLink.href); }, 1000);
-    }
-    
-    alert('📸 Image capturée !\n\n1. Collez le prompt dans ChatGPT.\n2. Envoyez l\'image.\n3. Copiez la réponse JSON dans le textarea ci-dessous.');
-}
-
-function dataURLToBlob(dataURL) {
-    try {
-        var parts = dataURL.split(',');
-        var mimeType = parts[0].match(/:(.*?);/)[1];
-        var byteString = atob(parts[1]);
-        var arrayBuffer = new ArrayBuffer(byteString.length);
-        var uint8Array = new Uint8Array(arrayBuffer);
-        for (var i = 0; i < byteString.length; i++) {
-            uint8Array[i] = byteString.charCodeAt(i);
-        }
-        return new Blob([arrayBuffer], { type: mimeType });
-    } catch(e) {
-        return null;
-    }
-}
-
-function parserReponseChatGPT() {
-    var textarea = document.getElementById('chatgptResponseTextarea');
-    if (!textarea || !textarea.value.trim()) {
-        alert('Veuillez coller la réponse de ChatGPT dans le champ.');
-        return;
-    }
-    
-    var texte = textarea.value.trim();
-    console.log('Texte collé :', texte);
-    
-    // Extraire le JSON de la réponse (enlève les balises markdown)
-    var cleaned = texte.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    var produitsExtraits = [];
-    try {
-        produitsExtraits = JSON.parse(cleaned);
-        if (!Array.isArray(produitsExtraits)) throw new Error('Pas un tableau');
-    } catch(e) {
-        console.warn('Parsing JSON échoué, tentative avec regex :', e);
-        // Fallback regex
-        var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
-        var match;
-        while ((match = regex.exec(cleaned)) !== null) {
-            produitsExtraits.push({ nom: match[1].trim(), quantite: parseInt(match[2]) });
-        }
-    }
-    
-    if (produitsExtraits.length === 0) {
-        alert('❌ Aucun produit reconnu dans la réponse. Vérifiez le format JSON.');
-        return;
-    }
-    
-    // Remplir les champs
-    var inputs = document.querySelectorAll('.achat-stock-input');
-    var remplis = 0;
-    var correspondances = [];
-    inputs.forEach(function(input) {
-        var prodId = input.getAttribute('data-produit-id');
-        var produit = window.allProductsData.find(p => p.id === prodId);
-        if (produit) {
-            var found = produitsExtraits.find(p => p.nom === produit.nom);
-            if (found) {
-                input.value = found.quantite;
-                remplis++;
-                correspondances.push(`${produit.nom} → ${found.quantite}`);
-            }
-        }
-    });
-    
-    var message = `✅ ${produitsExtraits.length} produit(s) reconnus.\n${remplis} pré-remplis.\n\n`;
-    if (correspondances.length > 0) message += correspondances.join('\n');
-    alert(message);
-}
-
-// ==================== VALIDATION DES ACHATS ====================
 async function validerAchats() {
     if (!fournisseurAchatSelectionne) {
         alert('Veuillez choisir un fournisseur.');
@@ -888,11 +719,185 @@ async function validerAchats() {
     }
 }
 
+// ==================== SCANNER FACTURE AUTOMATIQUE (OCR.space) ====================
+function scannerFactureAuto() {
+    if (!fournisseurAchatSelectionne) {
+        alert('Veuillez d\'abord sélectionner un fournisseur.');
+        return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Votre navigateur ne supporte pas la caméra.');
+        return;
+    }
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var imgData = event.target.result;
+                var container = document.getElementById('produitsAchatContainer');
+                if (container) {
+                    container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#92400e;font-size:18px;text-align:center;">
+                        ⏳ Analyse OCR en cours...
+                    </div>`;
+                }
+                // Lancer l'OCR
+                reconnaitreFactureOcrSpace(imgData);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    input.click();
+}
+
+async function reconnaitreFactureOcrSpace(imgData) {
+    var container = document.getElementById('produitsAchatContainer');
+    try {
+        var base64Image = imgData.split(',')[1];
+        var formData = new FormData();
+        formData.append('apikey', 'helloworld');
+        formData.append('base64Image', base64Image);
+        formData.append('isOverlayRequired', 'false');
+        formData.append('detectOrientation', 'true');
+        formData.append('scale', 'true');
+        formData.append('OCREngine', '1');
+
+        var response = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            body: formData
+        });
+        var data = await response.json();
+        console.log('OCR.space réponse :', data);
+
+        if (data.IsErroredOnProcessing) {
+            throw new Error(data.ErrorMessage || 'Erreur OCR');
+        }
+        if (!data.ParsedResults || !data.ParsedResults[0] || !data.ParsedResults[0].ParsedText) {
+            throw new Error('Aucun texte extrait');
+        }
+        var texte = data.ParsedResults[0].ParsedText;
+        console.log('Texte extrait :', texte);
+
+        if (container) {
+            // Supprimer le message de chargement
+            var loadingMsg = container.querySelector('.bg-amber-50');
+            if (loadingMsg) loadingMsg.remove();
+            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:200px;overflow:auto;margin-top:10px;">
+                <strong>📄 Texte extrait :</strong><br>${escapeHtml(texte)}
+            </div>`;
+        }
+
+        // Parser le texte pour trouver les produits et quantités
+        var produitsOCR = parserTexteFacture(texte);
+        if (produitsOCR.length === 0) {
+            alert('❌ Aucun produit reconnu dans la facture. Vérifiez la qualité de la photo.');
+            return;
+        }
+
+        // Faire correspondre avec les produits du fournisseur
+        var correspondances = faireCorrespondanceProduits(produitsOCR);
+        if (correspondances.length === 0) {
+            alert('❌ Aucun produit correspondant trouvé dans votre liste.');
+            return;
+        }
+
+        // Remplir les champs
+        remplirChampsAchat(correspondances);
+
+        var message = `✅ ${correspondances.length} produit(s) reconnus et pré-remplis.`;
+        alert(message);
+
+    } catch(e) {
+        console.error('Erreur OCR :', e);
+        alert('❌ Erreur OCR : ' + e.message);
+    }
+}
+
+function parserTexteFacture(texte) {
+    var lignes = texte.split('\n').filter(l => l.trim().length > 3);
+    var produits = [];
+    for (var ligne of lignes) {
+        // Essayer de capturer un nom suivi d'un nombre
+        var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
+        if (match) {
+            var nom = match[1].trim();
+            var qte = parseFloat(match[2].replace(',', '.'));
+            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
+            continue;
+        }
+        // Avec séparateurs multiples (tableau)
+        var parts = ligne.split(/\s{2,}/);
+        if (parts.length >= 2) {
+            var nom = parts[0].trim();
+            var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
+            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
+        }
+    }
+    return produits;
+}
+
+function normaliserNom(nom) {
+    if (!nom) return '';
+    return nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function faireCorrespondanceProduits(produitsOCR) {
+    var resultats = [];
+    var produitsSysteme = produitsAchatList;
+    
+    for (var pOCR of produitsOCR) {
+        var nomOCR = normaliserNom(pOCR.nom);
+        var meilleurMatch = null;
+        var meilleurScore = 0;
+        
+        for (var pSys of produitsSysteme) {
+            var nomSys = normaliserNom(pSys.nom);
+            // Vérifier si le nom OCR est contenu dans le nom système ou inversement
+            if (nomSys.includes(nomOCR) || nomOCR.includes(nomSys)) {
+                var score = Math.min(nomSys.length, nomOCR.length) / Math.max(nomSys.length, nomOCR.length);
+                if (score > meilleurScore) {
+                    meilleurScore = score;
+                    meilleurMatch = pSys;
+                }
+            }
+        }
+        if (meilleurMatch && meilleurScore > 0.3) {
+            resultats.push({
+                produit: meilleurMatch,
+                quantite: pOCR.quantite,
+                score: meilleurScore
+            });
+        }
+    }
+    return resultats;
+}
+
+function remplirChampsAchat(correspondances) {
+    var inputs = document.querySelectorAll('.achat-stock-input');
+    var remplis = 0;
+    for (var input of inputs) {
+        var prodId = input.getAttribute('data-produit-id');
+        var found = correspondances.find(c => c.produit.id === prodId);
+        if (found) {
+            input.value = found.quantite;
+            remplis++;
+        }
+    }
+    console.log(`${remplis} champs remplis`);
+}
+
 // Exporter les fonctions d'achat
 window.openAchatModal = openAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
-window.envoyerImageAChatGPT = envoyerImageAChatGPT;
-window.parserReponseChatGPT = parserReponseChatGPT;
+window.scannerFactureAuto = scannerFactureAuto;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (ChatGPT + OCR)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (Version Pro Automatisée)');
