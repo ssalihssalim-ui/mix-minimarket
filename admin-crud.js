@@ -1,14 +1,21 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Version Pro Automatisée) ====================
-// ✅ OCR.space (gratuit) pour extraire le texte
-// ✅ Parsing intelligent des produits et quantités
-// ✅ Correspondance automatique avec votre base de produits
-// ✅ Pré-remplissage automatique des champs de stock
-// ✅ 100% automatique, sans intervention manuelle
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Google Cloud Vision) ====================
+// Contient : Catégories, Produits, Clients, Fournisseurs
+// ✅ Police 24px sur toutes les pages d'administration
+// ✅ Module Achats fournisseurs avec Google Cloud Vision (OCR professionnel)
+// ✅ Utilisation de votre clé AQ. (valide pour Vision)
+// ✅ Extraction précise des produits et quantités
 
-// ========== INITIALISATION ==========
+// ====================================================
+//  🔑  CONFIGURATION GOOGLE CLOUD VISION
+// ====================================================
+// Votre clé AQ. fonctionne parfaitement pour Vision
+const VISION_API_KEY = 'AQ.Ab8RN6JbffZAlm3MjJmydKe1qN36P6kRS0PrQ4gpgcfMEEm4Fw';
+const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`;
+
+// ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
 
-// ========== FONCTIONS UTILITAIRES ==========
+// ========== FONCTIONS UTILITAIRES POUR LA SÉLECTION DE CATÉGORIES ==========
 function updateSelectedCategories() {
     var select = document.getElementById('prodCategoriesSelect');
     var display = document.getElementById('selectedCategoriesDisplay');
@@ -590,7 +597,7 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS (Version Pro Automatisée) ====================
+// ==================== MODULE ACHATS FOURNISSEURS ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 
@@ -616,11 +623,9 @@ function openAchatModalForm() {
                 <p style="text-align:center;color:#94a3b8;font-size:22px;">Choisissez un fournisseur</p>
             </div>
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
-                <button class="btn-add" onclick="scannerFactureAuto()" style="font-size:22px;padding:14px 28px;background:#16a34a;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Auto)</button>
-                <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Fermer</button>
-            </div>
-            <div style="margin-top:8px;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #86efac;text-align:center;">
-                <p style="font-size:16px;color:#166534;">📸 Prenez une photo, tout est automatique !</p>
+                <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
+                <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Vision)</button>
             </div>
         </div>
     `;
@@ -719,12 +724,8 @@ async function validerAchats() {
     }
 }
 
-// ==================== SCANNER FACTURE AUTOMATIQUE (OCR.space) ====================
-function scannerFactureAuto() {
-    if (!fournisseurAchatSelectionne) {
-        alert('Veuillez d\'abord sélectionner un fournisseur.');
-        return;
-    }
+// ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE CLOUD VISION ====================
+function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
         return;
@@ -736,92 +737,109 @@ function scannerFactureAuto() {
     input.onchange = function(e) {
         var file = e.target.files[0];
         if (file) {
-            var reader = new FileReader();
-            reader.onload = function(event) {
-                var imgData = event.target.result;
-                var container = document.getElementById('produitsAchatContainer');
-                if (container) {
-                    container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;color:#92400e;font-size:18px;text-align:center;">
-                        ⏳ Analyse OCR en cours...
-                    </div>`;
-                }
-                // Lancer l'OCR
-                reconnaitreFactureOcrSpace(imgData);
-            };
-            reader.readAsDataURL(file);
+            traiterFacture(file);
         }
     };
     input.click();
 }
 
-async function reconnaitreFactureOcrSpace(imgData) {
+function traiterFacture(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var imgData = e.target.result;
+        var container = document.getElementById('produitsAchatContainer');
+        if (container) {
+            container.innerHTML = `<div style="text-align:center;">
+                <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
+                <p style="font-size:22px;color:#64748b;">🔍 Analyse avec Google Cloud Vision...</p>
+            </div>`;
+        }
+        reconnaitreFactureVision(imgData);
+    };
+    reader.readAsDataURL(file);
+}
+
+async function reconnaitreFactureVision(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
-        var base64Image = imgData.split(',')[1];
-        var formData = new FormData();
-        formData.append('apikey', 'helloworld');
-        formData.append('base64Image', base64Image);
-        formData.append('isOverlayRequired', 'false');
-        formData.append('detectOrientation', 'true');
-        formData.append('scale', 'true');
-        formData.append('OCREngine', '1');
+        // Vérifier la clé
+        if (!VISION_API_KEY || VISION_API_KEY.length < 10) {
+            alert('❌ Clé API Vision manquante ou invalide.');
+            return;
+        }
 
-        var response = await fetch('https://api.ocr.space/parse/image', {
+        // Construire la requête Vision
+        var requestBody = {
+            requests: [{
+                image: {
+                    content: imgData.split(',')[1]
+                },
+                features: [{
+                    type: "TEXT_DETECTION",
+                    maxResults: 50
+                }]
+            }]
+        };
+
+        var response = await fetch(VISION_URL, {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
         });
-        var data = await response.json();
-        console.log('OCR.space réponse :', data);
 
-        if (data.IsErroredOnProcessing) {
-            throw new Error(data.ErrorMessage || 'Erreur OCR');
+        if (!response.ok) {
+            var errorData = await response.json();
+            throw new Error(`${response.status} - ${errorData.error?.message || response.statusText}`);
         }
-        if (!data.ParsedResults || !data.ParsedResults[0] || !data.ParsedResults[0].ParsedText) {
-            throw new Error('Aucun texte extrait');
+
+        var data = await response.json();
+        console.log('Réponse Vision :', data);
+
+        // Vérifier les erreurs
+        if (data.responses && data.responses[0] && data.responses[0].error) {
+            throw new Error(data.responses[0].error.message);
         }
-        var texte = data.ParsedResults[0].ParsedText;
+
+        // Extraire le texte
+        var textAnnotations = data.responses?.[0]?.textAnnotations;
+        var texte = textAnnotations && textAnnotations.length > 0 ? textAnnotations[0].description : '';
         console.log('Texte extrait :', texte);
 
+        if (!texte || texte.trim().length < 5) {
+            throw new Error('Aucun texte détecté. Vérifiez la qualité de la photo.');
+        }
+
         if (container) {
-            // Supprimer le message de chargement
-            var loadingMsg = container.querySelector('.bg-amber-50');
-            if (loadingMsg) loadingMsg.remove();
-            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:200px;overflow:auto;margin-top:10px;">
+            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
                 <strong>📄 Texte extrait :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
 
-        // Parser le texte pour trouver les produits et quantités
-        var produitsOCR = parserTexteFacture(texte);
-        if (produitsOCR.length === 0) {
-            alert('❌ Aucun produit reconnu dans la facture. Vérifiez la qualité de la photo.');
-            return;
+        // Parser le texte pour trouver produits et quantités
+        var produits = parserTexteFacture(texte);
+        if (produits.length > 0) {
+            remplirQuantites(produits);
+        } else {
+            alert('⚠️ Aucun produit reconnu. Vérifiez que la facture contient des noms de produits et des quantités.');
         }
-
-        // Faire correspondre avec les produits du fournisseur
-        var correspondances = faireCorrespondanceProduits(produitsOCR);
-        if (correspondances.length === 0) {
-            alert('❌ Aucun produit correspondant trouvé dans votre liste.');
-            return;
-        }
-
-        // Remplir les champs
-        remplirChampsAchat(correspondances);
-
-        var message = `✅ ${correspondances.length} produit(s) reconnus et pré-remplis.`;
-        alert(message);
 
     } catch(e) {
-        console.error('Erreur OCR :', e);
-        alert('❌ Erreur OCR : ' + e.message);
+        console.error('Erreur Vision :', e);
+        if (container) {
+            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
+                ❌ Erreur Vision : ${e.message}
+            </div>`;
+        }
+        alert('❌ Erreur Vision : ' + e.message);
     }
 }
 
+// ==================== FONCTIONS DE PARSING ET REMPLISSAGE ====================
 function parserTexteFacture(texte) {
     var lignes = texte.split('\n').filter(l => l.trim().length > 3);
     var produits = [];
     for (var ligne of lignes) {
-        // Essayer de capturer un nom suivi d'un nombre
+        // Motif : nom + quantité (nombre à la fin)
         var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
         if (match) {
             var nom = match[1].trim();
@@ -829,7 +847,7 @@ function parserTexteFacture(texte) {
             if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
             continue;
         }
-        // Avec séparateurs multiples (tableau)
+        // Alternative : colonnes séparées par plusieurs espaces
         var parts = ligne.split(/\s{2,}/);
         if (parts.length >= 2) {
             var nom = parts[0].trim();
@@ -840,64 +858,35 @@ function parserTexteFacture(texte) {
     return produits;
 }
 
-function normaliserNom(nom) {
-    if (!nom) return '';
-    return nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function faireCorrespondanceProduits(produitsOCR) {
-    var resultats = [];
-    var produitsSysteme = produitsAchatList;
-    
-    for (var pOCR of produitsOCR) {
-        var nomOCR = normaliserNom(pOCR.nom);
-        var meilleurMatch = null;
-        var meilleurScore = 0;
-        
-        for (var pSys of produitsSysteme) {
-            var nomSys = normaliserNom(pSys.nom);
-            // Vérifier si le nom OCR est contenu dans le nom système ou inversement
-            if (nomSys.includes(nomOCR) || nomOCR.includes(nomSys)) {
-                var score = Math.min(nomSys.length, nomOCR.length) / Math.max(nomSys.length, nomOCR.length);
-                if (score > meilleurScore) {
-                    meilleurScore = score;
-                    meilleurMatch = pSys;
-                }
-            }
-        }
-        if (meilleurMatch && meilleurScore > 0.3) {
-            resultats.push({
-                produit: meilleurMatch,
-                quantite: pOCR.quantite,
-                score: meilleurScore
-            });
-        }
-    }
-    return resultats;
-}
-
-function remplirChampsAchat(correspondances) {
+function remplirQuantites(produits) {
     var inputs = document.querySelectorAll('.achat-stock-input');
     var remplis = 0;
-    for (var input of inputs) {
+    var correspondances = [];
+    inputs.forEach(function(input) {
         var prodId = input.getAttribute('data-produit-id');
-        var found = correspondances.find(c => c.produit.id === prodId);
-        if (found) {
-            input.value = found.quantite;
-            remplis++;
+        var produit = window.allProductsData.find(p => p.id === prodId);
+        if (produit) {
+            // Recherche floue : le nom extrait est comparé au nom système
+            var found = produits.find(p =>
+                p.nom.toLowerCase().includes(produit.nom.toLowerCase()) ||
+                produit.nom.toLowerCase().includes(p.nom.toLowerCase())
+            );
+            if (found) {
+                input.value = found.quantite;
+                remplis++;
+                correspondances.push(`${produit.nom} → ${found.quantite}`);
+            }
         }
-    }
-    console.log(`${remplis} champs remplis`);
+    });
+    var message = `✅ ${produits.length} produit(s) reconnus au total.\n${remplis} pré-remplis.\n\n`;
+    if (correspondances.length > 0) message += correspondances.join('\n');
+    alert(message);
 }
 
 // Exporter les fonctions d'achat
 window.openAchatModal = openAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
-window.scannerFactureAuto = scannerFactureAuto;
+window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (Version Pro Automatisée)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (Google Cloud Vision)');
