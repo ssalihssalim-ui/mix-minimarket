@@ -1,19 +1,16 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Gemini + OCR fallback) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Google Cloud Vision) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec reconnaissance par Google Gemini (gratuit)
-// ✅ Gemini fait la correspondance avec les produits du fournisseur
+// ✅ Module Achats fournisseurs avec Google Cloud Vision (IA OCR)
+// ✅ Correspondance floue entre le texte extrait et les produits du fournisseur
 // ✅ Fallback sur OCR.space en cas d'échec
 
 // ====================================================
-//  🔑  CONFIGURATION GEMINI (mettez votre clé AIzaSy...)
+//  🔑  CONFIGURATION GOOGLE CLOUD VISION
 // ====================================================
-// Obtenez votre clé sur https://aistudio.google.com/apikey
-// ⚠️ La clé doit commencer par "AIzaSy"
-// Si vous n'avez pas encore de clé, créez-en une gratuitement (aucune carte bancaire nécessaire).
-const GEMINI_API_KEY = 'AIzaSy...';   // ← REMPLACEZ PAR VOTRE VRAIE CLÉ
-const GEMINI_MODEL = 'gemini-1.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+// Utilisez votre clé AQ. (valide pour Vision)
+const VISION_API_KEY = 'AQ.Ab8RN6JbffZAlm3MjJmydKe1qN36P6kRS0PrQ4gpgcfMEEm4Fw';
+const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`;
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -628,7 +625,7 @@ function openAchatModalForm() {
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
                 <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (IA Gemini)</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (IA Vision)</button>
             </div>
         </div>
     `;
@@ -727,7 +724,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC GEMINI ====================
+// ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE CLOUD VISION ====================
 function ouvrirCameraFacture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Votre navigateur ne supporte pas la caméra.');
@@ -754,64 +751,37 @@ function traiterFacture(file) {
         if (container) {
             container.innerHTML = `<div style="text-align:center;">
                 <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🤖 Envoi à l'IA Gemini pour analyse...</p>
+                <p style="font-size:22px;color:#64748b;">🧠 Analyse par IA Google Cloud Vision...</p>
             </div>`;
         }
-        reconnaitreFactureGemini(imgData);
+        reconnaitreFactureVision(imgData);
     };
     reader.readAsDataURL(file);
 }
 
-async function reconnaitreFactureGemini(imgData) {
+async function reconnaitreFactureVision(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
-        // Vérifier la clé API
-        if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSy...' || GEMINI_API_KEY.length < 20) {
-            alert('❌ Clé API Gemini manquante ou invalide. Obtenez une clé sur https://aistudio.google.com/apikey');
-            return;
-        }
-
-        // 1. Récupérer la liste des noms de produits du fournisseur sélectionné
+        // 1. Récupérer la liste des produits du fournisseur sélectionné
         if (!fournisseurAchatSelectionne) {
             alert('Veuillez d\'abord sélectionner un fournisseur.');
             return;
         }
-        var productNames = produitsAchatList.map(p => p.nom);
-        if (productNames.length === 0) {
-            alert('Aucun produit trouvé pour ce fournisseur. Vérifiez vos données.');
+        if (produitsAchatList.length === 0) {
+            alert('Aucun produit trouvé pour ce fournisseur.');
             return;
         }
-        var productListStr = productNames.join('", "');
 
-        // 2. Construire le prompt pour Gemini
-        var prompt = `Voici une photo d'une facture fournisseur.
-            La liste des produits existants pour ce fournisseur est : ["${productListStr}"].
-            Extrais de la facture les quantités achetées pour chacun de ces produits.
-            Retourne UNIQUEMENT un tableau JSON où chaque objet a les propriétés "nom" (exactement le nom du produit tel que dans la liste ci-dessus) et "quantite" (nombre).
-            Si un produit de la liste n'apparaît pas, ne le mentionne pas.
-            Exemple de format attendu :
-            [
-                { "nom": "Coca-Cola 1.5L", "quantite": 5 },
-                { "nom": "Fanta Orange", "quantite": 3 }
-            ]
-            Si aucun produit n'est identifié, retourne un tableau vide.`;
-
-        // 3. Appeler l'API Gemini
+        // 2. Appeler Google Cloud Vision
+        var base64Image = imgData.split(',')[1];
         var requestBody = {
-            contents: [{
-                parts: [
-                    { text: prompt },
-                    {
-                        inline_data: {
-                            mime_type: "image/jpeg",
-                            data: imgData.split(',')[1]
-                        }
-                    }
-                ]
+            requests: [{
+                image: { content: base64Image },
+                features: [{ type: "TEXT_DETECTION", maxResults: 100 }]
             }]
         };
 
-        var response = await fetch(GEMINI_URL, {
+        var response = await fetch(VISION_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
@@ -819,79 +789,136 @@ async function reconnaitreFactureGemini(imgData) {
 
         if (!response.ok) {
             var errorData = await response.json();
-            throw new Error(`Gemini erreur ${response.status}: ${errorData.error?.message || response.statusText}`);
+            throw new Error(`Vision erreur ${response.status}: ${errorData.error?.message || response.statusText}`);
         }
 
         var data = await response.json();
-        console.log('Réponse Gemini :', data);
+        console.log('Vision réponse :', data);
 
-        var texte = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        console.log('Texte brut :', texte);
-
-        // 4. Extraire le JSON
-        var cleaned = texte.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        var produitsExtraits = [];
-        try {
-            produitsExtraits = JSON.parse(cleaned);
-            if (!Array.isArray(produitsExtraits)) throw new Error('Pas un tableau');
-        } catch(e) {
-            console.warn('Parsing JSON échoué, tentative avec regex :', e);
-            // Fallback regex
-            var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
-            var match;
-            while ((match = regex.exec(cleaned)) !== null) {
-                produitsExtraits.push({ nom: match[1].trim(), quantite: parseInt(match[2]) });
-            }
+        // 3. Extraire le texte
+        var textAnnotations = data.responses?.[0]?.textAnnotations;
+        var texte = textAnnotations && textAnnotations.length > 0 ? textAnnotations[0].description : '';
+        if (!texte || texte.trim().length < 5) {
+            throw new Error('Aucun texte extrait. Vérifiez la qualité de la photo.');
         }
 
-        // 5. Vérifier et remplir les champs
-        if (produitsExtraits.length === 0) {
-            alert('Aucun produit reconnu par l\'IA. Vérifiez la qualité de la photo.');
-            return;
-        }
-
-        // Afficher dans le container
         if (container) {
             container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>🤖 Produits reconnus :</strong><br>${escapeHtml(JSON.stringify(produitsExtraits, null, 2))}
+                <strong>📄 Texte extrait par Vision :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
 
-        // Remplir les champs correspondants
-        var inputs = document.querySelectorAll('.achat-stock-input');
+        // 4. Parser le texte pour extraire les lignes qui ressemblent à des produits
+        var lignes = texte.split('\n').filter(l => l.trim().length > 3);
+        var nomsExtraits = [];
+        for (var ligne of lignes) {
+            // On cherche un nom suivi d'un nombre
+            var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
+            if (match) {
+                var nom = match[1].trim();
+                var qte = parseFloat(match[2].replace(',', '.'));
+                if (nom && qte > 0) {
+                    nomsExtraits.push({ nom: nom, quantite: qte });
+                }
+            } else {
+                // Tentative avec séparation par plusieurs espaces
+                var parts = ligne.split(/\s{2,}/);
+                if (parts.length >= 2) {
+                    var nom = parts[0].trim();
+                    var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
+                    if (nom && qte > 0) {
+                        nomsExtraits.push({ nom: nom, quantite: qte });
+                    }
+                }
+            }
+        }
+
+        console.log('Noms extraits :', nomsExtraits);
+        if (nomsExtraits.length === 0) {
+            alert('Aucun produit reconnu dans le texte extrait.');
+            return;
+        }
+
+        // 5. Correspondance floue avec les produits du fournisseur
         var remplis = 0;
         var correspondances = [];
-        inputs.forEach(function(input) {
-            var prodId = input.getAttribute('data-produit-id');
-            var produit = window.allProductsData.find(p => p.id === prodId);
-            if (produit) {
-                var found = produitsExtraits.find(p => p.nom === produit.nom);
-                if (found) {
-                    input.value = found.quantite;
-                    remplis++;
-                    correspondances.push(`${produit.nom} → ${found.quantite}`);
+        var inputs = document.querySelectorAll('.achat-stock-input');
+
+        // Normaliser un nom (minuscule, sans accents, sans caractères spéciaux)
+        function normaliserNom(str) {
+            if (!str) return '';
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // Distance de Levenshtein simple
+        function levenshtein(a, b) {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+            var matrix = [];
+            for (var i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (var j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (i = 1; i <= b.length; i++) {
+                for (j = 1; j <= a.length; j++) {
+                    if (b[i-1] === a[j-1]) {
+                        matrix[i][j] = matrix[i-1][j-1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+                    }
                 }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        // Pour chaque produit extrait, on cherche le meilleur match dans la liste du fournisseur
+        var produitsSysteme = produitsAchatList;
+        nomsExtraits.forEach(function(prod) {
+            var nomRecherche = normaliserNom(prod.nom);
+            var meilleurMatch = null;
+            var meilleurScore = 0;
+            produitsSysteme.forEach(function(prodSys) {
+                var nomSys = normaliserNom(prodSys.nom);
+                var distance = levenshtein(nomRecherche, nomSys);
+                var maxLen = Math.max(nomRecherche.length, nomSys.length);
+                if (maxLen === 0) return;
+                var similarite = 1 - distance / maxLen;
+                if (similarite > meilleurScore && similarite >= 0.5) {
+                    meilleurScore = similarite;
+                    meilleurMatch = prodSys;
+                }
+            });
+            if (meilleurMatch) {
+                inputs.forEach(function(input) {
+                    if (input.getAttribute('data-produit-id') === meilleurMatch.id) {
+                        input.value = prod.quantite;
+                        remplis++;
+                        correspondances.push(`${prod.nom} → ${meilleurMatch.nom} (${prod.quantite})`);
+                    }
+                });
             }
         });
 
-        var message = `✅ ${produitsExtraits.length} produit(s) reconnus.\n${remplis} pré-remplis.\n\n`;
+        var message = `✅ ${nomsExtraits.length} produit(s) reconnus.\n${remplis} pré-remplis.\n\n`;
         if (correspondances.length > 0) message += correspondances.join('\n');
         alert(message);
 
     } catch(e) {
-        console.error('Erreur Gemini :', e);
+        console.error('Erreur Vision :', e);
         if (container) {
             container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
-                ❌ Erreur Gemini : ${e.message}
+                ❌ Erreur : ${e.message}
             </div>`;
         }
-        // Fallback vers OCR.space
-        alert('Gemini a échoué, utilisation du fallback OCR.space (moins précis).');
+        // Fallback sur OCR.space
+        alert('Google Cloud Vision a échoué. Bascule vers OCR.space (fallback).');
         reconnaitreFactureOcrSpace(imgData);
     }
 }
 
-// ----- Fallback OCR.space (en cas d'échec de Gemini) -----
+// ==================== FALLBACK OCR.space ====================
 async function reconnaitreFactureOcrSpace(imgData) {
     var container = document.getElementById('produitsAchatContainer');
     try {
@@ -909,7 +936,6 @@ async function reconnaitreFactureOcrSpace(imgData) {
             body: formData
         });
         var data = await response.json();
-        console.log('OCR.space réponse :', data);
         if (data.IsErroredOnProcessing) throw new Error(data.ErrorMessage);
         if (!data.ParsedResults || !data.ParsedResults[0] || !data.ParsedResults[0].ParsedText) {
             throw new Error('Aucun texte extrait');
@@ -920,63 +946,84 @@ async function reconnaitreFactureOcrSpace(imgData) {
                 <strong>📄 Texte extrait (OCR.space) :</strong><br>${escapeHtml(texte)}
             </div>`;
         }
-        // Parser le texte et remplir (avec correspondance floue)
-        var produits = parserTexteFacture(texte);
-        if (produits.length > 0) {
-            remplirQuantites(produits);
-        } else {
-            alert('Aucun produit reconnu par OCR.space non plus.');
+        // On utilise la même fonction de parsing et correspondance
+        var lignes = texte.split('\n').filter(l => l.trim().length > 3);
+        var nomsExtraits = [];
+        for (var ligne of lignes) {
+            var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
+            if (match) {
+                var nom = match[1].trim();
+                var qte = parseFloat(match[2].replace(',', '.'));
+                if (nom && qte > 0) nomsExtraits.push({ nom: nom, quantite: qte });
+            } else {
+                var parts = ligne.split(/\s{2,}/);
+                if (parts.length >= 2) {
+                    var nom = parts[0].trim();
+                    var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
+                    if (nom && qte > 0) nomsExtraits.push({ nom: nom, quantite: qte });
+                }
+            }
         }
+        // Correspondance floue
+        var remplis = 0;
+        var correspondances = [];
+        var inputs = document.querySelectorAll('.achat-stock-input');
+        function normaliserNom(str) {
+            if (!str) return '';
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+        function levenshtein(a, b) {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+            var matrix = [];
+            for (var i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (var j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (i = 1; i <= b.length; i++) {
+                for (j = 1; j <= a.length; j++) {
+                    if (b[i-1] === a[j-1]) {
+                        matrix[i][j] = matrix[i-1][j-1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+        nomsExtraits.forEach(function(prod) {
+            var nomRecherche = normaliserNom(prod.nom);
+            var meilleurMatch = null;
+            var meilleurScore = 0;
+            produitsAchatList.forEach(function(prodSys) {
+                var nomSys = normaliserNom(prodSys.nom);
+                var distance = levenshtein(nomRecherche, nomSys);
+                var maxLen = Math.max(nomRecherche.length, nomSys.length);
+                if (maxLen === 0) return;
+                var similarite = 1 - distance / maxLen;
+                if (similarite > meilleurScore && similarite >= 0.5) {
+                    meilleurScore = similarite;
+                    meilleurMatch = prodSys;
+                }
+            });
+            if (meilleurMatch) {
+                inputs.forEach(function(input) {
+                    if (input.getAttribute('data-produit-id') === meilleurMatch.id) {
+                        input.value = prod.quantite;
+                        remplis++;
+                        correspondances.push(`${prod.nom} → ${meilleurMatch.nom} (${prod.quantite})`);
+                    }
+                });
+            }
+        });
+        var message = `✅ ${nomsExtraits.length} produit(s) reconnus.\n${remplis} pré-remplis.\n\n`;
+        if (correspondances.length > 0) message += correspondances.join('\n');
+        alert(message);
     } catch(e) {
         alert('Erreur OCR.space : ' + e.message);
     }
-}
-
-// ==================== FONCTIONS DE PARSING ET REMPLISSAGE (pour fallback) ====================
-function parserTexteFacture(texte) {
-    var lignes = texte.split('\n').filter(l => l.trim().length > 3);
-    var produits = [];
-    for (var ligne of lignes) {
-        var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
-        if (match) {
-            var nom = match[1].trim();
-            var qte = parseFloat(match[2].replace(',', '.'));
-            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
-            continue;
-        }
-        var parts = ligne.split(/\s{2,}/);
-        if (parts.length >= 2) {
-            var nom = parts[0].trim();
-            var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
-            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
-        }
-    }
-    return produits;
-}
-
-function remplirQuantites(produits) {
-    var inputs = document.querySelectorAll('.achat-stock-input');
-    var remplis = 0;
-    var correspondances = [];
-    produits.forEach(function(prod) {
-        var nomProd = prod.nom.trim().toLowerCase();
-        inputs.forEach(function(input) {
-            var prodId = input.getAttribute('data-produit-id');
-            var produit = window.allProductsData.find(p => p.id === prodId);
-            if (produit) {
-                var nomSys = produit.nom.trim().toLowerCase();
-                // Correspondance simple (contient ou est contenu)
-                if (nomSys.includes(nomProd) || nomProd.includes(nomSys)) {
-                    input.value = prod.quantite;
-                    remplis++;
-                    correspondances.push(`${produit.nom} → ${prod.quantite}`);
-                }
-            }
-        });
-    });
-    var message = `✅ ${produits.length} produit(s) reconnus au total.\n${remplis} pré-remplis.\n\n`;
-    if (correspondances.length > 0) message += correspondances.join('\n');
-    alert(message);
 }
 
 // Exporter les fonctions d'achat
@@ -985,4 +1032,4 @@ window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (Gemini + fallback OCR)');
+console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (Google Cloud Vision + correspondance floue)');
