@@ -1,16 +1,17 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (COMPLET AVEC ACHATS PRO) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (COMPLET AVEC GEMINI) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseur avec modal 90% (écran)
-// ✅ Google Cloud Vision pour scanner les factures
+// ✅ Reconnaissance par Gemini (IA) avec votre clé AQ.
 // ✅ Gestion du stock, prix boîte, date d'expiration
 // ✅ Calcul automatique du total
 
 // ====================================================
-//  🔑  CONFIGURATION GOOGLE CLOUD VISION
+//  🔑  CONFIGURATION GEMINI
 // ====================================================
-const VISION_API_KEY = 'AQ.Ab8RN6JbffZAlm3MjJmydKe1qN36P6kRS0PrQ4gpgcfMEEm4Fw';
-const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`;
+const GEMINI_API_KEY = 'AQ.Ab8RN6JbffZAlm3MjJmydKe1qN36P6kRS0PrQ4gpgcfMEEm4Fw';
+const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -597,12 +598,11 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS (VERSION PRO 90%) ====================
+// ==================== MODULE ACHATS FOURNISSEURS (VERSION PRO) ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 var achatLignes = [];
 
-// Ouvrir le modal d'achat (90% de l'écran)
 function openAchatModal() {
     if (typeof allFournisseursData === 'undefined' || allFournisseursData.length === 0) {
         loadFournisseurs().then(function() { openAchatModalForm(); });
@@ -633,7 +633,7 @@ function openAchatModalForm() {
                     </div>
                     <div style="flex:1; display:flex; align-items:flex-end; gap:10px;">
                         <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:20px; padding:12px 24px; background:#2563eb; color:#fff; border:none; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                            <i class="fas fa-camera"></i> Scanner facture
+                            <i class="fas fa-camera"></i> Scanner avec Gemini
                         </button>
                     </div>
                 </div>
@@ -649,7 +649,6 @@ function openAchatModalForm() {
             </div>
         </div>
     `;
-    // Supprimer un éventuel overlay existant
     var oldOverlay = document.getElementById('achatModalOverlay');
     if (oldOverlay) oldOverlay.remove();
     document.body.insertAdjacentHTML('beforeend', html);
@@ -686,7 +685,6 @@ function afficherProduitsAchat(produits) {
         container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:22px; padding:40px;">Aucun produit pour ce fournisseur.</p>';
         return;
     }
-    // Initialiser les lignes d'achat
     achatLignes = produits.map(function(p) {
         return {
             id: p.id,
@@ -825,7 +823,7 @@ async function validerAchats() {
             updateData.box_price = item.nouveauPrix;
             var prixUnitaire = item.nouveauPrix / boxUnit;
             updateData.prixAchat = prixUnitaire;
-            updateData.prixVente = prixUnitaire * 1.3; // marge 30%
+            updateData.prixVente = prixUnitaire * 1.3;
             updateData.profit = updateData.prixVente - prixUnitaire;
         }
         if (item.dateExpiration) {
@@ -844,7 +842,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== SCAN DE FACTURE AVEC GOOGLE CLOUD VISION ====================
+// ==================== RECONNAISSANCE AVEC GEMINI ====================
 function ouvrirCameraFacture() {
     var input = document.createElement('input');
     input.type = 'file';
@@ -856,7 +854,7 @@ function ouvrirCameraFacture() {
             var reader = new FileReader();
             reader.onload = function(event) {
                 var imgData = event.target.result;
-                reconnaitreFactureVision(imgData);
+                reconnaitreFactureGemini(imgData);
             };
             reader.readAsDataURL(file);
         }
@@ -864,21 +862,47 @@ function ouvrirCameraFacture() {
     input.click();
 }
 
-async function reconnaitreFactureVision(imgData) {
+async function reconnaitreFactureGemini(imgData) {
+    var container = document.getElementById('produitsAchatContainer');
     try {
-        if (!VISION_API_KEY || VISION_API_KEY.length < 10) {
-            alert('❌ Clé API Vision manquante.');
+        if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 10) {
+            alert('❌ Clé API Gemini manquante.');
             return;
         }
 
+        // Récupérer les noms des produits du fournisseur pour le prompt
+        var productNames = produitsAchatList.map(p => p.nom);
+        var productListStr = productNames.map(n => '"' + n + '"').join(', ');
+
+        var prompt = `
+            Voici une photo d'une facture fournisseur.
+            La liste des produits existants pour ce fournisseur est : [${productListStr}].
+            Extrais de la facture les quantités achetées pour chacun de ces produits.
+            Retourne UNIQUEMENT un tableau JSON où chaque objet a les propriétés "nom" (exactement le nom du produit tel que dans la liste ci-dessus) et "quantite" (nombre).
+            Si un produit de la liste n'apparaît pas, ne le mentionne pas.
+            Exemple de format attendu :
+            [
+                { "nom": "Coca-Cola 1.5L", "quantite": 5 },
+                { "nom": "Fanta Orange", "quantite": 3 }
+            ]
+            Si aucun produit n'est identifié, retourne un tableau vide.
+        `;
+
         var requestBody = {
-            requests: [{
-                image: { content: imgData.split(',')[1] },
-                features: [{ type: "TEXT_DETECTION", maxResults: 50 }]
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    {
+                        inline_data: {
+                            mime_type: "image/jpeg",
+                            data: imgData.split(',')[1]
+                        }
+                    }
+                ]
             }]
         };
 
-        var response = await fetch(VISION_URL, {
+        var response = await fetch(GEMINI_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
@@ -890,63 +914,39 @@ async function reconnaitreFactureVision(imgData) {
         }
 
         var data = await response.json();
-        if (data.responses && data.responses[0] && data.responses[0].error) {
-            throw new Error(data.responses[0].error.message);
+        console.log('Réponse Gemini :', data);
+
+        var rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        var cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        var produitsReconnus = [];
+
+        try {
+            produitsReconnus = JSON.parse(cleaned);
+            if (!Array.isArray(produitsReconnus)) throw new Error('Pas un tableau');
+        } catch(e) {
+            var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
+            var match;
+            while ((match = regex.exec(cleaned)) !== null) {
+                produitsReconnus.push({ nom: match[1].trim(), quantite: parseInt(match[2]) });
+            }
         }
 
-        var textAnnotations = data.responses?.[0]?.textAnnotations;
-        var texte = textAnnotations && textAnnotations.length > 0 ? textAnnotations[0].description : '';
-        if (!texte || texte.trim().length < 5) {
-            alert('Aucun texte détecté. Vérifiez la qualité de la photo.');
-            return;
-        }
-
-        var produitsReconnus = parserTexteFacture(texte);
         if (produitsReconnus.length === 0) {
-            alert('Aucun produit reconnu dans la facture.');
+            alert('Aucun produit reconnu par Gemini.');
             return;
         }
+
+        // Pré-remplir
         remplirDepuisOCR(produitsReconnus);
         alert(`✅ ${produitsReconnus.length} produit(s) reconnus et pré-remplis.`);
 
     } catch(e) {
-        alert('❌ Erreur Vision : ' + e.message);
+        alert('❌ Erreur Gemini : ' + e.message);
         console.error(e);
     }
 }
 
-function parserTexteFacture(texte) {
-    var lignes = texte.split('\n').filter(l => l.trim().length > 3);
-    var produits = [];
-    for (var ligne of lignes) {
-        // Chercher un motif : nom + quantité (et éventuellement prix)
-        var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*([\d,.]*)\s*$/);
-        if (match) {
-            var nom = match[1].trim();
-            var qte = parseFloat(match[2].replace(',', '.'));
-            var prix = match[3] ? parseFloat(match[3].replace(',', '.')) : 0;
-            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte, prix: prix });
-            continue;
-        }
-        // Alternative : colonnes séparées par plusieurs espaces
-        var parts = ligne.split(/\s{2,}/);
-        if (parts.length >= 2) {
-            var nom = parts[0].trim();
-            var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
-            var prix = 0;
-            if (parts.length >= 3) {
-                var last = parts[parts.length-2];
-                if (!isNaN(parseFloat(last.replace(',', '.')))) {
-                    prix = parseFloat(last.replace(',', '.'));
-                }
-            }
-            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte, prix: prix });
-        }
-    }
-    return produits;
-}
-
-// ==================== EXPORTER LES FONCTIONS ====================
+// Exporter les fonctions
 window.openAchatModal = openAchatModal;
 window.fermerAchatModal = fermerAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
@@ -954,4 +954,4 @@ window.validerAchats = validerAchats;
 window.calculerTotalLigne = calculerTotalLigne;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Admin CRUD - Module achats pro chargé');
+console.log('🛒 Admin CRUD - Module achats pro avec Gemini');
