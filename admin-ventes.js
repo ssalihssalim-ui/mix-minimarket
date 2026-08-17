@@ -1,7 +1,8 @@
 // ==================== ADMIN-VENTES.JS - MIXMAX MINIMARKET ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
-// BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
-// Version FINALE
+// ✅ BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
+// ✅ SÉLECTION EN MASSE (comme dans crédits)
+// ✅ Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -15,6 +16,102 @@ window.filteredCommandes = window.filteredCommandes || null;
 window.venteSelectionMode = window.venteSelectionMode || false;
 window.venteSelectedIndex = window.venteSelectedIndex || -1;
 window.clientsDataForSearch = window.clientsDataForSearch || [];
+
+// ========== SELECTION EN MASSE ==========
+var ventesSelectionnees = new Set();
+
+function toggleVenteSelection(id) {
+    if (ventesSelectionnees.has(id)) {
+        ventesSelectionnees.delete(id);
+    } else {
+        ventesSelectionnees.add(id);
+    }
+    updateVenteSelectionUI();
+}
+
+function toggleAllVentesSelection() {
+    var checkboxes = document.querySelectorAll('.vente-checkbox');
+    var allChecked = true;
+    checkboxes.forEach(function(cb) {
+        if (!cb.checked) allChecked = false;
+    });
+    
+    checkboxes.forEach(function(cb) {
+        cb.checked = !allChecked;
+        var id = cb.getAttribute('data-id');
+        if (cb.checked) {
+            ventesSelectionnees.add(id);
+        } else {
+            ventesSelectionnees.delete(id);
+        }
+    });
+    updateVenteSelectionUI();
+}
+
+function updateVenteSelectionUI() {
+    var count = ventesSelectionnees.size;
+    var btn = document.getElementById('deleteSelectedVentesBtn');
+    var selectAllBtn = document.getElementById('selectAllVentesBtn');
+    var countDisplay = document.getElementById('selectedVentesCount');
+    
+    if (btn) {
+        btn.style.display = count > 0 ? 'inline-block' : 'none';
+        btn.textContent = '🗑️ Supprimer ' + count + ' vente(s)';
+    }
+    if (countDisplay) {
+        countDisplay.textContent = count + ' sélectionnée(s)';
+        countDisplay.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+    if (selectAllBtn) {
+        var checkboxes = document.querySelectorAll('.vente-checkbox');
+        var allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+        selectAllBtn.textContent = allChecked ? '❌ Désélectionner tout' : '✅ Tout sélectionner';
+    }
+}
+
+async function deleteSelectedVentes() {
+    if (ventesSelectionnees.size === 0) {
+        alert('Aucune vente sélectionnée.');
+        return;
+    }
+    
+    var count = ventesSelectionnees.size;
+    if (!confirm(`⚠️ Supprimer ${count} vente(s) sélectionnée(s) ? Cette action est IRRÉVERSIBLE.`)) return;
+    
+    try {
+        var batch = db.batch();
+        var batchCount = 0;
+        var totalDeleted = 0;
+        var ids = Array.from(ventesSelectionnees);
+        
+        for (var id of ids) {
+            var ref = db.collection('ventes').doc(id);
+            batch.delete(ref);
+            batchCount++;
+            totalDeleted++;
+            
+            if (batchCount >= 500) {
+                await batch.commit();
+                console.log(`✅ ${totalDeleted} ventes supprimées...`);
+                batch = db.batch();
+                batchCount = 0;
+            }
+        }
+        if (batchCount > 0) {
+            await batch.commit();
+        }
+        
+        ventesSelectionnees.clear();
+        alert(`✅ ${totalDeleted} vente(s) supprimée(s) !`);
+        
+        // Recharger la page des ventes
+        loadVentes();
+        
+    } catch(e) {
+        console.error('❌ Erreur :', e);
+        alert('❌ Erreur : ' + e.message);
+    }
+}
 
 // ========== FONCTIONS UTILITAIRES ==========
 
@@ -645,6 +742,57 @@ function injectVentesStyles() {
                 font-size: 22px !important;
                 margin-right: 6px;
             }
+
+            /* === BOUTONS DE SÉLECTION EN MASSE === */
+            .ventes-select-buttons {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            
+            #selectedVentesCount {
+                font-size: 16px;
+                color: #64748b;
+                display: none;
+                font-weight: 600;
+                padding: 4px 12px;
+                background: #f1f5f9;
+                border-radius: 20px;
+            }
+            
+            #selectAllVentesBtn {
+                font-size: 16px;
+                padding: 8px 16px;
+                background: #2563eb;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            #selectAllVentesBtn:hover {
+                background: #1d4ed8;
+                transform: scale(1.02);
+            }
+            
+            #deleteSelectedVentesBtn {
+                font-size: 16px;
+                padding: 8px 16px;
+                background: #ef4444;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                display: none;
+                transition: all 0.2s;
+            }
+            
+            #deleteSelectedVentesBtn:hover {
+                background: #dc2626;
+                transform: scale(1.02);
+            }
             
             /* === RESPONSIVE === */
             @media(max-width:1024px) {
@@ -1094,7 +1242,7 @@ function cancelCommande(cid) {
     }
 }
 
-// ==================== VENTES (PRO AVEC BOUTONS CORRIGÉS) ====================
+// ==================== VENTES (PRO AVEC BOUTONS CORRIGÉS ET SÉLECTION MASSE) ====================
 function loadVentesPage(c) {
     injectVentesStyles();
     
@@ -1147,7 +1295,55 @@ function loadVentesPage(c) {
             <div id="ventesPagination" style="margin-top:12px;"></div>
         </div>
     `;
+    
+    // Ajouter les boutons de sélection en masse dans le header
+    ajouterBoutonsSelectionVentes();
+    
     loadVentes();
+}
+
+// ==================== AJOUTER LES BOUTONS DE SÉLECTION EN MASSE ====================
+function ajouterBoutonsSelectionVentes() {
+    // Chercher le conteneur du header
+    var header = document.querySelector('#ventesPage .card-header');
+    if (!header) {
+        // Essayer de trouver après un délai
+        setTimeout(ajouterBoutonsSelectionVentes, 500);
+        return;
+    }
+    
+    // Vérifier si les boutons existent déjà
+    if (document.getElementById('selectAllVentesBtn')) return;
+    
+    // Créer le conteneur des boutons de sélection
+    var btnContainer = document.createElement('div');
+    btnContainer.className = 'ventes-select-buttons';
+    btnContainer.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;';
+    
+    // Compteur des sélections
+    var countSpan = document.createElement('span');
+    countSpan.id = 'selectedVentesCount';
+    countSpan.textContent = '0 sélectionnée(s)';
+    
+    // Bouton "Tout sélectionner"
+    var selectAllBtn = document.createElement('button');
+    selectAllBtn.id = 'selectAllVentesBtn';
+    selectAllBtn.textContent = '✅ Tout sélectionner';
+    selectAllBtn.onclick = toggleAllVentesSelection;
+    
+    // Bouton "Supprimer les sélectionnés"
+    var deleteBtn = document.createElement('button');
+    deleteBtn.id = 'deleteSelectedVentesBtn';
+    deleteBtn.textContent = '🗑️ Supprimer les sélectionnés';
+    deleteBtn.style.display = 'none';
+    deleteBtn.onclick = deleteSelectedVentes;
+    
+    btnContainer.appendChild(selectAllBtn);
+    btnContainer.appendChild(deleteBtn);
+    btnContainer.appendChild(countSpan);
+    
+    // Ajouter à la fin du header (après les autres boutons)
+    header.appendChild(btnContainer);
 }
 
 function handleVentesSearch(value) {
@@ -1313,6 +1509,9 @@ function renderVentesTablePro() {
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th style="width:40px; text-align:center;">
+                            <input type="checkbox" id="ventesSelectAllCheckbox" onchange="toggleAllVentesSelection()" title="Tout sélectionner">
+                        </th>
                         <th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
                         <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
                         <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
@@ -1326,13 +1525,13 @@ function renderVentesTablePro() {
                         <th><i class="fas fa-credit-card"></i> Paiement</th>
                         <th><i class="fas fa-circle"></i> Statut</th>
                         <th style="min-width:200px;"><i class="fas fa-tools"></i> Actions</th>
-                        ${window.venteSelectionMode ? '<th style="width:40px;">✅</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
     `;
     
     pageData.forEach(function(d, index) {
+        var isChecked = ventesSelectionnees.has(d.id) ? 'checked' : '';
         const factureHtml = renderFactureCell(d);
         const dateHtml = renderDateCell(d);
         const clientHtml = renderClientCell(d);
@@ -1389,25 +1588,26 @@ function renderVentesTablePro() {
         }
         actions += `</div>`;
         
-        var isSelected = (window.venteSelectionMode && window.venteSelectedIndex === index);
-        var rowClass = isSelected ? ' style="background:#fef3c7; border-left:4px solid #d97706;"' : '';
-        
-        h += `<tr${rowClass}>
-            <td>${factureHtml}</td>
-            <td>${dateHtml}</td>
-            <td>${clientHtml}</td>
-            ${isAdmin ? `<td>${arts}</td><td>${opts}</td>` : ''}
-            ${isAdmin ? `<td>${(d.achat || 0).toFixed(2)}</td><td style="color:#2E7D32;font-weight:700;">${(d.profit || 0).toFixed(2)}</td>` : ''}
-            <td><span class="amount-total">${(d.total || 0).toFixed(2)} MAD</span></td>
-            <td>${(d.discountMAD || 0).toFixed(2)}</td>
-            <td>${(d.amountGiven || 0).toFixed(2)}</td>
-            <td>${(d.change || 0).toFixed(2)}</td>
-            ${isAdmin ? `<td>${escapeHtml(d.vendeur || '-')}</td>` : ''}
-            <td>${escapeHtml(d.paymentMethod || '-')}</td>
-            <td><span class="${st.class}"><i class="fas ${st.icon}"></i> ${st.label}</span></td>
-            <td>${actions}</td>
-            ${window.venteSelectionMode ? `<td><input type="checkbox" ${isSelected ? 'checked' : ''} onclick="window.venteSelectedIndex=${index};renderVentesTablePro();"></td>` : ''}
-        </tr>`;
+        h += `
+            <tr>
+                <td style="text-align:center; vertical-align:middle;">
+                    <input type="checkbox" class="vente-checkbox" data-id="${d.id}" ${isChecked} onchange="toggleVenteSelection('${d.id}')">
+                </td>
+                <td>${factureHtml}</td>
+                <td>${dateHtml}</td>
+                <td>${clientHtml}</td>
+                ${isAdmin ? `<td>${arts}</td><td>${opts}</td>` : ''}
+                ${isAdmin ? `<td>${(d.achat || 0).toFixed(2)}</td><td style="color:#2E7D32;font-weight:700;">${(d.profit || 0).toFixed(2)}</td>` : ''}
+                <td><span class="amount-total">${(d.total || 0).toFixed(2)} MAD</span></td>
+                <td>${(d.discountMAD || 0).toFixed(2)}</td>
+                <td>${(d.amountGiven || 0).toFixed(2)}</td>
+                <td>${(d.change || 0).toFixed(2)}</td>
+                ${isAdmin ? `<td>${escapeHtml(d.vendeur || '-')}</td>` : ''}
+                <td>${escapeHtml(d.paymentMethod || '-')}</td>
+                <td><span class="${st.class}"><i class="fas ${st.icon}"></i> ${st.label}</span></td>
+                <td>${actions}</td>
+            </tr>
+        `;
     });
     
     h += `
@@ -1435,6 +1635,7 @@ function renderVentesTablePro() {
     `;
     cont.innerHTML = h;
     document.getElementById('ventesPagination').innerHTML = getPaginationHTML('ventes', data.length);
+    updateVenteSelectionUI();
 }
 
 // ==================== ÉDITER VENTE ====================
@@ -1460,286 +1661,4 @@ function editVente(did) {
                         <input type="number" id="editAmountGiven" value="${d.amountGiven || 0}" step="0.01">
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label><i class="fas fa-undo-alt"></i> Montant rendu</label>
-                        <input type="number" id="editChange" value="${d.change || 0}" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-hourglass-half"></i> Reste à payer</label>
-                        <input type="number" id="editRemaining" value="${d.remainingAmount || 0}" step="0.01">
-                    </div>
-                </div>
-                <button class="btn-cancel" onclick="closeModal()">Annuler</button>
-                <button class="btn-save" onclick="saveEditVente()"><i class="fas fa-save"></i> Enregistrer</button>
-            `;
-            openModal('Modifier vente ' + (d.factureNum || ''), h);
-        }
-    });
-}
-
-function saveEditVente() {
-    var statut = document.getElementById('editStatut').value;
-    var amountGiven = parseFloat(document.getElementById('editAmountGiven').value) || 0;
-    var change = parseFloat(document.getElementById('editChange').value) || 0;
-    var remaining = parseFloat(document.getElementById('editRemaining').value) || 0;
-    var paid = (statut === 'payé');
-    var data = {
-        statutPaiement: statut,
-        amountGiven: amountGiven,
-        change: change,
-        remainingAmount: paid ? 0 : remaining,
-        paid: paid,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    saveDocument('ventes', data, function() { closeModal(); loadVentes(); });
-}
-
-function deleteVente(did) {
-    if (confirm('Supprimer définitivement cette vente ?')) {
-        CacheDB.write('ventes', did, null, 'delete').then(function() {
-            alert('✅ Supprimé');
-            loadVentes();
-            CacheDB.sync();
-        });
-    }
-}
-
-async function payerVente(did) {
-    if (!confirm('Payer cette vente ? Redirection vers le POS...')) return;
-    var dc = await db.collection('ventes').doc(did).get();
-    if (!dc.exists) { alert('Introuvable'); return; }
-    var d = dc.data();
-    localStorage.setItem('posPayerVente', JSON.stringify({
-        venteId: did,
-        clientId: d.clientId,
-        clientName: d.clientName,
-        items: d.items,
-        total: d.total,
-        table: d.table || ''
-    }));
-    navigateTo('pos');
-}
-
-function printFacture(did) {
-    db.collection('ventes').doc(did).get().then(function(dc) {
-        if (dc.exists) imprimerFacture(dc.data(), dc.id);
-        else {
-            db.collection('credits').doc(did).get().then(function(cd) {
-                if (cd.exists) imprimerFacture(cd.data(), cd.id);
-            });
-        }
-    });
-}
-
-function imprimerFacture(d, id) {
-    var ih = '';
-    if (d.items) {
-        d.items.forEach(function(it) {
-            var o = '';
-            if (it.interdits && it.interdits.length > 0) o += ' 🚫' + it.interdits.join(',');
-            if (it.permis && it.permis.length > 0) o += ' ✅' + it.permis.join(',');
-            if (it.epice && it.epice !== 'Normal') o += ' 🌶️' + it.epice;
-            ih += `<tr><td>${escapeHtml(it.nom)}${o}</td><td>${it.quantite}</td><td>${(it.prixVente || 0).toFixed(2)}</td><td>${((it.prixVente || 0) * it.quantite).toFixed(2)}</td></tr>`;
-        });
-    }
-    var w = window.open('', '_blank', 'width=400,height=600');
-    w.document.write(`
-        <html><head><title>Facture Mixmax Minimarket</title>
-        <style>
-            body{font-family:'Inter',Arial,sans-serif;padding:24px;background:#f9fafb;}
-            .invoice{background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
-            h2{text-align:center;color:#111827;}
-            .header-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;font-size:0.9rem;}
-            table{width:100%;border-collapse:collapse;margin:16px 0;}
-            th{background:#f3f4f6;padding:8px 12px;text-align:left;font-weight:600;font-size:0.8rem;}
-            td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:0.85rem;}
-            .total{font-size:1.2rem;font-weight:800;text-align:right;margin-top:16px;padding-top:16px;border-top:2px solid #111827;}
-            .footer{text-align:center;color:#6b7280;font-size:0.75rem;margin-top:20px;}
-        </style>
-        </head><body>
-        <div class="invoice">
-            <h2>🛒 Mixmax Minimarket</h2>
-            <div class="header-info">
-                <div><strong>Facture:</strong> ${d.factureNum || id.substring(0, 8)}</div>
-                <div><strong>Date:</strong> ${d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : ''}</div>
-                <div><strong>Client:</strong> ${d.clientName || d.table || '-'}</div>
-                <div><strong>Vendeur:</strong> ${d.vendeur || '-'}</div>
-            </div>
-            <table>
-                <tr><th>Article</th><th>Qté</th><th>Prix</th><th>Total</th></tr>
-                ${ih}
-            </table>
-            ${d.discountMAD > 0 ? `<p><strong>Remise:</strong> -${d.discountMAD.toFixed(2)} MAD</p>` : ''}
-            <div class="total">Total: ${d.total.toFixed(2)} MAD</div>
-            <div class="footer">Merci de votre visite ! 🌟</div>
-        </div>
-        </body></html>
-    `);
-    w.document.close();
-    setTimeout(function() { w.print(); }, 500);
-}
-
-// ==================== WHATSAPP ====================
-async function sendWhatsApp(did) {
-    try {
-        const doc = await db.collection('ventes').doc(did).get();
-        if (!doc.exists) { alert('Vente introuvable'); return; }
-        const vente = doc.data();
-
-        let phone = '';
-
-        const allClients = (window.posAllClients && window.posAllClients.length)
-            ? window.posAllClients
-            : (window.allClientsData || []);
-        let client = null;
-
-        if (vente.clientId) {
-            client = allClients.find(c => c.id === vente.clientId);
-        } else if (vente.clientName) {
-            const normalized = (vente.clientName || '')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase()
-                .trim();
-            client = allClients.find(c => {
-                const full = ((c.nom || '') + ' ' + (c.prenom || ''))
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .toLowerCase()
-                    .trim();
-                return full === normalized;
-            });
-        }
-
-        if (client) {
-            phone = client.whatsapp || client.telephone || '';
-        }
-
-        if (!phone && vente.clientId) {
-            try {
-                const clientDoc = await db.collection('clients').doc(vente.clientId).get();
-                if (clientDoc.exists) {
-                    const cdata = clientDoc.data();
-                    phone = cdata.whatsapp || cdata.telephone || '';
-                }
-            } catch (e) {}
-        }
-
-        phone = phone.replace(/[^\d+]/g, '').trim();
-        if (phone.startsWith('0')) {
-            phone = '+212' + phone.substring(1);
-        } else if (!phone.startsWith('+')) {
-            phone = '+' + phone;
-        }
-
-        if (!phone || phone === '+') {
-            alert('❌ Aucun numéro WhatsApp trouvé.');
-            return;
-        }
-
-        var msg = '🧾 *FACTURE MIXMAX MINIMARKET*\n';
-        msg += '━━━━━━━━━━━━━━━━━━\n';
-        msg += '📄 ' + (vente.factureNum || did.substring(0, 8)) + '\n';
-        msg += '📅 ' + (vente.createdAt ? new Date(vente.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : '') + '\n';
-        msg += '👤 ' + (vente.clientName || '-') + '\n';
-        msg += '━━━━━━━━━━━━━━━━━━\n';
-        if (vente.items) {
-            vente.items.forEach(function(it) {
-                var opt = '';
-                if (it.interdits && it.interdits.length) opt += ' 🚫' + it.interdits.join(',');
-                if (it.epice && it.epice !== 'Normal') opt += ' 🌶️' + it.epice;
-                if (it.sel && it.sel !== 'Normal') opt += ' 🧂' + it.sel;
-                msg += it.quantite + 'x ' + it.nom + opt + ' → ' + ((it.prixVente || 0) * it.quantite).toFixed(2) + ' MAD\n';
-            });
-        }
-        msg += '━━━━━━━━━━━━━━━━━━\n';
-        if (vente.discountMAD > 0) msg += 'Remise: -' + vente.discountMAD.toFixed(2) + ' MAD\n';
-        msg += '*💰 TOTAL: ' + vente.total.toFixed(2) + ' MAD*\n';
-        if (vente.paymentMethod === 'crédit') msg += '📋 Reste à payer: ' + (vente.remainingAmount || vente.total).toFixed(2) + ' MAD\n';
-        msg += '━━━━━━━━━━━━━━━━━━\n';
-        msg += '🙏 Merci de votre visite !\n';
-        msg += '🛒 Mixmax Minimarket';
-
-        var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
-
-        var w = window.open(url, '_blank');
-        if (!w || w.closed) {
-            var modalHtml = `
-                <div style="text-align:center;padding:10px;">
-                    <i class="fab fa-whatsapp" style="font-size:4rem;color:#25D366;"></i>
-                    <p style="margin:16px 0;font-size:1.1rem;">Cliquez sur le bouton ci-dessous pour envoyer la facture</p>
-                    <a href="${url}" target="_blank" rel="noopener noreferrer" 
-                       style="display:inline-block;padding:14px 32px;background:#25D366;color:#fff;
-                              border-radius:12px;font-weight:700;text-decoration:none;font-size:1.1rem;">
-                        <i class="fab fa-whatsapp"></i> Envoyer sur WhatsApp
-                    </a>
-                </div>
-            `;
-            openModal('📱 Envoyer WhatsApp', modalHtml);
-        }
-
-    } catch (e) {
-        console.error('WhatsApp:', e);
-        alert('❌ Erreur lors de l\'envoi WhatsApp');
-    }
-}
-
-// ==================== UTILITAIRES RECHERCHE ====================
-function clearSearch(target) {
-    if (target === 'ventes') {
-        clearVentesSearch();
-    } else if (target === 'commandes') {
-        const searchField = document.getElementById('commandesSearchInput');
-        if (searchField) {
-            searchField.value = '';
-            window.commandesSearch = '';
-            applyCommandesFilters();
-            const clearBtn = document.getElementById('commandesClearBtn');
-            if (clearBtn) clearBtn.classList.add('hidden');
-        }
-    }
-}
-
-function handleSearchInput(target) {
-    const searchField = document.getElementById(target + 'SearchInput');
-    const clearBtn = document.getElementById(target + 'ClearBtn');
-    if (searchField && clearBtn) {
-        if (searchField.value.length > 0) {
-            clearBtn.classList.remove('hidden');
-        } else {
-            clearBtn.classList.add('hidden');
-        }
-    }
-}
-
-// ==================== EXPORTS ====================
-window.loadCommandesPage = loadCommandesPage;
-window.loadCommandes = loadCommandes;
-window.applyCommandesFilters = applyCommandesFilters;
-window.renderCommandesTablePro = renderCommandesTablePro;
-window.validateCommande = validateCommande;
-window.payCommande = payCommande;
-window.cancelCommande = cancelCommande;
-window.loadVentesPage = loadVentesPage;
-window.loadVentes = loadVentes;
-window.applyVentesFilters = applyVentesFilters;
-window.renderVentesTablePro = renderVentesTablePro;
-window.editVente = editVente;
-window.saveEditVente = saveEditVente;
-window.deleteVente = deleteVente;
-window.payerVente = payerVente;
-window.printFacture = printFacture;
-window.imprimerFacture = imprimerFacture;
-window.sendWhatsApp = sendWhatsApp;
-window.clearSearch = clearSearch;
-window.handleSearchInput = handleSearchInput;
-window.injectVentesStyles = injectVentesStyles;
-window.detectPeriodFilterVentes = detectPeriodFilterVentes;
-window.processVentesSearchFromVoice = processVentesSearchFromVoice;
-window.handleVentesSearch = handleVentesSearch;
-window.clearVentesSearch = clearVentesSearch;
-window.loadClientsForSearch = loadClientsForSearch;
-window.filterVentesBySearchWithDescription = filterVentesBySearchWithDescription;
-
-console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec icônes corrigées) chargé ✅');
+                <div class="
