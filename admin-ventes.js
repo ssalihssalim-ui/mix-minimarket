@@ -1661,4 +1661,291 @@ function editVente(did) {
                         <input type="number" id="editAmountGiven" value="${d.amountGiven || 0}" step="0.01">
                     </div>
                 </div>
-                <div class="
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-undo-alt"></i> Montant rendu</label>
+                        <input type="number" id="editChange" value="${d.change || 0}" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-hourglass-half"></i> Reste à payer</label>
+                        <input type="number" id="editRemaining" value="${d.remainingAmount || 0}" step="0.01">
+                    </div>
+                </div>
+                <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+                <button class="btn-save" onclick="saveEditVente()"><i class="fas fa-save"></i> Enregistrer</button>
+            `;
+            openModal('Modifier vente ' + (d.factureNum || ''), h);
+        }
+    });
+}
+
+function saveEditVente() {
+    var statut = document.getElementById('editStatut').value;
+    var amountGiven = parseFloat(document.getElementById('editAmountGiven').value) || 0;
+    var change = parseFloat(document.getElementById('editChange').value) || 0;
+    var remaining = parseFloat(document.getElementById('editRemaining').value) || 0;
+    var paid = (statut === 'payé');
+    var data = {
+        statutPaiement: statut,
+        amountGiven: amountGiven,
+        change: change,
+        remainingAmount: paid ? 0 : remaining,
+        paid: paid,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    saveDocument('ventes', data, function() { closeModal(); loadVentes(); });
+}
+
+function deleteVente(did) {
+    if (confirm('Supprimer définitivement cette vente ?')) {
+        CacheDB.write('ventes', did, null, 'delete').then(function() {
+            alert('✅ Supprimé');
+            loadVentes();
+            CacheDB.sync();
+        });
+    }
+}
+
+async function payerVente(did) {
+    if (!confirm('Payer cette vente ? Redirection vers le POS...')) return;
+    var dc = await db.collection('ventes').doc(did).get();
+    if (!dc.exists) { alert('Introuvable'); return; }
+    var d = dc.data();
+    localStorage.setItem('posPayerVente', JSON.stringify({
+        venteId: did,
+        clientId: d.clientId,
+        clientName: d.clientName,
+        items: d.items,
+        total: d.total,
+        table: d.table || ''
+    }));
+    navigateTo('pos');
+}
+
+function printFacture(did) {
+    db.collection('ventes').doc(did).get().then(function(dc) {
+        if (dc.exists) imprimerFacture(dc.data(), dc.id);
+        else {
+            db.collection('credits').doc(did).get().then(function(cd) {
+                if (cd.exists) imprimerFacture(cd.data(), cd.id);
+            });
+        }
+    });
+}
+
+function imprimerFacture(d, id) {
+    var ih = '';
+    if (d.items) {
+        d.items.forEach(function(it) {
+            var o = '';
+            if (it.interdits && it.interdits.length > 0) o += ' 🚫' + it.interdits.join(',');
+            if (it.permis && it.permis.length > 0) o += ' ✅' + it.permis.join(',');
+            if (it.epice && it.epice !== 'Normal') o += ' 🌶️' + it.epice;
+            ih += `<tr><td>${escapeHtml(it.nom)}${o}</td><td>${it.quantite}</td><td>${(it.prixVente || 0).toFixed(2)}</td><td>${((it.prixVente || 0) * it.quantite).toFixed(2)}</td></tr>`;
+        });
+    }
+    var w = window.open('', '_blank', 'width=400,height=600');
+    w.document.write(`
+        <html><head><title>Facture Mixmax Minimarket</title>
+        <style>
+            body{font-family:'Inter',Arial,sans-serif;padding:24px;background:#f9fafb;}
+            .invoice{background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+            h2{text-align:center;color:#111827;}
+            .header-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;font-size:0.9rem;}
+            table{width:100%;border-collapse:collapse;margin:16px 0;}
+            th{background:#f3f4f6;padding:8px 12px;text-align:left;font-weight:600;font-size:0.8rem;}
+            td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:0.85rem;}
+            .total{font-size:1.2rem;font-weight:800;text-align:right;margin-top:16px;padding-top:16px;border-top:2px solid #111827;}
+            .footer{text-align:center;color:#6b7280;font-size:0.75rem;margin-top:20px;}
+        </style>
+        </head><body>
+        <div class="invoice">
+            <h2>🛒 Mixmax Minimarket</h2>
+            <div class="header-info">
+                <div><strong>Facture:</strong> ${d.factureNum || id.substring(0, 8)}</div>
+                <div><strong>Date:</strong> ${d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : ''}</div>
+                <div><strong>Client:</strong> ${d.clientName || d.table || '-'}</div>
+                <div><strong>Vendeur:</strong> ${d.vendeur || '-'}</div>
+            </div>
+            <table>
+                <tr><th>Article</th><th>Qté</th><th>Prix</th><th>Total</th></tr>
+                ${ih}
+            </table>
+            ${d.discountMAD > 0 ? `<p><strong>Remise:</strong> -${d.discountMAD.toFixed(2)} MAD</p>` : ''}
+            <div class="total">Total: ${d.total.toFixed(2)} MAD</div>
+            <div class="footer">Merci de votre visite ! 🌟</div>
+        </div>
+        </body></html>
+    `);
+    w.document.close();
+    setTimeout(function() { w.print(); }, 500);
+}
+
+// ==================== WHATSAPP ====================
+async function sendWhatsApp(did) {
+    try {
+        const doc = await db.collection('ventes').doc(did).get();
+        if (!doc.exists) { alert('Vente introuvable'); return; }
+        const vente = doc.data();
+
+        let phone = '';
+
+        const allClients = (window.posAllClients && window.posAllClients.length)
+            ? window.posAllClients
+            : (window.allClientsData || []);
+        let client = null;
+
+        if (vente.clientId) {
+            client = allClients.find(c => c.id === vente.clientId);
+        } else if (vente.clientName) {
+            const normalized = (vente.clientName || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+            client = allClients.find(c => {
+                const full = ((c.nom || '') + ' ' + (c.prenom || ''))
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .trim();
+                return full === normalized;
+            });
+        }
+
+        if (client) {
+            phone = client.whatsapp || client.telephone || '';
+        }
+
+        if (!phone && vente.clientId) {
+            try {
+                const clientDoc = await db.collection('clients').doc(vente.clientId).get();
+                if (clientDoc.exists) {
+                    const cdata = clientDoc.data();
+                    phone = cdata.whatsapp || cdata.telephone || '';
+                }
+            } catch (e) {}
+        }
+
+        phone = phone.replace(/[^\d+]/g, '').trim();
+        if (phone.startsWith('0')) {
+            phone = '+212' + phone.substring(1);
+        } else if (!phone.startsWith('+')) {
+            phone = '+' + phone;
+        }
+
+        if (!phone || phone === '+') {
+            alert('❌ Aucun numéro WhatsApp trouvé.');
+            return;
+        }
+
+        var msg = '🧾 *FACTURE MIXMAX MINIMARKET*\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '📄 ' + (vente.factureNum || did.substring(0, 8)) + '\n';
+        msg += '📅 ' + (vente.createdAt ? new Date(vente.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : '') + '\n';
+        msg += '👤 ' + (vente.clientName || '-') + '\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        if (vente.items) {
+            vente.items.forEach(function(it) {
+                var opt = '';
+                if (it.interdits && it.interdits.length) opt += ' 🚫' + it.interdits.join(',');
+                if (it.epice && it.epice !== 'Normal') opt += ' 🌶️' + it.epice;
+                if (it.sel && it.sel !== 'Normal') opt += ' 🧂' + it.sel;
+                msg += it.quantite + 'x ' + it.nom + opt + ' → ' + ((it.prixVente || 0) * it.quantite).toFixed(2) + ' MAD\n';
+            });
+        }
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        if (vente.discountMAD > 0) msg += 'Remise: -' + vente.discountMAD.toFixed(2) + ' MAD\n';
+        msg += '*💰 TOTAL: ' + vente.total.toFixed(2) + ' MAD*\n';
+        if (vente.paymentMethod === 'crédit') msg += '📋 Reste à payer: ' + (vente.remainingAmount || vente.total).toFixed(2) + ' MAD\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '🙏 Merci de votre visite !\n';
+        msg += '🛒 Mixmax Minimarket';
+
+        var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
+
+        var w = window.open(url, '_blank');
+        if (!w || w.closed) {
+            var modalHtml = `
+                <div style="text-align:center;padding:10px;">
+                    <i class="fab fa-whatsapp" style="font-size:4rem;color:#25D366;"></i>
+                    <p style="margin:16px 0;font-size:1.1rem;">Cliquez sur le bouton ci-dessous pour envoyer la facture</p>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" 
+                       style="display:inline-block;padding:14px 32px;background:#25D366;color:#fff;
+                              border-radius:12px;font-weight:700;text-decoration:none;font-size:1.1rem;">
+                        <i class="fab fa-whatsapp"></i> Envoyer sur WhatsApp
+                    </a>
+                </div>
+            `;
+            openModal('📱 Envoyer WhatsApp', modalHtml);
+        }
+
+    } catch (e) {
+        console.error('WhatsApp:', e);
+        alert('❌ Erreur lors de l\'envoi WhatsApp');
+    }
+}
+
+// ==================== UTILITAIRES RECHERCHE ====================
+function clearSearch(target) {
+    if (target === 'ventes') {
+        clearVentesSearch();
+    } else if (target === 'commandes') {
+        const searchField = document.getElementById('commandesSearchInput');
+        if (searchField) {
+            searchField.value = '';
+            window.commandesSearch = '';
+            applyCommandesFilters();
+            const clearBtn = document.getElementById('commandesClearBtn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+        }
+    }
+}
+
+function handleSearchInput(target) {
+    const searchField = document.getElementById(target + 'SearchInput');
+    const clearBtn = document.getElementById(target + 'ClearBtn');
+    if (searchField && clearBtn) {
+        if (searchField.value.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+    }
+}
+
+// ==================== EXPORTS ====================
+window.loadCommandesPage = loadCommandesPage;
+window.loadCommandes = loadCommandes;
+window.applyCommandesFilters = applyCommandesFilters;
+window.renderCommandesTablePro = renderCommandesTablePro;
+window.validateCommande = validateCommande;
+window.payCommande = payCommande;
+window.cancelCommande = cancelCommande;
+window.loadVentesPage = loadVentesPage;
+window.loadVentes = loadVentes;
+window.applyVentesFilters = applyVentesFilters;
+window.renderVentesTablePro = renderVentesTablePro;
+window.editVente = editVente;
+window.saveEditVente = saveEditVente;
+window.deleteVente = deleteVente;
+window.payerVente = payerVente;
+window.printFacture = printFacture;
+window.imprimerFacture = imprimerFacture;
+window.sendWhatsApp = sendWhatsApp;
+window.clearSearch = clearSearch;
+window.handleSearchInput = handleSearchInput;
+window.injectVentesStyles = injectVentesStyles;
+window.detectPeriodFilterVentes = detectPeriodFilterVentes;
+window.processVentesSearchFromVoice = processVentesSearchFromVoice;
+window.handleVentesSearch = handleVentesSearch;
+window.clearVentesSearch = clearVentesSearch;
+window.loadClientsForSearch = loadClientsForSearch;
+window.filterVentesBySearchWithDescription = filterVentesBySearchWithDescription;
+window.toggleVenteSelection = toggleVenteSelection;
+window.toggleAllVentesSelection = toggleAllVentesSelection;
+window.deleteSelectedVentes = deleteSelectedVentes;
+window.updateVenteSelectionUI = updateVenteSelectionUI;
+window.ajouterBoutonsSelectionVentes = ajouterBoutonsSelectionVentes;
+
+console.log('🛒 Mixmax Minimarket - Admin Ventes PRO (avec sélection en masse) chargé ✅');
