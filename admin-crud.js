@@ -3,12 +3,13 @@
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseurs avec Google Cloud Vision (OCR professionnel)
 // ✅ Utilisation de votre clé AQ. (valide pour Vision)
+// ✅ Caméra native avec toutes ses options
 // ✅ Extraction précise des produits et quantités
+// ✅ Correspondance automatique avec les produits du fournisseur
 
 // ====================================================
 //  🔑  CONFIGURATION GOOGLE CLOUD VISION
 // ====================================================
-// Votre clé AQ. fonctionne parfaitement pour Vision
 const VISION_API_KEY = 'AQ.Ab8RN6JbffZAlm3MjJmydKe1qN36P6kRS0PrQ4gpgcfMEEm4Fw';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`;
 
@@ -597,7 +598,7 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS ====================
+// ==================== MODULE ACHATS FOURNISSEURS (avec Google Cloud Vision) ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 
@@ -625,7 +626,7 @@ function openAchatModalForm() {
             <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
                 <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
                 <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Vision)</button>
+                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Vision OCR)</button>
             </div>
         </div>
     `;
@@ -726,10 +727,6 @@ async function validerAchats() {
 
 // ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE CLOUD VISION ====================
 function ouvrirCameraFacture() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Votre navigateur ne supporte pas la caméra.');
-        return;
-    }
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -789,7 +786,7 @@ async function reconnaitreFactureVision(imgData) {
 
         if (!response.ok) {
             var errorData = await response.json();
-            throw new Error(`${response.status} - ${errorData.error?.message || response.statusText}`);
+            throw new Error(`Erreur ${response.status} - ${errorData.error?.message || response.statusText}`);
         }
 
         var data = await response.json();
@@ -827,7 +824,7 @@ async function reconnaitreFactureVision(imgData) {
         console.error('Erreur Vision :', e);
         if (container) {
             container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
-                ❌ Erreur Vision : ${e.message}
+                ❌ Erreur : ${e.message}
             </div>`;
         }
         alert('❌ Erreur Vision : ' + e.message);
