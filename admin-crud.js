@@ -1,11 +1,10 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (Google Cloud Vision) ====================
+// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (COMPLET AVEC ACHATS PRO) ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
-// ✅ Module Achats fournisseurs avec Google Cloud Vision (OCR professionnel)
-// ✅ Utilisation de votre clé AQ. (valide pour Vision)
-// ✅ Caméra native avec toutes ses options
-// ✅ Extraction précise des produits et quantités
-// ✅ Correspondance automatique avec les produits du fournisseur
+// ✅ Module Achats fournisseur avec modal 90% (écran)
+// ✅ Google Cloud Vision pour scanner les factures
+// ✅ Gestion du stock, prix boîte, date d'expiration
+// ✅ Calcul automatique du total
 
 // ====================================================
 //  🔑  CONFIGURATION GOOGLE CLOUD VISION
@@ -16,7 +15,7 @@ const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISIO
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
 
-// ========== FONCTIONS UTILITAIRES POUR LA SÉLECTION DE CATÉGORIES ==========
+// ========== FONCTIONS UTILITAIRES ==========
 function updateSelectedCategories() {
     var select = document.getElementById('prodCategoriesSelect');
     var display = document.getElementById('selectedCategoriesDisplay');
@@ -598,10 +597,12 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS (avec Google Cloud Vision) ====================
+// ==================== MODULE ACHATS FOURNISSEURS (VERSION PRO 90%) ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
+var achatLignes = [];
 
+// Ouvrir le modal d'achat (90% de l'écran)
 function openAchatModal() {
     if (typeof allFournisseursData === 'undefined' || allFournisseursData.length === 0) {
         loadFournisseurs().then(function() { openAchatModalForm(); });
@@ -611,41 +612,62 @@ function openAchatModal() {
 }
 
 function openAchatModalForm() {
+    var options = '<option value="">-- Choisir --</option>';
+    allFournisseursData.forEach(function(f) {
+        options += '<option value="' + f.id + '">' + escapeHtml(f.nom) + ' ' + escapeHtml(f.prenom || '') + (f.societe ? ' (' + f.societe + ')' : '') + '</option>';
+    });
+
     var html = `
-        <div style="padding:10px;">
-            <h3 style="font-size:28px;">📦 Effectuer des achats</h3>
-            <div style="margin:12px 0;">
-                <label style="font-size:22px;font-weight:600;">Fournisseur</label>
-                <select id="achatFournisseurSelect" style="width:100%;padding:14px;font-size:22px;border-radius:8px;border:2px solid #e2e8f0;" onchange="chargerProduitsFournisseurAchat()">
-                    <option value="">-- Choisir --</option>
-                </select>
-            </div>
-            <div id="produitsAchatContainer" style="margin-top:12px;max-height:400px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
-                <p style="text-align:center;color:#94a3b8;font-size:22px;">Choisissez un fournisseur</p>
-            </div>
-            <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
-                <button class="btn-save" onclick="validerAchats()" style="font-size:22px;padding:14px 28px;">✅ Valider les achats</button>
-                <button class="btn-cancel" onclick="closeModal()" style="font-size:22px;padding:14px 28px;">Annuler</button>
-                <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:22px;padding:14px 28px;background:#2563eb;color:#fff;border:none;border-radius:12px;cursor:pointer;">📷 Scanner facture (Vision OCR)</button>
+        <div id="achatModalOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; overflow:auto;">
+            <div style="background:#fff; width:90%; max-width:1400px; height:90%; border-radius:20px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,0.3); display:flex; flex-direction:column; position:relative;">
+                <button onclick="fermerAchatModal()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:32px; cursor:pointer; color:#64748b; z-index:10;">×</button>
+                <h3 style="font-size:28px; margin:0 0 10px 0; display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-shopping-cart"></i> Effectuer des achats
+                </h3>
+                <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:15px;">
+                    <div style="flex:2; min-width:250px;">
+                        <label style="font-size:20px; font-weight:600;">Fournisseur</label>
+                        <select id="achatFournisseurSelect" style="width:100%; padding:12px; font-size:20px; border-radius:10px; border:2px solid #e2e8f0;" onchange="chargerProduitsFournisseurAchat()">
+                            ${options}
+                        </select>
+                    </div>
+                    <div style="flex:1; display:flex; align-items:flex-end; gap:10px;">
+                        <button class="btn-add" onclick="ouvrirCameraFacture()" style="font-size:20px; padding:12px 24px; background:#2563eb; color:#fff; border:none; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-camera"></i> Scanner facture
+                        </button>
+                    </div>
+                </div>
+                <div style="flex:1; overflow-y:auto; border:1px solid #e2e8f0; border-radius:12px; padding:10px; background:#f8fafc;">
+                    <div id="produitsAchatContainer">
+                        <p style="text-align:center; color:#94a3b8; font-size:22px; padding:40px;">Choisissez un fournisseur</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:12px; margin-top:15px; justify-content:flex-end;">
+                    <button class="btn-cancel" onclick="fermerAchatModal()" style="font-size:22px; padding:14px 28px;">Annuler</button>
+                    <button class="btn-save" onclick="validerAchats()" style="font-size:22px; padding:14px 28px; background:#16a34a;">✅ Valider les achats</button>
+                </div>
             </div>
         </div>
     `;
-    openModal('Achats fournisseur', html);
-    var select = document.getElementById('achatFournisseurSelect');
-    if (select) {
-        select.innerHTML = '<option value="">-- Choisir --</option>';
-        allFournisseursData.forEach(function(f) {
-            select.innerHTML += '<option value="' + f.id + '">' + escapeHtml(f.nom) + ' ' + escapeHtml(f.prenom || '') + (f.societe ? ' (' + f.societe + ')' : '') + '</option>';
-        });
-    }
+    // Supprimer un éventuel overlay existant
+    var oldOverlay = document.getElementById('achatModalOverlay');
+    if (oldOverlay) oldOverlay.remove();
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function fermerAchatModal() {
+    var overlay = document.getElementById('achatModalOverlay');
+    if (overlay) overlay.remove();
 }
 
 function chargerProduitsFournisseurAchat() {
     var select = document.getElementById('achatFournisseurSelect');
     var fournisseurId = select.value;
     if (!fournisseurId) {
-        document.getElementById('produitsAchatContainer').innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:22px;">Choisissez un fournisseur</p>';
+        document.getElementById('produitsAchatContainer').innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:22px; padding:40px;">Choisissez un fournisseur</p>';
         fournisseurAchatSelectionne = null;
+        produitsAchatList = [];
+        achatLignes = [];
         return;
     }
     fournisseurAchatSelectionne = allFournisseursData.find(f => f.id === fournisseurId);
@@ -661,20 +683,100 @@ function afficherProduitsAchat(produits) {
     var container = document.getElementById('produitsAchatContainer');
     if (!container) return;
     if (!produits || produits.length === 0) {
-        container.innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:22px;">Aucun produit trouvé pour ce fournisseur.</p>';
+        container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:22px; padding:40px;">Aucun produit pour ce fournisseur.</p>';
         return;
     }
-    var html = '<table style="width:100%;font-size:20px;border-collapse:collapse;">';
-    html += '<thead><tr style="background:#f1f5f9;"><th style="padding:10px;text-align:left;">Produit</th><th style="padding:10px;text-align:center;">Stock actuel</th><th style="padding:10px;text-align:center;">Nouveau stock (boîtes)</th></tr></thead><tbody>';
-    produits.forEach(function(p) {
-        html += '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;">' + escapeHtml(p.nom) + '</td>';
-        html += '<td style="padding:10px;text-align:center;border-bottom:1px solid #e2e8f0;">' + (p.stock || 0) + '</td>';
-        html += '<td style="padding:10px;text-align:center;border-bottom:1px solid #e2e8f0;">';
-        html += '<input type="number" class="achat-stock-input" data-produit-id="' + p.id + '" value="0" min="0" style="width:80px;padding:8px;font-size:20px;border:2px solid #e2e8f0;border-radius:6px;">';
-        html += '</td></tr>';
+    // Initialiser les lignes d'achat
+    achatLignes = produits.map(function(p) {
+        return {
+            id: p.id,
+            nom: p.nom,
+            stockActuel: p.stock || 0,
+            prixActuel: p.box_price || 0,
+            quantite: 0,
+            nouveauPrix: 0,
+            dateExpiration: '',
+            total: 0
+        };
+    });
+
+    var html = `
+        <table style="width:100%; border-collapse:collapse; font-size:18px;">
+            <thead>
+                <tr style="background:#e2e8f0; position:sticky; top:0; z-index:5;">
+                    <th style="padding:12px 8px; text-align:left;">ID</th>
+                    <th style="padding:12px 8px; text-align:left;">Nom</th>
+                    <th style="padding:12px 8px; text-align:center;">Stock actuel</th>
+                    <th style="padding:12px 8px; text-align:center;">Prix boîte (MAD)</th>
+                    <th style="padding:12px 8px; text-align:center;">Qté achetée</th>
+                    <th style="padding:12px 8px; text-align:center;">Nouveau prix (MAD)</th>
+                    <th style="padding:12px 8px; text-align:center;">Date expiration</th>
+                    <th style="padding:12px 8px; text-align:center;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    produits.forEach(function(p, index) {
+        var ligne = achatLignes[index];
+        html += `
+            <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:10px 8px; font-weight:600;">${p.id ? p.id.substring(0,6) : '-'}</td>
+                <td style="padding:10px 8px; font-weight:500;">${escapeHtml(p.nom)}</td>
+                <td style="padding:10px 8px; text-align:center;">${ligne.stockActuel}</td>
+                <td style="padding:10px 8px; text-align:center;">${ligne.prixActuel.toFixed(2)}</td>
+                <td style="padding:10px 8px; text-align:center;">
+                    <input type="number" class="achat-qte" data-index="${index}" value="0" min="0" step="1" style="width:70px; padding:6px; font-size:18px; border:2px solid #e2e8f0; border-radius:6px; text-align:center;" onchange="calculerTotalLigne(${index})">
+                </td>
+                <td style="padding:10px 8px; text-align:center;">
+                    <input type="number" class="achat-prix" data-index="${index}" value="0" step="0.01" min="0" style="width:90px; padding:6px; font-size:18px; border:2px solid #e2e8f0; border-radius:6px; text-align:center;" onchange="calculerTotalLigne(${index})">
+                </td>
+                <td style="padding:10px 8px; text-align:center;">
+                    <input type="date" class="achat-date" data-index="${index}" style="padding:6px; font-size:18px; border:2px solid #e2e8f0; border-radius:6px;">
+                </td>
+                <td style="padding:10px 8px; text-align:center; font-weight:600;" id="total-${index}">0.00</td>
+            </tr>
+        `;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
+}
+
+function calculerTotalLigne(index) {
+    var qteInput = document.querySelector(`.achat-qte[data-index="${index}"]`);
+    var prixInput = document.querySelector(`.achat-prix[data-index="${index}"]`);
+    var totalSpan = document.getElementById(`total-${index}`);
+    if (!qteInput || !prixInput || !totalSpan) return;
+    var qte = parseFloat(qteInput.value) || 0;
+    var prix = parseFloat(prixInput.value) || 0;
+    var total = qte * prix;
+    totalSpan.textContent = total.toFixed(2);
+    if (achatLignes[index]) {
+        achatLignes[index].quantite = qte;
+        achatLignes[index].nouveauPrix = prix;
+        achatLignes[index].total = total;
+        var dateInput = document.querySelector(`.achat-date[data-index="${index}"]`);
+        if (dateInput) achatLignes[index].dateExpiration = dateInput.value;
+    }
+}
+
+function remplirDepuisOCR(produitsReconnus) {
+    var inputsQte = document.querySelectorAll('.achat-qte');
+    inputsQte.forEach(function(input) {
+        var idx = parseInt(input.getAttribute('data-index'));
+        var produit = produitsAchatList[idx];
+        if (!produit) return;
+        var found = produitsReconnus.find(function(p) {
+            return p.nom.toLowerCase().includes(produit.nom.toLowerCase()) || produit.nom.toLowerCase().includes(p.nom.toLowerCase());
+        });
+        if (found) {
+            input.value = found.quantite || 0;
+            var prixInput = document.querySelector(`.achat-prix[data-index="${idx}"]`);
+            if (prixInput && found.prix) {
+                prixInput.value = found.prix;
+            }
+            calculerTotalLigne(idx);
+        }
+    });
 }
 
 async function validerAchats() {
@@ -682,17 +784,22 @@ async function validerAchats() {
         alert('Veuillez choisir un fournisseur.');
         return;
     }
-    var inputs = document.querySelectorAll('.achat-stock-input');
     var misesAJour = [];
-    inputs.forEach(function(input) {
-        var qte = parseInt(input.value) || 0;
+    achatLignes.forEach(function(ligne, index) {
+        var qte = parseInt(document.querySelector(`.achat-qte[data-index="${index}"]`)?.value) || 0;
+        var prix = parseFloat(document.querySelector(`.achat-prix[data-index="${index}"]`)?.value) || 0;
+        var date = document.querySelector(`.achat-date[data-index="${index}"]`)?.value || '';
         if (qte > 0) {
-            var produitId = input.getAttribute('data-produit-id');
-            misesAJour.push({ id: produitId, quantite: qte });
+            misesAJour.push({
+                id: ligne.id,
+                quantite: qte,
+                nouveauPrix: prix,
+                dateExpiration: date
+            });
         }
     });
     if (misesAJour.length === 0) {
-        alert('Aucune quantité à ajouter.');
+        alert('Aucune quantité saisie.');
         return;
     }
     var details = '';
@@ -700,7 +807,8 @@ async function validerAchats() {
         var produit = window.allProductsData.find(p => p.id === item.id);
         var boxUnit = produit ? (produit.box_unit || 1) : 1;
         var stockToAdd = item.quantite * boxUnit;
-        details += `${produit.nom} : ${item.quantite} boîte(s) × ${boxUnit} = ${stockToAdd} pièces\n`;
+        var prixBoite = item.nouveauPrix > 0 ? item.nouveauPrix : (produit ? produit.box_price || 0 : 0);
+        details += `${produit.nom} : ${item.quantite} boîtes × ${boxUnit} = ${stockToAdd} pièces, nouveau prix boîte = ${prixBoite.toFixed(2)} MAD\n`;
     }
     if (!confirm(`Ajouter au stock ?\n\n${details}`)) return;
 
@@ -710,14 +818,25 @@ async function validerAchats() {
         var produit = window.allProductsData.find(p => p.id === item.id);
         var boxUnit = produit ? (produit.box_unit || 1) : 1;
         var stockToAdd = item.quantite * boxUnit;
-        batch.update(prodRef, {
+        var updateData = {
             stock: firebase.firestore.FieldValue.increment(stockToAdd)
-        });
+        };
+        if (item.nouveauPrix > 0) {
+            updateData.box_price = item.nouveauPrix;
+            var prixUnitaire = item.nouveauPrix / boxUnit;
+            updateData.prixAchat = prixUnitaire;
+            updateData.prixVente = prixUnitaire * 1.3; // marge 30%
+            updateData.profit = updateData.prixVente - prixUnitaire;
+        }
+        if (item.dateExpiration) {
+            updateData.dateExpiration = item.dateExpiration;
+        }
+        batch.update(prodRef, updateData);
     }
     try {
         await batch.commit();
-        alert('✅ Stock mis à jour !');
-        closeModal();
+        alert('✅ Stock et prix mis à jour !');
+        fermerAchatModal();
         if (typeof loadProducts === 'function') loadProducts();
         else if (typeof renderProductsTable === 'function') renderProductsTable();
     } catch(e) {
@@ -725,7 +844,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE DE FACTURE AVEC GOOGLE CLOUD VISION ====================
+// ==================== SCAN DE FACTURE AVEC GOOGLE CLOUD VISION ====================
 function ouvrirCameraFacture() {
     var input = document.createElement('input');
     input.type = 'file';
@@ -734,47 +853,28 @@ function ouvrirCameraFacture() {
     input.onchange = function(e) {
         var file = e.target.files[0];
         if (file) {
-            traiterFacture(file);
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var imgData = event.target.result;
+                reconnaitreFactureVision(imgData);
+            };
+            reader.readAsDataURL(file);
         }
     };
     input.click();
 }
 
-function traiterFacture(file) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        var imgData = e.target.result;
-        var container = document.getElementById('produitsAchatContainer');
-        if (container) {
-            container.innerHTML = `<div style="text-align:center;">
-                <img src="${imgData}" style="max-width:100%;max-height:300px;border-radius:8px;margin-bottom:10px;">
-                <p style="font-size:22px;color:#64748b;">🔍 Analyse avec Google Cloud Vision...</p>
-            </div>`;
-        }
-        reconnaitreFactureVision(imgData);
-    };
-    reader.readAsDataURL(file);
-}
-
 async function reconnaitreFactureVision(imgData) {
-    var container = document.getElementById('produitsAchatContainer');
     try {
-        // Vérifier la clé
         if (!VISION_API_KEY || VISION_API_KEY.length < 10) {
-            alert('❌ Clé API Vision manquante ou invalide.');
+            alert('❌ Clé API Vision manquante.');
             return;
         }
 
-        // Construire la requête Vision
         var requestBody = {
             requests: [{
-                image: {
-                    content: imgData.split(',')[1]
-                },
-                features: [{
-                    type: "TEXT_DETECTION",
-                    maxResults: 50
-                }]
+                image: { content: imgData.split(',')[1] },
+                features: [{ type: "TEXT_DETECTION", maxResults: 50 }]
             }]
         };
 
@@ -790,58 +890,42 @@ async function reconnaitreFactureVision(imgData) {
         }
 
         var data = await response.json();
-        console.log('Réponse Vision :', data);
-
-        // Vérifier les erreurs
         if (data.responses && data.responses[0] && data.responses[0].error) {
             throw new Error(data.responses[0].error.message);
         }
 
-        // Extraire le texte
         var textAnnotations = data.responses?.[0]?.textAnnotations;
         var texte = textAnnotations && textAnnotations.length > 0 ? textAnnotations[0].description : '';
-        console.log('Texte extrait :', texte);
-
         if (!texte || texte.trim().length < 5) {
-            throw new Error('Aucun texte détecté. Vérifiez la qualité de la photo.');
+            alert('Aucun texte détecté. Vérifiez la qualité de la photo.');
+            return;
         }
 
-        if (container) {
-            container.innerHTML += `<div style="white-space:pre-wrap;font-size:18px;background:#f1f5f9;padding:10px;border-radius:8px;max-height:300px;overflow:auto;margin-top:10px;">
-                <strong>📄 Texte extrait :</strong><br>${escapeHtml(texte)}
-            </div>`;
+        var produitsReconnus = parserTexteFacture(texte);
+        if (produitsReconnus.length === 0) {
+            alert('Aucun produit reconnu dans la facture.');
+            return;
         }
-
-        // Parser le texte pour trouver produits et quantités
-        var produits = parserTexteFacture(texte);
-        if (produits.length > 0) {
-            remplirQuantites(produits);
-        } else {
-            alert('⚠️ Aucun produit reconnu. Vérifiez que la facture contient des noms de produits et des quantités.');
-        }
+        remplirDepuisOCR(produitsReconnus);
+        alert(`✅ ${produitsReconnus.length} produit(s) reconnus et pré-remplis.`);
 
     } catch(e) {
-        console.error('Erreur Vision :', e);
-        if (container) {
-            container.innerHTML += `<div style="margin-top:12px;padding:12px;background:#fee2e2;border-radius:8px;color:#dc2626;font-size:18px;">
-                ❌ Erreur : ${e.message}
-            </div>`;
-        }
         alert('❌ Erreur Vision : ' + e.message);
+        console.error(e);
     }
 }
 
-// ==================== FONCTIONS DE PARSING ET REMPLISSAGE ====================
 function parserTexteFacture(texte) {
     var lignes = texte.split('\n').filter(l => l.trim().length > 3);
     var produits = [];
     for (var ligne of lignes) {
-        // Motif : nom + quantité (nombre à la fin)
-        var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*$/);
+        // Chercher un motif : nom + quantité (et éventuellement prix)
+        var match = ligne.match(/^([A-Za-z0-9\s\-\.]+?)\s+(\d+[,.]?\d*)\s*([\d,.]*)\s*$/);
         if (match) {
             var nom = match[1].trim();
             var qte = parseFloat(match[2].replace(',', '.'));
-            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
+            var prix = match[3] ? parseFloat(match[3].replace(',', '.')) : 0;
+            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte, prix: prix });
             continue;
         }
         // Alternative : colonnes séparées par plusieurs espaces
@@ -849,41 +933,25 @@ function parserTexteFacture(texte) {
         if (parts.length >= 2) {
             var nom = parts[0].trim();
             var qte = parseFloat(parts[parts.length-1].replace(',', '.'));
-            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte });
+            var prix = 0;
+            if (parts.length >= 3) {
+                var last = parts[parts.length-2];
+                if (!isNaN(parseFloat(last.replace(',', '.')))) {
+                    prix = parseFloat(last.replace(',', '.'));
+                }
+            }
+            if (nom && qte > 0) produits.push({ nom: nom, quantite: qte, prix: prix });
         }
     }
     return produits;
 }
 
-function remplirQuantites(produits) {
-    var inputs = document.querySelectorAll('.achat-stock-input');
-    var remplis = 0;
-    var correspondances = [];
-    inputs.forEach(function(input) {
-        var prodId = input.getAttribute('data-produit-id');
-        var produit = window.allProductsData.find(p => p.id === prodId);
-        if (produit) {
-            // Recherche floue : le nom extrait est comparé au nom système
-            var found = produits.find(p =>
-                p.nom.toLowerCase().includes(produit.nom.toLowerCase()) ||
-                produit.nom.toLowerCase().includes(p.nom.toLowerCase())
-            );
-            if (found) {
-                input.value = found.quantite;
-                remplis++;
-                correspondances.push(`${produit.nom} → ${found.quantite}`);
-            }
-        }
-    });
-    var message = `✅ ${produits.length} produit(s) reconnus au total.\n${remplis} pré-remplis.\n\n`;
-    if (correspondances.length > 0) message += correspondances.join('\n');
-    alert(message);
-}
-
-// Exporter les fonctions d'achat
+// ==================== EXPORTER LES FONCTIONS ====================
 window.openAchatModal = openAchatModal;
+window.fermerAchatModal = fermerAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
+window.calculerTotalLigne = calculerTotalLigne;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Mixmax Minimarket - Admin CRUD chargé (Google Cloud Vision)');
+console.log('🛒 Admin CRUD - Module achats pro chargé');
