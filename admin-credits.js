@@ -1,6 +1,7 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
 // BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
+// ✅ STATISTIQUES EN HAUT DE PAGE
 // Version FINALE
 
 // ========== VARIABLES GLOBALES ==========
@@ -41,6 +42,79 @@ function formatDateHeure(seconds) {
 
 function normalize(str) {
     return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+// ========== STATISTIQUES DES CRÉDITS ==========
+
+function renderCreditStats(data) {
+    var statsContainer = document.getElementById('creditStatsContainer');
+    if (!statsContainer) return;
+
+    // Filtrer les crédits actifs (non payés)
+    var actifs = data.filter(function(c) { return !c.paid && c.remainingAmount > 0; });
+    var payes = data.filter(function(c) { return c.paid || c.remainingAmount <= 0; });
+    var totalRestant = actifs.reduce(function(sum, c) { return sum + (c.remainingAmount || 0); }, 0);
+    var totalCredits = data.reduce(function(sum, c) { return sum + (c.total || 0); }, 0);
+    var totalPaye = data.reduce(function(sum, c) { return sum + (c.amountGiven || 0); }, 0);
+
+    // Trouver le client avec le plus de crédit
+    var clientDebts = {};
+    actifs.forEach(function(c) {
+        var name = c.clientName || 'Client inconnu';
+        if (!clientDebts[name]) clientDebts[name] = 0;
+        clientDebts[name] += (c.remainingAmount || 0);
+    });
+
+    var topClient = '';
+    var topAmount = 0;
+    for (var name in clientDebts) {
+        if (clientDebts[name] > topAmount) {
+            topAmount = clientDebts[name];
+            topClient = name;
+        }
+    }
+
+    // Calculer le nombre de crédits en retard (dueDate dépassée)
+    var now = new Date();
+    var enRetard = actifs.filter(function(c) {
+        if (!c.dueDate) return false;
+        var due = c.dueDate.toDate ? c.dueDate.toDate() : new Date(c.dueDate);
+        return due < now;
+    });
+
+    var html = `
+        <div id="creditStatsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:16px; padding:12px 16px; background:var(--gray-50); border-radius:12px; border:1px solid var(--border);">
+            <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #2563eb;">
+                <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📊 Total</div>
+                <div style="font-size:26px; font-weight:800; color:#111827;">${data.length}</div>
+            </div>
+            <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #dc2626;">
+                <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💳 Impayés</div>
+                <div style="font-size:26px; font-weight:800; color:#dc2626;">${actifs.length}</div>
+            </div>
+            <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #16a34a;">
+                <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">✅ Payés</div>
+                <div style="font-size:26px; font-weight:800; color:#16a34a;">${payes.length}</div>
+            </div>
+            <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #8b5cf6;">
+                <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💰 Restant dû</div>
+                <div style="font-size:26px; font-weight:800; color:#8b5cf6;">${totalRestant.toFixed(2)} MAD</div>
+            </div>
+            <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #f59e0b;">
+                <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">⏰ En retard</div>
+                <div style="font-size:26px; font-weight:800; color:#f59e0b;">${enRetard.length}</div>
+            </div>
+            <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #ec4899;">
+                <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">🏆 Plus gros crédit</div>
+                <div style="font-size:18px; font-weight:700; color:#111827; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(topClient)}">
+                    ${topClient ? escapeHtml(topClient) : '-'}
+                </div>
+                <div style="font-size:16px; font-weight:600; color:#8b5cf6;">${topAmount.toFixed(2)} MAD</div>
+            </div>
+        </div>
+    `;
+
+    statsContainer.innerHTML = html;
 }
 
 // ========== DÉTECTION FILTRE PÉRIODE (pour voice) ==========
@@ -224,6 +298,41 @@ function injectCreditsStyles() {
                 font-size: 18px !important;
                 padding: 6px 16px !important;
             }
+            
+            /* === STATS CARDS === */
+            #creditStatsContainer .stat-card {
+                background: #fff;
+                padding: 12px 16px;
+                border-radius: 10px;
+                border-left: 4px solid #2563eb;
+                transition: transform 0.2s;
+            }
+            
+            #creditStatsContainer .stat-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            }
+            
+            #creditStatsContainer .stat-label {
+                font-size: 13px;
+                color: #64748b;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            #creditStatsContainer .stat-value {
+                font-size: 26px;
+                font-weight: 800;
+                color: #111827;
+            }
+            
+            #creditStatsContainer .stat-value.danger { color: #dc2626; }
+            #creditStatsContainer .stat-value.success { color: #16a34a; }
+            #creditStatsContainer .stat-value.warning { color: #f59e0b; }
+            #creditStatsContainer .stat-value.info { color: #8b5cf6; }
+            #creditStatsContainer .stat-value.primary { color: #2563eb; }
+            #creditStatsContainer .stat-value.pink { color: #ec4899; }
             
             /* === CHAMP VOCAL === */
             .voice-display-field {
@@ -616,6 +725,16 @@ function injectCreditsStyles() {
                     font-size: 12px !important;
                     padding: 0 10px !important;
                 }
+                
+                #creditStatsContainer {
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+                    gap: 10px !important;
+                    padding: 10px 12px !important;
+                }
+                
+                #creditStatsContainer .stat-value {
+                    font-size: 22px !important;
+                }
             }
             
             @media(max-width:768px) {
@@ -679,6 +798,20 @@ function injectCreditsStyles() {
                 #creditsPage .action-buttons .btn-delete i,
                 #creditsPage .action-buttons .btn-add i {
                     font-size: 16px !important;
+                }
+                
+                #creditStatsContainer {
+                    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+                    gap: 8px !important;
+                    padding: 8px 10px !important;
+                }
+                
+                #creditStatsContainer .stat-value {
+                    font-size: 20px !important;
+                }
+                
+                #creditStatsContainer .stat-label {
+                    font-size: 11px !important;
                 }
             }
             
@@ -765,6 +898,24 @@ function injectCreditsStyles() {
                 #creditsPage .action-buttons .btn-add i {
                     font-size: 12px !important;
                 }
+                
+                #creditStatsContainer {
+                    grid-template-columns: repeat(3, 1fr) !important;
+                    gap: 6px !important;
+                    padding: 6px 8px !important;
+                }
+                
+                #creditStatsContainer .stat-value {
+                    font-size: 18px !important;
+                }
+                
+                #creditStatsContainer .stat-label {
+                    font-size: 10px !important;
+                }
+                
+                #creditStatsContainer .stat-card {
+                    padding: 8px 10px !important;
+                }
             }
         </style>
     `;
@@ -788,6 +939,34 @@ async function loadCreditsPage(c) {
 
     c.innerHTML = `
         <div class="content-card" id="creditsPage">
+            <!-- STATISTIQUES -->
+            <div id="creditStatsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:16px; padding:12px 16px; background:var(--gray-50); border-radius:12px; border:1px solid var(--border);">
+                <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #2563eb;">
+                    <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📊 Total</div>
+                    <div style="font-size:26px; font-weight:800; color:#111827;">0</div>
+                </div>
+                <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #dc2626;">
+                    <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💳 Impayés</div>
+                    <div style="font-size:26px; font-weight:800; color:#dc2626;">0</div>
+                </div>
+                <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #16a34a;">
+                    <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">✅ Payés</div>
+                    <div style="font-size:26px; font-weight:800; color:#16a34a;">0</div>
+                </div>
+                <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #8b5cf6;">
+                    <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💰 Restant dû</div>
+                    <div style="font-size:26px; font-weight:800; color:#8b5cf6;">0.00 MAD</div>
+                </div>
+                <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #f59e0b;">
+                    <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">⏰ En retard</div>
+                    <div style="font-size:26px; font-weight:800; color:#f59e0b;">0</div>
+                </div>
+                <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #ec4899;">
+                    <div style="font-size:13px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">🏆 Plus gros crédit</div>
+                    <div style="font-size:18px; font-weight:700; color:#111827;">-</div>
+                    <div style="font-size:16px; font-weight:600; color:#8b5cf6;">0.00 MAD</div>
+                </div>
+            </div>
             <div class="card-header">
                 <h3 style="font-size:26px !important;"><i class="fas fa-credit-card"></i> Crédits</h3>
                 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -982,6 +1161,10 @@ function applyCreditsFilters() {
     }
 
     window.filteredCredits = filtered;
+    
+    // ✅ AFFICHER LES STATISTIQUES
+    renderCreditStats(filtered);
+    
     renderCreditsTablePro();
 }
 
@@ -1447,5 +1630,6 @@ window.injectCreditsStyles = injectCreditsStyles;
 window.renderCreditFactureCell = renderCreditFactureCell;
 window.renderCreditDateCell = renderCreditDateCell;
 window.renderCreditClientCell = renderCreditClientCell;
+window.renderCreditStats = renderCreditStats;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits PRO (avec icônes corrigées) chargé ✅');
+console.log('🛒 Mixmax Minimarket - Admin Credits PRO (avec statistiques) chargé ✅');
