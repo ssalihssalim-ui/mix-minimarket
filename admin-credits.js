@@ -1,289 +1,199 @@
-// ==================== POS-AUDIO.JS v11 – COMPATIBLE AVEC ADMIN-CREDITS.JS ====================
-// Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
-// ✅ Compatible avec la nouvelle interface admin-credits.js
-// ✅ Support des IDs: periodFilter, creditsSearchInput
-// ✅ Statistiques dynamiques mises à jour
+// ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
+// Version : Design PRO - Facture/Date/Client en colonnes séparées
+// ✅ STATISTIQUES DYNAMIQUES EN HAUT DE PAGE (24px)
+// ✅ COMPATIBLE AVEC POS-AUDIO.JS
+// Version FINALE
 
-var voiceRecognition = null;
-var isRecording = false;
-var voiceMode = 'search';
-var lastAddedProductId = null;
-var voiceModeMessage = '🎤 Recherche vocale active';
-var micPermissionGranted = false;
+// ========== VARIABLES GLOBALES ==========
+window.creditsPeriod = window.creditsPeriod || 'all';
+window.creditsSearch = window.creditsSearch || '';
+window.creditSelectionMode = false;
+window.creditSelectedIds = [];
+window.allCreditsData = window.allCreditsData || [];
+window.clientsDataForSearch = window.clientsDataForSearch || [];
 
-// ========== INDEX CLIENT ==========
-var clientSearchIndex = {};
-var clientIndexBuilt = false;
+// ========== FONCTIONS UTILITAIRES ==========
 
-// ========== INDEX PRODUIT (RAPIDE) – POUR POS ==========
-var productNameIndex = {};
-var productIndexBuilt = false;
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
 
-// ========== PAYMENT STATE MACHINE ==========
-window.voicePaymentState = 0;
+// Format date + heure en français
+function formatDateHeure(seconds) {
+    if (!seconds) return { date: '-', time: '-', full: '-' };
+    const d = new Date(seconds * 1000);
+    const date = d.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    const time = d.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    return { date, time, full: date + ' ' + time };
+}
 
-var paymentKeywords = {
-    'espece': ['espèces', 'espece', 'argent', 'cash', 'comptant', 'liquide', 'espèce'],
-    'credit': ['crédit', 'credit', 'à crédit', 'acredit', 'dette', 'avance', 'crédit'],
-    'partiel': ['partiel', 'partielle', 'acompte', 'moitié', 'partial', 'part', 'partiel']
-};
+function normalize(str) {
+    return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
 
-var numberMap = {
-    'wahed': 1, 'ouais': 1, 'wad': 1, 'un': 1, 'une': 1,
-    'juge': 2, 'joue': 2, 'george': 2, 'souche': 2, 'deux': 2,
-    'claud': 3, 'cl': 3, 'trois': 3, 'clé': 3, 'clea': 3, 'play': 3,
-    'rabah': 4, 'quatre': 4, 'arba': 4, 'abba': 4, 'rabat': 4, 'rabats': 4, 'alba': 4,
-    'cinq': 5, 'hamza': 5, 'rama': 5, 'comme ça': 5,
-    'six': 6, 'sept': 7, 'huit': 8, 'neuf': 9, 'dix': 10,
-    'onze': 11, 'douze': 12, 'douz': 12, 'treize': 13, 'quatorze': 14,
-    'quinze': 15, 'seize': 16, 'vingt': 20, 'trente': 30, 'quarante': 40,
-    'cinquante': 50, 'soixante': 60, 'cent': 100
-};
-
-// ========== FONCTIONS D'AFFICHAGE VOCAL ==========
-
-function ensureVoiceDisplay() {
-    if (!document.getElementById('voiceDisplay')) {
-        var div = document.createElement('div');
-        div.id = 'voiceDisplay';
-        div.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 24px; border-radius:40px; z-index:9999; font-weight:600; display:none; white-space:nowrap; font-size:20px;';
-        document.body.appendChild(div);
+// ========== STATISTIQUES DYNAMIQUES ==========
+function renderCreditStats(data, searchQuery, period) {
+    var statsContainer = document.getElementById('creditStatsContainer');
+    if (!statsContainer) {
+        statsContainer = document.createElement('div');
+        statsContainer.id = 'creditStatsContainer';
+        statsContainer.style.cssText = 'display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:16px; padding:12px 16px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;';
+        
+        var page = document.getElementById('creditsPage');
+        if (page) {
+            page.insertBefore(statsContainer, page.firstChild);
+        } else {
+            var container = document.getElementById('creditsTableContainer');
+            if (container) container.parentNode.insertBefore(statsContainer, container);
+        }
     }
-}
 
-function showVoiceResult(msg) {
-    ensureVoiceDisplay();
-    var el = document.getElementById('voiceDisplay');
-    el.textContent = msg;
-    el.style.display = 'block';
-    clearTimeout(window._voiceTimeout);
-    window._voiceTimeout = setTimeout(function() {
-        el.style.display = 'none';
-    }, 2500);
-}
+    // Filtrer les données selon la recherche et la période
+    var filteredData = filterDataForStats(data, searchQuery, period);
 
-function showVoiceModeIndicator() {
-    var mb = document.getElementById('posMicBtn');
-    if (mb && isRecording) {
-        mb.style.background = '#fee2e2';
-        mb.style.borderColor = '#ef4444';
+    if (!filteredData || filteredData.length === 0) {
+        statsContainer.innerHTML = `
+            <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #94a3b8; grid-column:1/-1; text-align:center; color:#94a3b8; font-size:24px;">
+                <i class="fas fa-inbox" style="font-size:32px; display:block; margin-bottom:8px;"></i>
+                Aucune donnée correspondante
+                ${searchQuery ? `<br><span style="font-size:18px;">Recherche: "${escapeHtml(searchQuery)}"</span>` : ''}
+                ${period && period !== 'all' ? `<br><span style="font-size:18px;">Période: ${getPeriodLabel(period)}</span>` : ''}
+            </div>
+        `;
+        return;
     }
+
+    var actifs = filteredData.filter(function(c) { return !c.paid && (c.remainingAmount || 0) > 0; });
+    var payes = filteredData.filter(function(c) { return c.paid || (c.remainingAmount || 0) <= 0; });
+    var totalRestant = actifs.reduce(function(sum, c) { return sum + (c.remainingAmount || 0); }, 0);
+    var totalCredits = filteredData.reduce(function(sum, c) { return sum + (c.total || 0); }, 0);
+
+    var clientDebts = {};
+    actifs.forEach(function(c) {
+        var name = c.clientName || 'Client inconnu';
+        if (!clientDebts[name]) clientDebts[name] = 0;
+        clientDebts[name] += (c.remainingAmount || 0);
+    });
+    var topClient = '';
+    var topAmount = 0;
+    for (var name in clientDebts) {
+        if (clientDebts[name] > topAmount) {
+            topAmount = clientDebts[name];
+            topClient = name;
+        }
+    }
+
+    var now = new Date();
+    var enRetard = actifs.filter(function(c) {
+        if (!c.dueDate) return false;
+        var due = c.dueDate.toDate ? c.dueDate.toDate() : new Date(c.dueDate);
+        return due < now;
+    });
+
+    statsContainer.innerHTML = `
+        <div style="background:#fff; padding:14px 18px; border-radius:10px; border-left:4px solid #2563eb; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📊 Total</div>
+            <div style="font-size:38px !important; font-weight:800; color:#111827;">${filteredData.length}</div>
+            ${searchQuery ? `<div style="font-size:14px;color:#94a3b8;margin-top:2px;">filtre: "${escapeHtml(searchQuery)}"</div>` : ''}
+        </div>
+        <div style="background:#fff; padding:14px 18px; border-radius:10px; border-left:4px solid #dc2626; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💳 Impayés</div>
+            <div style="font-size:38px !important; font-weight:800; color:#dc2626;">${actifs.length}</div>
+            ${filteredData.length > 0 ? `<div style="font-size:14px;color:#94a3b8;margin-top:2px;">${((actifs.length / filteredData.length) * 100).toFixed(0)}%</div>` : ''}
+        </div>
+        <div style="background:#fff; padding:14px 18px; border-radius:10px; border-left:4px solid #16a34a; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">✅ Payés</div>
+            <div style="font-size:38px !important; font-weight:800; color:#16a34a;">${payes.length}</div>
+            ${filteredData.length > 0 ? `<div style="font-size:14px;color:#94a3b8;margin-top:2px;">${((payes.length / filteredData.length) * 100).toFixed(0)}%</div>` : ''}
+        </div>
+        <div style="background:#fff; padding:14px 18px; border-radius:10px; border-left:4px solid #8b5cf6; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💰 Restant dû</div>
+            <div style="font-size:38px !important; font-weight:800; color:#8b5cf6;">${totalRestant.toFixed(2)} MAD</div>
+            ${actifs.length > 0 ? `<div style="font-size:14px;color:#94a3b8;margin-top:2px;">moyenne: ${(totalRestant / actifs.length).toFixed(2)} MAD</div>` : ''}
+        </div>
+        <div style="background:#fff; padding:14px 18px; border-radius:10px; border-left:4px solid #f59e0b; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">⏰ En retard</div>
+            <div style="font-size:38px !important; font-weight:800; color:#f59e0b;">${enRetard.length}</div>
+            ${enRetard.length > 0 ? `<div style="font-size:14px;color:#ef4444;margin-top:2px;">⚠️ à régler</div>` : '<div style="font-size:14px;color:#16a34a;margin-top:2px;">✅ tout est bon</div>'}
+        </div>
+        <div style="background:#fff; padding:14px 18px; border-radius:10px; border-left:4px solid #ec4899; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">🏆 Plus gros crédit</div>
+            <div style="font-size:22px; font-weight:700; color:#111827; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(topClient)}">
+                ${topClient ? escapeHtml(topClient) : '-'}
+            </div>
+            <div style="font-size:26px; font-weight:700; color:#8b5cf6;">${topAmount.toFixed(2)} MAD</div>
+            ${topClient ? `<div style="font-size:12px;color:#94a3b8;margin-top:2px;">sur ${actifs.length} débiteur${actifs.length > 1 ? 's' : ''}</div>` : ''}
+        </div>
+    `;
 }
 
-function hideVoiceFlowIndicator() {}
-
-function showVoiceFlowIndicator(phase) {
+function getPeriodLabel(period) {
     var labels = {
-        'product': 'Dites le nom du produit',
-        'quantity': 'Dites la quantité',
-        'payment_mode': 'Mode de paiement ?',
-        'payment_amount': 'Montant donné ?'
+        'today': "Aujourd'hui",
+        'week': 'Cette semaine',
+        'month': 'Ce mois',
+        'year': 'Cette année',
+        'all': 'Toutes'
     };
-    if (labels[phase]) showVoiceResult(labels[phase]);
+    return labels[period] || period;
 }
 
-function showProcessingIndicator() {}
+function filterDataForStats(data, searchQuery, period) {
+    if (!data || data.length === 0) return [];
 
-// ========== UTILITAIRES ==========
-function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
-function isIOSStandalone() { return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream && (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches); }
-function checkVoiceSupport() { var i = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (i && isIOSStandalone()) return { supported: false, reason: 'Ouvrez dans Safari' }; if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return { supported: false, reason: 'Non supporté' }; return { supported: true }; }
-async function requestMicrophonePermission() { if (micPermissionGranted) return true; try { if (!navigator.mediaDevices?.getUserMedia) return false; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach(t => t.stop()); micPermissionGranted = true; return true; } catch (e) { return false; } }
+    var filtered = data.slice();
 
-// ========== CONSTRUCTION INDEX CLIENT ==========
-function buildClientIndex() {
-    if (clientIndexBuilt || !window.posAllClients?.length) return;
-    clientSearchIndex = {};
-    window.posAllClients.forEach(c => {
-        if (!c?.id) return;
-        const allText = (c.nom + ' ' + c.prenom + ' ' + c.telephone + ' ' + (c.description || '')).toLowerCase();
-        allText.split(/[\s,;.]+/).forEach(mot => {
-            mot = mot.trim();
-            if (mot.length >= 1) {
-                if (!clientSearchIndex[mot]) clientSearchIndex[mot] = [];
-                if (!clientSearchIndex[mot].includes(c)) clientSearchIndex[mot].push(c);
+    if (period && period !== 'all') {
+        var now = new Date();
+        filtered = filtered.filter(function(c) {
+            if (!c.createdAt) return false;
+            var date = c.createdAt.toDate ? c.createdAt.toDate() : new Date(c.createdAt);
+
+            if (period === 'today') {
+                return date.toDateString() === now.toDateString();
+            } else if (period === 'week') {
+                var weekAgo = new Date(now);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                return date >= weekAgo;
+            } else if (period === 'month') {
+                return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+            } else if (period === 'year') {
+                return date.getFullYear() === now.getFullYear();
             }
+            return true;
         });
-        const fullName = (c.nom + ' ' + c.prenom).toLowerCase().trim();
-        if (fullName.length >= 2) {
-            if (!clientSearchIndex[fullName]) clientSearchIndex[fullName] = [];
-            if (!clientSearchIndex[fullName].includes(c)) clientSearchIndex[fullName].push(c);
-        }
-        if (c.description) {
-            const descWords = c.description.toLowerCase().trim().split(/[\s,;.]+/);
-            descWords.forEach(mot => {
-                mot = mot.trim();
-                if (mot.length >= 2) {
-                    if (!clientSearchIndex[mot]) clientSearchIndex[mot] = [];
-                    if (!clientSearchIndex[mot].includes(c)) clientSearchIndex[mot].push(c);
-                }
-            });
-        }
-    });
-    clientIndexBuilt = true;
-}
-
-function fastFindClient(query) {
-    buildClientIndex();
-    const q = (query || '').toLowerCase().trim();
-    if (!q) return window.posAllClients?.slice() || [];
-    const normalized = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const mots = normalized.split(/[\s,;.]+/);
-    const seen = {}, results = [];
-    mots.forEach(mot => {
-        mot = mot.trim();
-        if (!mot) return;
-        (clientSearchIndex[mot] || []).forEach(c => { if (!seen[c.id]) { seen[c.id] = true; results.push(c); } });
-    });
-    if (results.length === 0 && window.posAllClients) {
-        results.push(...window.posAllClients.filter(c => {
-            const nom = (c.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const prenom = (c.prenom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const desc = (c.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const tel = (c.telephone || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return nom.includes(normalized) || prenom.includes(normalized) || desc.includes(normalized) || tel.includes(normalized);
-        }));
-    }
-    return results;
-}
-
-function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
-
-// ========== INDEX PRODUIT ==========
-function buildProductIndex() {
-    if (productIndexBuilt || !window.posProductsList?.length) return;
-    productNameIndex = {};
-    window.posProductsList.forEach(function(p) {
-        if (!p.nom) return;
-        var nomNormalized = p.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        var mots = nomNormalized.split(/[\s,;.]+/);
-        mots.forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 2) return;
-            if (!productNameIndex[mot]) productNameIndex[mot] = [];
-            if (!productNameIndex[mot].includes(p)) productNameIndex[mot].push(p);
-        });
-        var descNormalized = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        descNormalized.split(/[\s,;.]+/).forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 2) return;
-            if (!productNameIndex[mot]) productNameIndex[mot] = [];
-            if (!productNameIndex[mot].includes(p)) productNameIndex[mot].push(p);
-        });
-    });
-    productIndexBuilt = true;
-}
-
-function fastFindProduct(query) {
-    buildProductIndex();
-    if (!query) return [];
-    var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    var mots = cleaned.split(/[\s,;.]+/);
-    if (mots.length === 0) return [];
-
-    var firstWord = mots[0];
-    var searchTerm = firstWord;
-    if (mots.length >= 2) {
-        searchTerm = firstWord + ' ' + mots[1];
     }
 
-    var candidates = productNameIndex[firstWord] || [];
-    if (candidates.length === 0) return [];
-
-    var filtered = candidates.filter(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom.indexOf(searchTerm) !== -1;
-    });
-
-    if (filtered.length === 0) {
-        return [candidates[0]];
+    if (searchQuery && searchQuery.trim() !== '') {
+        filtered = filterCreditsBySearchWithDescription(filtered, searchQuery);
     }
 
-    if (filtered.length === 1) return filtered;
-
-    var exact = filtered.find(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom === searchTerm;
-    });
-    if (exact) return [exact];
-
-    filtered.sort(function(a, b) { return (a.nom||'').length - (b.nom||'').length; });
-    return [filtered[0]];
+    return filtered;
 }
 
-// ========== INDEX PRODUIT ADMIN ==========
-function buildProductAdminIndex() {
-    if (window.productAdminIndexBuilt) return;
-    window.productAdminIndex = {};
-    var products = window.allProductsData || window.posProductsList || [];
-    products.forEach(function(p) {
-        if (!p.nom) return;
-        var nomNormalized = p.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        var mots = nomNormalized.split(/[\s,;.]+/);
-        mots.forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 2) return;
-            if (!window.productAdminIndex[mot]) window.productAdminIndex[mot] = [];
-            if (!window.productAdminIndex[mot].includes(p)) window.productAdminIndex[mot].push(p);
-        });
-        var descNormalized = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        descNormalized.split(/[\s,;.]+/).forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 2) return;
-            if (!window.productAdminIndex[mot]) window.productAdminIndex[mot] = [];
-            if (!window.productAdminIndex[mot].includes(p)) window.productAdminIndex[mot].push(p);
-        });
-    });
-    window.productAdminIndexBuilt = true;
-}
-
-function fastFindProductAdmin(query) {
-    buildProductAdminIndex();
-    if (!query) return [];
-    var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    var mots = cleaned.split(/[\s,;.]+/);
-    if (mots.length === 0) return [];
-
-    var firstWord = mots[0];
-    var searchTerm = firstWord;
-    if (mots.length >= 2) {
-        searchTerm = firstWord + ' ' + mots[1];
-    }
-
-    var candidates = window.productAdminIndex[firstWord] || [];
-    if (candidates.length === 0) return [];
-
-    var filtered = candidates.filter(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom.indexOf(searchTerm) !== -1;
-    });
-
-    if (filtered.length === 0) {
-        return [candidates[0]];
-    }
-
-    if (filtered.length === 1) return filtered;
-
-    var exact = filtered.find(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom === searchTerm;
-    });
-    if (exact) return [exact];
-
-    filtered.sort(function(a, b) { return (a.nom||'').length - (b.nom||'').length; });
-    return [filtered[0]];
-}
-
-// ========== DÉTECTION PÉRIODE (pour credits) ==========
-function detectPeriodFilter(transcript) {
-    var cleaned = transcript.toLowerCase().trim();
-    if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today") || cleaned.includes("ajourdhui")) {
+// ========== DÉTECTION FILTRE PÉRIODE (pour voice) ==========
+function detectPeriodFilterCredits(text) {
+    var cleaned = text.toLowerCase().trim();
+    if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today") || cleaned.includes("ajourdhui") || cleaned.includes("aujourd")) {
         return 'today';
     }
     if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours") || cleaned.includes("ce mois ci") || cleaned.includes("mois")) {
         return 'month';
     }
-    if (cleaned.includes("cette semaine") || cleaned.includes("cettesemaine") || cleaned.includes("semaine") || cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours") || cleaned.includes("semaine")) {
+    if (cleaned.includes("cette semaine") || cleaned.includes("cettesemaine") || cleaned.includes("semaine") || cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours")) {
         return 'week';
     }
     if (cleaned.includes("cette année") || cleaned.includes("cetteannee") || cleaned.includes("cette annee") || cleaned.includes("annee") || cleaned.includes("année") || cleaned.includes("1 an") || cleaned.includes("1an")) {
@@ -295,656 +205,1410 @@ function detectPeriodFilter(transcript) {
     return null;
 }
 
-// ========== COMMANDES ==========
-function extractNumberFromTranscript(transcript) {
-    const cleaned = transcript.toLowerCase().trim();
-    const digits = cleaned.match(/\b\d+\b/);
-    if (digits) return parseInt(digits[0]);
-    for (const word in numberMap) {
-        if (cleaned.includes(word)) return numberMap[word];
+// ========== CHARGER LES CLIENTS POUR LA RECHERCHE ==========
+async function loadClientsForSearchCredits() {
+    try {
+        const snapshot = await db.collection('clients').limit(2000).get();
+        window.clientsDataForSearch = [];
+        snapshot.forEach(doc => {
+            var d = doc.data();
+            d.id = doc.id;
+            window.clientsDataForSearch.push(d);
+        });
+        console.log('📋 Clients chargés pour recherche description (Crédits):', window.clientsDataForSearch.length);
+    } catch(e) {
+        console.warn('Erreur chargement clients pour recherche:', e);
+        window.clientsDataForSearch = [];
     }
-    return null;
 }
 
-function parseVoiceCommand(transcript) {
-    var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    var currentPage = document.getElementById('pageTitle')?.textContent || '';
-    var posStep = window.posStep || 1;
+// ========== FONCTION DE RECHERCHE AVEC DESCRIPTION ==========
+function filterCreditsBySearchWithDescription(data, query) {
+    if (!query || query.trim() === '') return data;
 
-    // ⚡ NAVIGATION
-    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises')) {
-        return { type: 'navigate', page: 'credits' };
-    }
-    if (cleaned.includes('ventes') || cleaned.includes('vente') || cleaned.includes('historique ventes') || cleaned.includes('recettes')) {
-        return { type: 'navigate', page: 'ventes' };
-    }
-    if (cleaned.includes('dashboard') || cleaned.includes('accueil') || cleaned.includes('home') || cleaned.includes('sommaire') || cleaned.includes('tableau de bord')) {
-        return { type: 'navigate', page: 'dashboard' };
-    }
-    if (cleaned.includes('produits') || cleaned.includes('catalogue') || cleaned.includes('liste des produits')) {
-        return { type: 'navigate', page: 'products' };
-    }
-    if (cleaned.includes('clients') || cleaned.includes('clientèle')) {
-        return { type: 'navigate', page: 'clients' };
-    }
-    if (cleaned.includes('point de vente') || cleaned.includes('pos') || cleaned.includes('caisse') || cleaned.includes('encaissement')) {
-        return { type: 'navigate', page: 'pos' };
-    }
-    if (cleaned.includes('dépenses') || cleaned.includes('depenses')) {
-        return { type: 'navigate', page: 'depenses' };
-    }
-    if (cleaned.includes('statistiques') || cleaned.includes('stats')) {
-        return { type: 'navigate', page: 'statistiques' };
-    }
+    var q = query.toLowerCase().trim();
+    var results = [];
+    var clientsMap = {};
 
-    // Période
-    var period = detectPeriodFilter(cleaned);
-    if (period !== null) {
-        return { type: 'period_filter', period: period };
-    }
+    window.clientsDataForSearch.forEach(function(c) {
+        clientsMap[c.id] = c;
+    });
 
-    // MODE QUANTITÉ
-    if (voiceMode === 'quantity') {
-        var num = extractNumberFromTranscript(cleaned);
-        if (num !== null && num > 0) return { type: 'number', value: num };
-        return { type: 'ignore' };
-    }
+    data.forEach(function(credit) {
+        var match = false;
+        var clientInfo = null;
 
-    // === ÉTAPE 2 : MODE PAIEMENT ===
-    if ((posStep === 2 || voiceMode === 'payment') && (currentPage === 'POS' || currentPage === 'Dashboard')) {
-        switch (window.voicePaymentState) {
-            case 0:
-                if (window.posAllClients) {
-                    var clients = fastFindClient(cleaned);
-                    if (clients.length === 1) {
-                        return { type: 'client', client: clients[0] };
-                    }
-                    if (clients.length > 1) {
-                        var best = clients.find(function(c) { 
-                            return (c.nom + ' ' + c.prenom).toLowerCase().indexOf(cleaned) !== -1; 
-                        }) || clients[0];
-                        return { type: 'client', client: best };
-                    }
-                }
-                var pm0 = detectPaymentMode(cleaned);
-                if (pm0) return { type: 'payment_mode', mode: pm0 };
-                return { type: 'ignore' };
-            case 1:
-                var pm = detectPaymentMode(cleaned);
-                if (pm) return { type: 'payment_mode', mode: pm };
-                return { type: 'ignore' };
-            case 2:
-                var n = extractNumberFromTranscript(cleaned);
-                if (n !== null && n > 0) return { type: 'number', value: n };
-                if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || 
-                    cleaned.includes('confirmer') || cleaned.includes('ok') || cleaned.includes('finaliser')) {
-                    return { type: 'validate' };
-                }
-                return { type: 'ignore' };
+        if (credit.clientName && credit.clientName.toLowerCase().indexOf(q) !== -1) {
+            match = true;
         }
-    }
 
-    // === ÉTAPE 1 : RECHERCHE PRODUIT (POS) ===
-    if (voiceMode === 'search' || posStep === 1) {
-        if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 1) {
-            var products = window.posProductsList || [];
-            if (products.length) {
-                var best = fastFindProduct(cleaned)[0];
-                if (best) return { type: 'search_product', product: best, page: 'pos' };
+        if (!match && credit.items) {
+            for (var i = 0; i < credit.items.length; i++) {
+                if (credit.items[i].nom && credit.items[i].nom.toLowerCase().indexOf(q) !== -1) {
+                    match = true;
+                    break;
+                }
             }
-            if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) {
-                return { type: 'next' };
-            }
-            if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || 
-                cleaned.includes('confirmer') || cleaned.includes('ok')) {
-                return { type: 'validate' };
-            }
-            if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
-            if (cleaned.includes('efface') || cleaned.includes('vider')) return { type: 'clear' };
-            if (cleaned.includes('termine') || cleaned.includes('terminer') || cleaned.includes('fin')) return { type: 'finalize' };
         }
-        else if (currentPage === 'Produits') {
-            var bestAdmin = fastFindProductAdmin(cleaned)[0];
-            if (bestAdmin) return { type: 'search_product', product: bestAdmin, page: 'products' };
+
+        if (!match && credit.clientId && clientsMap[credit.clientId]) {
+            var client = clientsMap[credit.clientId];
+            var description = client.description || '';
+            if (description.toLowerCase().indexOf(q) !== -1) {
+                match = true;
+                clientInfo = client;
+            }
         }
-    }
 
-    return { type: 'ignore' };
-}
-
-function detectPaymentMode(transcript) {
-    var t = transcript.toLowerCase().trim();
-    for (var mode in paymentKeywords) {
-        if (paymentKeywords[mode].some(function(kw) { return t.indexOf(kw) !== -1; })) return mode;
-    }
-    return null;
-}
-
-// ========== HANDLE COMMAND ==========
-function handleVoiceCommand(cmd) {
-    var cp = document.getElementById('pageTitle')?.textContent || '';
-    switch (cmd.type) {
-        case 'period_filter':
-            var period = cmd.period;
-            var periodLabels = {
-                'today': "Aujourd'hui",
-                'week': "Cette semaine",
-                'month': "Ce mois",
-                'year': "Cette année",
-                'all': "Tout"
-            };
-
-            // 🔥 NOUVEAU: Support pour admin-credits.js avec les bons IDs
-            if (cp === 'Crédits' || cp === 'Gestion des Crédits') {
-                var periodSelect = document.getElementById('periodFilter');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.creditsPeriod = period;
-                    window.currentPages.credits = 1;
-                    
-                    // Appliquer les filtres
-                    if (typeof applyCreditsFilters === 'function') {
-                        applyCreditsFilters();
-                    } else if (window.allCreditsData && window.allCreditsData.length > 0) {
-                        // Recharger les données si nécessaire
-                        if (typeof loadCreditsData === 'function') {
-                            loadCreditsData();
-                        }
+        if (!match && credit.clientName && !credit.clientId) {
+            for (var id in clientsMap) {
+                var c = clientsMap[id];
+                var fullName = (c.nom || '') + ' ' + (c.prenom || '');
+                if (fullName.trim().toLowerCase() === credit.clientName.toLowerCase()) {
+                    var desc = c.description || '';
+                    if (desc.toLowerCase().indexOf(q) !== -1) {
+                        match = true;
+                        clientInfo = c;
+                        break;
                     }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Ventes') {
-                var periodSelect = document.getElementById('ventesPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.ventesPeriod = period;
-                    window.currentPages.ventes = 1;
-                    if (window.allVentesData.length === 0) {
-                        if (typeof loadVentes === 'function') loadVentes();
-                    } else {
-                        if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                    }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Dépenses') {
-                var periodSelect = document.getElementById('globalPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    globalPeriod = period;
-                    if (typeof loadDepenses === 'function') loadDepenses();
-                    if (typeof loadPersonnel === 'function') loadPersonnel();
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'POS' || cp === 'Dashboard') {
-                // Naviguer vers crédits avec le filtre
-                if (typeof navigateTo === 'function') {
-                    navigateTo('credits');
-                    setTimeout(function() {
-                        var periodSelect = document.getElementById('periodFilter');
-                        if (periodSelect) {
-                            periodSelect.value = period;
-                            window.creditsPeriod = period;
-                            window.currentPages.credits = 1;
-                            if (typeof applyCreditsFilters === 'function') {
-                                applyCreditsFilters();
-                            }
-                            showVoiceResult('📅 ' + (periodLabels[period] || period));
-                        }
-                    }, 500);
                 }
             }
-            hideVoiceFlowIndicator();
-            break;
+        }
 
-        case 'search_product':
-            if (cmd.page === 'products' || cp === 'Produits') {
-                var adminInput = document.getElementById('productSearchInput');
-                if (adminInput && cmd.product) {
-                    adminInput.value = cmd.product.nom;
-                    window.productSearchQuery = cmd.product.nom.toLowerCase().trim();
-                    if (typeof renderProductsTable === 'function') renderProductsTable();
-                    showVoiceResult('🔍 ' + cmd.product.nom + ' – filtré');
-                }
+        if (match) {
+            if (clientInfo) {
+                credit._clientDisplayName = (clientInfo.nom || '') + ' ' + (clientInfo.prenom || '');
+            } else if (credit.clientId && clientsMap[credit.clientId]) {
+                var c = clientsMap[credit.clientId];
+                credit._clientDisplayName = (c.nom || '') + ' ' + (c.prenom || '');
             } else {
-                var searchInput = document.getElementById('posSearchInput');
-                if (searchInput && cmd.product) {
-                    searchInput.value = cmd.product.nom;
-                    if (cmd.product.categorie && typeof window.posFilterCategory === 'function') {
-                        window.posFilterCategory(cmd.product.categorie);
-                    }
-                    setTimeout(function() {
-                        var cards = document.querySelectorAll('.pos-product-card');
-                        for (var i = 0; i < cards.length; i++) {
-                            var card = cards[i];
-                            var nameEl = card.querySelector('.pos-product-name');
-                            if (nameEl && nameEl.textContent.trim().toLowerCase() === cmd.product.nom.toLowerCase()) {
-                                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                card.style.boxShadow = '0 0 0 3px #14B8A6';
-                                setTimeout(function() { card.style.boxShadow = ''; }, 1500);
-                                break;
-                            }
-                        }
-                    }, 300);
-                    showVoiceResult('🔍 ' + cmd.product.nom);
-                }
+                credit._clientDisplayName = credit.clientName || credit.table || 'Client inconnu';
             }
-            hideVoiceFlowIndicator();
-            break;
-            
-        case 'number':
-            if (voiceMode === 'quantity' && lastAddedProductId) {
-                var qty = cmd.value, it = window.posCart?.find(function(x) { return x.id === lastAddedProductId; });
-                if (it) {
-                    var p = window.posProductsList?.find(function(x) { return x.id === lastAddedProductId; });
-                    if (p && p.stock !== undefined && qty > p.stock) { showVoiceResult('⚠️ Stock max: ' + p.stock); return; }
-                    it.quantite = qty; lastAddedProductId = null;
-                    setVoiceMode('search', '🎤 Recherche vocale active', null);
-                    if (typeof window.updateCartOnly === 'function') window.updateCartOnly();
-                    showVoiceResult('✅ Qté: ' + qty);
-                }
-            } else if (voiceMode === 'payment' && window.voicePaymentState === 2) {
-                window.posAmountGiven = cmd.value;
-                var ce = document.getElementById('posChangeDisplay');
-                if (ce) {
-                    var st = typeof window.posCalculateTotal === 'function' ? window.posCalculateTotal() : 0;
-                    var t = st - (window.posDiscountMAD || 0);
-                    var c = window.posAmountGiven - t;
-                    ce.innerHTML = c >= 0 ? '<div class="pos-change-positive"><span>Rendu</span><span>' + c.toFixed(2) + ' MAD</span></div>' : '<div class="pos-change-negative"><span>Manquant</span><span>' + Math.abs(c).toFixed(2) + ' MAD</span></div>';
-                }
-                var ai = document.getElementById('posAmountGiven');
-                if (ai) ai.value = window.posAmountGiven;
-                showVoiceResult('💰 ' + window.posAmountGiven.toFixed(2) + ' MAD');
-            }
-            hideVoiceFlowIndicator();
-            break;
-        
-        // ✅ CLIENT TROUVÉ PAR AUDIO
-        case 'client':
-            window.posCurrentClient = { id: cmd.client.id, name: cmd.client.nom + ' ' + cmd.client.prenom };
-            window.posCurrentTable = '';
-            
-            var ci = document.getElementById('posClientSearchInput');
-            if (ci) {
-                ci.value = window.posCurrentClient.name;
-                var evt = new Event('input', { bubbles: true });
-                ci.dispatchEvent(evt);
-            }
-            
-            if (typeof window.updateClientCreditDisplay === 'function') {
-                window.updateClientCreditDisplay(cmd.client.id);
-            }
-            
-            if (typeof window.updatePaymentButtons === 'function') {
-                window.updatePaymentButtons();
-            }
-            
-            var creditDisplay = document.getElementById('clientCreditDisplay');
-            if (creditDisplay) {
-                try {
-                    if (typeof window.loadClientCredits === 'function') {
-                        window.loadClientCredits(cmd.client.id).then(function(amount) {
-                            if (amount > 0) {
-                                creditDisplay.textContent = '💳 Crédit: ' + amount.toFixed(2) + ' MAD';
-                                creditDisplay.style.color = '#ef4444';
-                                creditDisplay.style.fontWeight = '700';
-                            } else {
-                                creditDisplay.textContent = '✅ Aucun crédit';
-                                creditDisplay.style.color = '#16a34a';
-                                creditDisplay.style.fontWeight = '600';
-                            }
-                            creditDisplay.style.display = 'block';
-                        });
-                    }
-                } catch(e) {
-                    console.warn('Erreur affichage crédit:', e);
-                }
-            }
-            
-            window.voicePaymentState = 1;
-            showVoiceResult('👤 ' + window.posCurrentClient.name);
-            hideVoiceFlowIndicator();
-            
-            setTimeout(function() {
-                if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
-                    window.posGoToStep2();
-                }
-                if (typeof window.renderPOS === 'function') {
-                    setTimeout(function() { window.renderPOS(); }, 100);
-                }
-                setTimeout(function() { 
-                    showVoiceFlowIndicator('payment_mode'); 
-                }, 300);
-            }, 400);
-            break;
-            
-        case 'payment_mode':
-            if (typeof window.posSetPaymentMethod === 'function') {
-                window.posSetPaymentMethod(cmd.mode);
-                window.voicePaymentState = 2;
-                showVoiceResult('💳 ' + cmd.mode);
-                if (cmd.mode === 'espece') {
-                    setTimeout(function() { var ai = document.getElementById('posAmountGiven'); if (ai) ai.focus(); }, 200);
-                }
-            }
-            hideVoiceFlowIndicator();
-            setTimeout(function() { showVoiceFlowIndicator('payment_amount'); }, 100);
-            break;
-            
-        case 'validate': case 'finalize':
-            if (window.posStep === 2 && typeof window.posFinalizeSale === 'function') {
-                window.posFinalizeSale();
-                hideVoiceFlowIndicator();
-            } else if (window.posCart?.length > 0 && window.posStep === 1) {
-                window.posGoToStep2();
-                hideVoiceFlowIndicator();
-            }
-            break;
-            
-        case 'clear':
-            if (typeof window.posResetCart === 'function') { window.posResetCart(); showVoiceResult('🗑️ Panier vidé'); }
-            hideVoiceFlowIndicator();
-            break;
-            
-        case 'next':
-            if (window.posCart?.length > 0 && window.posStep === 1) window.posGoToStep2();
-            hideVoiceFlowIndicator();
-            break;
-            
-        case 'cancel':
-            setVoiceMode('search', '🎤 Recherche vocale active', null);
-            showVoiceResult('↩️ Recherche');
-            if (typeof window.renderPOS === 'function') window.renderPOS();
-            hideVoiceFlowIndicator();
-            break;
-            
-        case 'navigate':
-            var pages = { 
-                'credits': 'Crédits', 
-                'ventes': 'Ventes', 
-                'dashboard': 'Dashboard', 
-                'products': 'Produits', 
-                'clients': 'Clients', 
-                'pos': 'POS',
-                'depenses': 'Dépenses',
-                'statistiques': 'Statistiques'
-            };
-            if (cp === pages[cmd.page]) { 
-                showVoiceResult('✅ ' + pages[cmd.page]); 
-            } else {
-                if (typeof navigateTo === 'function') {
-                    navigateTo(cmd.page);
-                    showVoiceResult('📍 ' + pages[cmd.page]);
-                }
-            }
-            hideVoiceFlowIndicator();
-            break;
-            
-        default:
-            if (cmd.text && typeof window.posSearchProducts === 'function') window.posSearchProducts(cmd.text);
+            results.push(credit);
+        }
+    });
+
+    return results;
+}
+
+// Génère l'affichage Facture (colonne séparée)
+function renderCreditFactureCell(credit) {
+    const factureNum = credit.factureNum || credit.id?.substring(0, 8) || '---';
+    return `
+        <div class="facture-cell">
+            <i class="fas fa-file-invoice"></i>
+            <span class="facture-number">#${factureNum}</span>
+        </div>
+    `;
+}
+
+// Génère l'affichage Date/Heure (colonne séparée)
+function renderCreditDateCell(credit) {
+    const dt = credit.createdAt ? formatDateHeure(credit.createdAt.seconds) : { date: '-', time: '-', full: '-' };
+    return `
+        <div class="date-cell">
+            <div class="date-line">
+                <i class="far fa-calendar-alt"></i>
+                <span>${dt.date}</span>
+            </div>
+            <div class="time-line">
+                <i class="far fa-clock"></i>
+                <span>${dt.time}</span>
+            </div>
+        </div>
+    `;
+}
+
+// Génère l'affichage Client (colonne séparée)
+function renderCreditClientCell(credit) {
+    var clientName = credit._clientDisplayName || credit.clientName || credit.table || 'Client inconnu';
+    return `
+        <div class="client-cell">
+            <i class="fas fa-user-circle"></i>
+            <span>${escapeHtml(clientName)}</span>
+        </div>
+    `;
+}
+
+// ========== STYLES CSS DYNAMIQUES ==========
+function injectCreditsStyles() {
+    const styleId = 'credits-pro-styles-final';
+    if (document.getElementById(styleId)) return;
+
+    const styles = `
+<style id="${styleId}">
+/* === POLICE GLOBALE 22px === */
+#creditsPage,
+#creditsPage * {
+    font-size: 22px !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === EXCEPTIONS === */
+#creditsPage .stat-label,
+#creditsPage .filter-group label,
+#creditsPage .total-label {
+    font-size: 16px !important;
+}
+
+#creditsPage .btn-add,
+#creditsPage .btn-edit,
+#creditsPage .btn-delete,
+#creditsPage .btn-save,
+#creditsPage .btn-cancel {
+    font-size: 18px !important;
+}
+
+#creditsPage .status-success,
+#creditsPage .status-warning,
+#creditsPage .status-danger {
+    font-size: 18px !important;
+    padding: 6px 16px !important;
+}
+
+/* === STATS CARDS === */
+#creditStatsContainer .stat-card {
+    background: #fff;
+    padding: 14px 18px;
+    border-radius: 10px;
+    border-left: 4px solid #2563eb;
+    transition: transform 0.2s;
+}
+
+#creditStatsContainer .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* === CHAMP VOCAL === */
+.voice-display-field {
+    padding: 8px 12px !important;
+    border: 2px solid #16a34a !important;
+    border-radius: 8px !important;
+    width: 180px !important;
+    background: #f0fdf4 !important;
+    color: #14532d !important;
+    font-weight: 600 !important;
+    font-size: 22px !important;
+    min-height: 48px !important;
+}
+
+/* === COLONNES SÉPARÉES === */
+.facture-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 22px !important;
+    color: var(--text-primary);
+    padding: 4px 12px;
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+    background: var(--gray-50);
+}
+
+.facture-cell i {
+    color: var(--accent);
+    font-size: 20px !important;
+}
+
+.facture-cell .facture-number {
+    color: var(--black);
+    font-weight: 900;
+    font-size: 22px !important;
+    background: var(--white);
+    padding: 0 10px;
+    border-radius: 4px;
+}
+
+.date-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0;
+}
+
+.date-cell .date-line,
+.date-cell .time-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 20px !important;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.date-cell .date-line i,
+.date-cell .time-line i {
+    font-size: 16px !important;
+    color: var(--accent);
+    opacity: 0.7;
+    width: 18px;
+}
+
+.client-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 22px !important;
+    color: var(--text-primary);
+    background: rgba(20, 184, 166, 0.05);
+    padding: 4px 12px;
+    border-radius: 8px;
+}
+
+.client-cell i {
+    color: var(--accent);
+    font-size: 20px !important;
+}
+
+/* === TABLEAU GLOBAL === */
+#creditsPage .data-table {
+    font-size: 22px !important;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    width: 100%;
+}
+
+#creditsPage .data-table thead th {
+    font-size: 18px !important;
+    padding: 14px 18px !important;
+    background: var(--gray-50) !important;
+    color: var(--text-secondary) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+
+#creditsPage .data-table thead th i {
+    font-size: 16px !important;
+    margin-right: 6px;
+}
+
+#creditsPage .data-table tbody td {
+    padding: 14px 16px !important;
+    font-size: 22px !important;
+    vertical-align: middle;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-100);
+}
+
+#creditsPage .data-table tbody tr:hover td {
+    background: var(--gray-50);
+}
+
+/* === MONTANTS === */
+.amount-total {
+    font-weight: 800 !important;
+    font-size: 24px !important;
+    color: var(--black) !important;
+    letter-spacing: -0.3px;
+}
+
+.amount-remaining {
+    font-weight: 800 !important;
+    font-size: 24px !important;
+    color: var(--danger) !important;
+    letter-spacing: -0.3px;
+}
+
+/* === BARRE DE RECHERCHE AVEC BOUTON X === */
+.search-bar-pro {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--white);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 4px 4px 4px 18px;
+    transition: var(--transition);
+    flex: 1;
+    min-width: 220px;
+    position: relative;
+}
+
+.search-bar-pro:focus-within {
+    border-color: var(--black);
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04);
+}
+
+.search-bar-pro i.fa-search {
+    color: var(--text-muted);
+    font-size: 20px !important;
+}
+
+.search-bar-pro input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 14px 8px;
+    font-size: 22px !important;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    color: var(--text-primary);
+    min-width: 100px;
+}
+
+.search-bar-pro input::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 20px !important;
+}
+
+/* === BOUTON X POUR EFFACER === */
+.search-clear-btn {
+    width: 35px !important;
+    height: 35px !important;
+    min-width: 35px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: var(--gray-200) !important;
+    color: var(--text-secondary) !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: var(--transition) !important;
+    padding: 0 !important;
+    margin: 0 2px !important;
+}
+
+.search-clear-btn:hover {
+    background: var(--gray-300) !important;
+    color: var(--black) !important;
+    transform: scale(1.05);
+}
+
+.search-clear-btn.hidden {
+    display: none !important;
+}
+
+/* === BOUTONS D'ACTION CORRIGÉS - AVEC ICÔNES === */
+#creditsPage .action-buttons {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    min-width: 180px !important;
+}
+
+#creditsPage .action-buttons .btn-edit,
+#creditsPage .action-buttons .btn-delete,
+#creditsPage .action-buttons .btn-add {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    font-size: 18px !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+    background: var(--gray-50) !important;
+    color: var(--text-secondary) !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+
+/* === ICÔNES DES BOUTONS === */
+#creditsPage .action-buttons .btn-edit i,
+#creditsPage .action-buttons .btn-delete i,
+#creditsPage .action-buttons .btn-add i {
+    font-size: 20px !important;
+    pointer-events: none !important;
+    line-height: 1 !important;
+}
+
+#creditsPage .action-buttons .btn-edit:hover {
+    background: var(--gray-200) !important;
+    color: var(--black) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+#creditsPage .action-buttons .btn-delete {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+
+#creditsPage .action-buttons .btn-delete:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15) !important;
+}
+
+#creditsPage .action-buttons .btn-add {
+    background: var(--black) !important;
+    color: var(--white) !important;
+}
+
+#creditsPage .action-buttons .btn-add:hover {
+    background: var(--primary-hover) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+/* === BOUTON PAYER SPÉCIAL === */
+#creditsPage .action-buttons .btn-add.payer-btn {
+    background: #10B981 !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    padding: 0 12px !important;
+    width: auto !important;
+    min-width: 60px !important;
+    border-radius: 8px !important;
+    gap: 4px !important;
+}
+
+#creditsPage .action-buttons .btn-add.payer-btn:hover {
+    background: #059669 !important;
+    transform: translateY(-2px) !important;
+}
+
+#creditsPage .action-buttons .btn-add.payer-btn i {
+    font-size: 14px !important;
+}
+
+/* === FILTRES === */
+#creditsPage .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#creditsPage .filter-group label {
+    font-size: 16px !important;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#creditsPage .filter-group select {
+    padding: 10px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 20px !important;
+    font-family: 'Inter', sans-serif;
+    background: var(--white);
+    color: var(--text-primary);
+    transition: var(--transition);
+    min-width: 140px;
+}
+
+#creditsPage .filter-group select:focus {
+    border-color: var(--black);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+}
+
+/* === TOTAL EN BAS === */
+#creditsPage .total-row-pro {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 32px;
+    padding: 18px 24px;
+    background: #fef2f2;
+    border-radius: 14px;
+    margin-top: 18px;
+    border: 1px solid #fecaca;
+    flex-wrap: wrap;
+}
+
+#creditsPage .total-row-pro .total-label {
+    font-size: 16px !important;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#creditsPage .total-row-pro .total-amount {
+    font-size: 28px !important;
+    font-weight: 900;
+    color: var(--danger);
+    letter-spacing: -0.5px;
+}
+
+#creditsPage .total-row-pro .total-amount i {
+    color: var(--danger);
+    font-size: 22px !important;
+    margin-right: 6px;
+}
+
+/* === RESPONSIVE === */
+@media(max-width:1024px) {
+    #creditsPage .action-buttons {
+        min-width: 140px !important;
+        gap: 4px !important;
+    }
+    
+    #creditsPage .action-buttons .btn-edit,
+    #creditsPage .action-buttons .btn-delete,
+    #creditsPage .action-buttons .btn-add {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+        font-size: 16px !important;
+    }
+    
+    #creditsPage .action-buttons .btn-add.payer-btn {
+        min-width: 50px !important;
+        font-size: 12px !important;
+        padding: 0 10px !important;
     }
 }
 
-// ========== SET VOCAL MODE ==========
-function setVoiceMode(mode, msg, productId) {
-    voiceMode = mode;
-    if (msg) voiceModeMessage = msg;
-    if (productId !== undefined) lastAddedProductId = productId;
-    if (mode === 'payment') window.voicePaymentState = 0;
-    showVoiceModeIndicator();
+@media(max-width:768px) {
+    #creditsPage .data-table tbody td {
+        font-size: 18px !important;
+        padding: 10px 12px !important;
+    }
+    
+    .facture-cell {
+        font-size: 18px !important;
+        padding: 2px 8px !important;
+    }
+    
+    .facture-cell .facture-number {
+        font-size: 18px !important;
+    }
+    
+    .date-cell .date-line,
+    .date-cell .time-line {
+        font-size: 16px !important;
+    }
+    
+    .client-cell {
+        font-size: 18px !important;
+        padding: 2px 8px !important;
+    }
+    
+    .search-bar-pro input {
+        font-size: 18px !important;
+    }
+    
+    .search-clear-btn {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        font-size: 16px !important;
+    }
+    
+    .voice-display-field {
+        font-size: 18px !important;
+        width: 140px !important;
+    }
+    
+    #creditsPage .action-buttons {
+        min-width: 120px !important;
+        gap: 4px !important;
+    }
+    
+    #creditsPage .action-buttons .btn-edit,
+    #creditsPage .action-buttons .btn-delete,
+    #creditsPage .action-buttons .btn-add {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        min-height: 34px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    
+    #creditsPage .action-buttons .btn-edit i,
+    #creditsPage .action-buttons .btn-delete i,
+    #creditsPage .action-buttons .btn-add i {
+        font-size: 16px !important;
+    }
 }
 
-// ========== MICRO ==========
-function posToggleVoiceSearch() {
-    var s = checkVoiceSupport();
-    if (!s.supported) { alert('⚠️ ' + s.reason); return; }
-    if (!navigator.onLine) { alert('⚠️ Connexion internet requise.'); return; }
-    if (isRecording) { posStopVoiceSearch(); return; }
-    requestMicrophonePermission().then(function(p) {
-        if (!p) { alert('❌ Micro refusé.'); return; }
-        posStartVoiceRecording();
+@media(max-width:500px) {
+    #creditsPage .data-table tbody td {
+        font-size: 15px !important;
+        padding: 8px 10px !important;
+    }
+    
+    .facture-cell {
+        font-size: 15px !important;
+        padding: 2px 6px !important;
+    }
+    
+    .facture-cell .facture-number {
+        font-size: 15px !important;
+    }
+    
+    .date-cell .date-line,
+    .date-cell .time-line {
+        font-size: 13px !important;
+        gap: 4px !important;
+    }
+    
+    .date-cell .date-line i,
+    .date-cell .time-line i {
+        font-size: 12px !important;
+        width: 14px !important;
+    }
+    
+    .client-cell {
+        font-size: 15px !important;
+        padding: 2px 6px !important;
+    }
+    
+    .search-bar-pro input {
+        font-size: 15px !important;
+        padding: 10px 6px !important;
+    }
+    
+    .search-clear-btn {
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        font-size: 14px !important;
+    }
+    
+    #creditsPage .filter-group select {
+        font-size: 16px !important;
+        padding: 8px 12px !important;
+    }
+    
+    .voice-display-field {
+        font-size: 15px !important;
+        width: 100px !important;
+        padding: 6px 8px !important;
+    }
+    
+    #creditsPage .action-buttons {
+        min-width: 90px !important;
+        gap: 2px !important;
+    }
+    
+    #creditsPage .action-buttons .btn-edit,
+    #creditsPage .action-buttons .btn-delete,
+    #creditsPage .action-buttons .btn-add {
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        font-size: 12px !important;
+        border-radius: 6px !important;
+    }
+    
+    #creditsPage .action-buttons .btn-add.payer-btn {
+        min-width: 40px !important;
+        font-size: 10px !important;
+        padding: 0 6px !important;
+        height: 28px !important;
+    }
+    
+    #creditsPage .action-buttons .btn-edit i,
+    #creditsPage .action-buttons .btn-delete i,
+    #creditsPage .action-buttons .btn-add i {
+        font-size: 12px !important;
+    }
+}
+</style>
+`;
+
+    document.head.insertAdjacentHTML('beforeend', styles);
+}
+
+// ========== PAGE CRÉDITS ==========
+async function loadCreditsPage(c) {
+    injectCreditsStyles();
+
+    await loadClientsForSearchCredits();
+
+    window.creditsPeriod = 'all';
+    window.creditsSearch = '';
+    window.creditSelectionMode = false;
+    window.creditSelectedIds = [];
+
+    if (!window.sortOrders.credits) window.sortOrders.credits = {};
+    if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
+
+    c.innerHTML = `
+        <div class="content-card" id="creditsPage">
+            <div class="card-header">
+                <h3 style="font-size:26px !important;"><i class="fas fa-credit-card"></i> Crédits</h3>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <div class="search-bar-pro">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="creditsSearchInput" 
+                               placeholder="Rechercher (client, produit, description)..."
+                               onkeyup="handleCreditsSearch(this.value);">
+                        <button class="search-clear-btn hidden" id="creditsClearBtn" onclick="clearCreditsSearch()" title="Effacer la recherche">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." class="voice-display-field" readonly>
+                    <div class="filter-group">
+                        <label><i class="far fa-calendar-alt"></i> Période</label>
+                        <select id="creditsPeriodSelect" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">
+                            ${getPeriodOptions('all')}
+                        </select>
+                    </div>
+                    <button class="btn-add" onclick="loadCredits()" style="font-size:20px !important;padding:10px 20px !important;">
+                        <i class="fas fa-sync-alt"></i> Actualiser
+                    </button>
+                    <button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="font-size:18px !important;padding:10px 16px !important;">
+                        <i class="fas fa-check-square"></i> Sélectionner
+                    </button>
+                    <button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5; font-size:18px !important;padding:10px 16px !important;">
+                        <i class="fas fa-check-double"></i> Tout sélectionner
+                    </button>
+                    <button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+            <div id="creditsTableContainer"></div>
+            <div id="creditsPagination" style="margin-top:12px;"></div>
+        </div>
+    `;
+
+    loadCredits();
+}
+
+// ========== FONCTIONS RECHERCHE ==========
+function handleCreditsSearch(value) {
+    window.creditsSearch = value;
+    window.currentPages.credits = 1;
+    handleSearchInputCredits('credits');
+    applyCreditsFilters();
+}
+
+function clearCreditsSearch() {
+    var searchField = document.getElementById('creditsSearchInput');
+    if (searchField) {
+        searchField.value = '';
+        window.creditsSearch = '';
+        applyCreditsFilters();
+        var clearBtn = document.getElementById('creditsClearBtn');
+        if (clearBtn) {
+            clearBtn.classList.add('hidden');
+        }
+    }
+}
+
+function processCreditsSearchFromVoice(text) {
+    var searchField = document.getElementById('creditsSearchInput');
+    var periodSelect = document.getElementById('creditsPeriodSelect');
+    var voiceDisplay = document.getElementById('creditsVoiceDisplay');
+
+    if (!searchField || !periodSelect) return;
+
+    var detectedFilter = detectPeriodFilterCredits(text);
+    if (detectedFilter) {
+        periodSelect.value = detectedFilter;
+        window.creditsPeriod = detectedFilter;
+        window.currentPages.credits = 1;
+
+        searchField.value = '';
+        window.creditsSearch = '';
+
+        if (voiceDisplay) {
+            var filterLabels = {
+                'today': '📅 Aujourd\'hui',
+                'week': '📅 Cette semaine',
+                'month': '📅 Ce mois',
+                'year': '📅 Cette année',
+                'all': '📅 Tous les crédits'
+            };
+            voiceDisplay.value = filterLabels[detectedFilter] || '📅 Filtre appliqué';
+            setTimeout(function() { voiceDisplay.value = ''; }, 2000);
+        }
+
+        applyCreditsFilters();
+
+        var clearBtn = document.getElementById('creditsClearBtn');
+        if (clearBtn) clearBtn.classList.add('hidden');
+
+        return true;
+    }
+
+    searchField.value = text;
+    window.creditsSearch = text;
+    window.currentPages.credits = 1;
+    applyCreditsFilters();
+
+    return false;
+}
+
+function handleSearchInputCredits(target) {
+    const searchField = document.getElementById(target + 'SearchInput');
+    const clearBtn = document.getElementById(target + 'ClearBtn');
+    if (searchField && clearBtn) {
+        if (searchField.value.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+    }
+}
+
+// ========== CHARGEMENT CRÉDITS ==========
+async function loadCredits() {
+    var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
+    var vendeurCaissier = '';
+    if (!isAdmin && window.currentUserData) {
+        vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    }
+
+    const cached = await CacheDB.getAll('credits');
+    if (cached.length) {
+        window.allCreditsData = cached;
+        if (!isAdmin) {
+            window.allCreditsData = window.allCreditsData.filter(function(d) {
+                return d.vendeur === vendeurCaissier;
+            });
+        }
+        if (!window.sortOrders.credits) window.sortOrders.credits = {};
+        if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
+        window.currentPages.credits = 1;
+        applyCreditsFilters();
+    }
+
+    if (navigator.onLine) {
+        try {
+            const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').limit(2000).get();
+            window.allCreditsData = [];
+            snapshot.forEach(function(dc) {
+                var d = dc.data();
+                d.id = dc.id;
+                window.allCreditsData.push(d);
+            });
+
+            if (!isAdmin) {
+                window.allCreditsData = window.allCreditsData.filter(function(d) {
+                    return d.vendeur === vendeurCaissier;
+                });
+            }
+
+            for (let doc of window.allCreditsData) {
+                await CacheDB.set('credits', doc.id, doc);
+            }
+
+            if (!window.sortOrders.credits) window.sortOrders.credits = {};
+            if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
+        } catch (e) {
+            console.error('Erreur chargement crédits:', e);
+        }
+    }
+
+    window.currentPages.credits = 1;
+    applyCreditsFilters();
+}
+
+// ========== FILTRES ==========
+function applyCreditsFilters() {
+    var filtered = filterByPeriod(window.allCreditsData, window.creditsPeriod);
+
+    if (window.creditsSearch && window.creditsSearch.trim() !== '') {
+        filtered = filterCreditsBySearchWithDescription(filtered, window.creditsSearch);
+    } else {
+        filtered.forEach(function(d) {
+            delete d._clientDisplayName;
+        });
+    }
+
+    if (!window.sortOrders.credits || !window.sortOrders.credits.createdAt) {
+        filtered.sort(function(a, b) {
+            var da = a.createdAt?.seconds || 0;
+            var db = b.createdAt?.seconds || 0;
+            return db - da;
+        });
+    } else {
+        filtered = applySort('credits', filtered, 'createdAt');
+    }
+
+    window.filteredCredits = filtered;
+    
+    // 🔥 METTRE À JOUR LES STATISTIQUES
+    renderCreditStats(window.allCreditsData, window.creditsSearch, window.creditsPeriod);
+    
+    renderCreditsTablePro();
+}
+
+// ========== RENDU TABLEAU ==========
+function renderCreditsTablePro() {
+    var cont = document.getElementById('creditsTableContainer');
+    if (!cont) return;
+
+    var data = (window.filteredCredits || window.allCreditsData).slice();
+
+    if (window.sortOrders.credits && window.sortOrders.credits.createdAt) {
+        data = applySort('credits', data, 'createdAt');
+    } else {
+        data.sort(function(a, b) {
+            var da = a.createdAt?.seconds || 0;
+            var db = b.createdAt?.seconds || 0;
+            return db - da;
+        });
+    }
+
+    var pageData = getPageData('credits', data);
+
+    if (pageData.length === 0) {
+        cont.innerHTML = `
+            <div style="text-align:center;padding:60px 20px;">
+                <i class="fas fa-inbox" style="font-size:3rem;color:#d1d5db;"></i>
+                <p style="margin-top:16px;color:#6b7280;font-size:24px !important;">Aucun crédit trouvé</p>
+            </div>
+        `;
+        document.getElementById('creditsPagination').innerHTML = '';
+        return;
+    }
+
+    var tc = 0;
+    var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
+
+    var h = `
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="min-width:160px;"><i class="fas fa-file-invoice"></i> Facture</th>
+                        <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
+                        <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
+                        <th><i class="fas fa-box"></i> Articles</th>
+                        <th><i class="fas fa-tag"></i> Total</th>
+                        <th><i class="fas fa-hand-holding-usd"></i> Payé</th>
+                        <th><i class="fas fa-hourglass-half"></i> Restant</th>
+                        <th><i class="fas fa-credit-card"></i> Mode</th>
+                        ${isAdmin ? `<th><i class="fas fa-user-tie"></i> Vendeur</th>` : ''}
+                        <th style="min-width:200px;"><i class="fas fa-tools"></i> Actions</th>
+                        ${window.creditSelectionMode ? '<th style="width:40px;">☑️</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    pageData.forEach(function(d, index) {
+        var reste = d.remainingAmount || d.total || 0;
+        if (!d.paid) tc += reste;
+
+        const factureHtml = renderCreditFactureCell(d);
+        const dateHtml = renderCreditDateCell(d);
+        const clientHtml = renderCreditClientCell(d);
+
+        var articlesHtml = '';
+        if (d.items && d.items.length > 0) {
+            articlesHtml = d.items.map(function(it) {
+                return '<strong>' + (it.quantite || 1) + 'x</strong> ' + escapeHtml(it.nom || '');
+            }).join('<br>');
+        } else {
+            articlesHtml = '-';
+        }
+
+        var mode = d.paymentMethod || '-';
+        var amountPaid = d.amountGiven || 0;
+
+        // ✅ BOUTONS AVEC ICÔNES CORRIGÉES
+        var actions = `
+            <div class="action-buttons">
+                <button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer / PDF">
+                    <i class="fas fa-print"></i>
+                </button>
+        `;
+        if (!d.paid) {
+            actions += `<button class="btn-add payer-btn" onclick="payerCredit('${d.id}')" title="Payer">
+                            <i class="fas fa-check"></i> Payer
+                        </button>`;
+        }
+        if (isAdmin) {
+            actions += `
+                <button class="btn-edit" onclick="editCredit('${d.id}')" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-delete" onclick="if(confirm('Supprimer définitivement ce crédit ?')) deleteCredit('${d.id}')" title="Supprimer">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+        }
+        actions += `</div>`;
+
+        var isSelected = window.creditSelectedIds.includes(d.id);
+        var rowClass = isSelected ? ' style="background:#fef3c7; border-left:4px solid #d97706;"' : '';
+
+        h += `<tr${rowClass}>
+            <td>${factureHtml}</td>
+            <td>${dateHtml}</td>
+            <td>${clientHtml}</td>
+            <td>${articlesHtml}</td>
+            <td><span class="amount-total">${d.total.toFixed(2)} MAD</span></td>
+            <td>${amountPaid.toFixed(2)} MAD</td>
+            <td><span class="amount-remaining">${reste.toFixed(2)} MAD</span></td>
+            <td>${escapeHtml(mode)}</td>
+            ${isAdmin ? `<td>${escapeHtml(d.vendeur || '-')}</td>` : ''}
+            <td>${actions}</td>
+            ${window.creditSelectionMode ? `<td style="text-align:center;"><input type="checkbox" class="credit-select-check" data-id="${d.id}" ${isSelected ? 'checked' : ''} onchange="toggleCreditSelection('${d.id}')" style="transform:scale(1.5);width:24px;height:24px;"></td>` : ''}
+        </tr>`;
+    });
+
+    h += `
+                </tbody>
+            </table>
+        </div>
+        <div class="total-row-pro">
+            <span class="total-label">Total Impayés</span>
+            <span class="total-amount"><i class="fas fa-exclamation-triangle"></i> ${tc.toFixed(2)} MAD</span>
+        </div>
+    `;
+
+    cont.innerHTML = h;
+    document.getElementById('creditsPagination').innerHTML = getPaginationHTML('credits', data.length);
+}
+
+// ========== SÉLECTION MULTIPLE ==========
+function toggleCreditSelectionMode() {
+    window.creditSelectionMode = !window.creditSelectionMode;
+    window.creditSelectedIds = [];
+    var selectAllBtn = document.getElementById('selectAllBtn');
+    if (selectAllBtn) {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+        selectAllBtn.style.background = '#4f46e5';
+    }
+    window.selectAllBtnState = false;
+
+    var selectBtn = document.getElementById('toggleSelectionBtn');
+    var deleteBtn = document.getElementById('deleteSelectedBtn');
+    if (selectBtn) {
+        if (window.creditSelectionMode) {
+            selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
+        } else {
+            selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+        }
+    }
+    if (selectAllBtn) {
+        selectAllBtn.style.display = window.creditSelectionMode ? 'inline-block' : 'none';
+    }
+    if (deleteBtn) {
+        deleteBtn.style.display = 'none';
+    }
+    renderCreditsTablePro();
+}
+
+function toggleCreditSelection(id) {
+    var idx = window.creditSelectedIds.indexOf(id);
+    if (idx === -1) {
+        window.creditSelectedIds.push(id);
+    } else {
+        window.creditSelectedIds.splice(idx, 1);
+    }
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
+}
+
+function updateDeleteButtonVisibility() {
+    var deleteBtn = document.getElementById('deleteSelectedBtn');
+    if (deleteBtn) {
+        if (window.creditSelectedIds.length === 0) {
+            deleteBtn.style.display = 'none';
+        } else {
+            deleteBtn.style.display = 'inline-block';
+        }
+    }
+}
+
+window.selectAllBtnState = false;
+
+function selectAllVisibleCredits() {
+    var data = window.filteredCredits || window.allCreditsData;
+    var pageData = getPageData('credits', data);
+    window.creditSelectedIds = pageData.map(function(d) { return d.id; });
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
+}
+
+function deselectAllVisibleCredits() {
+    window.creditSelectedIds = [];
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
+}
+
+function toggleSelectAllVisible() {
+    if (window.selectAllBtnState) {
+        deselectAllVisibleCredits();
+    } else {
+        selectAllVisibleCredits();
+    }
+    window.selectAllBtnState = !window.selectAllBtnState;
+    var btn = document.getElementById('selectAllBtn');
+    if (btn) {
+        if (window.selectAllBtnState) {
+            btn.innerHTML = '<i class="fas fa-times"></i> Tout décocher';
+            btn.style.background = '#ef4444';
+        } else {
+            btn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+            btn.style.background = '#4f46e5';
+        }
+    }
+}
+
+function deleteSelectedCredits() {
+    if (window.creditSelectedIds.length === 0) {
+        alert('Aucun crédit sélectionné.');
+        return;
+    }
+    if (!confirm('Supprimer définitivement les ' + window.creditSelectedIds.length + ' crédits sélectionnés ?')) return;
+
+    var promises = window.creditSelectedIds.map(function(id) {
+        return db.collection('credits').doc(id).delete().then(function() {
+            window.allCreditsData = window.allCreditsData.filter(function(c) { return c.id !== id; });
+        });
+    });
+
+    Promise.all(promises).then(function() {
+        alert('✅ ' + window.creditSelectedIds.length + ' crédit(s) supprimé(s).');
+        window.creditSelectedIds = [];
+        window.creditSelectionMode = false;
+        var selectBtn = document.getElementById('toggleSelectionBtn');
+        var deleteBtn = document.getElementById('deleteSelectedBtn');
+        var selectAllBtn = document.getElementById('selectAllBtn');
+        if (selectBtn) selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+        if (selectAllBtn) selectAllBtn.style.display = 'none';
+        loadCredits();
+        CacheDB.sync();
+    }).catch(function(e) {
+        alert('❌ Erreur: ' + e.message);
     });
 }
 
-function posStartVoiceRecording() {
-    var mb = document.getElementById('posMicBtn');
-    if (voiceRecognition) { try { voiceRecognition.abort(); } catch (e) {} voiceRecognition = null; }
-    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert('❌ Reconnaissance vocale non disponible.'); return; }
-    voiceRecognition = new SR();
-    voiceRecognition.lang = 'fr-FR';
-    voiceRecognition.continuous = true;
-    voiceRecognition.interimResults = true;
-    voiceRecognition.maxAlternatives = 1;
-
-    if (mb) {
-        mb.classList.add('recording');
-        mb.innerHTML = '<i class="fas fa-circle" style="color:#ef4444;animation:pulse 0.5s ease-in-out infinite;"></i>';
-        mb.style.background = '#fee2e2'; mb.style.borderColor = '#ef4444';
+// ========== PAIEMENT REDIRIGÉ VERS LE POS ==========
+async function payerCredit(creditId) {
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) { return c.id === creditId; });
+    if (!credit) {
+        alert('Crédit introuvable');
+        return;
     }
 
-    var lastInterim = '';
-    voiceRecognition.onresult = function(e) {
-        var interim = '', final = '';
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-            var t = e.results[i][0].transcript;
-            if (e.results[i].isFinal) final += t;
-            else interim += t;
+    localStorage.setItem('posPayerCredit', JSON.stringify({
+        creditId: credit.id,
+        clientId: credit.clientId || null,
+        clientName: credit.clientName || '',
+        items: credit.items || [],
+        total: credit.total || 0,
+        table: credit.table || '',
+        amountGiven: credit.amountGiven || 0,
+        remainingAmount: credit.remainingAmount || credit.total || 0,
+        factureNum: credit.factureNum || ''
+    }));
+
+    if (typeof navigateTo === 'function') {
+        navigateTo('pos');
+    } else {
+        window.location.href = '#';
+    }
+}
+
+// ========== IMPRESSION FACTURE ==========
+function printFacture(did) {
+    db.collection('credits').doc(did).get().then(function(dc) {
+        if (dc.exists) imprimerFactureCredit(dc.data(), dc.id);
+    });
+}
+
+function imprimerFactureCredit(d, id) {
+    var ih = '';
+    if (d.items) {
+        d.items.forEach(function(it) {
+            var o = '';
+            if (it.interdits && it.interdits.length > 0) o += ' 🚫' + it.interdits.join(',');
+            if (it.epice && it.epice !== 'Normal') o += ' 🌶️' + it.epice;
+            if (it.sel && it.sel !== 'Normal') o += ' 🧂' + it.sel;
+            ih += `<tr><td>${escapeHtml(it.nom)}${o}</td><td>${it.quantite}</td><td>${(it.prixVente || 0).toFixed(2)}</td><td>${((it.prixVente || 0) * it.quantite).toFixed(2)}</td></tr>`;
+        });
+    }
+    var w = window.open('', '_blank', 'width=400,height=600');
+    w.document.write(`
+        <html><head><title>Facture Mixmax Minimarket</title>
+        <style>
+            body{font-family:'Inter',Arial,sans-serif;padding:24px;background:#f9fafb;}
+            .invoice{background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+            h2{text-align:center;color:#111827;}
+            .header-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;font-size:0.9rem;}
+            table{width:100%;border-collapse:collapse;margin:16px 0;}
+            th{background:#f3f4f6;padding:8px 12px;text-align:left;font-weight:600;font-size:0.8rem;}
+            td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:0.85rem;}
+            .total{font-size:1.2rem;font-weight:800;text-align:right;margin-top:16px;padding-top:16px;border-top:2px solid #111827;}
+            .remaining{font-size:1rem;font-weight:700;text-align:right;color:#ef4444;margin-top:8px;}
+            .footer{text-align:center;color:#6b7280;font-size:0.75rem;margin-top:20px;}
+        </style>
+        </head><body>
+        <div class="invoice">
+            <h2>🛒 Mixmax Minimarket</h2>
+            <div class="header-info">
+                <div><strong>Facture:</strong> ${d.factureNum || id.substring(0, 8)}</div>
+                <div><strong>Date:</strong> ${d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : ''}</div>
+                <div><strong>Client:</strong> ${d.clientName || d.table || '-'}</div>
+                <div><strong>Vendeur:</strong> ${d.vendeur || '-'}</div>
+                <div><strong>Mode:</strong> ${d.paymentMethod || '-'}</div>
+            </div>
+            <table>
+                <tr><th>Article</th><th>Qté</th><th>Prix</th><th>Total</th></tr>
+                ${ih}
+            </table>
+            ${d.discountMAD > 0 ? `<p><strong>Remise:</strong> -${d.discountMAD.toFixed(2)} MAD</p>` : ''}
+            <div class="total">Total: ${d.total.toFixed(2)} MAD</div>
+            <div class="remaining">💰 Restant: ${(d.remainingAmount || d.total || 0).toFixed(2)} MAD</div>
+            <div class="footer">Merci de votre visite ! 🌟</div>
+        </div>
+        </body></html>
+    `);
+    w.document.close();
+    setTimeout(function() { w.print(); }, 500);
+}
+
+// ========== ÉDITION ==========
+async function editCredit(id) {
+    try {
+        var doc = await db.collection('credits').doc(id).get();
+        if (!doc.exists) {
+            alert('Crédit introuvable');
+            return;
         }
-        var cp = document.getElementById('pageTitle')?.textContent || '';
+        var d = doc.data();
+        window.editingId = id;
+        window.currentCollection = 'credits';
 
-        // 🔥 NOUVEAU: Support pour admin-credits.js
-        if (cp === 'Crédits' || cp === 'Gestion des Crédits') {
-            var searchInput = document.getElementById('creditsSearchInput');
-            var periodSelect = document.getElementById('periodFilter');
-            var voiceDisplay = document.getElementById('creditsVoiceDisplay');
+        var h = `
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Client</label>
+                    <input type="text" id="editCreditClient" value="${escapeHtml(d.clientName || '')}" style="font-size:22px;padding:14px;">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-tag"></i> Total (MAD)</label>
+                    <input type="number" id="editCreditTotal" value="${(d.total || 0)}" step="0.01" style="font-size:22px;padding:14px;">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-hand-holding-usd"></i> Payé (MAD)</label>
+                    <input type="number" id="editCreditPaid" value="${(d.amountGiven || 0)}" step="0.01" style="font-size:22px;padding:14px;">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-hourglass-half"></i> Restant (MAD)</label>
+                    <input type="number" id="editCreditRemaining" value="${(d.remainingAmount || 0)}" step="0.01" style="font-size:22px;padding:14px;">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-credit-card"></i> Mode de paiement</label>
+                    <input type="text" id="editCreditMode" value="${escapeHtml(d.paymentMethod || '')}" style="font-size:22px;padding:14px;">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-circle"></i> Statut</label>
+                    <select id="editCreditStatut" style="font-size:22px;padding:14px;">
+                        <option value="0" ${!d.paid ? 'selected' : ''}>Impayé</option>
+                        <option value="1" ${d.paid ? 'selected' : ''}>Payé</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+            <button class="btn-save" onclick="saveEditCredit()"><i class="fas fa-save"></i> Enregistrer</button>
+        `;
 
-            if (searchInput && periodSelect) {
-                if (final) {
-                    var period = detectPeriodFilter(final);
-                    if (period !== null) {
-                        periodSelect.value = period;
-                        window.creditsPeriod = period;
-                        window.currentPages.credits = 1;
-                        
-                        if (typeof applyCreditsFilters === 'function') {
-                            applyCreditsFilters();
-                        } else if (window.allCreditsData && window.allCreditsData.length > 0) {
-                            if (typeof loadCreditsData === 'function') {
-                                loadCreditsData();
-                            }
-                        }
-                        showVoiceResult('📅 ' + final);
-                    } else {
-                        searchInput.value = final;
-                        window.creditsSearch = final;
-                        window.currentPages.credits = 1;
-                        
-                        if (typeof applyCreditsFilters === 'function') {
-                            applyCreditsFilters();
-                        } else if (window.allCreditsData && window.allCreditsData.length > 0) {
-                            if (typeof loadCreditsData === 'function') {
-                                loadCreditsData();
-                            }
-                        }
-                        showVoiceResult('🔍 ' + final);
-                        
-                        // Mettre à jour le bouton clear
-                        var clearBtn = document.getElementById('creditsClearSearch');
-                        if (clearBtn) {
-                            clearBtn.classList.remove('hidden');
-                        }
-                    }
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                } else if (interim && interim !== lastInterim) {
-                    searchInput.value = interim + ' ✍️';
-                    if (voiceDisplay) voiceDisplay.value = interim + ' ✍️';
-                    lastInterim = interim;
-                }
-            }
-        } else if (cp === 'Ventes') {
-            var vd2 = document.getElementById('ventesVoiceDisplay');
-            var searchInput = document.getElementById('ventesSearchInput');
-            var periodSelect = document.getElementById('ventesPeriodSelect');
+        openModal('Modifier Crédit ' + (d.factureNum || id.substring(0, 8)), h);
+    } catch (e) {
+        console.error('Erreur editCredit:', e);
+        alert('Erreur lors du chargement du crédit');
+    }
+}
 
-            if (vd2 && searchInput && periodSelect) {
-                if (final) {
-                    var period = detectPeriodFilter(final);
-                    if (period !== null) {
-                        periodSelect.value = period;
-                        window.ventesPeriod = period;
-                        window.currentPages.ventes = 1;
-                        if (window.allVentesData.length === 0) {
-                            if (typeof loadVentes === 'function') loadVentes();
-                        } else {
-                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                        }
-                        showVoiceResult('📅 ' + final);
-                    } else {
-                        searchInput.value = final;
-                        vd2.value = final;
-                        window.ventesSearch = final;
-                        window.currentPages.ventes = 1;
-                        if (window.allVentesData.length === 0) {
-                            if (typeof loadVentes === 'function') loadVentes();
-                        } else {
-                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                        }
-                        showVoiceResult('👤 ' + final);
-                    }
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                } else if (interim && interim !== lastInterim) {
-                    searchInput.value = interim + ' ✍️';
-                    vd2.value = interim + ' ✍️';
-                    lastInterim = interim;
-                }
-            }
-        } else if (cp === 'Produits') {
-            var pi = document.getElementById('productSearchInput');
-            if (pi) {
-                if (final) {
-                    pi.value = final;
-                    window.productSearchQuery = final.toLowerCase().trim();
-                    if (typeof renderProductsTable === 'function') renderProductsTable();
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                    showVoiceResult('🔍 ' + final);
-                } else if (interim && interim !== lastInterim) {
-                    pi.value = interim + ' ✍️';
-                    lastInterim = interim;
-                }
-            }
-        } else {
-            var si = document.getElementById('posSearchInput');
-            if (si) {
-                if (final) {
-                    var lowerFinal = final.toLowerCase().trim();
-                    if (lowerFinal.includes('crédits') || lowerFinal.includes('impayés') || 
-                        lowerFinal.includes('dettes') || lowerFinal.includes('ardoises') ||
-                        lowerFinal.includes('liste des crédits')) {
-                        if (typeof navigateTo === 'function') {
-                            navigateTo('credits');
-                        }
-                        if (typeof showVoiceResult === 'function') {
-                            showVoiceResult('📍 Crédits');
-                        }
-                        lastInterim = '';
-                        si.value = '';
-                        return;
-                    }
-                    
-                    si.value = final;
-                    var event = new Event('input', { bubbles: true });
-                    si.dispatchEvent(event);
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                } else if (interim && interim !== lastInterim) {
-                    si.value = interim + ' ✍️';
-                    lastInterim = interim;
-                }
-            }
-        }
-    };
+async function saveEditCredit() {
+    var clientName = document.getElementById('editCreditClient').value.trim();
+    var total = parseFloat(document.getElementById('editCreditTotal').value) || 0;
+    var amountGiven = parseFloat(document.getElementById('editCreditPaid').value) || 0;
+    var remainingAmount = parseFloat(document.getElementById('editCreditRemaining').value) || 0;
+    var paymentMethod = document.getElementById('editCreditMode').value.trim();
+    var paid = document.getElementById('editCreditStatut').value === '1';
 
-    voiceRecognition.onend = function() {
-        if (isRecording) {
-            setTimeout(function() {
-                try { voiceRecognition.start(); } catch (e) { posStopVoiceSearch(); }
-            }, 8);
-        }
-    };
-    voiceRecognition.onerror = function(e) {
-        if (e.error === 'aborted' || e.error === 'no-speech') return;
-        if (e.error === 'network') showVoiceResult('❌ Réseau');
-        posStopVoiceSearch();
+    var data = {
+        clientName: clientName,
+        total: total,
+        amountGiven: amountGiven,
+        remainingAmount: paid ? 0 : remainingAmount,
+        paymentMethod: paymentMethod,
+        paid: paid,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     try {
-        voiceRecognition.start();
-        isRecording = true;
-        showVoiceModeIndicator();
-        showVoiceResult('🎤 Écoute...');
-        showVoiceFlowIndicator('product');
+        await CacheDB.write('credits', window.editingId, data, 'update');
+        closeModal();
+        loadCredits();
+        CacheDB.sync();
+        alert('✅ Crédit mis à jour');
     } catch (e) {
-        isRecording = false;
-        if (mb) {
-            mb.classList.remove('recording');
-            mb.innerHTML = '<i class="fas fa-microphone"></i>';
-            mb.style.background = '#dcfce7'; mb.style.borderColor = '#16a34a';
-        }
+        alert('❌ Erreur: ' + e.message);
     }
 }
 
-function posStopVoiceSearch() {
-    if (voiceRecognition) { try { voiceRecognition.abort(); } catch (e) {} voiceRecognition = null; }
-    isRecording = false;
-    var mb = document.getElementById('posMicBtn'), si = document.getElementById('posSearchInput');
-    if (mb) {
-        mb.classList.remove('recording');
-        mb.innerHTML = '<i class="fas fa-microphone"></i>';
-        mb.style.background = '#dcfce7'; mb.style.borderColor = '#16a34a';
+async function deleteCredit(id) {
+    try {
+        await db.collection('credits').doc(id).delete();
+        window.allCreditsData = (window.allCreditsData || []).filter(function(c) { return c.id !== id; });
+        if (typeof loadCredits === 'function') loadCredits();
+        CacheDB.sync();
+    } catch (e) {
+        console.error('Erreur deleteCredit:', e);
+        throw e;
     }
-    if (si) {
-        si.placeholder = '🔍 Rechercher...';
-        si.style.background = '#fff';
-        si.style.borderColor = '#e2e8f0';
-    }
-    hideVoiceFlowIndicator();
-    showVoiceResult('🎤 Micro désactivé');
 }
 
 // ========== EXPORTS ==========
-window.posToggleVoiceSearch = posToggleVoiceSearch;
-window.showVoiceResult = showVoiceResult;
-window.setVoiceMode = setVoiceMode;
-window.showVoiceModeIndicator = showVoiceModeIndicator;
-window.parseVoiceCommand = parseVoiceCommand;
-window.handleVoiceCommand = handleVoiceCommand;
-window.invalidateClientIndex = invalidateClientIndex;
-window.showVoiceFlowIndicator = showVoiceFlowIndicator;
-window.hideVoiceFlowIndicator = hideVoiceFlowIndicator;
-window.showProcessingIndicator = showProcessingIndicator;
-window.onProductAdded = function(pid) {
-    lastAddedProductId = pid;
-    setVoiceMode('quantity', '🔢 Qté', pid);
-    showVoiceModeIndicator();
-    hideVoiceFlowIndicator();
-    setTimeout(function() { showVoiceFlowIndicator('quantity'); }, 100);
-};
-window.buildClientIndex = buildClientIndex;
-window.buildProductIndex = buildProductIndex;
-window.buildProductAdminIndex = buildProductAdminIndex;
-window.fastFindProductAdmin = fastFindProductAdmin;
-window.detectPeriodFilter = detectPeriodFilter;
+window.loadCreditsPage = loadCreditsPage;
+window.loadCredits = loadCredits;
+window.applyCreditsFilters = applyCreditsFilters;
+window.renderCreditsTablePro = renderCreditsTablePro;
+window.editCredit = editCredit;
+window.deleteCredit = deleteCredit;
+window.saveEditCredit = saveEditCredit;
+window.payerCredit = payerCredit;
+window.printFacture = printFacture;
+window.imprimerFactureCredit = imprimerFactureCredit;
+window.normalize = normalize;
 
-console.log('🎤 Module vocal v11 – Compatible avec admin-credits.js ✅');
-console.log('📊 Support des IDs: periodFilter, creditsSearchInput');
+window.toggleCreditSelectionMode = toggleCreditSelectionMode;
+window.toggleCreditSelection = toggleCreditSelection;
+window.deleteSelectedCredits = deleteSelectedCredits;
+window.updateDeleteButtonVisibility = updateDeleteButtonVisibility;
+window.toggleSelectAllVisible = toggleSelectAllVisible;
+window.selectAllVisibleCredits = selectAllVisibleCredits;
+window.deselectAllVisibleCredits = deselectAllVisibleCredits;
+window.closeCreditSelection = closeCreditSelection;
+window.clearCreditsSearch = clearCreditsSearch;
+window.handleCreditsSearch = handleCreditsSearch;
+window.handleSearchInputCredits = handleSearchInputCredits;
+window.processCreditsSearchFromVoice = processCreditsSearchFromVoice;
+window.detectPeriodFilterCredits = detectPeriodFilterCredits;
+window.loadClientsForSearchCredits = loadClientsForSearchCredits;
+window.filterCreditsBySearchWithDescription = filterCreditsBySearchWithDescription;
+window.injectCreditsStyles = injectCreditsStyles;
+window.renderCreditFactureCell = renderCreditFactureCell;
+window.renderCreditDateCell = renderCreditDateCell;
+window.renderCreditClientCell = renderCreditClientCell;
+window.renderCreditStats = renderCreditStats;
+window.filterDataForStats = filterDataForStats;
+window.getPeriodLabel = getPeriodLabel;
+
+console.log('🛒 Mixmax Minimarket - Admin Credits PRO (avec statistiques dynamiques 24px) chargé ✅');
+console.log('📊 Les statistiques se mettent à jour avec la recherche et les filtres');
