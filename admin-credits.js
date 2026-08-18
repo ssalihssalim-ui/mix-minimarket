@@ -1,6 +1,7 @@
 // ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
-// Version : Statistiques dynamiques avec filtres
+// Version : Statistiques dynamiques avec filtres - POLICE 24px
 // ✅ STATISTIQUES EN HAUT DE PAGE - MISE À JOUR DYNAMIQUE
+// ✅ POLICE 24px POUR LES STATISTIQUES
 // ✅ FILTRES ET RECHERCHE EN TEMPS RÉEL
 // ✅ GESTION COMPLÈTE DES CRÉDITS
 // Version FINALE
@@ -316,12 +317,14 @@ function renderCreditClientCell(credit) {
     `;
 }
 
-// ========== STATISTIQUES DYNAMIQUES ==========
+// ========== STATISTIQUES DYNAMIQUES AVEC POLICE 24px ==========
 function renderDynamicCreditStats(data, searchQuery, period) {
     var statsContainer = document.getElementById('creditStatsContainer');
     if (!statsContainer) {
         statsContainer = document.createElement('div');
         statsContainer.id = 'creditStatsContainer';
+        statsContainer.style.cssText = 'display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:16px; padding:14px 18px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;';
+        
         var page = document.getElementById('creditsPage') || document.querySelector('.content-card');
         if (page) {
             page.insertBefore(statsContainer, page.firstChild);
@@ -331,16 +334,15 @@ function renderDynamicCreditStats(data, searchQuery, period) {
         }
     }
 
-    // Filtrer les données selon la recherche et la période
     var filteredData = filterDataForStats(data, searchQuery, period);
 
     if (!filteredData || filteredData.length === 0) {
         statsContainer.innerHTML = `
-            <div style="background:#fff; padding:12px 16px; border-radius:10px; border-left:4px solid #94a3b8; grid-column:1/-1; text-align:center; color:#94a3b8; font-size:18px;">
-                <i class="fas fa-inbox" style="font-size:28px; display:block; margin-bottom:8px;"></i>
+            <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #94a3b8; grid-column:1/-1; text-align:center; color:#94a3b8; font-size:24px;">
+                <i class="fas fa-inbox" style="font-size:36px; display:block; margin-bottom:10px;"></i>
                 Aucune donnée correspondante
-                ${searchQuery ? `<br><span style="font-size:14px;">Recherche: "${escapeHtml(searchQuery)}"</span>` : ''}
-                ${period && period !== 'all' ? `<br><span style="font-size:14px;">Période: ${getPeriodLabel(period)}</span>` : ''}
+                ${searchQuery ? `<br><span style="font-size:20px;">Recherche: "${escapeHtml(searchQuery)}"</span>` : ''}
+                ${period && period !== 'all' ? `<br><span style="font-size:20px;">Période: ${getPeriodLabel(period)}</span>` : ''}
             </div>
         `;
         return;
@@ -374,39 +376,39 @@ function renderDynamicCreditStats(data, searchQuery, period) {
     });
 
     statsContainer.innerHTML = `
-        <div class="stat-card" style="border-left-color: #2563eb;">
-            <div class="stat-label">📊 Total</div>
-            <div class="stat-value">${filteredData.length}</div>
-            ${searchQuery ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">filtre: "${escapeHtml(searchQuery)}"</div>` : ''}
-            ${period && period !== 'all' ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">${getPeriodLabel(period)}</div>` : ''}
+        <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #2563eb; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📊 Total</div>
+            <div style="font-size:40px !important; font-weight:800; color:#111827;">${filteredData.length}</div>
+            ${searchQuery ? `<div style="font-size:16px;color:#94a3b8;margin-top:2px;">filtre: "${escapeHtml(searchQuery)}"</div>` : ''}
+            ${period && period !== 'all' ? `<div style="font-size:16px;color:#94a3b8;margin-top:2px;">${getPeriodLabel(period)}</div>` : ''}
         </div>
-        <div class="stat-card" style="border-left-color: #dc2626;">
-            <div class="stat-label">💳 Impayés</div>
-            <div class="stat-value" style="color:#dc2626;">${actifs.length}</div>
-            ${filteredData.length > 0 ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">${((actifs.length / filteredData.length) * 100).toFixed(0)}%</div>` : ''}
+        <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #dc2626; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💳 Impayés</div>
+            <div style="font-size:40px !important; font-weight:800; color:#dc2626;">${actifs.length}</div>
+            ${filteredData.length > 0 ? `<div style="font-size:16px;color:#94a3b8;margin-top:2px;">${((actifs.length / filteredData.length) * 100).toFixed(0)}%</div>` : ''}
         </div>
-        <div class="stat-card" style="border-left-color: #16a34a;">
-            <div class="stat-label">✅ Payés</div>
-            <div class="stat-value" style="color:#16a34a;">${payes.length}</div>
-            ${filteredData.length > 0 ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">${((payes.length / filteredData.length) * 100).toFixed(0)}%</div>` : ''}
+        <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #16a34a; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">✅ Payés</div>
+            <div style="font-size:40px !important; font-weight:800; color:#16a34a;">${payes.length}</div>
+            ${filteredData.length > 0 ? `<div style="font-size:16px;color:#94a3b8;margin-top:2px;">${((payes.length / filteredData.length) * 100).toFixed(0)}%</div>` : ''}
         </div>
-        <div class="stat-card" style="border-left-color: #8b5cf6;">
-            <div class="stat-label">💰 Restant dû</div>
-            <div class="stat-value" style="color:#8b5cf6;">${totalRestant.toFixed(2)} MAD</div>
-            ${actifs.length > 0 ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">moyenne: ${(totalRestant / actifs.length).toFixed(2)} MAD</div>` : ''}
+        <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #8b5cf6; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">💰 Restant dû</div>
+            <div style="font-size:40px !important; font-weight:800; color:#8b5cf6;">${totalRestant.toFixed(2)} MAD</div>
+            ${actifs.length > 0 ? `<div style="font-size:16px;color:#94a3b8;margin-top:2px;">moyenne: ${(totalRestant / actifs.length).toFixed(2)} MAD</div>` : ''}
         </div>
-        <div class="stat-card" style="border-left-color: #f59e0b;">
-            <div class="stat-label">⏰ En retard</div>
-            <div class="stat-value" style="color:#f59e0b;">${enRetard.length}</div>
-            ${enRetard.length > 0 ? `<div style="font-size:11px;color:#ef4444;margin-top:2px;">⚠️ à régler</div>` : '<div style="font-size:11px;color:#16a34a;margin-top:2px;">✅ tout est bon</div>'}
+        <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #f59e0b; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">⏰ En retard</div>
+            <div style="font-size:40px !important; font-weight:800; color:#f59e0b;">${enRetard.length}</div>
+            ${enRetard.length > 0 ? `<div style="font-size:16px;color:#ef4444;margin-top:2px;">⚠️ à régler</div>` : '<div style="font-size:16px;color:#16a34a;margin-top:2px;">✅ tout est bon</div>'}
         </div>
-        <div class="stat-card" style="border-left-color: #ec4899;">
-            <div class="stat-label">🏆 Plus gros crédit</div>
-            <div class="stat-value" style="font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(topClient)}">
+        <div style="background:#fff; padding:16px 20px; border-radius:10px; border-left:4px solid #ec4899; transition:transform 0.2s;">
+            <div style="font-size:24px !important; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">🏆 Plus gros crédit</div>
+            <div style="font-size:24px; font-weight:700; color:#111827; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(topClient)}">
                 ${topClient ? escapeHtml(topClient) : '-'}
             </div>
-            <div style="font-size:15px; font-weight:600; color:#8b5cf6;">${topAmount.toFixed(2)} MAD</div>
-            ${topClient ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;">sur ${actifs.length} débiteur${actifs.length > 1 ? 's' : ''}</div>` : ''}
+            <div style="font-size:28px; font-weight:700; color:#8b5cf6;">${topAmount.toFixed(2)} MAD</div>
+            ${topClient ? `<div style="font-size:14px;color:#94a3b8;margin-top:2px;">sur ${actifs.length} débiteur${actifs.length > 1 ? 's' : ''}</div>` : ''}
         </div>
     `;
 }
@@ -1394,10 +1396,10 @@ function injectCreditsStyles() {
             
             #creditStatsContainer {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-                gap: 12px;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 14px;
                 margin-bottom: 16px;
-                padding: 12px 16px;
+                padding: 14px 18px;
                 background: #f8fafc;
                 border-radius: 12px;
                 border: 1px solid #e2e8f0;
@@ -1405,7 +1407,7 @@ function injectCreditsStyles() {
             
             #creditStatsContainer .stat-card {
                 background: #fff;
-                padding: 12px 16px;
+                padding: 16px 20px;
                 border-radius: 10px;
                 border-left: 4px solid #2563eb;
                 transition: transform 0.2s;
@@ -1417,7 +1419,7 @@ function injectCreditsStyles() {
             }
             
             #creditStatsContainer .stat-label {
-                font-size: 13px;
+                font-size: 24px !important;
                 color: #64748b;
                 font-weight: 600;
                 text-transform: uppercase;
@@ -1425,7 +1427,7 @@ function injectCreditsStyles() {
             }
             
             #creditStatsContainer .stat-value {
-                font-size: 26px;
+                font-size: 40px !important;
                 font-weight: 800;
                 color: #111827;
             }
@@ -2014,13 +2016,17 @@ function injectCreditsStyles() {
                 }
                 
                 #creditStatsContainer {
-                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
-                    gap: 10px !important;
-                    padding: 10px 12px !important;
+                    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+                    gap: 12px !important;
+                    padding: 12px 14px !important;
                 }
                 
                 #creditStatsContainer .stat-value {
-                    font-size: 22px !important;
+                    font-size: 32px !important;
+                }
+                
+                #creditStatsContainer .stat-label {
+                    font-size: 20px !important;
                 }
             }
             
@@ -2088,17 +2094,17 @@ function injectCreditsStyles() {
                 }
                 
                 #creditStatsContainer {
-                    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-                    gap: 8px !important;
-                    padding: 8px 10px !important;
+                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+                    gap: 10px !important;
+                    padding: 10px 12px !important;
                 }
                 
                 #creditStatsContainer .stat-value {
-                    font-size: 20px !important;
+                    font-size: 28px !important;
                 }
                 
                 #creditStatsContainer .stat-label {
-                    font-size: 11px !important;
+                    font-size: 18px !important;
                 }
             }
             
@@ -2187,17 +2193,17 @@ function injectCreditsStyles() {
                 }
                 
                 #creditStatsContainer {
-                    grid-template-columns: repeat(3, 1fr) !important;
-                    gap: 6px !important;
-                    padding: 6px 8px !important;
+                    grid-template-columns: repeat(2, 1fr) !important;
+                    gap: 8px !important;
+                    padding: 8px 10px !important;
                 }
                 
                 #creditStatsContainer .stat-value {
-                    font-size: 18px !important;
+                    font-size: 24px !important;
                 }
                 
                 #creditStatsContainer .stat-label {
-                    font-size: 10px !important;
+                    font-size: 16px !important;
                 }
             }
             
@@ -2341,5 +2347,5 @@ window.getPeriodLabel = getPeriodLabel;
 window.setupCreditsEvents = setupCreditsEvents;
 window.setupRealtimeCredits = setupRealtimeCredits;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits PRO (Statistiques dynamiques) chargé ✅');
-console.log('📊 Les statistiques se mettent à jour avec la recherche et les filtres');
+console.log('🛒 Mixmax Minimarket - Admin Credits PRO (Statistiques 24px) chargé ✅');
+console.log('📊 Les statistiques sont en 24px et se mettent à jour dynamiquement');
