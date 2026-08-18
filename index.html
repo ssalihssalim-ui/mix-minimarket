@@ -2,379 +2,172 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0A0D12">
+    <meta name="description" content="Système de gestion pour minimarket - Mixmax Minimarket">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Mixmax Minimarket</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <div id="app">
-        <header class="app-header">
-            <div class="brand">
-                <i class="fas fa-store"></i>
-                <span>Mixmax</span>
-                <span class="badge">v2</span>
+    <!-- ==================== AUTH PAGE ==================== -->
+    <div id="authPage" class="login-wrapper">
+        <div class="login-container" id="loginContainer">
+            <div class="login-brand">
+                <div class="brand-icon"><img src="logo.png" alt="Mixmax Minimarket" class="brand-logo"></div>
+                <h1><span>Mixmax</span> Minimarket</h1>
+                <p style="color:rgba(255,255,255,0.8); font-size:0.9rem;">Gestion complète • Minimarket</p>
             </div>
-            <div class="header-actions">
-                <span id="userInfo">
-                    <i class="fas fa-user-circle"></i>
-                    <span id="userName">Chargement...</span>
-                </span>
-                <button id="logoutBtn" class="btn-logout" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Déconnexion
-                </button>
+            <div class="login-form">
+                <h2>🔐 Connexion</h2>
+                <form id="loginForm" onsubmit="return handleLogin(event)">
+                    <div class="input-group"><i class="fas fa-envelope"></i><input type="email" id="loginEmail" placeholder="Email" required></div>
+                    <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="loginPassword" placeholder="Mot de passe" required></div>
+                    <button type="submit" class="btn-login" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Se connecter</button>
+                </form>
+                <div class="register-link">Pas de compte ? <strong onclick="showRegister()">Créer un compte</strong></div>
             </div>
-        </header>
-
-        <div class="app-layout">
-            <nav class="sidebar" id="sidebar">
-                <div class="sidebar-section">
-                    <div class="nav-label">Navigation</div>
-                    <a class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
-                        <i class="fas fa-chart-pie"></i> Dashboard
-                    </a>
-                    <a class="nav-item" data-page="pos" onclick="navigateTo('pos')">
-                        <i class="fas fa-cash-register"></i> Point de Vente
-                    </a>
-                </div>
-                <div class="sidebar-section">
-                    <div class="nav-label">Gestion</div>
-                    <a class="nav-item" data-page="products" onclick="navigateTo('products')">
-                        <i class="fas fa-boxes"></i> Produits
-                    </a>
-                    <a class="nav-item" data-page="clients" onclick="navigateTo('clients')">
-                        <i class="fas fa-users"></i> Clients
-                    </a>
-                    <a class="nav-item" data-page="credits" onclick="navigateTo('credits')">
-                        <i class="fas fa-credit-card"></i> Crédits
-                        <span class="badge" id="creditsBadge">0</span>
-                    </a>
-                    <a class="nav-item" data-page="ventes" onclick="navigateTo('ventes')">
-                        <i class="fas fa-chart-line"></i> Ventes
-                    </a>
-                    <a class="nav-item" data-page="depenses" onclick="navigateTo('depenses')">
-                        <i class="fas fa-coins"></i> Dépenses
-                    </a>
-                </div>
-                <div class="sidebar-section">
-                    <div class="nav-label">Autres</div>
-                    <a class="nav-item" data-page="statistiques" onclick="navigateTo('statistiques')">
-                        <i class="fas fa-chart-bar"></i> Statistiques
-                    </a>
-                    <a class="nav-item" data-page="options" onclick="navigateTo('options')">
-                        <i class="fas fa-cog"></i> Options
-                    </a>
-                </div>
-            </nav>
-
-            <main class="main-content" id="mainContent">
-                <div id="pageContent">
-                    <div class="loading-container">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Chargement...</p>
+        </div>
+        <div class="register-container hidden" id="registerContainer">
+            <div class="register-brand">
+                <div class="brand-icon"><img src="logo.png" alt="Mixmax Minimarket" class="brand-logo"></div>
+                <h1><span>Mixmax</span> Minimarket</h1>
+                <p style="color:rgba(255,255,255,0.8);">Inscription rapide</p>
+            </div>
+            <div class="register-form">
+                <h2>📝 Créer un compte</h2>
+                <form id="registerForm" onsubmit="return handleRegister(event)">
+                    <div class="input-group"><i class="fas fa-user"></i><input type="text" id="regNom" placeholder="Nom" required></div>
+                    <div class="input-group"><i class="fas fa-user"></i><input type="text" id="regPrenom" placeholder="Prénom" required></div>
+                    <div class="input-group"><i class="fas fa-at"></i><input type="text" id="regUsername" placeholder="Nom d'utilisateur" required></div>
+                    <div class="input-group"><i class="fas fa-envelope"></i><input type="email" id="regEmail" placeholder="Email" required></div>
+                    <div class="input-group"><i class="fas fa-phone"></i><input type="tel" id="regTelephone" placeholder="Téléphone" required></div>
+                    <div class="input-group"><i class="fas fa-briefcase"></i>
+                        <select id="regRole">
+                            <option value="client">Client</option>
+                            <option value="caissier">Caissier</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
                     </div>
-                </div>
-            </main>
+                    <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="regPassword" placeholder="Mot de passe (min 6 caractères)" required></div>
+                    <button type="submit" class="btn-login" id="registerBtn"><i class="fas fa-user-plus"></i> Créer mon compte</button>
+                </form>
+                <div class="register-link">Déjà inscrit ? <strong onclick="showLogin()">Se connecter</strong></div>
+            </div>
         </div>
     </div>
 
-    <!-- Mobile menu toggle -->
-    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-        <i class="fas fa-bars"></i>
-    </button>
+    <!-- ==================== DASHBOARD ADMIN/CAISSIER ==================== -->
+    <div id="dashboardPage" class="dashboard hidden">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img"></div>
+                <h2>Mixmax <span>Market</span></h2>
+                <div class="sidebar-subtitle">MINIMARKET</div>
+            </div>
+            <div class="sidebar-nav">
+                <ul id="navMenu"></ul>
+                <ul>
+                    <li class="nav-item logout-item" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</li>
+                </ul>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-info" id="sidebarUserInfo"><i class="fas fa-user-circle"></i> <span>Chargement...</span></div>
+                <div id="sidebarRole" style="font-size:0.7rem; color:#66BB6A; margin-top:5px;"></div>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="page-header">
+                <div class="header-title"><i class="fas fa-store"></i><h2 id="pageTitle">Dashboard</h2></div>
+            </div>
+            <div id="dynamicContent"></div>
+        </div>
+    </div>
 
+    <!-- ==================== CLIENT PAGE ==================== -->
+    <div id="clientPage" class="dashboard hidden">
+        <button class="mobile-menu-btn" onclick="toggleClientSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="sidebar-overlay" id="clientSidebarOverlay" onclick="closeClientSidebar()"></div>
+        <div class="sidebar" id="clientSidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img"></div>
+                <h2>Mixmax <span>Market</span></h2>
+                <div class="sidebar-subtitle">BIENVENUE</div>
+            </div>
+            <div class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" onclick="clientNavigate('commander')"><i class="fas fa-shopping-bag"></i> Commander</li>
+                    <li class="nav-item" onclick="clientNavigate('historique')"><i class="fas fa-history"></i> Historique</li>
+                    <li class="nav-item" onclick="clientNavigate('parametres')"><i class="fas fa-user-cog"></i> Paramètres</li>
+                    <li class="nav-item logout-item" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</li>
+                </ul>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-info" id="clientSidebarInfo"><i class="fas fa-user-circle"></i> <span>Client</span></div>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="page-header">
+                <div class="header-title"><i class="fas fa-shopping-bag"></i><h2 id="clientPageTitle">Commander</h2></div>
+            </div>
+            <div id="clientDynamicContent"></div>
+        </div>
+    </div>
+
+    <!-- ==================== MENU TACTILE PAGE ==================== -->
+    <div id="menuTactilePage" class="hidden" style="background:#f8fafc; min-height:100vh;">
+        <div id="menuTactileContent" style="padding-bottom:100px;"></div>
+    </div>
+
+    <!-- ==================== MODAL ==================== -->
+    <div id="modalOverlay" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Titre</h3>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+                Contenu du modal
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SCRIPTS ==================== -->
+    <script src="db-cache.js"></script>
     <script src="firebase-config.js"></script>
     <script src="auth.js"></script>
-    <script src="db-cache.js"></script>
+    <script src="script.js"></script>
+    <script src="pos.js"></script>
     <script src="admin.js"></script>
     <script src="admin-crud.js"></script>
-    <script src="admin-credits.js"></script>
     <script src="admin-ventes.js"></script>
+    <script src="admin-credits.js"></script>
     <script src="client.js"></script>
-    <script src="depenses.js"></script>
-    <script src="pos.js"></script>
-    <script src="pos-audio.js"></script>
-    <script src="caissier.js"></script>
-    <script src="statistics.js"></script>
     <script src="menutactile.js"></script>
-    <script src="script.js"></script>
-
-    <style>
-        /* Styles de base pour le chargement */
-        .loading-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 80px 20px;
-            color: #94a3b8;
-        }
-        .loading-container i {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-        .loading-container p {
-            font-size: 18px;
-            font-weight: 500;
-        }
-        
-        /* Mobile menu toggle */
-        .mobile-menu-toggle {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: #111827;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 56px;
-            height: 56px;
-            font-size: 24px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .mobile-menu-toggle:hover {
-            transform: scale(1.05);
-        }
-        
-        @media(max-width:768px) {
-            .mobile-menu-toggle {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-                position: fixed;
-                top: 64px;
-                left: 0;
-                bottom: 0;
-                width: 280px;
-                z-index: 99;
-                background: white;
-                border-right: 1px solid #e2e8f0;
-                overflow-y: auto;
-            }
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            .sidebar-overlay {
-                display: none;
-                position: fixed;
-                top: 64px;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.3);
-                z-index: 98;
-            }
-            .sidebar-overlay.active {
-                display: block;
-            }
-        }
-    </style>
-
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileMenu()"></div>
-
+    <script src="depenses.js"></script>
+    <script src="statistics.js"></script>
+    <script src="caissier.js"></script>
+    <script src="pos-audio.js"></script>
+    
     <script>
-        // ===== NAVIGATION =====
-        window.currentPage = 'dashboard';
-        window.currentUserData = null;
-        window.isAdmin = false;
-
-        function navigateTo(page) {
-            console.log('📍 Navigation vers:', page);
-            window.currentPage = page;
-            
-            // Mettre à jour le sidebar
-            document.querySelectorAll('.sidebar .nav-item').forEach(el => {
-                el.classList.toggle('active', el.dataset.page === page);
-            });
-            
-            // Fermer le menu mobile
-            closeMobileMenu();
-            
-            // Charger la page
-            const container = document.getElementById('pageContent');
-            
-            // Ajouter le titre
-            const titles = {
-                'dashboard': 'Tableau de bord',
-                'pos': 'Point de Vente',
-                'products': 'Produits',
-                'clients': 'Clients',
-                'credits': 'Crédits',
-                'ventes': 'Ventes',
-                'depenses': 'Dépenses',
-                'statistiques': 'Statistiques',
-                'options': 'Options'
-            };
-            
-            const icons = {
-                'dashboard': 'fa-chart-pie',
-                'pos': 'fa-cash-register',
-                'products': 'fa-boxes',
-                'clients': 'fa-users',
-                'credits': 'fa-credit-card',
-                'ventes': 'fa-chart-line',
-                'depenses': 'fa-coins',
-                'statistiques': 'fa-chart-bar',
-                'options': 'fa-cog'
-            };
-            
-            container.innerHTML = `
-                <div class="page-header">
-                    <h2><i class="fas ${icons[page] || 'fa-file'}"></i> ${titles[page] || page}</h2>
-                </div>
-                <div id="pageContainer"></div>
-            `;
-            
-            const pageContainer = document.getElementById('pageContainer');
-            
-            // Charger le contenu selon la page
-            switch(page) {
-                case 'dashboard':
-                    if (typeof loadDashboard === 'function') {
-                        loadDashboard(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Dashboard en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'pos':
-                    if (typeof loadPOSPage === 'function') {
-                        loadPOSPage(pageContainer);
-                    } else if (typeof loadPosPage === 'function') {
-                        loadPosPage(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Point de vente en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'products':
-                    if (typeof loadProductsPage === 'function') {
-                        loadProductsPage(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Gestion des produits en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'clients':
-                    if (typeof loadClientsPage === 'function') {
-                        loadClientsPage(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Gestion des clients en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'credits':
-                    if (typeof loadCreditsPage === 'function') {
-                        loadCreditsPage(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Gestion des crédits en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'ventes':
-                    if (typeof loadVentesPage === 'function') {
-                        loadVentesPage(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Historique des ventes en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'depenses':
-                    if (typeof loadDepensesPage === 'function') {
-                        loadDepensesPage(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Gestion des dépenses en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'statistiques':
-                    if (typeof loadStatisticsPage === 'function') {
-                        loadStatisticsPage(pageContainer);
-                    } else {
-                        pageContainer.innerHTML = '<div class="content-card"><p>Statistiques en cours de développement...</p></div>';
-                    }
-                    break;
-                    
-                case 'options':
-                    pageContainer.innerHTML = '<div class="content-card"><p>Options en cours de développement...</p></div>';
-                    break;
-                    
-                default:
-                    pageContainer.innerHTML = '<div class="content-card"><p>Page en cours de développement...</p></div>';
-            }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)).catch(err => console.error('SW ✗', err));
         }
-
-        function toggleMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        }
-
-        function closeMobileMenu() {
-            document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('sidebarOverlay').classList.remove('active');
-        }
-
-        function logout() {
-            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
-                if (typeof firebase !== 'undefined' && firebase.auth) {
-                    firebase.auth().signOut().then(() => {
-                        window.location.href = 'login.html';
-                    }).catch((e) => {
-                        console.error('Erreur déconnexion:', e);
-                        window.location.href = 'login.html';
-                    });
-                } else {
-                    window.location.href = 'login.html';
-                }
-            }
-        }
-
-        // ===== INITIALISATION =====
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Mixmax Minimarket - Initialisation');
-            
-            if (typeof firebase !== 'undefined' && firebase.auth) {
-                firebase.auth().onAuthStateChanged(function(user) {
-                    if (user) {
-                        console.log('👤 Utilisateur connecté:', user.email);
-                        if (typeof loadUserData === 'function') {
-                            loadUserData(user);
-                        }
-                        navigateTo('dashboard');
-                    } else {
-                        console.log('🔒 Utilisateur non connecté');
-                        window.location.href = 'login.html';
-                    }
-                });
-            } else {
-                console.warn('⚠️ Firebase Auth non disponible');
-                navigateTo('dashboard');
-            }
-        });
-
-        // ===== EXPORTS =====
-        window.navigateTo = navigateTo;
-        window.toggleMobileMenu = toggleMobileMenu;
-        window.closeMobileMenu = closeMobileMenu;
-        window.logout = logout;
-
-        console.log('✅ index.html chargé');
     </script>
+
 </body>
 </html>
