@@ -1,185 +1,1023 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MANORA · Beauty & Wellness</title>
-  <!-- Font Awesome (icônes) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-  <!-- CSS principal -->
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mixmax Minimarket</title>
+    
+    <!-- ===== FAVICON ===== -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+    
+    <!-- ===== FONTS ===== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- ===== FONT AWESOME ===== -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- ===== TESSERACT (OCR) ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    
+    <!-- ===== CSS PRINCIPAL ===== -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- ===== STYLES ADDITIONNELS ===== -->
+    <style>
+        /* Reset et base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #111827;
+            --primary-hover: #1f2937;
+            --accent: #14b8a6;
+            --accent-hover: #0d9488;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            --white: #ffffff;
+            --black: #111827;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --transition: all 0.2s ease;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f5f9;
+            color: var(--gray-900);
+            font-size: 16px;
+            line-height: 1.6;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--gray-100); }
+        ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+        
+        /* ===== HEADER / SIDEBAR ===== */
+        .app-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            background: rgba(255,255,255,0.95);
+            min-height: 64px;
+        }
+        
+        .app-header .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--black);
+            text-decoration: none;
+        }
+        
+        .app-header .brand i {
+            color: var(--accent);
+            font-size: 24px;
+        }
+        
+        .app-header .brand span {
+            background: var(--accent);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header-actions .user-info {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+        
+        .header-actions .user-info i {
+            margin-right: 6px;
+            color: var(--accent);
+        }
+        
+        .btn-logout {
+            background: var(--gray-100);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .btn-logout:hover {
+            background: var(--gray-200);
+            color: var(--black);
+        }
+        
+        /* ===== SIDEBAR ===== */
+        .app-layout {
+            display: flex;
+            flex: 1;
+        }
+        
+        .sidebar {
+            width: 240px;
+            background: var(--white);
+            border-right: 1px solid var(--border);
+            padding: 16px 12px;
+            flex-shrink: 0;
+            height: calc(100vh - 64px);
+            position: sticky;
+            top: 64px;
+            overflow-y: auto;
+        }
+        
+        .sidebar .nav-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--gray-400);
+            padding: 12px 12px 6px;
+        }
+        
+        .sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            transition: var(--transition);
+            cursor: pointer;
+            margin-bottom: 2px;
+        }
+        
+        .sidebar .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--black);
+        }
+        
+        .sidebar .nav-item.active {
+            background: var(--black);
+            color: var(--white);
+        }
+        
+        .sidebar .nav-item i {
+            width: 20px;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .sidebar .nav-item .badge {
+            margin-left: auto;
+            background: var(--gray-200);
+            color: var(--gray-600);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 1px 10px;
+            border-radius: 20px;
+        }
+        
+        .sidebar .nav-item.active .badge {
+            background: rgba(255,255,255,0.2);
+            color: var(--white);
+        }
+        
+        /* ===== CONTENU PRINCIPAL ===== */
+        .main-content {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-y: auto;
+            max-height: calc(100vh - 64px);
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--black);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .page-title i {
+            color: var(--accent);
+        }
+        
+        .page-title .sub {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--gray-400);
+            margin-left: 8px;
+        }
+        
+        /* ===== CARDS ===== */
+        .content-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        
+        .content-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .content-card .card-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--black);
+        }
+        
+        /* ===== BOUTONS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: var(--black);
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: var(--white);
+        }
+        
+        .btn-success:hover {
+            background: #15803d;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+        
+        .btn-danger:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--gray-600);
+            border: 2px solid var(--border);
+        }
+        
+        .btn-outline:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+        }
+        
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 13px;
+        }
+        
+        /* ===== TABLEAU ===== */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 4px;
+            font-size: 14px;
+        }
+        
+        .data-table thead th {
+            padding: 12px 16px;
+            text-align: left;
+            background: var(--gray-50);
+            color: var(--gray-500);
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        
+        .data-table thead th i {
+            margin-right: 6px;
+            font-size: 13px;
+        }
+        
+        .data-table tbody td {
+            padding: 12px 16px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-100);
+            vertical-align: middle;
+        }
+        
+        .data-table tbody tr:hover td {
+            background: var(--gray-50);
+        }
+        
+        .data-table .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .data-table .status-badge.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .data-table .status-badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .data-table .status-badge.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* ===== PAGINATION ===== */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .pagination button {
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .pagination button:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+        }
+        
+        .pagination button.active {
+            background: var(--black);
+            color: var(--white);
+            border-color: var(--black);
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* ===== FORMULAIRES ===== */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+            background: var(--white);
+            color: var(--black);
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--black);
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        .modal {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 560px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .modal h2 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .modal h2 i {
+            color: var(--accent);
+        }
+        
+        .modal .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .modal .modal-actions .btn-cancel {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+        
+        .modal .modal-actions .btn-cancel:hover {
+            background: var(--gray-200);
+        }
+        
+        .modal .modal-actions .btn-submit {
+            background: var(--black);
+            color: var(--white);
+        }
+        
+        .modal .modal-actions .btn-submit:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+        
+        /* ===== NOTIFICATIONS ===== */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 14px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            z-index: 10000;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+        
+        .notification.success { background: var(--success); }
+        .notification.error { background: var(--danger); }
+        .notification.warning { background: var(--warning); }
+        .notification.info { background: var(--accent); }
+        
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:1024px) {
+            .sidebar {
+                width: 200px;
+            }
+        }
+        
+        @media(max-width:768px) {
+            .sidebar {
+                display: none;
+                position: fixed;
+                top: 64px;
+                left: 0;
+                bottom: 0;
+                width: 280px;
+                z-index: 99;
+                background: var(--white);
+                border-right: 1px solid var(--border);
+                box-shadow: var(--shadow-lg);
+                padding: 16px;
+            }
+            
+            .sidebar.open {
+                display: block;
+            }
+            
+            .main-content {
+                padding: 16px;
+                max-height: calc(100vh - 64px);
+            }
+            
+            .app-header .brand {
+                font-size: 17px;
+            }
+            
+            .header-actions .user-info {
+                display: none;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal {
+                padding: 20px;
+                max-width: 95%;
+            }
+            
+            .data-table {
+                font-size: 13px;
+            }
+            
+            .data-table thead th,
+            .data-table tbody td {
+                padding: 8px 12px;
+            }
+        }
+        
+        @media(max-width:480px) {
+            .content-card {
+                padding: 12px 14px;
+            }
+            
+            .app-header {
+                padding: 8px 12px;
+                min-height: 56px;
+            }
+            
+            .main-content {
+                padding: 12px;
+            }
+            
+            .data-table thead th,
+            .data-table tbody td {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+        
+        /* Hamburger menu mobile */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--black);
+            cursor: pointer;
+            padding: 4px;
+        }
+        
+        @media(max-width:768px) {
+            .menu-toggle {
+                display: block;
+            }
+        }
+        
+        /* Overlay mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 98;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-
-  <!-- PROMO BAR -->
-  <div class="promo-bar">
-    <span><i class="fas fa-sparkles"></i> Nouvelle collection beauté & bien-être</span>
-    <i class="fas fa-circle" style="font-size: 0.2rem; vertical-align: middle;"></i>
-    <span>Shop Now <i class="fas fa-arrow-right" style="font-size: 0.5rem;"></i></span>
-  </div>
-
-  <div class="wrapper">
-
-    <!-- HEADER -->
-    <header class="header">
-      <a href="#" class="logo" id="logoLink"><i class="fas fa-leaf"></i> MANORA</a>
-      <nav class="nav-links">
-        <!-- Navbar vide -->
-      </nav>
-      <div class="header-icons">
-        <i class="fas fa-search" data-icon="search"></i>
-        <i class="far fa-user" data-icon="user" id="userIcon"></i>
-        <i class="fas fa-shopping-bag" data-icon="bag"></i>
-        <span class="user-status" id="userStatus"></span>
-      </div>
+    <!-- ===== HEADER ===== -->
+    <header class="app-header">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="#" class="brand" onclick="navigateTo('dashboard')">
+                <i class="fas fa-store"></i>
+                Mixmax
+                <span>v2</span>
+            </a>
+        </div>
+        <div class="header-actions">
+            <span class="user-info" id="userInfo">
+                <i class="fas fa-user-circle"></i>
+                <span id="userName">Chargement...</span>
+            </span>
+            <button class="btn-logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="hide-mobile">Déconnexion</span>
+            </button>
+        </div>
     </header>
-
-    <!-- HERO SECTION -->
-    <section class="hero">
-      <div class="hero-tag"><i class="fas fa-star" style="color: #e8a87c; margin-right: 0.4rem;"></i> nouvelle collection</div>
-      
-      <h1>
-        Beauté <span class="gold-accent">&</span> Bien-être
-      </h1>
-      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; justify-content: center; margin-top: 0.2rem;">
-        <span class="lunch-easter" id="lunchBadge"><i class="fas fa-spa" style="margin-right: 0.3rem;"></i> wellness</span>
-        <span style="font-size: 0.7rem; letter-spacing: 0.2em; color: #e8a87c;">✦</span>
-        <span style="font-size: 0.6rem; letter-spacing: 0.1em; color: #999;">édition limitée</span>
-      </div>
-
-      <p class="hero-sub">Découvrez notre nouvelle collection</p>
-      
-      <button class="btn-primary" id="shopNowBtn">Shop Now</button>
-
-      <div class="hero-note">
-        <span><i class="fas fa-check-circle"></i> 100% naturel</span>
-        <span><i class="fas fa-truck"></i> livraison offerte</span>
-        <span><i class="fas fa-undo-alt"></i> 30 jours</span>
-      </div>
-    </section>
-
-    <!-- CATÉGORIES -->
-    <div class="categories">
-      <span class="cat-item" data-category="Soin">Soin</span>
-      <span class="cat-item" data-category="Maquillage">Maquillage</span>
-      <span class="cat-item" data-category="Vitamines">Vitamines</span>
-      <span class="cat-item" data-category="Ensemble">Ensemble</span>
-      <span class="cat-item" data-category="Coquet">Coquet</span>
-      <span class="cat-item" data-category="Accessoires">Accessoires</span>
-      <span class="cat-item" data-category="Sport">Sport</span>
+    
+    <!-- ===== LAYOUT ===== -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="nav-label">Navigation</div>
+            
+            <a class="nav-item" data-page="dashboard" onclick="navigateTo('dashboard')">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a class="nav-item" data-page="pos" onclick="navigateTo('pos')">
+                <i class="fas fa-cash-register"></i> Point de Vente
+            </a>
+            
+            <div class="nav-label" style="margin-top:12px;">Gestion</div>
+            
+            <a class="nav-item" data-page="products" onclick="navigateTo('products')">
+                <i class="fas fa-boxes"></i> Produits
+            </a>
+            <a class="nav-item" data-page="clients" onclick="navigateTo('clients')">
+                <i class="fas fa-users"></i> Clients
+            </a>
+            <a class="nav-item" data-page="credits" onclick="navigateTo('credits')">
+                <i class="fas fa-credit-card"></i> Crédits
+                <span class="badge" id="creditsBadge">0</span>
+            </a>
+            <a class="nav-item" data-page="ventes" onclick="navigateTo('ventes')">
+                <i class="fas fa-chart-line"></i> Ventes
+            </a>
+            <a class="nav-item" data-page="depenses" onclick="navigateTo('depenses')">
+                <i class="fas fa-coins"></i> Dépenses
+            </a>
+            
+            <div class="nav-label" style="margin-top:12px;">Autres</div>
+            
+            <a class="nav-item" data-page="statistiques" onclick="navigateTo('statistiques')">
+                <i class="fas fa-chart-bar"></i> Statistiques
+            </a>
+            <a class="nav-item" data-page="options" onclick="navigateTo('options')">
+                <i class="fas fa-cog"></i> Options
+            </a>
+        </nav>
+        
+        <!-- Overlay mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        
+        <!-- Contenu principal -->
+        <main class="main-content" id="mainContent">
+            <!-- Le contenu est injecté ici par JavaScript -->
+            <div id="pageContent">
+                <div style="text-align:center;padding:60px 20px;color:var(--gray-400);">
+                    <i class="fas fa-spinner fa-spin" style="font-size:40px;"></i>
+                    <p style="margin-top:16px;font-size:18px;">Chargement...</p>
+                </div>
+            </div>
+        </main>
     </div>
-
-    <!-- COLLECTION SECTION -->
-    <div class="silver-section">
-      <div class="silver-content">
-        <h3><i class="fas fa-heart"></i> Collection Wellness</h3>
-        <p>Soin · beauté · bien-être · vitalité</p>
-        <button class="btn-secondary" id="silverBtn">Découvrir</button>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <footer class="footer">
-      <div class="footer-links">
-        <a href="#" data-footer="about">À propos</a>
-        <a href="#" data-footer="faq">FAQ</a>
-        <a href="#" data-footer="shipping">Livraison</a>
-        <a href="#" data-footer="returns">Retours</a>
-      </div>
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 0.6rem;">© 2026 MANORA</span>
-        <span style="color: #d4cfc6;">|</span>
-        <span style="font-size: 0.6rem; letter-spacing: 0.1em;">Beauty & Wellness</span>
-      </div>
-      <div class="footer-social">
-        <i class="fab fa-instagram" data-social="instagram"></i>
-        <i class="fab fa-pinterest-p" data-social="pinterest"></i>
-        <i class="fab fa-youtube" data-social="youtube"></i>
-      </div>
-    </footer>
-
-  </div> <!-- fin wrapper -->
-
-  <!-- MODAL AUTHENTIFICATION -->
-  <div class="auth-overlay" id="authOverlay">
-    <div class="auth-modal">
-      <button class="auth-close" id="authClose"><i class="fas fa-times"></i></button>
-      
-      <div class="auth-header">
-        <h2><i class="fas fa-leaf" style="color: #e8a87c;"></i> Bienvenue chez MANORA</h2>
-        <p>Connectez-vous ou créez un compte</p>
-      </div>
-
-      <!-- Tabs -->
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-tab="login">Connexion</button>
-        <button class="auth-tab" data-tab="register">Inscription</button>
-      </div>
-
-      <!-- Formulaire Connexion -->
-      <form class="auth-form" id="loginForm">
-        <div class="form-group">
-          <label for="loginEmail"><i class="fas fa-envelope"></i> Email</label>
-          <input type="email" id="loginEmail" placeholder="votre@email.com" required />
-        </div>
-        <div class="form-group">
-          <label for="loginPassword"><i class="fas fa-lock"></i> Mot de passe</label>
-          <input type="password" id="loginPassword" placeholder="••••••••" required />
-        </div>
-        <div id="loginError" class="auth-error hidden"></div>
-        <button type="submit" class="auth-submit" id="loginBtn">Se connecter</button>
-        <p class="auth-forgot"><a href="#" id="resetPasswordLink">Mot de passe oublié ?</a></p>
-      </form>
-
-      <!-- Formulaire Inscription -->
-      <form class="auth-form hidden" id="registerForm">
-        <div class="form-group">
-          <label for="registerName"><i class="fas fa-user"></i> Nom complet</label>
-          <input type="text" id="registerName" placeholder="Jean Dupont" required />
-        </div>
-        <div class="form-group">
-          <label for="registerEmail"><i class="fas fa-envelope"></i> Email</label>
-          <input type="email" id="registerEmail" placeholder="votre@email.com" required />
-        </div>
-        <div class="form-group">
-          <label for="registerPassword"><i class="fas fa-lock"></i> Mot de passe</label>
-          <input type="password" id="registerPassword" placeholder="••••••••" required />
-          <small style="font-size: 0.6rem; color: #999;">Minimum 6 caractères</small>
-        </div>
-        <div class="form-group">
-          <label for="registerConfirm"><i class="fas fa-check-circle"></i> Confirmer</label>
-          <input type="password" id="registerConfirm" placeholder="••••••••" required />
-        </div>
-        <div id="registerError" class="auth-error hidden"></div>
-        <button type="submit" class="auth-submit" id="registerBtn">Créer mon compte</button>
-        <p class="auth-terms">En créant un compte, vous acceptez nos <a href="#">conditions d'utilisation</a></p>
-      </form>
-    </div>
-  </div>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  
-  <!-- Configuration Firebase -->
-  <script>
-    // ===== CONFIGURATION FIREBASE =====
-    // REMPLACEZ CES VALEURS PAR VOTRE PROPRE CONFIGURATION FIREBASE
-    const firebaseConfig = {
-      apiKey: "VOTRE_API_KEY",
-      authDomain: "VOTRE_PROJET.firebaseapp.com",
-      projectId: "VOTRE_PROJET_ID",
-      storageBucket: "VOTRE_PROJET.appspot.com",
-      messagingSenderId: "VOTRE_SENDER_ID",
-      appId: "VOTRE_APP_ID"
-    };
-
-    // Initialiser Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-  </script>
-
-  <!-- Script principal -->
-  <script src="script.js"></script>
+    
+    <!-- ===== SCRIPTS ===== -->
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="db-cache.js"></script>
+    <script src="admin.js"></script>
+    <script src="admin-crud.js"></script>
+    <script src="admin-credits.js"></script>
+    <script src="admin-ventes.js"></script>
+    <script src="client.js"></script>
+    <script src="depenses.js"></script>
+    <script src="pos.js"></script>
+    <script src="pos-audio.js"></script>
+    <script src="caissier.js"></script>
+    <script src="statistics.js"></script>
+    <script src="menutactile.js"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        // ===== VARIABLES GLOBALES =====
+        window.currentPage = 'dashboard';
+        window.currentUserData = null;
+        window.isAdmin = false;
+        window.pageTitle = document.getElementById('pageTitle');
+        
+        // ===== NAVIGATION =====
+        function navigateTo(page) {
+            console.log('📍 Navigation vers:', page);
+            window.currentPage = page;
+            
+            // Mettre à jour le sidebar
+            document.querySelectorAll('.sidebar .nav-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.page === page);
+            });
+            
+            // Fermer le sidebar sur mobile
+            closeSidebar();
+            
+            // Charger la page
+            const container = document.getElementById('pageContent');
+            
+            // Ajouter le titre
+            const titles = {
+                'dashboard': 'Tableau de bord',
+                'pos': 'Point de Vente',
+                'products': 'Produits',
+                'clients': 'Clients',
+                'credits': 'Crédits',
+                'ventes': 'Ventes',
+                'depenses': 'Dépenses',
+                'statistiques': 'Statistiques',
+                'options': 'Options'
+            };
+            
+            // Nettoyer le contenu
+            container.innerHTML = '';
+            
+            // Créer le titre
+            const titleEl = document.createElement('div');
+            titleEl.className = 'page-title';
+            titleEl.id = 'pageTitle';
+            titleEl.innerHTML = `<i class="fas fa-${getIconForPage(page)}"></i> ${titles[page] || page} <span class="sub">${getSubtitleForPage(page)}</span>`;
+            container.appendChild(titleEl);
+            
+            // Charger le contenu selon la page
+            switch(page) {
+                case 'dashboard':
+                    if (typeof loadDashboard === 'function') {
+                        loadDashboard(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Dashboard en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'pos':
+                    if (typeof loadPOSPage === 'function') {
+                        loadPOSPage(container);
+                    } else if (typeof loadPosPage === 'function') {
+                        loadPosPage(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Point de vente en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'products':
+                    if (typeof loadProductsPage === 'function') {
+                        loadProductsPage(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Gestion des produits en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'clients':
+                    if (typeof loadClientsPage === 'function') {
+                        loadClientsPage(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Gestion des clients en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'credits':
+                    if (typeof loadCreditsPage === 'function') {
+                        loadCreditsPage(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Gestion des crédits en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'ventes':
+                    if (typeof loadVentesPage === 'function') {
+                        loadVentesPage(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Historique des ventes en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'depenses':
+                    if (typeof loadDepensesPage === 'function') {
+                        loadDepensesPage(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Gestion des dépenses en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'statistiques':
+                    if (typeof loadStatisticsPage === 'function') {
+                        loadStatisticsPage(container);
+                    } else {
+                        container.innerHTML += '<div class="content-card"><p>Statistiques en cours de développement...</p></div>';
+                    }
+                    break;
+                    
+                case 'options':
+                    container.innerHTML += '<div class="content-card"><p>Options en cours de développement...</p></div>';
+                    break;
+                    
+                default:
+                    container.innerHTML += '<div class="content-card"><p>Page en cours de développement...</p></div>';
+            }
+        }
+        
+        function getIconForPage(page) {
+            const icons = {
+                'dashboard': 'chart-pie',
+                'pos': 'cash-register',
+                'products': 'boxes',
+                'clients': 'users',
+                'credits': 'credit-card',
+                'ventes': 'chart-line',
+                'depenses': 'coins',
+                'statistiques': 'chart-bar',
+                'options': 'cog'
+            };
+            return icons[page] || 'file';
+        }
+        
+        function getSubtitleForPage(page) {
+            const subs = {
+                'dashboard': 'Vue d\'ensemble',
+                'pos': 'Encaissement',
+                'products': 'Catalogue',
+                'clients': 'Carnet d\'adresses',
+                'credits': 'Gestion des impayés',
+                'ventes': 'Historique',
+                'depenses': 'Suivi des coûts',
+                'statistiques': 'Analyses',
+                'options': 'Paramètres'
+            };
+            return subs[page] || '';
+        }
+        
+        // ===== SIDEBAR =====
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+        
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+        
+        // ===== LOGOUT =====
+        function logout() {
+            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+                if (typeof firebase !== 'undefined' && firebase.auth) {
+                    firebase.auth().signOut().then(() => {
+                        window.location.href = 'login.html';
+                    }).catch((e) => {
+                        console.error('Erreur déconnexion:', e);
+                        window.location.href = 'login.html';
+                    });
+                } else {
+                    window.location.href = 'login.html';
+                }
+            }
+        }
+        
+        // ===== INITIALISATION =====
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Mixmax Minimarket - Initialisation');
+            
+            // Vérifier l'authentification
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        console.log('👤 Utilisateur connecté:', user.email);
+                        // Charger les données utilisateur
+                        if (typeof loadUserData === 'function') {
+                            loadUserData(user);
+                        }
+                        // Naviguer vers la page par défaut
+                        navigateTo('dashboard');
+                    } else {
+                        console.log('🔒 Utilisateur non connecté, redirection vers login');
+                        window.location.href = 'login.html';
+                    }
+                });
+            } else {
+                console.warn('⚠️ Firebase Auth non disponible');
+                navigateTo('dashboard');
+            }
+        });
+        
+        // ===== EXPORTS =====
+        window.navigateTo = navigateTo;
+        window.toggleSidebar = toggleSidebar;
+        window.closeSidebar = closeSidebar;
+        window.logout = logout;
+        
+        console.log('✅ index.html chargé avec succès');
+    </script>
 </body>
 </html>
