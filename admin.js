@@ -321,59 +321,211 @@ function loadDashboardStats() {
     db.collection('ventes').get().then(function(s) { var e = document.getElementById('ventesCount'); if (e) e.textContent = s.size; });
 }
 
-// ==================== INSCRIPTIONS EN ATTENTE ====================
+// ==================== INSCRIPTIONS EN ATTENTE (CORRIGÉ) ====================
 function loadPendingRegistrations() {
     var d = document.getElementById('pendingRegistrations');
     if (!d) return;
-    d.innerHTML = '<div class="table-container"><table class="data-table" id="pendingTable"><thead><tr>' +
-        '<th>Utilisateur</th><th>Email</th><th>Rôle</th><th>Date</th><th>Actions</th>' +
-        '</thead><tbody></tbody></table></div>';
-    db.collection('users').where('authorized', '==', 'no').get().then(function(s) {
-        window.pendingUsersData = [];
-        s.forEach(function(dc) {
-            var u = dc.data();
-            window.pendingUsersData.push({ id: dc.id, prenom: u.prenom + ' ' + u.nom, email: u.email, role: u.role, createdAt: u.createdAt, data: u });
+    
+    d.innerHTML = `
+        <div class="table-container">
+            <table class="data-table" id="pendingTable">
+                <thead>
+                    <tr>
+                        <th style="font-size:22px;">Utilisateur</th>
+                        <th style="font-size:22px;">Email</th>
+                        <th style="font-size:22px;">Rôle</th>
+                        <th style="font-size:22px;">Date</th>
+                        <th style="font-size:22px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    `;
+    
+    // 🔥 Utiliser Firestore directement (pas le cache)
+    db.collection('users')
+        .where('authorized', '==', 'no')
+        .orderBy('createdAt', 'desc')
+        .get()
+        .then(function(snapshot) {
+            window.pendingUsersData = [];
+            snapshot.forEach(function(dc) {
+                var u = dc.data();
+                window.pendingUsersData.push({
+                    id: dc.id,
+                    prenom: (u.prenom || '') + ' ' + (u.nom || ''),
+                    email: u.email || '',
+                    role: u.role || 'client',
+                    createdAt: u.createdAt,
+                    data: u
+                });
+            });
+            renderPendingTable();
+        })
+        .catch(function(err) {
+            console.error('❌ Erreur chargement pending:', err);
+            window.pendingUsersData = [];
+            renderPendingTable();
         });
-        renderPendingTable();
-    }).catch(function() { window.pendingUsersData = []; renderPendingTable(); });
 }
 
 function renderPendingTable() {
     var tb = document.querySelector('#pendingTable tbody');
     if (!tb) return;
     tb.innerHTML = '';
+    
     var data = window.pendingUsersData || [];
+    
     if (data.length === 0) {
-        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#16a34a;">Aucune inscription en attente</td></tr>';
+        tb.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center;padding:40px;color:#16a34a;font-size:24px;">
+                    ✅ Aucune inscription en attente
+                </td>
+            </tr>
+        `;
         return;
     }
-    data.forEach(function(x) {
-        var dt = x.createdAt ? new Date(x.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : 'N/A';
-        tb.innerHTML += '<tr><td><strong>' + escapeHtml(x.prenom) + '</strong></td><td>' + escapeHtml(x.email) + '</td><td>' + escapeHtml(x.role) + '</td><td>' + dt + '</td>' +
-            '<td><button class="btn-add" style="padding:4px 8px;font-size:0.7rem;margin-right:5px;" onclick="approveUser(\'' + x.id + '\')">✔ Accepter</button>' +
-            '<button class="btn-delete" style="padding:4px 8px;font-size:0.7rem;" onclick="rejectUser(\'' + x.id + '\')">✖ Refuser</button></td></tr>';
-    });
+    
+    for (var i = 0; i < data.length; i++) {
+        var x = data[i];
+        var dt = x.createdAt ? new Date(x.createdAt.seconds * 1000).toLocaleDateString('fr-FR') + ' ' + 
+                                   new Date(x.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : 'N/A';
+        
+        tb.innerHTML += `
+            <tr>
+                <td style="font-size:22px;"><strong>${escapeHtml(x.prenom)}</strong></td>
+                <td style="font-size:22px;">${escapeHtml(x.email)}</td>
+                <td style="font-size:22px;"><span class="status-warning">${escapeHtml(x.role)}</span></td>
+                <td style="font-size:22px;">${dt}</td>
+                <td style="font-size:22px;">
+                    <button class="btn-add" style="padding:8px 16px;font-size:20px;margin-right:8px;" onclick="approveUser('${x.id}')">
+                        ✅ Accepter
+                    </button>
+                    <button class="btn-delete" style="padding:8px 16px;font-size:20px;" onclick="rejectUser('${x.id}')">
+                        ❌ Refuser
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
 }
 
+// ==================== APPROVE USER (CORRIGÉ) ====================
 async function approveUser(uid) {
     if (!confirm('Accepter cet utilisateur ?')) return;
-    var doc = await db.collection('users').doc(uid).get();
-    if (!doc.exists) { alert('Utilisateur introuvable'); return; }
-    var u = doc.data();
-    await CacheDB.write('users', uid, { authorized: 'yes' }, 'update');
-    if (u.role === 'client') {
-        var cd = { nom: u.nom || '', prenom: u.prenom || '', email: u.email || '', telephone: u.telephone || '', username: u.username || '', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-        var ec = await db.collection('clients').doc(uid).get();
-        if (ec.exists) await CacheDB.write('clients', uid, cd, 'update');
-        else await CacheDB.write('clients', uid, cd, 'set');
+    
+    try {
+        // 1. Vérifier que le document existe
+        const doc = await db.collection('users').doc(uid).get();
+        if (!doc.exists) {
+            alert('❌ Utilisateur introuvable');
+            return;
+        }
+        
+        const userData = doc.data();
+        
+        // 2. Mettre à jour DIRECTEMENT dans Firestore (pas via CacheDB)
+        await db.collection('users').doc(uid).update({
+            authorized: 'yes',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // 3. Mettre à jour le cache local
+        const updatedUser = { ...userData, authorized: 'yes', updatedAt: new Date() };
+        await CacheDB.set('users', uid, { uid: uid, userData: updatedUser });
+        
+        // 4. Si c'est un client, créer son profil client
+        if (userData.role === 'client') {
+            const clientData = {
+                nom: userData.nom || '',
+                prenom: userData.prenom || '',
+                email: userData.email || '',
+                telephone: userData.telephone || '',
+                username: userData.username || '',
+                authorized: 'yes',
+                pointsFidelite: 0,
+                ca: 0,
+                profit: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            const clientDoc = await db.collection('clients').doc(uid).get();
+            if (clientDoc.exists) {
+                await db.collection('clients').doc(uid).update(clientData);
+            } else {
+                await db.collection('clients').doc(uid).set(clientData);
+            }
+            await CacheDB.set('clients', uid, { id: uid, ...clientData });
+        }
+        
+        // 5. Mettre à jour le cache "current" si c'est l'utilisateur actuel
+        if (window.currentUserData && window.currentUserData.uid === uid) {
+            window.currentUserData.userData.authorized = 'yes';
+            await CacheDB.set('users', 'current', window.currentUserData);
+        }
+        
+        // 6. Synchroniser
+        await CacheDB.sync();
+        
+        alert('✅ Utilisateur accepté avec succès !');
+        
+        // 7. Rafraîchir les listes
+        if (typeof loadPendingRegistrations === 'function') {
+            loadPendingRegistrations();
+        }
+        if (typeof loadUsersList === 'function') {
+            loadUsersList();
+        }
+        if (typeof loadClients === 'function') {
+            loadClients();
+        }
+        
+    } catch (e) {
+        console.error('❌ Erreur approveUser:', e);
+        alert('❌ Erreur : ' + e.message);
     }
-    alert('✅ Accepté'); loadPendingRegistrations(); if (typeof loadUsersList === 'function') loadUsersList(); CacheDB.sync();
 }
 
+// ==================== REJECT USER (CORRIGÉ) ====================
 async function rejectUser(uid) {
-    if (confirm('Refuser et supprimer ?')) {
-        await CacheDB.write('users', uid, null, 'delete');
-        alert('Supprimé'); loadPendingRegistrations(); if (typeof loadUsersList === 'function') loadUsersList(); CacheDB.sync();
+    if (!confirm('Refuser et supprimer cet utilisateur ?')) return;
+    
+    try {
+        // 1. Supprimer directement de Firestore
+        await db.collection('users').doc(uid).delete();
+        
+        // 2. Supprimer du cache
+        await CacheDB.delete('users', uid);
+        
+        // 3. Supprimer aussi le client associé si existe
+        const clientDoc = await db.collection('clients').doc(uid).get();
+        if (clientDoc.exists) {
+            await db.collection('clients').doc(uid).delete();
+            await CacheDB.delete('clients', uid);
+        }
+        
+        // 4. Synchroniser
+        await CacheDB.sync();
+        
+        alert('✅ Utilisateur supprimé');
+        
+        // 5. Rafraîchir
+        if (typeof loadPendingRegistrations === 'function') {
+            loadPendingRegistrations();
+        }
+        if (typeof loadUsersList === 'function') {
+            loadUsersList();
+        }
+        if (typeof loadClients === 'function') {
+            loadClients();
+        }
+        
+    } catch (e) {
+        console.error('❌ Erreur rejectUser:', e);
+        alert('❌ Erreur : ' + e.message);
     }
 }
 
@@ -469,7 +621,7 @@ async function saveFideliteSettings() {
     alert('✅ Enregistré');
 }
 
-// ==================== NAVIGATION (AJOUTÉ) ====================
+// ==================== NAVIGATION ====================
 function navigateTo(page) {
     console.log('📍 Navigation vers:', page);
     
@@ -519,7 +671,6 @@ function navigateTo(page) {
         } else if (typeof loadPosPage === 'function') {
             loadPosPage(content);
         } else {
-            // Fallback : afficher un message
             content.innerHTML = `
                 <div class="content-card">
                     <p style="text-align:center;padding:40px;">
@@ -528,7 +679,6 @@ function navigateTo(page) {
                     </p>
                 </div>
             `;
-            // Essayer de charger le POS après un délai
             setTimeout(function() {
                 if (typeof window.loadPosPage === 'function') {
                     window.loadPosPage(content);
@@ -566,11 +716,10 @@ function navigateTo(page) {
         content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Page en développement</p></div>';
     }
     
-    // Fermer le menu
     closeSidebar();
 }
 
-// ==================== CRÉDITS (FONCTION DIRECTE) ====================
+// ==================== CRÉDITS ====================
 function loadCreditsPage(c) {
     console.log('📋 Chargement de la page Crédits...');
     
@@ -697,8 +846,6 @@ window.changeAdminPassword = changeAdminPassword;
 window.toggleMarketingProgram = toggleMarketingProgram;
 window.loadFideliteSettings = loadFideliteSettings;
 window.saveFideliteSettings = saveFideliteSettings;
-
-// ==================== EXPORTS NAVIGATION & CRÉDITS ====================
 window.navigateTo = navigateTo;
 window.loadCreditsPage = loadCreditsPage;
 window.loadCreditsData = loadCreditsData;
