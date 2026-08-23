@@ -1,9 +1,5 @@
 // ==================== POS.JS - 5 COLONNES SUR MOBILE ====================
 // Mixmax Minimarket – Point de vente complet avec virtualisation
-// ✅ 5 colonnes sur mobile (< 700px)
-// ✅ Nom produit 22px bold uppercase, Prix produit 24px sur mobile
-// ✅ Nom panier 22px, Prix panier 24px
-// ✅ Bouton Valider 26px / hauteur 60px
 
 var posCart = [];
 var posStep = 1;
@@ -206,7 +202,7 @@ if (clearBtn) clearBtn.style.display = 'none';
 
 function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProductGrid(); }
 
-// ==================== FILTER PRODUCT GRID AVEC 5 COLONNES SUR MOBILE ====================
+// ==================== FILTER PRODUCT GRID ====================
 function filterProductGrid(){
 if(!isOnPOSPage() || posStep !== 1) return;
 var grid=document.getElementById('posProductGrid')||document.querySelector('.pos-products-grid'); if(!grid) return;
@@ -223,7 +219,6 @@ var totalProducts = f.length;
 var displayProducts = f.slice(0, posProductOffset + posProductBatchSize);
 posHasMoreProducts = (posProductOffset + posProductBatchSize) < totalProducts;
 
-// ✅ Détection mobile pour 5 colonnes
 var isMobile = window.innerWidth < 700;
 var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(120px, 1fr))';
 grid.style.gridTemplateColumns = gridCols;
@@ -235,7 +230,6 @@ if(totalProducts===0){ html+='<div style="grid-column:1/-1;text-align:center;pad
 else{
 if(posSearchQuery) html+='<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">'+totalProducts+' résultat'+(totalProducts>1?'s':'')+'</div>';
 for(var j=0;j<displayProducts.length;j++){ var p=displayProducts[j],pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente,hp=p.prixPromo&&p.prixPromo>0,sc='',stt=''; if(p.stock!==undefined){ if(p.stock<=0){sc='pos-out-of-stock';stt=' (Rupture)';}else if(p.stock<=5) stt=' ('+p.stock+' rest.)'; } var dn=escapeHtml(p.nom); if(posSearchQuery) dn=dn.replace(new RegExp('('+posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fef3c7;border-radius:3px;">$1</mark>');
-// ✅ Style adapté pour mobile (5 colonnes) - Nom 22px bold uppercase, Prix 24px
 var cardStyle = isMobile ? 'padding:4px 2px;min-height:90px;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;' : '';
 var imgStyle = isMobile ? 'height:35px;width:100%;margin-bottom:2px;border-radius:6px;' : 'height:80px;margin-bottom:6px;';
 var nameStyle = isMobile ? 'font-size:22px !important;font-weight:700 !important;text-transform:uppercase;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:0;display:block;' : 'font-size:0.78rem;font-weight:600;line-height:1.2;';
@@ -378,32 +372,110 @@ s.value = posCurrentClient.name;
 function updatePaymentButtons(){ setTimeout(function(){ var cb=document.getElementById('posCreditBtn'),pb=document.getElementById('posPartielBtn'),cc=posCurrentClient&&posCurrentClient.id; if(cb){ cb.disabled=!cc; cb.style.opacity=cc?'1':'0.4'; } if(pb){ pb.disabled=!cc; pb.style.opacity=cc?'1':'0.4'; } },300); }
 function posSetTable(v){ posCurrentTable=v.trim(); if(posCurrentTable){ posCurrentClient=null; posPaymentMethod='espece'; var s=document.getElementById('posClientSearchInput'); if(s) s.value=''; document.getElementById('clientCreditDisplay').style.display='none'; var clearBtn=document.getElementById('posClientClearBtn'); if(clearBtn) clearBtn.style.display='none'; } }
 
-function posAddToCartOrOpenOptions(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } var cat=posCategoriesList.find(function(c){ return c.nom===p.categorie; }),isRecette=cat&&cat.recette===true; if(isRecette){ posCurrentProductId=pid; posOpenOptionsModal(pid); }else{ var ex=posCart.find(function(x){ return x.id===pid; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:[],epice:'Normal',sel:'Normal'}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); updateCartOnly(); } }
+// ==================== POS ADD TO CART OR OPEN OPTIONS ====================
+function posAddToCartOrOpenOptions(pid){
+    var p = posProductsList.find(function(x){ return x.id === pid; });
+    if(!p) return;
+    if(p.stock!==undefined && p.stock<=0){
+        alert('⚠️ Rupture de stock');
+        return;
+    }
+    
+    // ✅ VÉRIFIER SI LA CATÉGORIE DU PRODUIT A "recette" ACTIVÉ
+    var cat = posCategoriesList.find(function(c){ 
+        return c.nom === p.categorie || (p.categories && p.categories.includes(c.nom));
+    });
+    var isRecette = cat && cat.recette === true;
+    
+    // ✅ VÉRIFIER SI LE PRODUIT A DES INGRÉDIENTS
+    var aDesIngredients = false;
+    if (p.id) {
+        // On va vérifier dans le cache ou Firestore
+        var productInCache = posProductsList.find(function(x){ return x.id === p.id; });
+        // On charge les ingrédients depuis Firestore
+        db.collection('products').doc(p.id).get().then(function(doc) {
+            if (doc.exists) {
+                var ingredients = doc.data().ingredients || [];
+                aDesIngredients = ingredients.length > 0;
+                
+                if (isRecette && aDesIngredients) {
+                    // ✅ OUVRIR LE FORMULAIRE DE PERSONNALISATION
+                    posCurrentProductId = pid;
+                    posOpenOptionsModal(pid);
+                } else {
+                    // ✅ AJOUTER DIRECTEMENT SANS PERSONNALISATION
+                    ajouterProduitDirectement(pid);
+                }
+            } else {
+                // Fallback: ajouter directement
+                ajouterProduitDirectement(pid);
+            }
+        }).catch(function(err) {
+            console.error('❌ Erreur chargement produit:', err);
+            ajouterProduitDirectement(pid);
+        });
+    } else {
+        ajouterProduitDirectement(pid);
+    }
+}
+
+// ==================== AJOUTER PRODUIT DIRECTEMENT ====================
+function ajouterProduitDirectement(pid){
+    var p = posProductsList.find(function(x){ return x.id === pid; });
+    if(!p) return;
+    
+    var ex = posCart.find(function(x){ return x.id === pid; });
+    if(ex){
+        if(p.stock!==undefined && ex.quantite >= p.stock){
+            alert('Stock insuffisant');
+            return;
+        }
+        ex.quantite += 1;
+    }else{
+        var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
+        posCart.push({
+            id: p.id,
+            nom: p.nom,
+            prixUnitaire: pr,
+            prixAchat: p.prixAchat || 0,
+            prixPromo: p.prixPromo || 0,
+            prixVente: p.prixVente || 0,
+            quantite: 1,
+            categorie: p.categorie || '',
+            imageBase64: p.imageBase64 || '',
+            sauces: [],
+            interdits: [],
+            epice: 'Normal',
+            sel: 'Normal',
+            ingredientsExclus: []
+        });
+    }
+    if(typeof window.onProductAdded === 'function') window.onProductAdded(p.id);
+    updateCartOnly();
+}
 
 // ==================== POS OPEN OPTIONS MODAL (AVEC INGRÉDIENTS) ====================
 async function posOpenOptionsModal(pid) {
     var p = posProductsList.find(function(x) { return x.id === pid; });
     if (!p) return;
     if (p.stock !== undefined && p.stock <= 0) {
-        alert('Rupture');
+        alert('⚠️ Rupture de stock');
         return;
     }
 
     // ✅ CHARGER LES INGRÉDIENTS DU PRODUIT DEPUIS FIRESTORE
+    var productIngredients = [];
     try {
         var doc = await db.collection('products').doc(pid).get();
         if (doc.exists) {
-            posCurrentProductIngredients = doc.data().ingredients || [];
-        } else {
-            posCurrentProductIngredients = [];
+            productIngredients = doc.data().ingredients || [];
         }
     } catch(e) {
-        console.error('Erreur chargement ingrédients:', e);
-        posCurrentProductIngredients = [];
+        console.error('❌ Erreur chargement ingrédients:', e);
     }
 
-    // ✅ CHARGER LE STOCK POUR CONNAÎTRE LES QUANTITÉS
-    if (typeof allStockData === 'undefined' || allStockData.length === 0) {
+    // ✅ CHARGER LE STOCK
+    if (allStockData.length === 0) {
         try {
             const snap = await db.collection('stock').orderBy('nom').get();
             allStockData = [];
@@ -413,13 +485,19 @@ async function posOpenOptionsModal(pid) {
                 allStockData.push(dd);
             });
         } catch(e) {
-            console.error('Erreur chargement stock:', e);
+            console.error('❌ Erreur chargement stock:', e);
         }
+    }
+
+    // ✅ SI PAS D'INGRÉDIENTS → AJOUTER DIRECTEMENT
+    if (productIngredients.length === 0) {
+        ajouterProduitDirectement(pid);
+        return;
     }
 
     // ✅ REGROUPER LES INGRÉDIENTS PAR CATÉGORIE
     var grouped = {};
-    posCurrentProductIngredients.forEach(function(ing) {
+    productIngredients.forEach(function(ing) {
         var stockItem = allStockData.find(function(s) { return s.id === ing.idStock; });
         var cat = stockItem ? (stockItem.categorie || 'Ingrédients') : 'Ingrédients';
         if (!grouped[cat]) grouped[cat] = [];
@@ -446,29 +524,30 @@ async function posOpenOptionsModal(pid) {
 
     posCurrentProductId = pid;
     
-    var h = '<h4 style="font-size:1.2rem;margin-bottom:12px;">' + escapeHtml(p.nom) + '</h4>';
-    h += '<p style="color:#64748b;font-size:0.85rem;margin-bottom:12px;">Sélectionnez les ingrédients à conserver (décochez pour exclure) :</p>';
+    // ✅ AFFICHAGE DE LA FORM
+    var h = '<h4 style="font-size:1.4rem;margin-bottom:12px;color:#1e293b;">' + escapeHtml(p.nom) + '</h4>';
+    h += '<p style="color:#64748b;font-size:1rem;margin-bottom:16px;">☑️ Cochez les ingrédients à <strong>CONSERVER</strong> (décochez pour exclure) :</p>';
 
     if (sortedCats.length === 0) {
-        h += '<div style="color:#94a3b8;padding:12px;">Aucun ingrédient pour ce produit</div>';
+        h += '<div style="color:#94a3b8;padding:16px;text-align:center;">Aucun ingrédient</div>';
     } else {
         sortedCats.forEach(function(cat) {
-            h += '<div style="margin-bottom:14px;">';
-            h += '<label style="font-weight:700;font-size:0.9rem;display:block;margin-bottom:4px;">🥫 ' + escapeHtml(cat) + '</label>';
-            h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+            h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px;border-radius:10px;">';
+            h += '<label style="font-weight:700;font-size:1rem;display:block;margin-bottom:8px;color:#334155;">📦 ' + escapeHtml(cat) + '</label>';
+            h += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
             
             grouped[cat].forEach(function(ing) {
                 var disabled = ing.stockDisponible <= 0 ? 'disabled' : '';
                 var styleDisabled = ing.stockDisponible <= 0 ? 'opacity:0.5;' : '';
                 
-                h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + styleDisabled + '">';
-                h += '<input type="checkbox" class="pos-interdit-check" value="' + escapeHtml(ing.nom) + '" ' + disabled + ' checked>';
-                h += ' ' + escapeHtml(ing.nom);
-                if (ing.unite) h += ' (' + escapeHtml(ing.unite) + ')';
+                h += '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid #e2e8f0;border-radius:10px;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + styleDisabled + 'background:' + (ing.stockDisponible <= 0 ? '#f1f5f9' : '#fff') + ';">';
+                h += '<input type="checkbox" class="pos-ingredient-check" value="' + escapeHtml(ing.nom) + '" data-idstock="' + ing.idStock + '" data-quantite="' + ing.quantite + '" ' + disabled + ' checked style="width:22px;height:22px;">';
+                h += ' <span style="font-size:1rem;font-weight:500;">' + escapeHtml(ing.nom) + '</span>';
+                if (ing.unite) h += ' <span style="font-size:0.85rem;color:#94a3b8;">(' + escapeHtml(ing.unite) + ')</span>';
                 if (ing.stockDisponible > 0) {
-                    h += ' <span style="font-size:0.7rem;color:#94a3b8;">stock: ' + ing.stockDisponible + '</span>';
+                    h += ' <span style="font-size:0.85rem;color:#64748b;">stock: ' + ing.stockDisponible + '</span>';
                 } else {
-                    h += ' <span style="font-size:0.7rem;color:#ef4444;">❌ rupture</span>';
+                    h += ' <span style="font-size:0.85rem;color:#ef4444;">❌ rupture</span>';
                 }
                 h += '</label>';
             });
@@ -477,52 +556,68 @@ async function posOpenOptionsModal(pid) {
         });
     }
 
-    h += '<div style="margin-bottom:12px;"><label style="font-weight:700;font-size:0.9rem;">🌶️ Épices:</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">';
+    h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px;border-radius:10px;">';
+    h += '<label style="font-weight:700;font-size:1rem;display:block;margin-bottom:8px;color:#334155;">🌶️ Épices:</label>';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
     posEpicesList.forEach(function(s, idx) {
-        h += '<label style="padding:6px 12px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-epice" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>';
+        h += '<label style="padding:8px 16px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.95rem;background:#fff;"><input type="radio" name="pos-epice" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + ' style="width:18px;height:18px;margin-right:6px;"> ' + s + '</label>';
     });
     h += '</div></div>';
 
-    h += '<div style="margin-bottom:12px;"><label style="font-weight:700;font-size:0.9rem;">🧂 Sel:</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">';
+    h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px;border-radius:10px;">';
+    h += '<label style="font-weight:700;font-size:1rem;display:block;margin-bottom:8px;color:#334155;">🧂 Sel:</label>';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
     posSelList.forEach(function(s, idx) {
-        h += '<label style="padding:6px 12px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-sel" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>';
+        h += '<label style="padding:8px 16px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.95rem;background:#fff;"><input type="radio" name="pos-sel" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + ' style="width:18px;height:18px;margin-right:6px;"> ' + s + '</label>';
     });
     h += '</div></div>';
 
-    h += '<div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">';
-    h += '<button class="btn-cancel" onclick="closeModal()" style="font-size:0.9rem;padding:10px 20px;">Annuler</button>';
-    h += '<button class="btn-save" onclick="posConfirmOptions()" style="font-size:0.9rem;padding:10px 24px;"><i class="fas fa-check"></i> Ajouter au panier</button>';
+    h += '<div style="text-align:right;margin-top:20px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid #e2e8f0;padding-top:16px;">';
+    h += '<button class="btn-cancel" onclick="closeModal()" style="font-size:1rem;padding:12px 24px;border-radius:10px;">Annuler</button>';
+    h += '<button class="btn-save" onclick="posConfirmOptions()" style="font-size:1rem;padding:12px 28px;border-radius:10px;background:#2E7D32;"><i class="fas fa-check"></i> Ajouter au panier</button>';
     h += '</div>';
 
-    openModal('Personnaliser - ' + escapeHtml(p.nom), h);
+    openModal('🛠️ Personnaliser - ' + escapeHtml(p.nom), h);
 }
 
 // ==================== POS CONFIRM OPTIONS (AVEC DÉCRÉMENTATION STOCK) ====================
 function posConfirmOptions() {
-    var interdits = [];
-    document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) {
-        interdits.push(cb.value);
+    // Récupérer les ingrédients EXCLUS (décochés)
+    var ingredientsExclus = [];
+    document.querySelectorAll('.pos-ingredient-check:not(:checked)').forEach(function(cb) {
+        ingredientsExclus.push({
+            nom: cb.value,
+            idStock: cb.getAttribute('data-idstock'),
+            quantite: parseFloat(cb.getAttribute('data-quantite')) || 1
+        });
     });
+
+    // Récupérer les ingrédients CONSERVÉS (cochés)
+    var ingredientsConserves = [];
+    document.querySelectorAll('.pos-ingredient-check:checked').forEach(function(cb) {
+        ingredientsConserves.push({
+            nom: cb.value,
+            idStock: cb.getAttribute('data-idstock'),
+            quantite: parseFloat(cb.getAttribute('data-quantite')) || 1
+        });
+    });
+
     var epice = (document.querySelector('input[name="pos-epice"]:checked') || {}).value || 'Normal';
     var sel = (document.querySelector('input[name="pos-sel"]:checked') || {}).value || 'Normal';
     var p = posProductsList.find(function(x) { return x.id === posCurrentProductId; });
     if (!p) { closeModal(); return; }
 
-    // ✅ RÉCUPÉRER LES INGRÉDIENTS EXCLUS (COCHÉS)
-    var ingredientsExclus = [];
-    document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) {
-        ingredientsExclus.push(cb.value.toLowerCase().trim());
-    });
-
     // ✅ AJOUTER LE PRODUIT AU PANIER
     var ex = posCart.find(function(x) { return x.id === posCurrentProductId; });
     if (ex) {
         if (p.stock !== undefined && ex.quantite >= p.stock) {
-            alert('Stock insuffisant');
+            alert('⚠️ Stock insuffisant');
             closeModal();
             return;
         }
         ex.quantite += 1;
+        // Mettre à jour les ingrédients exclus
+        ex.ingredientsExclus = ingredientsExclus.map(function(i) { return i.nom; });
     } else {
         var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
         posCart.push({
@@ -536,15 +631,19 @@ function posConfirmOptions() {
             categorie: p.categorie || '',
             imageBase64: p.imageBase64 || '',
             sauces: [],
-            interdits: interdits,
+            interdits: [],
             epice: epice,
             sel: sel,
-            ingredientsExclus: ingredientsExclus
+            ingredientsExclus: ingredientsExclus.map(function(i) { return i.nom; })
         });
     }
 
     // ✅ DÉCRÉMENTER LE STOCK DES INGRÉDIENTS CONSERVÉS
-    decrementerIngredientsStock(posCurrentProductId, ingredientsExclus);
+    ingredientsConserves.forEach(function(ing) {
+        if (ing.idStock && ing.idStock !== 'undefined' && ing.idStock !== 'null') {
+            decrementerStockIngredient(ing.idStock, ing.quantite);
+        }
+    });
 
     if (typeof window.onProductAdded === 'function') {
         window.onProductAdded(p.id);
@@ -553,49 +652,42 @@ function posConfirmOptions() {
     updateCartOnly();
 }
 
-// ==================== DÉCRÉMENTER LE STOCK DES INGRÉDIENTS ====================
-function decrementerIngredientsStock(productId, ingredientsExclus) {
-    db.collection('products').doc(productId).get().then(function(doc) {
-        if (!doc.exists) return;
-        var productData = doc.data();
-        var ingredients = productData.ingredients || [];
-
-        ingredients.forEach(function(ing) {
-            var isExcluded = ingredientsExclus.some(function(excl) {
-                return excl === ing.nom.toLowerCase().trim();
-            });
-
-            if (!isExcluded && ing.idStock) {
-                var quantite = ing.quantite || 1;
-                
-                db.collection('stock').doc(ing.idStock).get().then(function(stockDoc) {
-                    if (!stockDoc.exists) return;
-                    var stockData = stockDoc.data();
-                    var nouveauStock = Math.max(0, (stockData.quantite || 0) - quantite);
-                    
-                    db.collection('stock').doc(ing.idStock).update({
-                        quantite: nouveauStock,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }).then(function() {
-                        var stockItem = allStockData.find(function(s) { return s.id === ing.idStock; });
-                        if (stockItem) {
-                            stockItem.quantite = nouveauStock;
-                            CacheDB.set('stock', ing.idStock, stockItem);
-                        }
-                        if (typeof renderStockTable === 'function') {
-                            renderStockTable();
-                        }
-                        console.log('✅ Stock mis à jour: ' + ing.nom + ' → ' + nouveauStock);
-                    }).catch(function(err) {
-                        console.error('❌ Erreur mise à jour stock:', err);
-                    });
-                }).catch(function(err) {
-                    console.error('❌ Erreur récupération stock:', err);
-                });
+// ==================== DÉCRÉMENTER LE STOCK D'UN INGRÉDIENT ====================
+function decrementerStockIngredient(idStock, quantite) {
+    if (!idStock || idStock === 'undefined' || idStock === 'null') return;
+    if (quantite <= 0) return;
+    
+    // Mettre à jour dans Firestore
+    db.collection('stock').doc(idStock).get().then(function(stockDoc) {
+        if (!stockDoc.exists) {
+            console.warn('⚠️ Ingrédient stock introuvable:', idStock);
+            return;
+        }
+        var stockData = stockDoc.data();
+        var stockActuel = stockData.quantite || 0;
+        var nouveauStock = Math.max(0, stockActuel - quantite);
+        
+        // Mettre à jour Firestore
+        db.collection('stock').doc(idStock).update({
+            quantite: nouveauStock,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function() {
+            // Mettre à jour le cache local
+            var stockItem = allStockData.find(function(s) { return s.id === idStock; });
+            if (stockItem) {
+                stockItem.quantite = nouveauStock;
+                CacheDB.set('stock', idStock, stockItem);
             }
+            // Rafraîchir l'affichage si la page stock est ouverte
+            if (typeof renderStockTable === 'function') {
+                renderStockTable();
+            }
+            console.log('✅ Stock mis à jour: ' + (stockData.nom || idStock) + ' → ' + nouveauStock);
+        }).catch(function(err) {
+            console.error('❌ Erreur mise à jour stock:', err);
         });
     }).catch(function(err) {
-        console.error('❌ Erreur récupération produit:', err);
+        console.error('❌ Erreur récupération stock:', err);
     });
 }
 
@@ -607,12 +699,10 @@ var html='';
 if(posCart.length===0) {
 html='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>';
 } else {
-// Détection mobile pour les styles
 var isMobile = window.innerWidth < 700;
 var btnSize = isMobile ? '40px' : '28px';
 var fontSize = isMobile ? '1.2rem' : '0.7rem';
 var qtySize = isMobile ? '1.3rem' : '0.85rem';
-// ✅ Nom panier 22px, Prix panier 24px
 var nameSize = isMobile ? '22px' : '0.85rem';
 var priceSize = isMobile ? '0.7rem' : '0.7rem';
 var totalSize = isMobile ? '24px' : '0.8rem';
@@ -649,7 +739,6 @@ tr.textContent=t.toFixed(2)+' MAD';
 var vb=document.querySelector('.pos-validate-btn');
 if(vb) {
 vb.disabled=posCart.length===0;
-// ✅ Bouton Valider: 26px font-size, hauteur 60px
 vb.style.height = '60px';
 vb.style.fontSize = '26px';
 vb.style.fontWeight = '700';
@@ -687,7 +776,6 @@ var st=posCalculateTotal(),t=st-posDiscountMAD;
 var isMobile = window.innerWidth < 700;
 var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
 
-// ===== INDICATEUR D'ÉTAPE (CLICABLE) =====
 var stepSize = isMobile ? '22px' : '28px';
 var stepNumberSize = isMobile ? '22px' : '28px';
 var stepNumberSize2 = isMobile ? '26px' : '38px';
@@ -706,7 +794,6 @@ var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-con
 
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
 
-// Styles pour mobile (5 colonnes)
 var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(120px, 1fr))';
 var gridGap = isMobile ? '4px' : '10px';
 var gridPadding = isMobile ? '2px' : '4px';
@@ -748,7 +835,6 @@ if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#4f46e5;font-size:0.6re
 var btnSize = isMobile ? '36px' : '28px';
 var fontSize = isMobile ? '1.1rem' : '0.7rem';
 var qtySize = isMobile ? '1.2rem' : '0.85rem';
-// ✅ Nom panier 22px, Prix panier 24px
 var nameSize = isMobile ? '22px' : '0.85rem';
 var priceSize = isMobile ? '0.7rem' : '0.7rem';
 var totalSize = isMobile ? '24px' : '0.8rem';
@@ -945,6 +1031,7 @@ if(!window._posKeydownListenerAdded){ window._posKeydownListenerAdded=true; docu
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.clearPosSearch=clearPosSearch; window.clearClientSearch=clearClientSearch; window.updateClearButtonVisibility=updateClearButtonVisibility; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.loadClientCredits=loadClientCredits; window.updateClientCreditDisplay=updateClientCreditDisplay; window.posCalculateChange=posCalculateChange; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
-window.decrementerIngredientsStock = decrementerIngredientsStock;
+window.decrementerStockIngredient = decrementerStockIngredient;
+window.ajouterProduitDirectement = ajouterProduitDirectement;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (5 colonnes mobile, Nom produit 22px bold uppercase, Prix produit 24px, Nom panier 22px, Prix panier 24px, Valider 26px/60px)');
+console.log('⚡ Mixmax Minimarket - POS chargé (avec gestion des ingrédients et stock)');
