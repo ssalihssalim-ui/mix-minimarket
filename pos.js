@@ -1,4 +1,4 @@
-// ==================== POS.JS - VERSION SIMPLIFIÉE AVEC INGRÉDIENTS ====================
+// ==================== POS.JS - VERSION ULTRA-SIMPLE ====================
 
 var posCart = [];
 var posStep = 1;
@@ -12,7 +12,6 @@ var posAmountGiven = 0;
 var posDiscountMAD = 0;
 var posAllClients = [];
 var posFilteredClients = [];
-var posCurrentProductId = null;
 var posSearchQuery = '';
 
 var productNameIndex = {};
@@ -41,6 +40,10 @@ var posHasMoreProducts = false;
 
 var clientCreditsCache = {};
 var clientSearchTimeout = null;
+
+// ========== VARIABLES POUR LES INGRÉDIENTS ==========
+var currentProductIngredients = [];
+var currentProductId = null;
 
 function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
 function toDate(val) { if(!val) return null; if(val.toDate) return val.toDate(); if(val.seconds) return new Date(val.seconds*1000); if(typeof val==='string') return new Date(val); if(val instanceof Date) return val; return null; }
@@ -378,11 +381,9 @@ function posAddToCartOrOpenOptions(pid){
         return;
     }
     
-    // ✅ VÉRIFIER SI LE PRODUIT A DES INGRÉDIENTS
-    // On va directement chercher dans Firestore
+    // ✅ RÉCUPÉRER LE PRODUIT AVEC SES INGRÉDIENTS DEPUIS FIRESTORE
     db.collection('products').doc(pid).get().then(function(doc) {
         if (!doc.exists) {
-            // Si le produit n'existe pas, ajouter directement
             ajouterProduitDirectement(pid);
             return;
         }
@@ -397,14 +398,17 @@ function posAddToCartOrOpenOptions(pid){
         });
         var isRecette = cat && cat.recette === true;
         
+        console.log('🔍 Produit:', p.nom);
+        console.log('🔍 Catégorie:', categorieNom, 'recette:', isRecette);
+        console.log('🔍 Ingrédients:', ingredients.length);
+        
         // ✅ SI LA CATÉGORIE A "recette" ACTIVÉ ET QUE LE PRODUIT A DES INGRÉDIENTS
         if (isRecette && ingredients.length > 0) {
-            posCurrentProductId = pid;
-            // Stocker les ingrédients dans une variable globale
-            window._currentProductIngredients = ingredients;
-            posOpenOptionsModal(pid, ingredients);
+            currentProductId = pid;
+            currentProductIngredients = ingredients;
+            // ✅ CHARGER LE STOCK AVANT D'AFFICHER
+            chargerStockEtAfficherFormulaire(pid, ingredients);
         } else {
-            // Sinon ajouter directement
             ajouterProduitDirectement(pid);
         }
     }).catch(function(err) {
@@ -413,50 +417,8 @@ function posAddToCartOrOpenOptions(pid){
     });
 }
 
-// ==================== AJOUTER PRODUIT DIRECTEMENT ====================
-function ajouterProduitDirectement(pid){
-    var p = posProductsList.find(function(x){ return x.id === pid; });
-    if(!p) return;
-    
-    var ex = posCart.find(function(x){ return x.id === pid; });
-    if(ex){
-        if(p.stock!==undefined && ex.quantite >= p.stock){
-            alert('Stock insuffisant');
-            return;
-        }
-        ex.quantite += 1;
-    }else{
-        var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
-        posCart.push({
-            id: p.id,
-            nom: p.nom,
-            prixUnitaire: pr,
-            prixAchat: p.prixAchat || 0,
-            prixPromo: p.prixPromo || 0,
-            prixVente: p.prixVente || 0,
-            quantite: 1,
-            categorie: p.categorie || '',
-            imageBase64: p.imageBase64 || '',
-            sauces: [],
-            interdits: [],
-            epice: 'Normal',
-            sel: 'Normal',
-            ingredientsExclus: []
-        });
-    }
-    if(typeof window.onProductAdded === 'function') window.onProductAdded(p.id);
-    updateCartOnly();
-}
-
-// ==================== POS OPEN OPTIONS MODAL (SIMPLIFIÉ) ====================
-function posOpenOptionsModal(pid, ingredients) {
-    var p = posProductsList.find(function(x) { return x.id === pid; });
-    if (!p) return;
-    if (p.stock !== undefined && p.stock <= 0) {
-        alert('⚠️ Rupture de stock');
-        return;
-    }
-
+// ==================== CHARGER STOCK ET AFFICHER FORMULAIRE ====================
+function chargerStockEtAfficherFormulaire(pid, ingredients) {
     // ✅ CHARGER LE STOCK
     if (allStockData.length === 0) {
         db.collection('stock').get().then(function(snap) {
@@ -466,6 +428,7 @@ function posOpenOptionsModal(pid, ingredients) {
                 dd.id = d.id;
                 allStockData.push(dd);
             });
+            console.log('✅ Stock chargé:', allStockData.length);
             afficherFormulaireIngredients(pid, ingredients);
         }).catch(function(err) {
             console.error('❌ Erreur chargement stock:', err);
@@ -480,6 +443,9 @@ function posOpenOptionsModal(pid, ingredients) {
 function afficherFormulaireIngredients(pid, ingredients) {
     var p = posProductsList.find(function(x) { return x.id === pid; });
     if (!p) return;
+    
+    console.log('📋 Affichage formulaire pour:', p.nom);
+    console.log('📋 Ingrédients:', ingredients);
     
     // ✅ REGROUPER LES INGRÉDIENTS PAR CATÉGORIE
     var grouped = {};
@@ -499,7 +465,7 @@ function afficherFormulaireIngredients(pid, ingredients) {
         });
     });
 
-    posCurrentProductId = pid;
+    currentProductId = pid;
     
     // ✅ CONSTRUCTION DU FORMULAIRE
     var h = '<div style="padding:5px;">';
@@ -562,8 +528,44 @@ function afficherFormulaireIngredients(pid, ingredients) {
     openModal('🛠️ Personnaliser - ' + escapeHtml(p.nom), h);
 }
 
+// ==================== AJOUTER PRODUIT DIRECTEMENT ====================
+function ajouterProduitDirectement(pid){
+    var p = posProductsList.find(function(x){ return x.id === pid; });
+    if(!p) return;
+    
+    var ex = posCart.find(function(x){ return x.id === pid; });
+    if(ex){
+        if(p.stock!==undefined && ex.quantite >= p.stock){
+            alert('Stock insuffisant');
+            return;
+        }
+        ex.quantite += 1;
+    }else{
+        var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
+        posCart.push({
+            id: p.id,
+            nom: p.nom,
+            prixUnitaire: pr,
+            prixAchat: p.prixAchat || 0,
+            prixPromo: p.prixPromo || 0,
+            prixVente: p.prixVente || 0,
+            quantite: 1,
+            categorie: p.categorie || '',
+            imageBase64: p.imageBase64 || '',
+            sauces: [],
+            interdits: [],
+            epice: 'Normal',
+            sel: 'Normal'
+        });
+    }
+    if(typeof window.onProductAdded === 'function') window.onProductAdded(p.id);
+    updateCartOnly();
+}
+
 // ==================== POS CONFIRM OPTIONS (SIMPLIFIÉ) ====================
 function posConfirmOptionsSimple() {
+    console.log('✅ Validation du formulaire');
+    
     // Récupérer les ingrédients EXCLUS (décochés)
     var ingredientsExclus = [];
     document.querySelectorAll('.pos-ingredient-check:not(:checked)').forEach(function(cb) {
@@ -584,13 +586,20 @@ function posConfirmOptionsSimple() {
         });
     });
 
+    console.log('📦 Ingrédients exclus:', ingredientsExclus);
+    console.log('📦 Ingrédients conservés:', ingredientsConserves);
+
     var epice = (document.querySelector('input[name="pos-epice"]:checked') || {}).value || 'Normal';
     var sel = (document.querySelector('input[name="pos-sel"]:checked') || {}).value || 'Normal';
-    var p = posProductsList.find(function(x) { return x.id === posCurrentProductId; });
-    if (!p) { closeModal(); return; }
+    var p = posProductsList.find(function(x) { return x.id === currentProductId; });
+    if (!p) { 
+        console.error('❌ Produit introuvable:', currentProductId);
+        closeModal(); 
+        return; 
+    }
 
     // ✅ AJOUTER LE PRODUIT AU PANIER
-    var ex = posCart.find(function(x) { return x.id === posCurrentProductId; });
+    var ex = posCart.find(function(x) { return x.id === currentProductId; });
     if (ex) {
         if (p.stock !== undefined && ex.quantite >= p.stock) {
             alert('⚠️ Stock insuffisant');
@@ -598,7 +607,6 @@ function posConfirmOptionsSimple() {
             return;
         }
         ex.quantite += 1;
-        ex.ingredientsExclus = ingredientsExclus.map(function(i) { return i.nom; });
     } else {
         var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
         posCart.push({
@@ -614,12 +622,12 @@ function posConfirmOptionsSimple() {
             sauces: [],
             interdits: [],
             epice: epice,
-            sel: sel,
-            ingredientsExclus: ingredientsExclus.map(function(i) { return i.nom; })
+            sel: sel
         });
     }
 
     // ✅ DÉCRÉMENTER LE STOCK DES INGRÉDIENTS CONSERVÉS
+    console.log('🔽 Décrémentation du stock pour', ingredientsConserves.length, 'ingrédients');
     ingredientsConserves.forEach(function(ing) {
         if (ing.idStock && ing.idStock !== 'undefined' && ing.idStock !== 'null' && ing.idStock !== '') {
             decrementerStockIngredient(ing.idStock, ing.quantite);
@@ -632,8 +640,16 @@ function posConfirmOptionsSimple() {
 
 // ==================== DÉCRÉMENTER LE STOCK D'UN INGRÉDIENT ====================
 function decrementerStockIngredient(idStock, quantite) {
-    if (!idStock || idStock === 'undefined' || idStock === 'null' || idStock === '') return;
-    if (quantite <= 0) return;
+    if (!idStock || idStock === 'undefined' || idStock === 'null' || idStock === '') {
+        console.warn('⚠️ ID stock invalide:', idStock);
+        return;
+    }
+    if (quantite <= 0) {
+        console.warn('⚠️ Quantité invalide:', quantite);
+        return;
+    }
+    
+    console.log('🔽 Décrémentation:', idStock, 'quantité:', quantite);
     
     db.collection('stock').doc(idStock).get().then(function(stockDoc) {
         if (!stockDoc.exists) {
@@ -644,15 +660,19 @@ function decrementerStockIngredient(idStock, quantite) {
         var stockActuel = stockData.quantite || 0;
         var nouveauStock = Math.max(0, stockActuel - quantite);
         
+        console.log('📊 Stock actuel:', stockActuel, '→ nouveau:', nouveauStock);
+        
         db.collection('stock').doc(idStock).update({
             quantite: nouveauStock,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(function() {
+            // Mettre à jour le cache local
             var stockItem = allStockData.find(function(s) { return s.id === idStock; });
             if (stockItem) {
                 stockItem.quantite = nouveauStock;
                 CacheDB.set('stock', idStock, stockItem);
             }
+            // Rafraîchir l'affichage du stock
             if (typeof renderStockTable === 'function') {
                 renderStockTable();
             }
@@ -1008,6 +1028,7 @@ window.buildFullPOS = buildFullPOS;
 window.decrementerStockIngredient = decrementerStockIngredient;
 window.ajouterProduitDirectement = ajouterProduitDirectement;
 window.posConfirmOptionsSimple = posConfirmOptionsSimple;
-window.posOpenOptionsModal = posOpenOptionsModal;
+window.chargerStockEtAfficherFormulaire = chargerStockEtAfficherFormulaire;
+window.afficherFormulaireIngredients = afficherFormulaireIngredients;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (version simplifiée avec ingrédients)');
+console.log('⚡ Mixmax Minimarket - POS chargé (version ultra-simple avec ingrédients)');
