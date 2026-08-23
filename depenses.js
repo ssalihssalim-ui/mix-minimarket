@@ -249,8 +249,9 @@ async function refreshStockFromPos() {
             await CacheDB.set('stock', doc.id, doc);
         }
         renderStockTable();
+        console.log('✅ Stock rafraîchi depuis Firestore');
     } catch(e) {
-        console.error('Erreur refresh stock:', e);
+        console.error('❌ Erreur refresh stock:', e);
     }
 }
 
