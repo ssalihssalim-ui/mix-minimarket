@@ -235,26 +235,6 @@ async function deleteStock(id) {
     }
 }
 
-// ==================== RAFRAÎCHIR LE STOCK DEPUIS LE POS ====================
-async function refreshStockFromPos() {
-    try {
-        const snapshot = await db.collection('stock').orderBy('nom').get();
-        allStockData = [];
-        snapshot.forEach(d => {
-            let dd = d.data();
-            dd.id = d.id;
-            allStockData.push(dd);
-        });
-        for (let doc of allStockData) {
-            await CacheDB.set('stock', doc.id, doc);
-        }
-        renderStockTable();
-        console.log('✅ Stock rafraîchi depuis Firestore');
-    } catch(e) {
-        console.error('❌ Erreur refresh stock:', e);
-    }
-}
-
 function convertirQuantiteBase(quantite, unite) {
     if (!unite) return quantite;
     switch(unite) {
@@ -593,8 +573,5 @@ function escapeHtml(str) {
         return m;
     });
 }
-
-// Exporter les fonctions
-window.refreshStockFromPos = refreshStockFromPos;
 
 console.log('☕ Alma Coffee Shop - Dépenses JS prêt');
