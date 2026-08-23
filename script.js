@@ -275,6 +275,7 @@ window.addEventListener('load', function() {
     setTimeout(function() { initApp(); }, 300);
 });
 
+// ==================== INIT APP (CORRIGÉ) ====================
 async function initApp() {
     console.log('☕ Mixmax Minimarket Started');
 
@@ -320,30 +321,54 @@ async function initApp() {
         auth.onAuthStateChanged(async function(u) {
             if (u) {
                 try {
-                    var ud = await CacheDB.get('users', u.uid);
-                    if (!ud) {
-                        var d = await db.collection('users').doc(u.uid).get();
-                        if (!d.exists) throw new Error('No user');
-                        ud = { uid: d.id, userData: d.data() };
-                        await CacheDB.set('users', u.uid, ud);
+                    // 🔥 ALLER CHERCHER DIRECTEMENT DANS FIRESTORE
+                    const doc = await db.collection('users').doc(u.uid).get();
+                    
+                    if (!doc.exists) {
+                        console.warn('⚠️ Utilisateur non trouvé dans Firestore');
+                        auth.signOut();
+                        showAuthPage();
+                        return;
                     }
-                    if (ud.userData.authorized !== 'yes') { auth.signOut();
-                        showAuthPage(); return; }
+                    
+                    const userData = doc.data();
+                    
+                    // Vérifier le statut authorized
+                    if (userData.authorized !== 'yes') {
+                        console.warn('⛔ Utilisateur non autorisé');
+                        auth.signOut();
+                        showAuthPage();
+                        alert('⛔ Votre compte est en attente de validation par l\'administrateur.');
+                        return;
+                    }
+                    
+                    // Mettre à jour le cache
+                    const ud = { uid: u.uid, userData: userData };
                     window.currentUserData = ud;
+                    await CacheDB.set('users', u.uid, ud);
                     await CacheDB.set('users', 'current', ud);
-                    if (ud.userData.role === 'client') showClientPage();
-                    else showDashboard();
-                } catch (e) { console.error(e);
+                    
+                    if (userData.role === 'client') {
+                        showClientPage();
+                    } else {
+                        showDashboard();
+                    }
+                    
+                } catch (e) {
+                    console.error('❌ Erreur vérification utilisateur:', e);
                     auth.signOut();
-                    showAuthPage(); }
-            } else { window.currentUserData = null;
-                showAuthPage(); }
+                    showAuthPage();
+                }
+            } else {
+                window.currentUserData = null;
+                showAuthPage();
+            }
         });
     }
     showLogin();
 }
 
-// ========== GESTION DU MENU MOBILE (AMÉLIORÉE) ==========
+// ========== GESTION DU MENU MOBILE ==========
 function openSidebar() {
     var s = document.getElementById('sidebar');
     var o = document.getElementById('sidebarOverlay');
@@ -390,7 +415,6 @@ function toggleClientSidebar() {
     }
 }
 
-// Fermeture avec la touche Échap
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeSidebar();
@@ -452,7 +476,7 @@ function buildMenu() {
     });
 }
 
-// ========== NAVIGATION INSTANTANÉE ==========
+// ========== NAVIGATION ==========
 function navigateTo(page) {
     if (!window.currentUserData || window.currentUserData.userData.authorized !== 'yes') { auth.signOut();
         showAuthPage(); return; }
@@ -477,11 +501,10 @@ function navigateTo(page) {
         content.innerHTML = '<div class="content-card"><h3>' + (titles[page] || 'Page') + '</h3><p style="text-align:center;padding:40px;">En développement</p></div>';
     }
 
-    // Fermer le menu après navigation
     closeSidebar();
 }
 
-// ========== FALLBACK PAGE CRÉDITS (si admin-credits.js non chargé) ==========
+// ========== FALLBACK PAGE CRÉDITS ==========
 window.loadCreditsPage = window.loadCreditsPage || async function(c) {
     window.creditsPeriod = 'all';
     window.creditsSearch = '';
@@ -519,7 +542,6 @@ window.loadCreditsPage = window.loadCreditsPage || async function(c) {
         '<div id="creditsPagination" style="margin-top:10px;"></div>' +
         '</div>';
     
-    // Fonction de chargement des crédits intégrée
     async function loadCreditsLocal() {
         try {
             const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').limit(2000).get();
