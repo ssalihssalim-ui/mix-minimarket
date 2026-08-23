@@ -133,11 +133,20 @@ function renderStockTable() {
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var qteBase = convertirQuantiteBase(d.quantite, d.unite);
+        
+        // ✅ Ajouter un indicateur visuel si le stock est faible
+        var stockWarning = '';
+        if (d.quantite !== undefined && d.quantite <= 5 && d.quantite > 0) {
+            stockWarning = ' <span style="color:#d97706;font-weight:700;">⚠️ Stock faible</span>';
+        } else if (d.quantite !== undefined && d.quantite <= 0) {
+            stockWarning = ' <span style="color:#ef4444;font-weight:700;">❌ Rupture</span>';
+        }
+        
         tb.innerHTML += '<tr>' +
-            '<td><strong>' + escapeHtml(d.nom||'') + '</strong></td>' +
+            '<td><strong>' + escapeHtml(d.nom||'') + '</strong> ' + stockWarning + '</td>' +
             '<td>' + escapeHtml(d.categorie||'-') + '</td>' +
             '<td>' + (d.prixAchat||0).toFixed(2) + '</td>' +
-            '<td>' + (d.quantite||0) + '</td>' +
+            '<td style="font-weight:700;color:' + (d.quantite <= 0 ? '#ef4444' : (d.quantite <= 5 ? '#d97706' : '#1e293b')) + ';">' + (d.quantite||0) + '</td>' +
             '<td>' + escapeHtml(d.unite||'') + '</td>' +
             '<td><small>' + qteBase + '</small></td>' +
             '<td><button class="btn-edit" onclick="editStock(\'' + d.id + '\')"><i class="fas fa-edit"></i></button> ' +
@@ -223,6 +232,25 @@ async function deleteStock(id) {
         allStockData = allStockData.filter(function(x) { return x.id !== id; });
         renderStockTable();
         CacheDB.sync();
+    }
+}
+
+// ==================== RAFRAÎCHIR LE STOCK DEPUIS LE POS ====================
+async function refreshStockFromPos() {
+    try {
+        const snapshot = await db.collection('stock').orderBy('nom').get();
+        allStockData = [];
+        snapshot.forEach(d => {
+            let dd = d.data();
+            dd.id = d.id;
+            allStockData.push(dd);
+        });
+        for (let doc of allStockData) {
+            await CacheDB.set('stock', doc.id, doc);
+        }
+        renderStockTable();
+    } catch(e) {
+        console.error('Erreur refresh stock:', e);
     }
 }
 
@@ -564,5 +592,8 @@ function escapeHtml(str) {
         return m;
     });
 }
+
+// Exporter les fonctions
+window.refreshStockFromPos = refreshStockFromPos;
 
 console.log('☕ Alma Coffee Shop - Dépenses JS prêt');
