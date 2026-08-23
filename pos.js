@@ -1,5 +1,4 @@
-// ==================== POS.JS - 5 COLONNES SUR MOBILE ====================
-// Mixmax Minimarket – Point de vente complet avec virtualisation
+// ==================== POS.JS - VERSION SIMPLIFIÉE AVEC INGRÉDIENTS ====================
 
 var posCart = [];
 var posStep = 1;
@@ -30,7 +29,6 @@ var posCommandesSortOrder = 'desc';
 
 var posEpicesList = ['Normal', 'Moins épicé', 'Très épicé', 'Sans épice'];
 var posSelList = ['Normal', 'Moins de sel', 'Sans sel'];
-var posCurrentProductIngredients = [];
 var allStockData = [];
 
 var posIsRendering = false;
@@ -202,7 +200,6 @@ if (clearBtn) clearBtn.style.display = 'none';
 
 function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProductGrid(); }
 
-// ==================== FILTER PRODUCT GRID ====================
 function filterProductGrid(){
 if(!isOnPOSPage() || posStep !== 1) return;
 var grid=document.getElementById('posProductGrid')||document.querySelector('.pos-products-grid'); if(!grid) return;
@@ -372,7 +369,7 @@ s.value = posCurrentClient.name;
 function updatePaymentButtons(){ setTimeout(function(){ var cb=document.getElementById('posCreditBtn'),pb=document.getElementById('posPartielBtn'),cc=posCurrentClient&&posCurrentClient.id; if(cb){ cb.disabled=!cc; cb.style.opacity=cc?'1':'0.4'; } if(pb){ pb.disabled=!cc; pb.style.opacity=cc?'1':'0.4'; } },300); }
 function posSetTable(v){ posCurrentTable=v.trim(); if(posCurrentTable){ posCurrentClient=null; posPaymentMethod='espece'; var s=document.getElementById('posClientSearchInput'); if(s) s.value=''; document.getElementById('clientCreditDisplay').style.display='none'; var clearBtn=document.getElementById('posClientClearBtn'); if(clearBtn) clearBtn.style.display='none'; } }
 
-// ==================== POS ADD TO CART OR OPEN OPTIONS ====================
+// ==================== POS ADD TO CART OR OPEN OPTIONS (SIMPLIFIÉ) ====================
 function posAddToCartOrOpenOptions(pid){
     var p = posProductsList.find(function(x){ return x.id === pid; });
     if(!p) return;
@@ -381,42 +378,39 @@ function posAddToCartOrOpenOptions(pid){
         return;
     }
     
-    // ✅ VÉRIFIER SI LA CATÉGORIE DU PRODUIT A "recette" ACTIVÉ
-    var cat = posCategoriesList.find(function(c){ 
-        return c.nom === p.categorie || (p.categories && p.categories.includes(c.nom));
-    });
-    var isRecette = cat && cat.recette === true;
-    
     // ✅ VÉRIFIER SI LE PRODUIT A DES INGRÉDIENTS
-    var aDesIngredients = false;
-    if (p.id) {
-        // On va vérifier dans le cache ou Firestore
-        var productInCache = posProductsList.find(function(x){ return x.id === p.id; });
-        // On charge les ingrédients depuis Firestore
-        db.collection('products').doc(p.id).get().then(function(doc) {
-            if (doc.exists) {
-                var ingredients = doc.data().ingredients || [];
-                aDesIngredients = ingredients.length > 0;
-                
-                if (isRecette && aDesIngredients) {
-                    // ✅ OUVRIR LE FORMULAIRE DE PERSONNALISATION
-                    posCurrentProductId = pid;
-                    posOpenOptionsModal(pid);
-                } else {
-                    // ✅ AJOUTER DIRECTEMENT SANS PERSONNALISATION
-                    ajouterProduitDirectement(pid);
-                }
-            } else {
-                // Fallback: ajouter directement
-                ajouterProduitDirectement(pid);
-            }
-        }).catch(function(err) {
-            console.error('❌ Erreur chargement produit:', err);
+    // On va directement chercher dans Firestore
+    db.collection('products').doc(pid).get().then(function(doc) {
+        if (!doc.exists) {
+            // Si le produit n'existe pas, ajouter directement
             ajouterProduitDirectement(pid);
+            return;
+        }
+        
+        var productData = doc.data();
+        var ingredients = productData.ingredients || [];
+        var categorieNom = p.categorie || '';
+        
+        // ✅ VÉRIFIER SI LA CATÉGORIE A "recette" ACTIVÉ
+        var cat = posCategoriesList.find(function(c) { 
+            return c.nom === categorieNom; 
         });
-    } else {
+        var isRecette = cat && cat.recette === true;
+        
+        // ✅ SI LA CATÉGORIE A "recette" ACTIVÉ ET QUE LE PRODUIT A DES INGRÉDIENTS
+        if (isRecette && ingredients.length > 0) {
+            posCurrentProductId = pid;
+            // Stocker les ingrédients dans une variable globale
+            window._currentProductIngredients = ingredients;
+            posOpenOptionsModal(pid, ingredients);
+        } else {
+            // Sinon ajouter directement
+            ajouterProduitDirectement(pid);
+        }
+    }).catch(function(err) {
+        console.error('❌ Erreur:', err);
         ajouterProduitDirectement(pid);
-    }
+    });
 }
 
 // ==================== AJOUTER PRODUIT DIRECTEMENT ====================
@@ -454,8 +448,8 @@ function ajouterProduitDirectement(pid){
     updateCartOnly();
 }
 
-// ==================== POS OPEN OPTIONS MODAL (AVEC INGRÉDIENTS) ====================
-async function posOpenOptionsModal(pid) {
+// ==================== POS OPEN OPTIONS MODAL (SIMPLIFIÉ) ====================
+function posOpenOptionsModal(pid, ingredients) {
     var p = posProductsList.find(function(x) { return x.id === pid; });
     if (!p) return;
     if (p.stock !== undefined && p.stock <= 0) {
@@ -463,41 +457,33 @@ async function posOpenOptionsModal(pid) {
         return;
     }
 
-    // ✅ CHARGER LES INGRÉDIENTS DU PRODUIT DEPUIS FIRESTORE
-    var productIngredients = [];
-    try {
-        var doc = await db.collection('products').doc(pid).get();
-        if (doc.exists) {
-            productIngredients = doc.data().ingredients || [];
-        }
-    } catch(e) {
-        console.error('❌ Erreur chargement ingrédients:', e);
-    }
-
     // ✅ CHARGER LE STOCK
     if (allStockData.length === 0) {
-        try {
-            const snap = await db.collection('stock').orderBy('nom').get();
+        db.collection('stock').get().then(function(snap) {
             allStockData = [];
             snap.forEach(function(d) {
                 var dd = d.data();
                 dd.id = d.id;
                 allStockData.push(dd);
             });
-        } catch(e) {
-            console.error('❌ Erreur chargement stock:', e);
-        }
+            afficherFormulaireIngredients(pid, ingredients);
+        }).catch(function(err) {
+            console.error('❌ Erreur chargement stock:', err);
+            afficherFormulaireIngredients(pid, ingredients);
+        });
+    } else {
+        afficherFormulaireIngredients(pid, ingredients);
     }
+}
 
-    // ✅ SI PAS D'INGRÉDIENTS → AJOUTER DIRECTEMENT
-    if (productIngredients.length === 0) {
-        ajouterProduitDirectement(pid);
-        return;
-    }
-
+// ==================== AFFICHER FORMULAIRE INGRÉDIENTS ====================
+function afficherFormulaireIngredients(pid, ingredients) {
+    var p = posProductsList.find(function(x) { return x.id === pid; });
+    if (!p) return;
+    
     // ✅ REGROUPER LES INGRÉDIENTS PAR CATÉGORIE
     var grouped = {};
-    productIngredients.forEach(function(ing) {
+    ingredients.forEach(function(ing) {
         var stockItem = allStockData.find(function(s) { return s.id === ing.idStock; });
         var cat = stockItem ? (stockItem.categorie || 'Ingrédients') : 'Ingrédients';
         if (!grouped[cat]) grouped[cat] = [];
@@ -513,41 +499,33 @@ async function posOpenOptionsModal(pid) {
         });
     });
 
-    var order = ['Sauces', 'Légumes', 'Fruits', 'Viande', 'Poulet', 'Poisson', 'Ingrédients'];
-    var sortedCats = Object.keys(grouped).sort(function(a, b) {
-        var ia = order.indexOf(a), ib = order.indexOf(b);
-        if (ia !== -1 && ib !== -1) return ia - ib;
-        if (ia !== -1) return -1;
-        if (ib !== -1) return 1;
-        return a.localeCompare(b);
-    });
-
     posCurrentProductId = pid;
     
-    // ✅ AFFICHAGE DE LA FORM
-    var h = '<h4 style="font-size:1.4rem;margin-bottom:12px;color:#1e293b;">' + escapeHtml(p.nom) + '</h4>';
-    h += '<p style="color:#64748b;font-size:1rem;margin-bottom:16px;">☑️ Cochez les ingrédients à <strong>CONSERVER</strong> (décochez pour exclure) :</p>';
+    // ✅ CONSTRUCTION DU FORMULAIRE
+    var h = '<div style="padding:5px;">';
+    h += '<h3 style="font-size:1.4rem;margin-bottom:10px;color:#1e293b;">' + escapeHtml(p.nom) + '</h3>';
+    h += '<p style="color:#64748b;font-size:0.95rem;margin-bottom:15px;">☑️ <strong>Décochez</strong> les ingrédients à exclure :</p>';
+    h += '<div style="max-height:350px;overflow-y:auto;">';
 
-    if (sortedCats.length === 0) {
-        h += '<div style="color:#94a3b8;padding:16px;text-align:center;">Aucun ingrédient</div>';
+    if (Object.keys(grouped).length === 0) {
+        h += '<p style="color:#94a3b8;padding:15px;">Aucun ingrédient disponible</p>';
     } else {
-        sortedCats.forEach(function(cat) {
-            h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px;border-radius:10px;">';
-            h += '<label style="font-weight:700;font-size:1rem;display:block;margin-bottom:8px;color:#334155;">📦 ' + escapeHtml(cat) + '</label>';
-            h += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+        Object.keys(grouped).forEach(function(cat) {
+            h += '<div style="margin-bottom:12px;background:#f8fafc;padding:10px;border-radius:8px;">';
+            h += '<label style="font-weight:700;font-size:0.95rem;display:block;margin-bottom:6px;">📦 ' + escapeHtml(cat) + '</label>';
+            h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
             
             grouped[cat].forEach(function(ing) {
                 var disabled = ing.stockDisponible <= 0 ? 'disabled' : '';
                 var styleDisabled = ing.stockDisponible <= 0 ? 'opacity:0.5;' : '';
                 
-                h += '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid #e2e8f0;border-radius:10px;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + styleDisabled + 'background:' + (ing.stockDisponible <= 0 ? '#f1f5f9' : '#fff') + ';">';
-                h += '<input type="checkbox" class="pos-ingredient-check" value="' + escapeHtml(ing.nom) + '" data-idstock="' + ing.idStock + '" data-quantite="' + ing.quantite + '" ' + disabled + ' checked style="width:22px;height:22px;">';
-                h += ' <span style="font-size:1rem;font-weight:500;">' + escapeHtml(ing.nom) + '</span>';
-                if (ing.unite) h += ' <span style="font-size:0.85rem;color:#94a3b8;">(' + escapeHtml(ing.unite) + ')</span>';
+                h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:2px solid #e2e8f0;border-radius:8px;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + styleDisabled + 'background:#fff;">';
+                h += '<input type="checkbox" class="pos-ingredient-check" value="' + escapeHtml(ing.nom) + '" data-idstock="' + ing.idStock + '" data-quantite="' + ing.quantite + '" ' + disabled + ' checked style="width:20px;height:20px;">';
+                h += ' <span style="font-size:0.95rem;">' + escapeHtml(ing.nom) + '</span>';
                 if (ing.stockDisponible > 0) {
-                    h += ' <span style="font-size:0.85rem;color:#64748b;">stock: ' + ing.stockDisponible + '</span>';
+                    h += ' <span style="font-size:0.75rem;color:#64748b;">(stock: ' + ing.stockDisponible + ')</span>';
                 } else {
-                    h += ' <span style="font-size:0.85rem;color:#ef4444;">❌ rupture</span>';
+                    h += ' <span style="font-size:0.75rem;color:#ef4444;">❌ rupture</span>';
                 }
                 h += '</label>';
             });
@@ -556,32 +534,36 @@ async function posOpenOptionsModal(pid) {
         });
     }
 
-    h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px;border-radius:10px;">';
-    h += '<label style="font-weight:700;font-size:1rem;display:block;margin-bottom:8px;color:#334155;">🌶️ Épices:</label>';
+    h += '</div>';
+
+    // Épices
+    h += '<div style="margin:10px 0;background:#f8fafc;padding:10px;border-radius:8px;">';
+    h += '<label style="font-weight:700;font-size:0.95rem;display:block;margin-bottom:6px;">🌶️ Épices:</label>';
     h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
     posEpicesList.forEach(function(s, idx) {
-        h += '<label style="padding:8px 16px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.95rem;background:#fff;"><input type="radio" name="pos-epice" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + ' style="width:18px;height:18px;margin-right:6px;"> ' + s + '</label>';
+        h += '<label style="padding:6px 14px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.9rem;background:#fff;"><input type="radio" name="pos-epice" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + ' style="width:16px;height:16px;margin-right:5px;"> ' + s + '</label>';
     });
     h += '</div></div>';
 
-    h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px;border-radius:10px;">';
-    h += '<label style="font-weight:700;font-size:1rem;display:block;margin-bottom:8px;color:#334155;">🧂 Sel:</label>';
+    // Sel
+    h += '<div style="margin:10px 0;background:#f8fafc;padding:10px;border-radius:8px;">';
+    h += '<label style="font-weight:700;font-size:0.95rem;display:block;margin-bottom:6px;">🧂 Sel:</label>';
     h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
     posSelList.forEach(function(s, idx) {
-        h += '<label style="padding:8px 16px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.95rem;background:#fff;"><input type="radio" name="pos-sel" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + ' style="width:18px;height:18px;margin-right:6px;"> ' + s + '</label>';
+        h += '<label style="padding:6px 14px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:0.9rem;background:#fff;"><input type="radio" name="pos-sel" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + ' style="width:16px;height:16px;margin-right:5px;"> ' + s + '</label>';
     });
     h += '</div></div>';
 
-    h += '<div style="text-align:right;margin-top:20px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid #e2e8f0;padding-top:16px;">';
-    h += '<button class="btn-cancel" onclick="closeModal()" style="font-size:1rem;padding:12px 24px;border-radius:10px;">Annuler</button>';
-    h += '<button class="btn-save" onclick="posConfirmOptions()" style="font-size:1rem;padding:12px 28px;border-radius:10px;background:#2E7D32;"><i class="fas fa-check"></i> Ajouter au panier</button>';
-    h += '</div>';
+    h += '<div style="text-align:right;margin-top:15px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid #e2e8f0;padding-top:12px;">';
+    h += '<button class="btn-cancel" onclick="closeModal()" style="font-size:0.95rem;padding:10px 20px;">Annuler</button>';
+    h += '<button class="btn-save" onclick="posConfirmOptionsSimple()" style="font-size:0.95rem;padding:10px 24px;background:#2E7D32;"><i class="fas fa-check"></i> Ajouter</button>';
+    h += '</div></div>';
 
     openModal('🛠️ Personnaliser - ' + escapeHtml(p.nom), h);
 }
 
-// ==================== POS CONFIRM OPTIONS (AVEC DÉCRÉMENTATION STOCK) ====================
-function posConfirmOptions() {
+// ==================== POS CONFIRM OPTIONS (SIMPLIFIÉ) ====================
+function posConfirmOptionsSimple() {
     // Récupérer les ingrédients EXCLUS (décochés)
     var ingredientsExclus = [];
     document.querySelectorAll('.pos-ingredient-check:not(:checked)').forEach(function(cb) {
@@ -616,7 +598,6 @@ function posConfirmOptions() {
             return;
         }
         ex.quantite += 1;
-        // Mettre à jour les ingrédients exclus
         ex.ingredientsExclus = ingredientsExclus.map(function(i) { return i.nom; });
     } else {
         var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
@@ -640,24 +621,20 @@ function posConfirmOptions() {
 
     // ✅ DÉCRÉMENTER LE STOCK DES INGRÉDIENTS CONSERVÉS
     ingredientsConserves.forEach(function(ing) {
-        if (ing.idStock && ing.idStock !== 'undefined' && ing.idStock !== 'null') {
+        if (ing.idStock && ing.idStock !== 'undefined' && ing.idStock !== 'null' && ing.idStock !== '') {
             decrementerStockIngredient(ing.idStock, ing.quantite);
         }
     });
 
-    if (typeof window.onProductAdded === 'function') {
-        window.onProductAdded(p.id);
-    }
     closeModal();
     updateCartOnly();
 }
 
 // ==================== DÉCRÉMENTER LE STOCK D'UN INGRÉDIENT ====================
 function decrementerStockIngredient(idStock, quantite) {
-    if (!idStock || idStock === 'undefined' || idStock === 'null') return;
+    if (!idStock || idStock === 'undefined' || idStock === 'null' || idStock === '') return;
     if (quantite <= 0) return;
     
-    // Mettre à jour dans Firestore
     db.collection('stock').doc(idStock).get().then(function(stockDoc) {
         if (!stockDoc.exists) {
             console.warn('⚠️ Ingrédient stock introuvable:', idStock);
@@ -667,18 +644,15 @@ function decrementerStockIngredient(idStock, quantite) {
         var stockActuel = stockData.quantite || 0;
         var nouveauStock = Math.max(0, stockActuel - quantite);
         
-        // Mettre à jour Firestore
         db.collection('stock').doc(idStock).update({
             quantite: nouveauStock,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(function() {
-            // Mettre à jour le cache local
             var stockItem = allStockData.find(function(s) { return s.id === idStock; });
             if (stockItem) {
                 stockItem.quantite = nouveauStock;
                 CacheDB.set('stock', idStock, stockItem);
             }
-            // Rafraîchir l'affichage si la page stock est ouverte
             if (typeof renderStockTable === 'function') {
                 renderStockTable();
             }
@@ -1033,5 +1007,7 @@ window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 window.decrementerStockIngredient = decrementerStockIngredient;
 window.ajouterProduitDirectement = ajouterProduitDirectement;
+window.posConfirmOptionsSimple = posConfirmOptionsSimple;
+window.posOpenOptionsModal = posOpenOptionsModal;
 
-console.log('⚡ Mixmax Minimarket - POS chargé (avec gestion des ingrédients et stock)');
+console.log('⚡ Mixmax Minimarket - POS chargé (version simplifiée avec ingrédients)');
