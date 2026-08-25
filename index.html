@@ -1,18 +1,19 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0A0D12">
-    <meta name="description" content="Système de gestion pour minimarket - Mixmax Minimarket">
+    <meta name="description" content="Système de gestion pour point de vente - E-SOLUTION">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Mixmax Minimarket</title>
+    <title>E-SOLUTION - Point de Vente</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -26,9 +27,11 @@
     <div id="authPage" class="login-wrapper">
         <div class="login-container" id="loginContainer">
             <div class="login-brand">
-                <div class="brand-icon"><img src="logo.png" alt="Mixmax Minimarket" class="brand-logo"></div>
-                <h1><span>Mixmax</span> Minimarket</h1>
-                <p style="color:rgba(255,255,255,0.8); font-size:0.9rem;">Gestion complète • Minimarket</p>
+                <div class="brand-icon">
+                    <i class="fas fa-store-alt" style="font-size:3.5rem;color:#14B8A6;"></i>
+                </div>
+                <h1><span>E</span>-SOLUTION</h1>
+                <p style="color:rgba(255,255,255,0.7); font-size:0.9rem;">Point de Vente • Gestion complète</p>
             </div>
             <div class="login-form">
                 <h2>🔐 Connexion</h2>
@@ -42,9 +45,11 @@
         </div>
         <div class="register-container hidden" id="registerContainer">
             <div class="register-brand">
-                <div class="brand-icon"><img src="logo.png" alt="Mixmax Minimarket" class="brand-logo"></div>
-                <h1><span>Mixmax</span> Minimarket</h1>
-                <p style="color:rgba(255,255,255,0.8);">Inscription rapide</p>
+                <div class="brand-icon">
+                    <i class="fas fa-store-alt" style="font-size:3.5rem;color:#14B8A6;"></i>
+                </div>
+                <h1><span>E</span>-SOLUTION</h1>
+                <p style="color:rgba(255,255,255,0.7);">Inscription rapide</p>
             </div>
             <div class="register-form">
                 <h2>📝 Créer un compte</h2>
@@ -69,15 +74,17 @@
         </div>
     </div>
 
-    <!-- ==================== DASHBOARD ADMIN/CAISSIER ==================== -->
+    <!-- ==================== DASHBOARD ==================== -->
     <div id="dashboardPage" class="dashboard hidden">
         <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img"></div>
-                <h2>Mixmax <span>Market</span></h2>
-                <div class="sidebar-subtitle">MINIMARKET</div>
+                <div class="sidebar-logo">
+                    <i class="fas fa-store-alt" style="font-size:2.5rem;color:#14B8A6;"></i>
+                </div>
+                <h2>E-<span>SOLUTION</span></h2>
+                <div class="sidebar-subtitle">POINT DE VENTE</div>
             </div>
             <div class="sidebar-nav">
                 <ul id="navMenu"></ul>
@@ -87,12 +94,12 @@
             </div>
             <div class="sidebar-footer">
                 <div class="user-info" id="sidebarUserInfo"><i class="fas fa-user-circle"></i> <span>Chargement...</span></div>
-                <div id="sidebarRole" style="font-size:0.7rem; color:#66BB6A; margin-top:5px;"></div>
+                <div id="sidebarRole" style="font-size:0.7rem; color:#14B8A6; margin-top:5px;"></div>
             </div>
         </div>
         <div class="main-content">
             <div class="page-header">
-                <div class="header-title"><i class="fas fa-store"></i><h2 id="pageTitle">Dashboard</h2></div>
+                <div class="header-title"><i class="fas fa-store-alt"></i><h2 id="pageTitle">Dashboard</h2></div>
             </div>
             <div id="dynamicContent"></div>
         </div>
@@ -104,8 +111,10 @@
         <div class="sidebar-overlay" id="clientSidebarOverlay" onclick="closeClientSidebar()"></div>
         <div class="sidebar" id="clientSidebar">
             <div class="sidebar-header">
-                <div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img"></div>
-                <h2>Mixmax <span>Market</span></h2>
+                <div class="sidebar-logo">
+                    <i class="fas fa-store-alt" style="font-size:2.5rem;color:#14B8A6;"></i>
+                </div>
+                <h2>E-<span>SOLUTION</span></h2>
                 <div class="sidebar-subtitle">BIENVENUE</div>
             </div>
             <div class="sidebar-nav">
@@ -168,6 +177,5 @@
             navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)).catch(err => console.error('SW ✗', err));
         }
     </script>
-
 </body>
 </html>
