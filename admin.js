@@ -1,4 +1,4 @@
-// ==================== ADMIN.JS - MIXMAX MINIMARKET (COMPLET CORRIGÉ) ====================
+// ==================== ADMIN.JS - E-SOLUTION ====================
 // Toutes les variables globales utilisent window. pour compatibilité
 
 // ==================== VARIABLES GLOBALES ====================
@@ -190,7 +190,7 @@ function sortTableData(tableName, field, loadFn) {
 
 function getSortIcon(tableName, field) {
     if (!window.sortOrders[tableName] || !window.sortOrders[tableName][field]) return '<i class="fas fa-sort" style="font-size:0.5rem;margin-left:2px;opacity:0.3;cursor:pointer;"></i>';
-    return window.sortOrders[tableName][field] === 'asc' ? '<i class="fas fa-sort-up" style="font-size:0.55rem;margin-left:2px;color:#A67C52;"></i>' : '<i class="fas fa-sort-down" style="font-size:0.55rem;margin-left:2px;color:#A67C52;"></i>';
+    return window.sortOrders[tableName][field] === 'asc' ? '<i class="fas fa-sort-up" style="font-size:0.55rem;margin-left:2px;color:#14B8A6;"></i>' : '<i class="fas fa-sort-down" style="font-size:0.55rem;margin-left:2px;color:#14B8A6;"></i>';
 }
 
 function applySort(tableName, data, defaultField) {
@@ -301,7 +301,7 @@ function filterBySearch(data, query, fields) {
 // ==================== DASHBOARD ====================
 function loadDashboardPage(c) {
     c.innerHTML = '<div class="stats-grid">' +
-        '<div class="stat-card"><div class="stat-icon"><i class="fas fa-coffee"></i></div><div class="stat-info"><span class="stat-label">Produits</span><span class="stat-value" id="productsCount">0</span></div></div>' +
+        '<div class="stat-card"><div class="stat-icon"><i class="fas fa-box"></i></div><div class="stat-info"><span class="stat-label">Produits</span><span class="stat-value" id="productsCount">0</span></div></div>' +
         '<div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><span class="stat-label">Clients</span><span class="stat-value" id="clientsCount">0</span></div></div>' +
         '<div class="stat-card"><div class="stat-icon"><i class="fas fa-layer-group"></i></div><div class="stat-info"><span class="stat-label">Catégories</span><span class="stat-value" id="categoriesCount">0</span></div></div>' +
         '<div class="stat-card"><div class="stat-icon"><i class="fas fa-shopping-cart"></i></div><div class="stat-info"><span class="stat-label">Ventes</span><span class="stat-value" id="ventesCount">0</span></div></div>' +
@@ -343,7 +343,6 @@ function loadPendingRegistrations() {
         </div>
     `;
     
-    // 🔥 Utiliser Firestore directement (pas le cache)
     db.collection('users')
         .where('authorized', '==', 'no')
         .orderBy('createdAt', 'desc')
@@ -380,7 +379,7 @@ function renderPendingTable() {
     if (data.length === 0) {
         tb.innerHTML = `
             <tr>
-                <td colspan="5" style="text-align:center;padding:40px;color:#16a34a;font-size:24px;">
+                <td colspan="5" style="text-align:center;padding:40px;color:#14B8A6;font-size:24px;">
                     ✅ Aucune inscription en attente
                 </td>
             </tr>
@@ -417,7 +416,6 @@ async function approveUser(uid) {
     if (!confirm('Accepter cet utilisateur ?')) return;
     
     try {
-        // 1. Vérifier que le document existe
         const doc = await db.collection('users').doc(uid).get();
         if (!doc.exists) {
             alert('❌ Utilisateur introuvable');
@@ -426,17 +424,14 @@ async function approveUser(uid) {
         
         const userData = doc.data();
         
-        // 2. Mettre à jour DIRECTEMENT dans Firestore (pas via CacheDB)
         await db.collection('users').doc(uid).update({
             authorized: 'yes',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // 3. Mettre à jour le cache local
         const updatedUser = { ...userData, authorized: 'yes', updatedAt: new Date() };
         await CacheDB.set('users', uid, { uid: uid, userData: updatedUser });
         
-        // 4. Si c'est un client, créer son profil client
         if (userData.role === 'client') {
             const clientData = {
                 nom: userData.nom || '',
@@ -461,18 +456,15 @@ async function approveUser(uid) {
             await CacheDB.set('clients', uid, { id: uid, ...clientData });
         }
         
-        // 5. Mettre à jour le cache "current" si c'est l'utilisateur actuel
         if (window.currentUserData && window.currentUserData.uid === uid) {
             window.currentUserData.userData.authorized = 'yes';
             await CacheDB.set('users', 'current', window.currentUserData);
         }
         
-        // 6. Synchroniser
         await CacheDB.sync();
         
         alert('✅ Utilisateur accepté avec succès !');
         
-        // 7. Rafraîchir les listes
         if (typeof loadPendingRegistrations === 'function') {
             loadPendingRegistrations();
         }
@@ -494,25 +486,19 @@ async function rejectUser(uid) {
     if (!confirm('Refuser et supprimer cet utilisateur ?')) return;
     
     try {
-        // 1. Supprimer directement de Firestore
         await db.collection('users').doc(uid).delete();
-        
-        // 2. Supprimer du cache
         await CacheDB.delete('users', uid);
         
-        // 3. Supprimer aussi le client associé si existe
         const clientDoc = await db.collection('clients').doc(uid).get();
         if (clientDoc.exists) {
             await db.collection('clients').doc(uid).delete();
             await CacheDB.delete('clients', uid);
         }
         
-        // 4. Synchroniser
         await CacheDB.sync();
         
         alert('✅ Utilisateur supprimé');
         
-        // 5. Rafraîchir
         if (typeof loadPendingRegistrations === 'function') {
             loadPendingRegistrations();
         }
@@ -529,20 +515,49 @@ async function rejectUser(uid) {
     }
 }
 
-// ==================== OPTIONS ====================
+// ==================== OPTIONS (AVEC MODE SOMBRE/CLAIR) ====================
 function loadOptionsPage(c) {
     if (!window.currentUserData || window.currentUserData.userData.role !== 'admin') {
         c.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#ef4444;">Accès réservé à l\'administrateur</p></div>';
         return;
     }
-    c.innerHTML = '<div class="stats-grid">' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#fef3c7;"><i class="fas fa-clock" style="color:#d97706;"></i></div><div class="stat-info"><span>En attente</span><span class="stat-value" id="pendingCount">0</span></div></div>' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#dcfce7;"><i class="fas fa-check-circle" style="color:#16a34a;"></i></div><div class="stat-info"><span>Autorisés</span><span class="stat-value" id="authorizedCount">0</span></div></div>' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#e0e7ff;"><i class="fas fa-users" style="color:#4f46e5;"></i></div><div class="stat-info"><span>Total</span><span class="stat-value" id="totalUsers">0</span></div></div>' +
-        '</div>' +
-        '<div class="content-card"><div class="card-header"><h3><i class="fas fa-lock"></i> Sécurité</h3><button class="btn-add" onclick="toggleChangePasswordForm()"><i class="fas fa-key"></i> Changer le mot de passe</button></div><div id="changePasswordForm" class="hidden" style="margin-top:15px;"><div class="form-row"><div class="form-group"><label>Mot de passe actuel</label><input type="password" id="currentPassword"></div></div><div class="form-row"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="newPassword"></div><div class="form-group"><label>Confirmer</label><input type="password" id="confirmPassword"></div></div><button class="btn-save" onclick="changeAdminPassword()">Changer le mot de passe</button></div></div>' +
-        '<div class="content-card"><div class="card-header"><h3><i class="fas fa-bullhorn"></i> Fidélité</h3><button class="btn-add" onclick="toggleMarketingProgram()"><i class="fas fa-cog"></i> Gérer</button></div><div id="marketingProgramContent" class="hidden" style="margin-top:15px;"><div style="display:flex;align-items:flex-end;gap:20px;"><div class="form-group"><label>Activer</label><select id="fideliteActifSelect"><option value="1">✅ Actif</option><option value="0">❌ Inactif</option></select></div><div class="form-group"><label>Points/vente</label><input type="number" id="fidelitePointsInput" value="1" min="1" style="width:80px;"></div><button class="btn-save" onclick="saveFideliteSettings()">Enregistrer</button></div></div></div>' +
-        '<div class="content-card"><div class="card-header"><h3><i class="fas fa-users"></i> Utilisateurs</h3><div style="display:flex;gap:10px;"><input type="text" id="usersSearchInput" placeholder="🔍 Rechercher..." style="padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;width:220px;" onkeyup="window.usersSearchQuery=this.value.trim().toLowerCase();renderUsersTable();"><button class="btn-add" onclick="loadUsersList()">Actualiser</button></div></div><div class="table-container"><table class="data-table" id="usersTable"><thead><tr><th>Username</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>';
+
+    var currentTheme = localStorage.getItem('e-solution-theme') || 'light';
+    var isDark = currentTheme === 'dark';
+
+    c.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon" style="background:#fef3c7;"><i class="fas fa-clock" style="color:#d97706;"></i></div><div class="stat-info"><span>En attente</span><span class="stat-value" id="pendingCount">0</span></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:#dcfce7;"><i class="fas fa-check-circle" style="color:#14B8A6;"></i></div><div class="stat-info"><span>Autorisés</span><span class="stat-value" id="authorizedCount">0</span></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:#e0e7ff;"><i class="fas fa-users" style="color:#4f46e5;"></i></div><div class="stat-info"><span>Total</span><span class="stat-value" id="totalUsers">0</span></div></div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-header">
+                <h3><i class="fas fa-palette"></i> Affichage</h3>
+                <span style="font-size:0.8rem;color:var(--text-secondary);">Choisissez votre thème</span>
+            </div>
+            <div class="theme-toggle-container">
+                <button class="theme-toggle-btn light ${!isDark ? 'theme-active' : ''}" onclick="setTheme('light')">
+                    <i class="fas fa-sun"></i>
+                    Mode Clair
+                </button>
+                <button class="theme-toggle-btn dark ${isDark ? 'theme-active' : ''}" onclick="setTheme('dark')">
+                    <i class="fas fa-moon"></i>
+                    Mode Sombre
+                </button>
+            </div>
+            <div style="text-align:center;padding:8px 0;color:var(--text-secondary);font-size:0.9rem;">
+                ${isDark ? '🌙 Mode Sombre actif' : '☀️ Mode Clair actif'}
+            </div>
+        </div>
+
+        <div class="content-card"><div class="card-header"><h3><i class="fas fa-lock"></i> Sécurité</h3><button class="btn-add" onclick="toggleChangePasswordForm()"><i class="fas fa-key"></i> Changer le mot de passe</button></div><div id="changePasswordForm" class="hidden" style="margin-top:15px;"><div class="form-row"><div class="form-group"><label>Mot de passe actuel</label><input type="password" id="currentPassword"></div></div><div class="form-row"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="newPassword"></div><div class="form-group"><label>Confirmer</label><input type="password" id="confirmPassword"></div></div><button class="btn-save" onclick="changeAdminPassword()">Changer le mot de passe</button></div></div>
+
+        <div class="content-card"><div class="card-header"><h3><i class="fas fa-bullhorn"></i> Fidélité</h3><button class="btn-add" onclick="toggleMarketingProgram()"><i class="fas fa-cog"></i> Gérer</button></div><div id="marketingProgramContent" class="hidden" style="margin-top:15px;"><div style="display:flex;align-items:flex-end;gap:20px;"><div class="form-group"><label>Activer</label><select id="fideliteActifSelect"><option value="1">✅ Actif</option><option value="0">❌ Inactif</option></select></div><div class="form-group"><label>Points/vente</label><input type="number" id="fidelitePointsInput" value="1" min="1" style="width:80px;"></div><button class="btn-save" onclick="saveFideliteSettings()">Enregistrer</button></div></div></div>
+
+        <div class="content-card"><div class="card-header"><h3><i class="fas fa-users"></i> Utilisateurs</h3><div style="display:flex;gap:10px;"><input type="text" id="usersSearchInput" placeholder="🔍 Rechercher..." style="padding:8px 12px;border:2px solid var(--border);border-radius:8px;width:220px;background:var(--input-bg);color:var(--text-primary);" onkeyup="window.usersSearchQuery=this.value.trim().toLowerCase();renderUsersTable();"><button class="btn-add" onclick="loadUsersList()">Actualiser</button></div></div><div class="table-container"><table class="data-table" id="usersTable"><thead><tr><th>Username</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
+    `;
     loadUsersList();
     loadFideliteSettings();
 }
@@ -648,7 +663,7 @@ function navigateTo(page) {
         'pos': 'fa-cash-register',
         'commandes': 'fa-shopping-basket',
         'categories': 'fa-layer-group',
-        'products': 'fa-coffee',
+        'products': 'fa-box',
         'clients': 'fa-users',
         'fournisseurs': 'fa-truck',
         'ventes': 'fa-shopping-cart',
@@ -664,7 +679,6 @@ function navigateTo(page) {
     var iconEl = document.querySelector('.header-title i');
     if (iconEl && icons[page]) iconEl.className = 'fas ' + icons[page];
     
-    // ✅ Gestion du POS
     if (page === 'pos') {
         if (typeof window.loadPosPage === 'function') {
             window.loadPosPage(content);
@@ -674,7 +688,7 @@ function navigateTo(page) {
             content.innerHTML = `
                 <div class="content-card">
                     <p style="text-align:center;padding:40px;">
-                        <i class="fas fa-cash-register" style="font-size:3rem;display:block;color:#A67C52;margin-bottom:15px;"></i>
+                        <i class="fas fa-cash-register" style="font-size:3rem;display:block;color:#14B8A6;margin-bottom:15px;"></i>
                         Chargement du POS...
                     </p>
                 </div>
@@ -689,7 +703,6 @@ function navigateTo(page) {
         return;
     }
     
-    // ✅ Autres pages
     var pageFunctions = {
         'dashboard': window.loadDashboardPage || loadDashboardPage,
         'commandes': window.loadCommandesPage || loadCommandesPage,
@@ -775,7 +788,7 @@ async function loadCreditsData() {
             html += '<td><strong>' + escapeHtml(d.clientName || '-') + '</strong></td>';
             html += '<td>' + (d.total || 0).toFixed(2) + ' MAD</td>';
             html += '<td>' + paye.toFixed(2) + ' MAD</td>';
-            html += '<td style="color:' + (reste > 0 ? '#ef4444' : '#16a34a') + ';font-weight:700;">' + reste.toFixed(2) + ' MAD</td>';
+            html += '<td style="color:' + (reste > 0 ? '#ef4444' : '#14B8A6') + ';font-weight:700;">' + reste.toFixed(2) + ' MAD</td>';
             html += '<td>' + escapeHtml(d.paymentMethod || '-') + '</td>';
             html += '<td>' + (d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : '-') + '</td>';
             html += '<td>';
@@ -851,4 +864,4 @@ window.loadCreditsPage = loadCreditsPage;
 window.loadCreditsData = loadCreditsData;
 window.applyCreditsFilters = applyCreditsFilters;
 
-console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
+console.log('🚀 E-SOLUTION - Admin JS complet');
