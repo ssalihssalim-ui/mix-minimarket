@@ -3,6 +3,7 @@
 // ✅ Sélection automatique du client par audio avec passage à l'étape paiement
 // ✅ Recherche adaptée selon l'étape POS : produits en étape 1, clients/paiement en étape 2
 // ✅ Affichage automatique du crédit après sélection vocale du client
+// ✅ RECHERCHE VOCALE IDENTIQUE À LA RECHERCHE ÉCRITE - AFFICHE TOUS LES PRODUITS CORRESPONDANTS
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -40,9 +41,8 @@ var numberMap = {
     'cinquante': 50, 'soixante': 60, 'cent': 100
 };
 
-// ========== FONCTIONS D'AFFICHAGE VOCAL (MANQUANTES AUPARAVANT) ==========
+// ========== FONCTIONS D'AFFICHAGE VOCAL ==========
 
-// Création d'un conteneur pour les messages vocaux s'il n'existe pas
 function ensureVoiceDisplay() {
     if (!document.getElementById('voiceDisplay')) {
         var div = document.createElement('div');
@@ -150,7 +150,7 @@ function fastFindClient(query) {
 
 function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
 
-// ========== INDEX PRODUIT (RAPIDE) ==========
+// ========== INDEX PRODUIT (RAPIDE) - CORRIGÉ POUR RETOURNER TOUS LES PRODUITS ==========
 function buildProductIndex() {
     if (productIndexBuilt || !window.posProductsList?.length) return;
     productNameIndex = {};
@@ -160,14 +160,14 @@ function buildProductIndex() {
         var mots = nomNormalized.split(/[\s,;.]+/);
         mots.forEach(function(mot) {
             mot = mot.trim();
-            if (mot.length < 2) return;
+            if (mot.length < 1) return;
             if (!productNameIndex[mot]) productNameIndex[mot] = [];
             if (!productNameIndex[mot].includes(p)) productNameIndex[mot].push(p);
         });
         var descNormalized = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         descNormalized.split(/[\s,;.]+/).forEach(function(mot) {
             mot = mot.trim();
-            if (mot.length < 2) return;
+            if (mot.length < 1) return;
             if (!productNameIndex[mot]) productNameIndex[mot] = [];
             if (!productNameIndex[mot].includes(p)) productNameIndex[mot].push(p);
         });
@@ -175,41 +175,63 @@ function buildProductIndex() {
     productIndexBuilt = true;
 }
 
+// ✅ VERSION CORRIGÉE - RETOURNE TOUS LES PRODUITS CORRESPONDANTS (COMME fastSearch)
 function fastFindProduct(query) {
     buildProductIndex();
     if (!query) return [];
+    
     var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (!cleaned) return [];
+    
     var mots = cleaned.split(/[\s,;.]+/);
     if (mots.length === 0) return [];
 
-    var firstWord = mots[0];
-    var searchTerm = firstWord;
-    if (mots.length >= 2) {
-        searchTerm = firstWord + ' ' + mots[1];
-    }
-
-    var candidates = productNameIndex[firstWord] || [];
-    if (candidates.length === 0) return [];
-
-    var filtered = candidates.filter(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom.indexOf(searchTerm) !== -1;
+    // ✅ RECHERCHE SIMILAIRE À fastSearch() DANS POS.JS
+    var results = [];
+    var seen = {};
+    
+    // Rechercher par chaque mot
+    mots.forEach(function(mot) {
+        mot = mot.trim();
+        if (mot.length < 2) return;
+        
+        var candidates = productNameIndex[mot] || [];
+        candidates.forEach(function(p) {
+            if (!seen[p.id]) {
+                seen[p.id] = true;
+                results.push(p);
+            }
+        });
     });
-
-    if (filtered.length === 0) {
-        return [candidates[0]];
+    
+    // Si aucun résultat trouvé via l'index, faire une recherche plus large
+    if (results.length === 0 && window.posProductsList) {
+        window.posProductsList.forEach(function(p) {
+            var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            var categorie = (p.categorie || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            var description = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            
+            if (nom.indexOf(cleaned) !== -1 || 
+                categorie.indexOf(cleaned) !== -1 || 
+                description.indexOf(cleaned) !== -1) {
+                if (!seen[p.id]) {
+                    seen[p.id] = true;
+                    results.push(p);
+                }
+            }
+        });
     }
-
-    if (filtered.length === 1) return filtered;
-
-    var exact = filtered.find(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom === searchTerm;
+    
+    // ✅ Trier les résultats par longueur de nom (les plus courts d'abord)
+    results.sort(function(a, b) {
+        var nomA = (a.nom || '').toLowerCase();
+        var nomB = (b.nom || '').toLowerCase();
+        if (nomA.length !== nomB.length) return nomA.length - nomB.length;
+        return nomA.localeCompare(nomB);
     });
-    if (exact) return [exact];
-
-    filtered.sort(function(a, b) { return (a.nom||'').length - (b.nom||'').length; });
-    return [filtered[0]];
+    
+    // ✅ Retourner TOUS les résultats trouvés (comme fastSearch)
+    return results;
 }
 
 // ========== INDEX PRODUIT ADMIN ==========
@@ -418,9 +440,21 @@ function parseVoiceCommand(transcript) {
         if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 1) {
             var products = window.posProductsList || [];
             if (products.length) {
-                var best = fastFindProduct(cleaned)[0];
-                if (best) return { type: 'search_product', product: best, page: 'pos' };
+                // ✅ Récupérer TOUS les produits correspondants
+                var foundProducts = fastFindProduct(cleaned);
+                if (foundProducts && foundProducts.length > 0) {
+                    // ✅ Retourner le premier produit ET la liste complète
+                    return { 
+                        type: 'search_product', 
+                        product: foundProducts[0],
+                        products: foundProducts,  // ✅ Tous les produits trouvés
+                        text: cleaned,
+                        page: 'pos' 
+                    };
+                }
             }
+            
+            // Commandes spéciales
             if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) {
                 return { type: 'next' };
             }
@@ -544,6 +578,7 @@ function handleVoiceCommand(cmd) {
             hideVoiceFlowIndicator();
             break;
 
+        // ✅ RECHERCHE PRODUIT - AFFICHE TOUS LES PRODUITS CORRESPONDANTS
         case 'search_product':
             if (cmd.page === 'products' || cp === 'Produits') {
                 var adminInput = document.getElementById('productSearchInput');
@@ -551,33 +586,41 @@ function handleVoiceCommand(cmd) {
                     adminInput.value = cmd.product.nom;
                     window.productSearchQuery = cmd.product.nom.toLowerCase().trim();
                     if (typeof renderProductsTable === 'function') renderProductsTable();
-                    showVoiceResult('🔍 ' + cmd.product.nom + ' – filtré');
+                    showVoiceResult('🔍 ' + cmd.product.nom);
                 }
             } else {
                 var searchInput = document.getElementById('posSearchInput');
-                if (searchInput && cmd.product) {
-                    searchInput.value = cmd.product.nom;
-                    if (cmd.product.categorie && typeof window.posFilterCategory === 'function') {
-                        window.posFilterCategory(cmd.product.categorie);
+                if (searchInput) {
+                    // ✅ Utiliser le nom du produit trouvé pour la recherche
+                    var searchText = cmd.product ? cmd.product.nom : cmd.text || '';
+                    
+                    // ✅ Remplir le champ de recherche
+                    searchInput.value = searchText;
+                    
+                    // ✅ Déclencher la recherche POS comme si l'utilisateur avait tapé
+                    var event = new Event('input', { bubbles: true });
+                    searchInput.dispatchEvent(event);
+                    
+                    // ✅ Forcer la mise à jour de la grille
+                    if (typeof window.filterProductGrid === 'function') {
+                        setTimeout(function() {
+                            window.filterProductGrid();
+                        }, 100);
                     }
-                    setTimeout(function() {
-                        var cards = document.querySelectorAll('.pos-product-card');
-                        for (var i = 0; i < cards.length; i++) {
-                            var card = cards[i];
-                            var nameEl = card.querySelector('.pos-product-name');
-                            if (nameEl && nameEl.textContent.trim().toLowerCase() === cmd.product.nom.toLowerCase()) {
-                                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                card.style.boxShadow = '0 0 0 3px #14B8A6';
-                                setTimeout(function() { card.style.boxShadow = ''; }, 1500);
-                                break;
-                            }
-                        }
-                    }, 300);
-                    showVoiceResult('🔍 ' + cmd.product.nom);
+                    
+                    // ✅ Afficher le résultat vocal
+                    if (cmd.products && cmd.products.length > 1) {
+                        showVoiceResult('🔍 ' + cmd.products.length + ' produits trouvés');
+                    } else if (cmd.product) {
+                        showVoiceResult('🔍 ' + cmd.product.nom);
+                    } else {
+                        showVoiceResult('🔍 Recherche...');
+                    }
                 }
             }
             hideVoiceFlowIndicator();
             break;
+            
         case 'number':
             if (voiceMode === 'quantity' && lastAddedProductId) {
                 var qty = cmd.value, it = window.posCart?.find(function(x) { return x.id === lastAddedProductId; });
@@ -889,6 +932,8 @@ function posStartVoiceRecording() {
             if (si) {
                 if (final) {
                     var lowerFinal = final.toLowerCase().trim();
+                    
+                    // Vérifier les commandes de navigation
                     if (lowerFinal.includes('crédits') || lowerFinal.includes('impayés') || 
                         lowerFinal.includes('dettes') || lowerFinal.includes('ardoises') ||
                         lowerFinal.includes('liste des crédits')) {
@@ -903,9 +948,20 @@ function posStartVoiceRecording() {
                         return;
                     }
                     
+                    // ✅ Remplir le champ de recherche
                     si.value = final;
+                    
+                    // ✅ Déclencher la recherche (comme si l'utilisateur avait tapé)
                     var event = new Event('input', { bubbles: true });
                     si.dispatchEvent(event);
+                    
+                    // ✅ Forcer la mise à jour de la grille
+                    if (typeof window.filterProductGrid === 'function') {
+                        setTimeout(function() {
+                            window.filterProductGrid();
+                        }, 100);
+                    }
+                    
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
                     if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
@@ -987,5 +1043,7 @@ window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
 window.buildProductAdminIndex = buildProductAdminIndex;
 window.fastFindProductAdmin = fastFindProductAdmin;
+window.fastFindProduct = fastFindProduct;
 
 console.log('🎤 Module vocal – prêt avec retour visuel (recherche adaptée selon étape POS + sélection client audio complète)');
+console.log('✅ Recherche vocale identique à la recherche écrite - affiche tous les produits correspondants');
