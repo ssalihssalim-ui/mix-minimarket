@@ -4,6 +4,7 @@
 // ✅ Recherche adaptée selon l'étape POS : produits en étape 1, clients/paiement en étape 2
 // ✅ Affichage automatique du crédit après sélection vocale du client
 // ✅ RECHERCHE VOCALE IDENTIQUE À LA RECHERCHE ÉCRITE - AFFICHE TOUS LES PRODUITS CORRESPONDANTS
+// ✅ RECHERCHE AUTOMATIQUE - PAS BESOIN D'APPUYER SUR ENTRÉE
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -597,9 +598,10 @@ function handleVoiceCommand(cmd) {
                     // ✅ Remplir le champ de recherche
                     searchInput.value = searchText;
                     
-                    // ✅ Déclencher la recherche POS comme si l'utilisateur avait tapé
-                    var event = new Event('input', { bubbles: true });
-                    searchInput.dispatchEvent(event);
+                    // ✅ Déclencher la recherche POS directement (comme si l'utilisateur avait tapé et appuyé sur Entrée)
+                    if (typeof window.posSearchProducts === 'function') {
+                        window.posSearchProducts(searchText);
+                    }
                     
                     // ✅ Forcer la mise à jour de la grille
                     if (typeof window.filterProductGrid === 'function') {
@@ -951,9 +953,10 @@ function posStartVoiceRecording() {
                     // ✅ Remplir le champ de recherche
                     si.value = final;
                     
-                    // ✅ Déclencher la recherche (comme si l'utilisateur avait tapé)
-                    var event = new Event('input', { bubbles: true });
-                    si.dispatchEvent(event);
+                    // ✅ Déclencher la recherche automatiquement (comme si l'utilisateur avait appuyé sur Entrée)
+                    if (typeof window.posSearchProducts === 'function') {
+                        window.posSearchProducts(final);
+                    }
                     
                     // ✅ Forcer la mise à jour de la grille
                     if (typeof window.filterProductGrid === 'function') {
@@ -1047,3 +1050,4 @@ window.fastFindProduct = fastFindProduct;
 
 console.log('🎤 Module vocal – prêt avec retour visuel (recherche adaptée selon étape POS + sélection client audio complète)');
 console.log('✅ Recherche vocale identique à la recherche écrite - affiche tous les produits correspondants');
+console.log('✅ Recherche automatique - pas besoin d\'appuyer sur Entrée');
