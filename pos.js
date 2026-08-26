@@ -1,7 +1,7 @@
 // ==================== POS.JS - E-SOLUTION (VERSION COMPLÈTE AVEC MODE CATÉGORIES) ====================
 // Point de vente complet avec mode catégories
 // ✅ Nom produit peut sauter à la ligne
-// ✅ Image taille fixe
+// ✅ Image taille fixe et conteneur agrandi
 // ✅ Pas de scroll horizontal
 
 var posCart = [];
@@ -261,7 +261,6 @@ function filterProductGrid(){
     var isMobile = window.innerWidth < 700;
     var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(110px, 1fr))';
     grid.style.gridTemplateColumns = gridCols;
-    // ✅ Pas de scroll horizontal
     grid.style.overflowX = 'hidden';
     grid.style.overflowY = 'auto';
     grid.style.flexWrap = 'wrap';
@@ -305,15 +304,15 @@ function filterProductGrid(){
 
             var isMobile = window.innerWidth < 700;
             
-            // ✅ Carte produit avec nom sur plusieurs lignes et image fixe
+            // ✅ Carte produit avec nom sur plusieurs lignes et image conteneur agrandi
             var cardStyle = isMobile ? 
-                'padding:4px 2px;min-height:100px;max-height:130px;aspect-ratio:1/1;border-radius:6px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' : 
-                'padding:6px 8px;min-height:140px;max-height:180px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
+                'padding:4px 2px;min-height:110px;max-height:140px;aspect-ratio:1/1;border-radius:6px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' : 
+                'padding:6px 8px;min-height:150px;max-height:190px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
             
-            // ✅ Image - taille fixe et centrée
+            // ✅ Image - conteneur agrandi (hauteur augmentée)
             var imgStyle = isMobile ? 
-                'height:45px;width:45px;margin-bottom:3px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;' : 
-                'height:65px;width:65px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
+                'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;' : 
+                'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
             
             // ✅ Nom produit - peut sauter à la ligne
             var nameStyle = isMobile ? 
@@ -328,7 +327,7 @@ function filterProductGrid(){
             if (p.imageBase64) {
                 imgContent = '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">';
             } else {
-                imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:16px;color:var(--text-muted);' : 'font-size:24px;color:var(--text-muted);') + '"></i>';
+                imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;color:var(--text-muted);' : 'font-size:26px;color:var(--text-muted);') + '"></i>';
             }
 
             html += '<div class="pos-product-card ' + sc + '" style="' + cardStyle + '" onclick="posAddToCartOrOpenOptions(\'' + p.id + '\')">' +
