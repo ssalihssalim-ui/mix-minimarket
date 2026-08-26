@@ -1,7 +1,7 @@
-// ==================== ADMIN-CREDITS.JS - MIXMAX MINIMARKET ====================
+// ==================== ADMIN-CREDITS.JS - E-SOLUTION ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
 // BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
-// Version FINALE
+// Version FINALE - AVEC MODAL DÉTAILS FACTURE ET PAIEMENT CRÉDIT
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -23,7 +23,6 @@ return m;
 });
 }
 
-// Format date + heure en français
 function formatDateHeure(seconds) {
 if (!seconds) return { date: '-', time: '-', full: '-' };
 const d = new Date(seconds * 1000);
@@ -43,7 +42,6 @@ function normalize(str) {
 return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-// ========== DÉTECTION FILTRE PÉRIODE (pour voice) ==========
 function detectPeriodFilterCredits(text) {
 var cleaned = text.toLowerCase().trim();
 if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today") || cleaned.includes("ajourdhui") || cleaned.includes("aujourd")) {
@@ -64,7 +62,6 @@ return 'all';
 return null;
 }
 
-// ========== CHARGER LES CLIENTS POUR LA RECHERCHE ==========
 async function loadClientsForSearchCredits() {
 try {
 const snapshot = await db.collection('clients').limit(2000).get();
@@ -81,7 +78,6 @@ window.clientsDataForSearch = [];
 }
 }
 
-// ========== FONCTION DE RECHERCHE AVEC DESCRIPTION ==========
 function filterCreditsBySearchWithDescription(data, query) {
 if (!query || query.trim() === '') return data;
 
@@ -150,7 +146,6 @@ results.push(credit);
 return results;
 }
 
-// Génère l'affichage Facture (colonne séparée)
 function renderCreditFactureCell(credit) {
 const factureNum = credit.factureNum || credit.id?.substring(0, 8) || '---';
 return `
@@ -161,7 +156,6 @@ return `
 `;
 }
 
-// Génère l'affichage Date/Heure (colonne séparée)
 function renderCreditDateCell(credit) {
 const dt = credit.createdAt ? formatDateHeure(credit.createdAt.seconds) : { date: '-', time: '-', full: '-' };
 return `
@@ -178,7 +172,6 @@ return `
 `;
 }
 
-// Génère l'affichage Client (colonne séparée)
 function renderCreditClientCell(credit) {
 var clientName = credit._clientDisplayName || credit.clientName || credit.table || 'Client inconnu';
 return `
@@ -189,21 +182,18 @@ return `
 `;
 }
 
-// ========== STYLES CSS DYNAMIQUES ==========
 function injectCreditsStyles() {
 const styleId = 'credits-pro-styles-final';
 if (document.getElementById(styleId)) return;
 
 const styles = `
 <style id="${styleId}">
-/* === POLICE GLOBALE 22px === */
 #creditsPage,
 #creditsPage * {
 font-size: 22px !important;
 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-/* === EXCEPTIONS === */
 #creditsPage .stat-label,
 #creditsPage .filter-group label,
 #creditsPage .total-label {
@@ -225,20 +215,18 @@ font-size: 18px !important;
 padding: 6px 16px !important;
 }
 
-/* === CHAMP VOCAL === */
 .voice-display-field {
 padding: 8px 12px !important;
-border: 2px solid #16a34a !important;
+border: 2px solid #14B8A6 !important;
 border-radius: 8px !important;
 width: 180px !important;
 background: #f0fdf4 !important;
-color: #14532d !important;
+color: #0D9488 !important;
 font-weight: 600 !important;
 font-size: 22px !important;
 min-height: 48px !important;
 }
 
-/* === COLONNES SÉPARÉES === */
 .facture-cell {
 display: flex;
 align-items: center;
@@ -308,7 +296,6 @@ color: var(--accent);
 font-size: 20px !important;
 }
 
-/* === TABLEAU GLOBAL === */
 #creditsPage .data-table {
 font-size: 22px !important;
 border-collapse: separate;
@@ -348,7 +335,6 @@ border-bottom: 1px solid var(--gray-100);
 background: var(--gray-50);
 }
 
-/* === MONTANTS === */
 .amount-total {
 font-weight: 800 !important;
 font-size: 24px !important;
@@ -363,7 +349,6 @@ color: var(--danger) !important;
 letter-spacing: -0.3px;
 }
 
-/* === BARRE DE RECHERCHE AVEC BOUTON X === */
 .search-bar-pro {
 display: flex;
 align-items: center;
@@ -380,7 +365,7 @@ position: relative;
 
 .search-bar-pro:focus-within {
 border-color: var(--black);
-box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04);
+box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
 }
 
 .search-bar-pro i.fa-search {
@@ -406,7 +391,6 @@ font-weight: 400;
 font-size: 20px !important;
 }
 
-/* === BOUTON X POUR EFFACER === */
 .search-clear-btn {
 width: 35px !important;
 height: 35px !important;
@@ -435,7 +419,6 @@ transform: scale(1.05);
 display: none !important;
 }
 
-/* === BOUTONS D'ACTION CORRIGÉS - AVEC ICÔNES === */
 #creditsPage .action-buttons {
 display: flex !important;
 align-items: center !important;
@@ -467,7 +450,6 @@ flex-shrink: 0 !important;
 box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
 }
 
-/* === ICÔNES DES BOUTONS === */
 #creditsPage .action-buttons .btn-edit i,
 #creditsPage .action-buttons .btn-delete i,
 #creditsPage .action-buttons .btn-add i {
@@ -505,7 +487,6 @@ transform: translateY(-2px) !important;
 box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
 }
 
-/* === BOUTON PAYER SPÉCIAL === */
 #creditsPage .action-buttons .btn-add.payer-btn {
 background: #10B981 !important;
 color: #fff !important;
@@ -526,7 +507,6 @@ transform: translateY(-2px) !important;
 font-size: 14px !important;
 }
 
-/* === FILTRES === */
 #creditsPage .filter-group {
 display: flex;
 align-items: center;
@@ -556,10 +536,9 @@ min-width: 140px;
 #creditsPage .filter-group select:focus {
 border-color: var(--black);
 outline: none;
-box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
 }
 
-/* === TOTAL EN BAS === */
 #creditsPage .total-row-pro {
 display: flex;
 justify-content: flex-end;
@@ -594,7 +573,6 @@ font-size: 22px !important;
 margin-right: 6px;
 }
 
-/* === RESPONSIVE === */
 @media(max-width:1024px) {
 #creditsPage .action-buttons {
 min-width: 140px !important;
@@ -829,7 +807,6 @@ ${getPeriodOptions('all')}
 loadCredits();
 }
 
-// ========== FONCTIONS RECHERCHE ==========
 function handleCreditsSearch(value) {
 window.creditsSearch = value;
 window.currentPages.credits = 1;
@@ -906,7 +883,6 @@ clearBtn.classList.add('hidden');
 }
 }
 
-// ========== CHARGEMENT CRÉDITS ==========
 async function loadCredits() {
 var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
 var vendeurCaissier = '';
@@ -959,7 +935,6 @@ window.currentPages.credits = 1;
 applyCreditsFilters();
 }
 
-// ========== FILTRES ==========
 function applyCreditsFilters() {
 var filtered = filterByPeriod(window.allCreditsData, window.creditsPeriod);
 
@@ -985,7 +960,7 @@ window.filteredCredits = filtered;
 renderCreditsTablePro();
 }
 
-// ========== RENDU TABLEAU ==========
+// ==================== RENDER CREDITS TABLE PRO ====================
 function renderCreditsTablePro() {
 var cont = document.getElementById('creditsTableContainer');
 if (!cont) return;
@@ -1043,7 +1018,13 @@ pageData.forEach(function(d, index) {
 var reste = d.remainingAmount || d.total || 0;
 if (!d.paid) tc += reste;
 
-const factureHtml = renderCreditFactureCell(d);
+const factureNum = d.factureNum || d.id?.substring(0, 8) || '---';
+const factureHtml = `
+<div class="facture-cell">
+<i class="fas fa-file-invoice"></i>
+<span class="facture-number">#${factureNum}</span>
+</div>
+`;
 const dateHtml = renderCreditDateCell(d);
 const clientHtml = renderCreditClientCell(d);
 
@@ -1059,7 +1040,6 @@ articlesHtml = '-';
 var mode = d.paymentMethod || '-';
 var amountPaid = d.amountGiven || 0;
 
-// ✅ BOUTONS AVEC ICÔNES CORRIGÉES
 var actions = `
 <div class="action-buttons">
 <button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer / PDF">
@@ -1067,7 +1047,7 @@ var actions = `
 </button>
 `;
 if (!d.paid) {
-actions += `<button class="btn-add payer-btn" onclick="payerCredit('${d.id}')" title="Payer">
+actions += `<button class="btn-add payer-btn" onclick="openCreditPaymentModal('${d.id}')" title="Payer">
 <i class="fas fa-check"></i> Payer
 </button>`;
 }
@@ -1087,7 +1067,9 @@ var isSelected = window.creditSelectedIds.includes(d.id);
 var rowClass = isSelected ? ' style="background:#fef3c7; border-left:4px solid #d97706;"' : '';
 
 h += `<tr${rowClass}>
-<td>${factureHtml}</td>
+<td onclick="openCreditFactureDetails('${d.id}', '${escapeHtml(factureNum)}')" style="cursor:pointer;">
+${factureHtml}
+</td>
 <td>${dateHtml}</td>
 <td>${clientHtml}</td>
 <td>${articlesHtml}</td>
@@ -1115,7 +1097,8 @@ cont.innerHTML = h;
 document.getElementById('creditsPagination').innerHTML = getPaginationHTML('credits', data.length);
 }
 
-// ========== SÉLECTION MULTIPLE ==========
+// ==================== SÉLECTION CRÉDITS ====================
+
 function toggleCreditSelectionMode() {
 window.creditSelectionMode = !window.creditSelectionMode;
 window.creditSelectedIds = [];
@@ -1231,35 +1214,370 @@ alert('❌ Erreur: ' + e.message);
 });
 }
 
-// ========== PAIEMENT REDIRIGÉ VERS LE POS ==========
+// ==================== PAIEMENT CRÉDIT (AVEC MODAL) ====================
+
+// Fonction pour ouvrir le modal de paiement crédit
+function openCreditPaymentModal(creditId) {
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) { return c.id === creditId; });
+    if (!credit) {
+        alert('Crédit introuvable');
+        return;
+    }
+
+    if (credit.paid) {
+        alert('✅ Ce crédit est déjà entièrement payé.');
+        return;
+    }
+
+    var restant = credit.remainingAmount || credit.total || 0;
+    var currentPaye = credit.amountGiven || 0;
+
+    var modalHtml = `
+        <div style="padding:10px;">
+            <h4 style="margin-bottom:16px;font-size:1.2rem;color:var(--text-primary);">
+                💳 Paiement du crédit
+            </h4>
+            <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px;margin-bottom:16px;border:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Facture</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(credit.factureNum || 'N/A')}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Client</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(credit.clientName || 'N/A')}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Total</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${credit.total.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Déjà payé</span>
+                    <span style="font-weight:600;color:var(--success);">${currentPaye.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1.1rem;font-weight:700;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
+                    <span style="color:var(--text-secondary);">Reste à payer</span>
+                    <span style="color:var(--danger);">${restant.toFixed(2)} MAD</span>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                    Montant à payer (MAD)
+                </label>
+                <input type="number" id="creditPaymentAmount" value="${restant.toFixed(2)}" 
+                    step="0.01" min="0.01" max="${restant}"
+                    style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:var(--radius);font-size:1.3rem;font-weight:700;background:var(--bg-card);color:var(--text-primary);">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                <button onclick="closeModal()" class="btn-cancel" style="padding:10px 24px;border-radius:var(--radius);border:none;background:var(--gray-100);color:var(--text-secondary);font-weight:600;cursor:pointer;font-size:0.9rem;">
+                    Annuler
+                </button>
+                <button onclick="confirmCreditPayment('${creditId}')" class="btn-save" style="padding:10px 24px;border-radius:var(--radius);border:none;background:var(--success);color:white;font-weight:600;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-check"></i> Payer
+                </button>
+            </div>
+        </div>
+    `;
+
+    openModal('💰 Paiement crédit', modalHtml);
+}
+
+// Fonction pour confirmer le paiement depuis le modal
+async function confirmCreditPayment(creditId) {
+    var amountInput = document.getElementById('creditPaymentAmount');
+    if (!amountInput) {
+        alert('Erreur: champ de montant introuvable');
+        return;
+    }
+
+    var montant = parseFloat(amountInput.value);
+    if (isNaN(montant) || montant <= 0) {
+        alert('❌ Veuillez entrer un montant valide');
+        return;
+    }
+
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) { return c.id === creditId; });
+    if (!credit) {
+        alert('Crédit introuvable');
+        return;
+    }
+
+    var restant = credit.remainingAmount || credit.total || 0;
+    
+    if (montant > restant) {
+        alert('❌ Le montant ne peut pas dépasser le reste à payer (' + restant.toFixed(2) + ' MAD)');
+        return;
+    }
+
+    try {
+        var nouveauPaye = (credit.amountGiven || 0) + montant;
+        var nouveauRestant = restant - montant;
+        var estPaye = nouveauRestant <= 0.01;
+        
+        // ✅ METTRE À JOUR LE CRÉDIT EXISTANT (pas créer un nouveau)
+        await db.collection('credits').doc(creditId).update({
+            amountGiven: nouveauPaye,
+            remainingAmount: Math.max(0, nouveauRestant),
+            paid: estPaye,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastPaymentAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastPaymentAmount: montant
+        });
+
+        // Mettre à jour le cache
+        var updatedCredit = {
+            ...credit,
+            amountGiven: nouveauPaye,
+            remainingAmount: Math.max(0, nouveauRestant),
+            paid: estPaye
+        };
+        await CacheDB.set('credits', creditId, updatedCredit);
+        
+        // Mettre à jour les données locales
+        var index = window.allCreditsData.findIndex(function(c) { return c.id === creditId; });
+        if (index !== -1) {
+            window.allCreditsData[index] = updatedCredit;
+        }
+        
+        closeModal();
+        alert('✅ Paiement enregistré !\n' +
+              'Montant payé: ' + montant.toFixed(2) + ' MAD\n' +
+              'Reste à payer: ' + Math.max(0, nouveauRestant).toFixed(2) + ' MAD');
+        
+        // Rafraîchir la liste
+        loadCredits();
+        CacheDB.sync();
+
+    } catch(e) {
+        console.error('Erreur paiement crédit:', e);
+        alert('❌ Erreur lors du paiement: ' + e.message);
+    }
+}
+
+// ==================== FONCTIONS POUR LE MODAL DÉTAILS FACTURE CRÉDIT ====================
+
+// Variable pour stocker l'ID du crédit en cours
+var currentCreditId = null;
+
+// Fonction pour ouvrir le modal des détails de facture crédit
+function openCreditFactureDetails(creditId, factureNum) {
+    var modal = document.getElementById('creditFactureDetailsModal');
+    if (!modal) {
+        var modalHTML = `
+            <div id="creditFactureDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+                <div style="background:var(--bg-card);border-radius:var(--radius-xl);width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-xl);border:1px solid var(--border);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:2px solid var(--border);flex-shrink:0;">
+                        <h3 id="creditFactureDetailsTitle" style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin:0;display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-file-invoice" style="color:var(--accent);font-size:1.4rem;"></i>
+                            📄 Détails du crédit
+                        </h3>
+                        <button onclick="closeCreditFactureDetails()" style="background:none;border:none;font-size:2rem;cursor:pointer;color:var(--text-muted);padding:0 14px;border-radius:8px;transition:var(--transition);display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="creditFactureDetailsBody" style="flex:1;overflow-y:auto;padding:24px;padding-top:16px;">
+                        <div style="text-align:center;padding:40px;">
+                            <i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:var(--accent);"></i>
+                            <p style="color:var(--text-secondary);margin-top:12px;font-size:1.1rem;">Chargement...</p>
+                        </div>
+                    </div>
+                    <div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;">
+                        <button onclick="closeCreditFactureDetails()" style="padding:12px 28px;border-radius:var(--radius);border:none;background:var(--gray-100);color:var(--text-secondary);font-weight:600;cursor:pointer;transition:var(--transition);font-size:1rem;">
+                            Fermer
+                        </button>
+                        <button onclick="printCreditFactureDetails()" style="padding:12px 28px;border-radius:var(--radius);border:none;background:var(--black);color:var(--white);font-weight:600;cursor:pointer;transition:var(--transition);font-size:1rem;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-print"></i> Imprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        var div = document.createElement('div');
+        div.innerHTML = modalHTML;
+        document.body.appendChild(div.firstElementChild);
+        
+        document.getElementById('creditFactureDetailsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCreditFactureDetails();
+            }
+        });
+        
+        modal = document.getElementById('creditFactureDetailsModal');
+    }
+    
+    modal.style.display = 'flex';
+    document.getElementById('creditFactureDetailsTitle').textContent = '📄 Détails crédit N° ' + (factureNum || 'N/A');
+    currentCreditId = creditId;
+    loadCreditFactureDetails(creditId);
+}
+
+function closeCreditFactureDetails() {
+    var modal = document.getElementById('creditFactureDetailsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentCreditId = null;
+}
+
+async function loadCreditFactureDetails(creditId) {
+    var body = document.getElementById('creditFactureDetailsBody');
+    if (!body) return;
+    
+    try {
+        var doc = await db.collection('credits').doc(creditId).get();
+        
+        if (!doc.exists) {
+            body.innerHTML = `
+                <div style="text-align:center;padding:40px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:var(--danger);"></i>
+                    <p style="color:var(--text-secondary);margin-top:12px;font-size:1.1rem;">Crédit non trouvé</p>
+                </div>
+            `;
+            return;
+        }
+        
+        var data = doc.data();
+        renderCreditFactureDetails(data);
+        
+    } catch(e) {
+        console.error('Erreur chargement crédit:', e);
+        body.innerHTML = `
+            <div style="text-align:center;padding:40px;">
+                <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:var(--danger);"></i>
+                <p style="color:var(--text-secondary);margin-top:12px;font-size:1.1rem;">Erreur lors du chargement: ${e.message}</p>
+            </div>
+        `;
+    }
+}
+
+function renderCreditFactureDetails(data) {
+    var body = document.getElementById('creditFactureDetailsBody');
+    if (!body) return;
+    
+    var date = data.createdAt ? new Date(data.createdAt.seconds * 1000) : new Date();
+    var dateStr = date.toLocaleDateString('fr-FR');
+    var timeStr = date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    
+    var statusBg = data.paid ? '#ECFDF5' : '#FEF3C7';
+    var statusColor = data.paid ? '#065F46' : '#92400E';
+    
+    var html = `
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--border);">
+            <div>
+                <h4 style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin:0;">Crédit N° ${data.factureNum || 'N/A'}</h4>
+                <p style="color:var(--text-secondary);font-size:1.1rem;margin:6px 0 0 0;">
+                    <i class="far fa-calendar-alt"></i> ${dateStr} à ${timeStr}
+                </p>
+            </div>
+            <span style="display:inline-block;padding:6px 18px;border-radius:20px;font-size:1rem;font-weight:600;text-transform:uppercase;background:${statusBg};color:${statusColor};">
+                ${data.paid ? 'Payé' : 'Impayé'}
+            </span>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px 18px;border:1px solid var(--border);">
+                <p style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin:0 0 6px 0;">Client</p>
+                <p style="font-size:1.2rem;font-weight:600;color:var(--text-primary);margin:0;">${escapeHtml(data.clientName || 'Passager')}</p>
+                <p style="font-size:1rem;color:var(--text-secondary);margin:4px 0 0 0;">${data.clientId ? 'ID: ' + data.clientId : 'Client non identifié'}</p>
+            </div>
+            <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px 18px;border:1px solid var(--border);">
+                <p style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin:0 0 6px 0;">Vendeur / Mode</p>
+                <p style="font-size:1.2rem;font-weight:600;color:var(--text-primary);margin:0;">${escapeHtml(data.vendeur || 'N/A')}</p>
+                <p style="font-size:1rem;color:var(--text-secondary);margin:4px 0 0 0;">💳 ${escapeHtml(data.paymentMethod || '—')}</p>
+            </div>
+        </div>
+        
+        <div style="margin-bottom:18px;">
+            <p style="font-size:0.9rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin:0 0 10px 0;">Articles</p>
+            <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:1rem;">
+                    <thead>
+                        <tr style="background:var(--bg-page);">
+                            <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text-secondary);border-bottom:2px solid var(--border);font-size:0.9rem;">Produit</th>
+                            <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--text-secondary);border-bottom:2px solid var(--border);font-size:0.9rem;">Qté</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text-secondary);border-bottom:2px solid var(--border);font-size:0.9rem;">Prix unit.</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text-secondary);border-bottom:2px solid var(--border);font-size:0.9rem;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    var items = data.items || [];
+    if (items.length === 0) {
+        html += '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-muted);font-size:1rem;">Aucun article</td></tr>';
+    } else {
+        items.forEach(function(item) {
+            var prix = item.prixVente || item.prixUnitaire || 0;
+            var total = prix * (item.quantite || 1);
+            var opts = '';
+            if (item.interdits && item.interdits.length) opts += ' 🚫' + escapeHtml(item.interdits.join(','));
+            if (item.epice && item.epice !== 'Normal') opts += ' 🌶️' + escapeHtml(item.epice);
+            if (item.sel && item.sel !== 'Normal') opts += ' 🧂' + escapeHtml(item.sel);
+            
+            html += `
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px 14px;color:var(--text-primary);font-size:1.05rem;">${escapeHtml(item.nom || 'Produit')}${opts}</td>
+                    <td style="padding:10px 14px;text-align:center;color:var(--text-primary);font-size:1.05rem;">${item.quantite || 1}</td>
+                    <td style="padding:10px 14px;text-align:right;color:var(--text-secondary);font-size:1.05rem;">${prix.toFixed(2)} MAD</td>
+                    <td style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text-primary);font-size:1.05rem;">${total.toFixed(2)} MAD</td>
+                </tr>
+            `;
+        });
+    }
+    
+    var restant = data.remainingAmount || data.total || 0;
+    var amountGiven = data.amountGiven || 0;
+    var total = data.total || 0;
+    
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div style="display:flex;justify-content:flex-end;padding-top:16px;border-top:2px solid var(--border);">
+            <div style="width:280px;">
+                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;color:var(--text-secondary);">
+                    <span>Total</span>
+                    <span>${total.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;color:var(--text-secondary);">
+                    <span>Payé</span>
+                    <span>${amountGiven.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:1.5rem;font-weight:700;color:var(--danger);border-top:2px solid var(--border);margin-top:6px;">
+                    <span>Reste à payer</span>
+                    <span>${restant.toFixed(2)} MAD</span>
+                </div>
+                ${data.discountMAD > 0 ? `
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;color:var(--text-secondary);">
+                    <span>Remise</span>
+                    <span>-${data.discountMAD.toFixed(2)} MAD</span>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    body.innerHTML = html;
+}
+
+function printCreditFactureDetails() {
+    if (currentCreditId) {
+        printFacture(currentCreditId);
+    } else {
+        alert('Aucun crédit sélectionné');
+    }
+}
+
+// ==================== AUTRES FONCTIONS ====================
+
 async function payerCredit(creditId) {
-var data = window.filteredCredits || window.allCreditsData || [];
-var credit = data.find(function(c) { return c.id === creditId; });
-if (!credit) {
-alert('Crédit introuvable');
-return;
+    // Rediriger vers le modal de paiement
+    openCreditPaymentModal(creditId);
 }
 
-localStorage.setItem('posPayerCredit', JSON.stringify({
-creditId: credit.id,
-clientId: credit.clientId || null,
-clientName: credit.clientName || '',
-items: credit.items || [],
-total: credit.total || 0,
-table: credit.table || '',
-amountGiven: credit.amountGiven || 0,
-remainingAmount: credit.remainingAmount || credit.total || 0,
-factureNum: credit.factureNum || ''
-}));
-
-if (typeof navigateTo === 'function') {
-navigateTo('pos');
-} else {
-window.location.href = '#';
-}
-}
-
-// ========== IMPRESSION FACTURE ==========
 function printFacture(did) {
 db.collection('credits').doc(did).get().then(function(dc) {
 if (dc.exists) imprimerFactureCredit(dc.data(), dc.id);
@@ -1279,7 +1597,7 @@ ih += `<tr><td>${escapeHtml(it.nom)}${o}</td><td>${it.quantite}</td><td>${(it.pr
 }
 var w = window.open('', '_blank', 'width=400,height=600');
 w.document.write(`
-<html><head><title>Facture Mixmax Minimarket</title>
+<html><head><title>Facture E-SOLUTION</title>
 <style>
 body{font-family:'Inter',Arial,sans-serif;padding:24px;background:#f9fafb;}
 .invoice{background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
@@ -1294,7 +1612,7 @@ td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:0.85rem;}
 </style>
 </head><body>
 <div class="invoice">
-<h2>🛒 Mixmax Minimarket</h2>
+<h2>🛒 E-SOLUTION</h2>
 <div class="header-info">
 <div><strong>Facture:</strong> ${d.factureNum || id.substring(0, 8)}</div>
 <div><strong>Date:</strong> ${d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : ''}</div>
@@ -1317,7 +1635,6 @@ w.document.close();
 setTimeout(function() { w.print(); }, 500);
 }
 
-// ========== ÉDITION ==========
 async function editCredit(id) {
 try {
 var doc = await db.collection('credits').doc(id).get();
@@ -1415,7 +1732,8 @@ throw e;
 }
 }
 
-// ========== EXPORTS ==========
+// ==================== EXPOSITION DES FONCTIONS GLOBALES ====================
+
 window.loadCreditsPage = loadCreditsPage;
 window.loadCredits = loadCredits;
 window.applyCreditsFilters = applyCreditsFilters;
@@ -1448,4 +1766,17 @@ window.renderCreditFactureCell = renderCreditFactureCell;
 window.renderCreditDateCell = renderCreditDateCell;
 window.renderCreditClientCell = renderCreditClientCell;
 
-console.log('🛒 Mixmax Minimarket - Admin Credits PRO (avec icônes corrigées) chargé ✅');
+// ✅ AJOUT DES FONCTIONS MODAL FACTURE CRÉDIT
+window.openCreditFactureDetails = openCreditFactureDetails;
+window.closeCreditFactureDetails = closeCreditFactureDetails;
+window.loadCreditFactureDetails = loadCreditFactureDetails;
+window.renderCreditFactureDetails = renderCreditFactureDetails;
+window.printCreditFactureDetails = printCreditFactureDetails;
+
+// ✅ AJOUT DES FONCTIONS PAIEMENT CRÉDIT
+window.openCreditPaymentModal = openCreditPaymentModal;
+window.confirmCreditPayment = confirmCreditPayment;
+
+console.log('🚀 E-SOLUTION - Admin Credits PRO chargé');
+console.log('✅ Détails facture crédit modal ajouté - Font size agrandi');
+console.log('✅ Paiement crédit avec modal - Mise à jour du crédit existant');
