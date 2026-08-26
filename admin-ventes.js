@@ -3,7 +3,7 @@
 // ✅ BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
 // ✅ SÉLECTION EN MASSE
 // ✅ DÉTAILS FACTURE MODAL AVEC X POUR FERMER - FONT SIZE AGRANDI
-// ✅ PAGINATION CORRIGÉE
+// ✅ PAGINATION CORRIGÉE - SANS ICÔNES
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -2110,7 +2110,7 @@ function printFactureDetails() {
     }
 }
 
-// ==================== PAGINATION ====================
+// ==================== PAGINATION (SANS ICÔNES) ====================
 
 // Fonction de pagination générique
 function getPaginationHTML(pageType, totalItems) {
@@ -2124,18 +2124,18 @@ function getPaginationHTML(pageType, totalItems) {
     
     var html = `
         <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap;">
-            <button onclick="changePage('${pageType}', 1)" class="btn-add" style="padding:6px 12px;font-size:0.75rem;" ${currentPage === 1 ? 'disabled' : ''}>
-                <i class="fas fa-angle-double-left"></i>
+            <button onclick="changePage('${pageType}', 1)" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">
+                <<
             </button>
-            <button onclick="changePage('${pageType}', ${currentPage - 1})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;" ${currentPage === 1 ? 'disabled' : ''}>
-                <i class="fas fa-angle-left"></i>
+            <button onclick="changePage('${pageType}', ${currentPage - 1})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">
+                <
             </button>
-            <span style="font-size:0.85rem;color:var(--text-secondary);">Page ${currentPage} / ${totalPages}</span>
-            <button onclick="changePage('${pageType}', ${currentPage + 1})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;" ${currentPage === totalPages ? 'disabled' : ''}>
-                <i class="fas fa-angle-right"></i>
+            <span style="font-size:0.85rem;color:var(--text-secondary);font-weight:600;">Page ${currentPage} / ${totalPages}</span>
+            <button onclick="changePage('${pageType}', ${currentPage + 1})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">
+                >
             </button>
-            <button onclick="changePage('${pageType}', ${totalPages})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;" ${currentPage === totalPages ? 'disabled' : ''}>
-                <i class="fas fa-angle-double-right"></i>
+            <button onclick="changePage('${pageType}', ${totalPages})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">
+                >>
             </button>
         </div>
     `;
@@ -2231,4 +2231,4 @@ window.getPageData = getPageData;
 
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ Détails facture modal ajouté - Font size agrandi');
-console.log('✅ Pagination corrigée');
+console.log('✅ Pagination corrigée - Sans icônes');
