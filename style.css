@@ -1258,12 +1258,23 @@ max-height: 400px !important;
         padding-top: 55px !important;
         height: calc(100vh - 60px) !important;
         max-height: calc(100vh - 60px) !important;
+        overflow-y: hidden !important;
     }
 
     /* ✅ DYNAMIC CONTENT - HAUTEUR RÉDUITE DE LA PAGE */
     #dynamicContent {
         height: calc(100vh - 70px) !important;
         max-height: calc(100vh - 70px) !important;
+        padding-bottom: 10px !important;
+        overflow-y: auto !important;
+    }
+
+    /* ✅ POS-CONTAINER - HAUTEUR RÉDUITE (CONTENEUR PRINCIPAL) */
+    .pos-container {
+        min-height: auto !important;
+        height: auto !important;
+        max-height: calc(100vh - 60px) !important;
+        overflow: hidden !important;
         padding-bottom: 10px !important;
     }
 }
