@@ -704,6 +704,9 @@ closeSidebar();
 return;
 }
 
+// ✅ Gestion des Dépenses pour caissier (déjà géré par la fonction existante)
+// Les dépenses sont déjà gérées par loadDepensesPage
+
 // ✅ Autres pages
 var pageFunctions = {
 'dashboard': window.loadDashboardPage || loadDashboardPage,
