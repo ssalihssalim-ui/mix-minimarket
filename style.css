@@ -1419,39 +1419,41 @@ font-size: 10px !important;
 }
 }
 
-/* ✅ SUR TRÈS PETIT ÉCRAN (< 400px) */
+/* ============================================================
+✅ FORCER PANIER EN DESSOUS SUR TRÈS PETIT ÉCRAN (< 400px)
+============================================================ */
 @media(max-width: 400px) {
-.pos-row {
-display: flex !important;
-flex-direction: column !important;
-gap: 3px !important;
-width: 100% !important;
-height: auto !important;
-}
+    .pos-row {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 3px !important;
+        width: 100% !important;
+        height: auto !important;
+    }
 
-.pos-products-panel {
-width: 100% !important;
-max-width: 100% !important;
-min-width: 100% !important;
-flex: 1 !important;
-height: auto !important;
-min-height: 200px !important;
-max-height: 50vh !important;
-order: 1 !important;
-}
+    .pos-products-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 !important;
+        height: auto !important;
+        min-height: 200px !important;
+        max-height: 50vh !important;
+        order: 1 !important;
+    }
 
-.pos-cart-panel {
-width: 100% !important;
-max-width: 100% !important;
-min-width: 100% !important;
-height: auto !important;
-min-height: 110px !important;
-max-height: 35vh !important;
-order: 2 !important;
-margin-top: 3px !important;
-position: static !important;
-flex: none !important;
-}
+    .pos-cart-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        height: auto !important;
+        min-height: 110px !important;
+        max-height: 35vh !important;
+        order: 2 !important;
+        margin-top: 3px !important;
+        position: static !important;
+        flex: none !important;
+    }
 
 .pos-products-grid {
 gap: 3px !important;
