@@ -1294,8 +1294,43 @@ max-height: 400px !important;
     }
 }
 
-/* ✅ SUR MOBILE (< 700px) - CATÉGORIES AGRANDIES */
+/* ============================================================
+✅ FORCER PANIER EN DESSOUS SUR MOBILE (< 700px)
+============================================================ */
 @media(max-width: 700px) {
+    /* ✅ FORCER LE PANIER EN DESSOUS */
+    .pos-row {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    .pos-products-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 !important;
+        height: auto !important;
+        min-height: 250px !important;
+        max-height: 55vh !important;
+        order: 1 !important;
+    }
+
+    .pos-cart-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        height: auto !important;
+        min-height: 130px !important;
+        max-height: 35vh !important;
+        order: 2 !important;
+        margin-top: 4px !important;
+        position: static !important;
+        flex: none !important;
+    }
+
 .pos-product-card {
 min-height: 115px !important;
 max-height: 140px !important;
@@ -1350,17 +1385,6 @@ min-height: 20px !important;
 max-height: 24px !important;
 }
 
-.pos-products-panel {
-height: 60vh !important;
-min-height: 250px !important;
-max-height: 65vh !important;
-}
-
-.pos-cart-panel {
-max-height: 50vh !important;
-min-height: 130px !important;
-}
-
 .pos-products-grid {
 gap: 4px !important;
 padding: 3px !important;
@@ -1397,6 +1421,38 @@ font-size: 10px !important;
 
 /* ✅ SUR TRÈS PETIT ÉCRAN (< 400px) */
 @media(max-width: 400px) {
+.pos-row {
+display: flex !important;
+flex-direction: column !important;
+gap: 3px !important;
+width: 100% !important;
+height: auto !important;
+}
+
+.pos-products-panel {
+width: 100% !important;
+max-width: 100% !important;
+min-width: 100% !important;
+flex: 1 !important;
+height: auto !important;
+min-height: 200px !important;
+max-height: 50vh !important;
+order: 1 !important;
+}
+
+.pos-cart-panel {
+width: 100% !important;
+max-width: 100% !important;
+min-width: 100% !important;
+height: auto !important;
+min-height: 110px !important;
+max-height: 35vh !important;
+order: 2 !important;
+margin-top: 3px !important;
+position: static !important;
+flex: none !important;
+}
+
 .pos-products-grid {
 gap: 3px !important;
 padding: 2px !important;
