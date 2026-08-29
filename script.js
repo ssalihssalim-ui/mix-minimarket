@@ -463,7 +463,9 @@ function buildMenu() {
             { p: 'pos', i: 'fa-cash-register', l: 'POS' },
             { p: 'commandes', i: 'fa-shopping-basket', l: 'Commandes en ligne' },
             { p: 'ventes', i: 'fa-shopping-cart', l: 'Ventes' },
-            { p: 'credits', i: 'fa-credit-card', l: 'Crédits' }
+            { p: 'credits', i: 'fa-credit-card', l: 'Crédits' },
+            { p: 'stock', i: 'fa-boxes', l: 'Stock' },
+            { p: 'depenses', i: 'fa-money-bill-wave', l: 'Dépenses' }
         ];
         var rs = document.getElementById('sidebarRole'); if (rs) rs.textContent = 'Caissier';
     }
