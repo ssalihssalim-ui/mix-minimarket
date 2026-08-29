@@ -1297,7 +1297,7 @@ max-height: 400px !important;
 /* ============================================================
 ✅ FORCER PANIER EN DESSOUS SUR MOBILE (< 700px)
 ============================================================ */
-@media(max-width: 700px) {
+@media(max-width: 780px) {
     /* ✅ FORCER LE PANIER EN DESSOUS */
     .pos-row {
         display: flex !important;
