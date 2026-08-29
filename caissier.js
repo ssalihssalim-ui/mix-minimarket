@@ -80,12 +80,19 @@ function loadCaissierCredits() {
 }
 
 // ==================== STOCK POUR CAISSIER ====================
-function loadCaissierStock() {
+function loadCaissierStock(content) {
+    // Si un paramètre content est passé, l'utiliser, sinon prendre dynamicContent
+    var container = content || document.getElementById('dynamicContent');
+    if (!container) {
+        console.error('Conteneur non trouvé pour Stock');
+        return;
+    }
+    
     if (typeof loadClientStockPage === 'function') {
-        loadClientStockPage(document.getElementById('dynamicContent'));
+        loadClientStockPage(container);
     } else {
-        console.warn('loadClientStockPage non définie');
-        document.getElementById('dynamicContent').innerHTML = `
+        console.warn('loadClientStockPage non définie, fallback');
+        container.innerHTML = `
             <div class="content-card">
                 <div class="card-header">
                     <h3><i class="fas fa-boxes"></i> Gestion Stock</h3>
@@ -132,12 +139,19 @@ function loadCaissierStockFallback() {
 }
 
 // ==================== DÉPENSES POUR CAISSIER ====================
-function loadCaissierDepenses() {
+function loadCaissierDepenses(content) {
+    // Si un paramètre content est passé, l'utiliser, sinon prendre dynamicContent
+    var container = content || document.getElementById('dynamicContent');
+    if (!container) {
+        console.error('Conteneur non trouvé pour Dépenses');
+        return;
+    }
+    
     if (typeof loadClientDepensesPage === 'function') {
-        loadClientDepensesPage(document.getElementById('dynamicContent'));
+        loadClientDepensesPage(container);
     } else {
-        console.warn('loadClientDepensesPage non définie');
-        document.getElementById('dynamicContent').innerHTML = `
+        console.warn('loadClientDepensesPage non définie, fallback');
+        container.innerHTML = `
             <div class="content-card">
                 <div class="card-header">
                     <h3><i class="fas fa-money-bill-wave"></i> Dépenses</h3>
