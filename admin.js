@@ -639,6 +639,7 @@ var titles = {
 'ventes': 'Ventes',
 'credits': 'Crédits',
 'depenses': 'Dépenses',
+'stock': 'Stock',
 'statistiques': 'Statistiques',
 'options': 'Options'
 };
@@ -654,6 +655,7 @@ var icons = {
 'ventes': 'fa-shopping-cart',
 'credits': 'fa-credit-card',
 'depenses': 'fa-money-bill-wave',
+'stock': 'fa-boxes',
 'statistiques': 'fa-chart-bar',
 'options': 'fa-cog'
 };
@@ -684,6 +686,19 @@ if (typeof window.loadPosPage === 'function') {
 window.loadPosPage(content);
 }
 }, 500);
+}
+closeSidebar();
+return;
+}
+
+// ✅ Gestion du Stock pour caissier
+if (page === 'stock') {
+if (typeof window.loadCaissierStock === 'function') {
+window.loadCaissierStock(content);
+} else if (typeof loadCaissierStock === 'function') {
+loadCaissierStock(content);
+} else {
+content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Stock - En développement</p></div>';
 }
 closeSidebar();
 return;
