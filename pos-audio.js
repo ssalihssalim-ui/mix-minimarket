@@ -1,11 +1,6 @@
-// ==================== POS-AUDIO.JS v11 – CORRIGÉ RECHERCHE VOCALE ====================
+// ==================== POS-AUDIO.JS v12 – CORRIGÉ DÉFINITIF ====================
 // Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
-// ✅ Sélection automatique du client par audio avec passage à l'étape paiement
-// ✅ Recherche adaptée selon l'étape POS : produits en étape 1, clients/paiement en étape 2
-// ✅ Affichage automatique du crédit après sélection vocale du client
-// ✅ RECHERCHE VOCALE IDENTIQUE À LA RECHERCHE ÉCRITE - AFFICHE TOUS LES PRODUITS CORRESPONDANTS
-// ✅ RECHERCHE AUTOMATIQUE - PAS BESOIN D'APPUYER SUR ENTRÉE
-// ✅ CORRECTION : TIMING DE RECHERCHE SYNCHRONISÉ AVEC POS.JS
+// ✅ CORRECTION : Export double window.posToggleVoiceSearch ET window.posAudioToggleVoiceSearch
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -44,7 +39,6 @@ var numberMap = {
 };
 
 // ========== FONCTIONS D'AFFICHAGE VOCAL ==========
-
 function ensureVoiceDisplay() {
     if (!document.getElementById('voiceDisplay')) {
         var div = document.createElement('div');
@@ -60,9 +54,7 @@ function showVoiceResult(msg) {
     el.textContent = msg;
     el.style.display = 'block';
     clearTimeout(window._voiceTimeout);
-    window._voiceTimeout = setTimeout(function() {
-        el.style.display = 'none';
-    }, 2000);
+    window._voiceTimeout = setTimeout(function() { el.style.display = 'none'; }, 2000);
 }
 
 function showVoiceModeIndicator() {
@@ -74,17 +66,10 @@ function showVoiceModeIndicator() {
 }
 
 function hideVoiceFlowIndicator() {}
-
 function showVoiceFlowIndicator(phase) {
-    var labels = {
-        'product': 'Dites le nom du produit',
-        'quantity': 'Dites la quantité',
-        'payment_mode': 'Mode de paiement ?',
-        'payment_amount': 'Montant donné ?'
-    };
+    var labels = { 'product': 'Dites le nom du produit', 'quantity': 'Dites la quantité', 'payment_mode': 'Mode de paiement ?', 'payment_amount': 'Montant donné ?' };
     if (labels[phase]) showVoiceResult(labels[phase]);
 }
-
 function showProcessingIndicator() {}
 
 // ========== UTILITAIRES ==========
@@ -93,7 +78,7 @@ function isIOSStandalone() { return /iPad|iPhone|iPod/.test(navigator.userAgent)
 function checkVoiceSupport() { var i = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (i && isIOSStandalone()) return { supported: false, reason: 'Ouvrez dans Safari' }; if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return { supported: false, reason: 'Non supporté' }; return { supported: true }; }
 async function requestMicrophonePermission() { if (micPermissionGranted) return true; try { if (!navigator.mediaDevices?.getUserMedia) return false; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach(t => t.stop()); micPermissionGranted = true; return true; } catch (e) { return false; } }
 
-// ========== CONSTRUCTION INDEX CLIENT ==========
+// ========== INDEX CLIENT ==========
 function buildClientIndex() {
     if (clientIndexBuilt || !window.posAllClients?.length) return;
     clientSearchIndex = {};
@@ -111,16 +96,6 @@ function buildClientIndex() {
         if (fullName.length >= 2) {
             if (!clientSearchIndex[fullName]) clientSearchIndex[fullName] = [];
             if (!clientSearchIndex[fullName].includes(c)) clientSearchIndex[fullName].push(c);
-        }
-        if (c.description) {
-            const descWords = c.description.toLowerCase().trim().split(/[\s,;.]+/);
-            descWords.forEach(mot => {
-                mot = mot.trim();
-                if (mot.length >= 2) {
-                    if (!clientSearchIndex[mot]) clientSearchIndex[mot] = [];
-                    if (!clientSearchIndex[mot].includes(c)) clientSearchIndex[mot].push(c);
-                }
-            });
         }
     });
     clientIndexBuilt = true;
@@ -142,9 +117,7 @@ function fastFindClient(query) {
         results.push(...window.posAllClients.filter(c => {
             const nom = (c.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             const prenom = (c.prenom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const desc = (c.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const tel = (c.telephone || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return nom.includes(normalized) || prenom.includes(normalized) || desc.includes(normalized) || tel.includes(normalized);
+            return nom.includes(normalized) || prenom.includes(normalized);
         }));
     }
     return results;
@@ -152,22 +125,14 @@ function fastFindClient(query) {
 
 function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
 
-// ========== INDEX PRODUIT (RAPIDE) - CORRIGÉ POUR RETOURNER TOUS LES PRODUITS ==========
+// ========== INDEX PRODUIT ==========
 function buildProductIndex() {
     if (productIndexBuilt || !window.posProductsList?.length) return;
     productNameIndex = {};
     window.posProductsList.forEach(function(p) {
         if (!p.nom) return;
         var nomNormalized = p.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        var mots = nomNormalized.split(/[\s,;.]+/);
-        mots.forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 1) return;
-            if (!productNameIndex[mot]) productNameIndex[mot] = [];
-            if (!productNameIndex[mot].includes(p)) productNameIndex[mot].push(p);
-        });
-        var descNormalized = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        descNormalized.split(/[\s,;.]+/).forEach(function(mot) {
+        nomNormalized.split(/[\s,;.]+/).forEach(function(mot) {
             mot = mot.trim();
             if (mot.length < 1) return;
             if (!productNameIndex[mot]) productNameIndex[mot] = [];
@@ -177,126 +142,27 @@ function buildProductIndex() {
     productIndexBuilt = true;
 }
 
-// ✅ VERSION CORRIGÉE - RETOURNE TOUS LES PRODUITS CORRESPONDANTS (COMME fastSearch)
 function fastFindProduct(query) {
     buildProductIndex();
     if (!query) return [];
-    
     var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     if (!cleaned) return [];
-    
     var mots = cleaned.split(/[\s,;.]+/);
-    if (mots.length === 0) return [];
-
-    // ✅ RECHERCHE SIMILAIRE À fastSearch() DANS POS.JS
-    var results = [];
-    var seen = {};
-    
-    // Rechercher par chaque mot
+    var results = [], seen = {};
     mots.forEach(function(mot) {
         mot = mot.trim();
         if (mot.length < 2) return;
-        
-        var candidates = productNameIndex[mot] || [];
-        candidates.forEach(function(p) {
-            if (!seen[p.id]) {
-                seen[p.id] = true;
-                results.push(p);
-            }
+        (productNameIndex[mot] || []).forEach(function(p) {
+            if (!seen[p.id]) { seen[p.id] = true; results.push(p); }
         });
     });
-    
-    // Si aucun résultat trouvé via l'index, faire une recherche plus large
     if (results.length === 0 && window.posProductsList) {
         window.posProductsList.forEach(function(p) {
             var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            var categorie = (p.categorie || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            var description = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            
-            if (nom.indexOf(cleaned) !== -1 || 
-                categorie.indexOf(cleaned) !== -1 || 
-                description.indexOf(cleaned) !== -1) {
-                if (!seen[p.id]) {
-                    seen[p.id] = true;
-                    results.push(p);
-                }
-            }
+            if (nom.indexOf(cleaned) !== -1 && !seen[p.id]) { seen[p.id] = true; results.push(p); }
         });
     }
-    
-    // ✅ Trier les résultats par longueur de nom (les plus courts d'abord)
-    results.sort(function(a, b) {
-        var nomA = (a.nom || '').toLowerCase();
-        var nomB = (b.nom || '').toLowerCase();
-        if (nomA.length !== nomB.length) return nomA.length - nomB.length;
-        return nomA.localeCompare(nomB);
-    });
-    
-    // ✅ Retourner TOUS les résultats trouvés (comme fastSearch)
     return results;
-}
-
-// ========== INDEX PRODUIT ADMIN ==========
-function buildProductAdminIndex() {
-    if (window.productAdminIndexBuilt) return;
-    window.productAdminIndex = {};
-    var products = window.allProductsData || window.posProductsList || [];
-    products.forEach(function(p) {
-        if (!p.nom) return;
-        var nomNormalized = p.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        var mots = nomNormalized.split(/[\s,;.]+/);
-        mots.forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 2) return;
-            if (!window.productAdminIndex[mot]) window.productAdminIndex[mot] = [];
-            if (!window.productAdminIndex[mot].includes(p)) window.productAdminIndex[mot].push(p);
-        });
-        var descNormalized = (p.description || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        descNormalized.split(/[\s,;.]+/).forEach(function(mot) {
-            mot = mot.trim();
-            if (mot.length < 2) return;
-            if (!window.productAdminIndex[mot]) window.productAdminIndex[mot] = [];
-            if (!window.productAdminIndex[mot].includes(p)) window.productAdminIndex[mot].push(p);
-        });
-    });
-    window.productAdminIndexBuilt = true;
-}
-
-function fastFindProductAdmin(query) {
-    buildProductAdminIndex();
-    if (!query) return [];
-    var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    var mots = cleaned.split(/[\s,;.]+/);
-    if (mots.length === 0) return [];
-
-    var firstWord = mots[0];
-    var searchTerm = firstWord;
-    if (mots.length >= 2) {
-        searchTerm = firstWord + ' ' + mots[1];
-    }
-
-    var candidates = window.productAdminIndex[firstWord] || [];
-    if (candidates.length === 0) return [];
-
-    var filtered = candidates.filter(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom.indexOf(searchTerm) !== -1;
-    });
-
-    if (filtered.length === 0) {
-        return [candidates[0]];
-    }
-
-    if (filtered.length === 1) return filtered;
-
-    var exact = filtered.find(function(p) {
-        var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        return nom === searchTerm;
-    });
-    if (exact) return [exact];
-
-    filtered.sort(function(a, b) { return (a.nom||'').length - (b.nom||'').length; });
-    return [filtered[0]];
 }
 
 // ========== COMMANDES ==========
@@ -304,41 +170,19 @@ function extractNumberFromTranscript(transcript) {
     const cleaned = transcript.toLowerCase().trim();
     const digits = cleaned.match(/\b\d+\b/);
     if (digits) return parseInt(digits[0]);
-    for (const word in numberMap) {
-        if (cleaned.includes(word)) return numberMap[word];
-    }
+    for (const word in numberMap) { if (cleaned.includes(word)) return numberMap[word]; }
     return null;
 }
 
 function detectPeriodFilter(transcript) {
     var cleaned = transcript.toLowerCase().trim();
-    if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today")) {
-        return 'today';
-    }
-    if (cleaned.includes("ce mois") || cleaned.includes("cemois") || cleaned.includes("mois en cours") || cleaned.includes("ce mois ci")) {
-        return '30';
-    }
-    if (cleaned.includes("7 jours") || cleaned.includes("7j") || cleaned.includes("sept jours") || cleaned.includes("semaine") || cleaned.includes("7 jour")) {
-        return '7';
-    }
-    if (cleaned.includes("15 jours") || cleaned.includes("15j") || cleaned.includes("quinze jours") || cleaned.includes("15 jour")) {
-        return '15';
-    }
-    if (cleaned.includes("30 jours") || cleaned.includes("30j") || cleaned.includes("trente jours") || cleaned.includes("30 jour")) {
-        return '30';
-    }
-    if (cleaned.includes("3 mois") || cleaned.includes("3mois") || cleaned.includes("trois mois") || cleaned.includes("trimestre") || cleaned.includes("3 moi")) {
-        return '90';
-    }
-    if (cleaned.includes("6 mois") || cleaned.includes("6mois") || cleaned.includes("six mois") || cleaned.includes("semestre") || cleaned.includes("6 moi")) {
-        return '180';
-    }
-    if (cleaned.includes("1 an") || cleaned.includes("1an") || cleaned.includes("un an") || cleaned.includes("annee") || cleaned.includes("année") || cleaned.includes("1 ans") || cleaned.includes("un ans")) {
-        return '365';
-    }
-    if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous")) {
-        return 'all';
-    }
+    if (cleaned.includes("aujourd'hui") || cleaned.includes("today")) return 'today';
+    if (cleaned.includes("semaine") || cleaned.includes("7 jours")) return '7';
+    if (cleaned.includes("mois") && !cleaned.includes("3 mois") && !cleaned.includes("6 mois")) return '30';
+    if (cleaned.includes("3 mois")) return '90';
+    if (cleaned.includes("6 mois")) return '180';
+    if (cleaned.includes("an") || cleaned.includes("année")) return '365';
+    if (cleaned.includes("tout") || cleaned.includes("toutes")) return 'all';
     return null;
 }
 
@@ -347,131 +191,46 @@ function parseVoiceCommand(transcript) {
     var currentPage = document.getElementById('pageTitle')?.textContent || '';
     var posStep = window.posStep || 1;
 
-    // ⚡ NAVIGATION EN PREMIER
-    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('liste des crédits') || cleaned.includes('dettes') || cleaned.includes('ardoises')) {
-        return { type: 'navigate', page: 'credits' };
-    }
-    if (cleaned.includes('ventes') || cleaned.includes('vente') || cleaned.includes('historique ventes') || cleaned.includes('recettes')) {
-        return { type: 'navigate', page: 'ventes' };
-    }
-    if (cleaned.includes('dashboard') || cleaned.includes('accueil') || cleaned.includes('home') || cleaned.includes('sommaire') || cleaned.includes('tableau de bord')) {
-        return { type: 'navigate', page: 'dashboard' };
-    }
-    if (cleaned.includes('produits') || cleaned.includes('catalogue') || cleaned.includes('liste des produits')) {
-        return { type: 'navigate', page: 'products' };
-    }
-    if (cleaned.includes('clients') || cleaned.includes('clientèle')) {
-        return { type: 'navigate', page: 'clients' };
-    }
-    if (cleaned.includes('commandes')) {
-        return { type: 'navigate', page: 'commandes' };
-    }
-    if (cleaned.includes('catégories')) {
-        return { type: 'navigate', page: 'categories' };
-    }
-    if (cleaned.includes('point de vente') || cleaned.includes('pos') || cleaned.includes('caisse') || cleaned.includes('encaissement')) {
-        return { type: 'navigate', page: 'pos' };
-    }
-    if (cleaned.includes('dépenses') || cleaned.includes('depenses')) {
-        return { type: 'navigate', page: 'depenses' };
-    }
-    if (cleaned.includes('statistiques') || cleaned.includes('stats')) {
-        return { type: 'navigate', page: 'statistiques' };
-    }
-    if (cleaned.includes('options') || cleaned.includes('paramètres') || cleaned.includes('settings')) {
-        return { type: 'navigate', page: 'options' };
-    }
+    // Navigation
+    if (cleaned.includes('crédits') || cleaned.includes('impayés') || cleaned.includes('dettes')) return { type: 'navigate', page: 'credits' };
+    if (cleaned.includes('ventes') || cleaned.includes('recettes')) return { type: 'navigate', page: 'ventes' };
+    if (cleaned.includes('dashboard') || cleaned.includes('accueil')) return { type: 'navigate', page: 'dashboard' };
+    if (cleaned.includes('clients')) return { type: 'navigate', page: 'clients' };
+    if (cleaned.includes('commandes')) return { type: 'navigate', page: 'commandes' };
+    if (cleaned.includes('dépenses') || cleaned.includes('depenses')) return { type: 'navigate', page: 'depenses' };
+    if (cleaned.includes('statistiques')) return { type: 'navigate', page: 'statistiques' };
+    if (cleaned.includes('produits') || cleaned.includes('catalogue')) return { type: 'navigate', page: 'products' };
 
     // Période
     var period = detectPeriodFilter(cleaned);
-    if (period !== null) {
-        return { type: 'period_filter', period: period };
-    }
+    if (period !== null) return { type: 'period_filter', period: period };
 
-    // MODE QUANTITÉ
+    // Mode quantité
     if (voiceMode === 'quantity') {
         var num = extractNumberFromTranscript(cleaned);
         if (num !== null && num > 0) return { type: 'number', value: num };
         return { type: 'ignore' };
     }
 
-    // ============================================================
-    // RECHERCHE ADAPTÉE SELON L'ÉTAPE POS
-    // ÉTAPE 1 (Panier) → Recherche PRODUITS en priorité
-    // ÉTAPE 2 (Paiement) → Recherche CLIENTS / PAIEMENT en priorité
-    // ============================================================
-
-    // === ÉTAPE 2 : MODE PAIEMENT ===
-    if ((posStep === 2 || voiceMode === 'payment') && (currentPage === 'POS' || currentPage === 'Dashboard')) {
-        switch (window.voicePaymentState) {
-            case 0:
-                // Recherche d'abord un client
-                if (window.posAllClients) {
-                    var clients = fastFindClient(cleaned);
-                    if (clients.length === 1) {
-                        return { type: 'client', client: clients[0] };
-                    }
-                    if (clients.length > 1) {
-                        var best = clients.find(function(c) { 
-                            return (c.nom + ' ' + c.prenom).toLowerCase().indexOf(cleaned) !== -1; 
-                        }) || clients[0];
-                        return { type: 'client', client: best };
-                    }
-                }
-                // Sinon mode de paiement
-                var pm0 = detectPaymentMode(cleaned);
-                if (pm0) return { type: 'payment_mode', mode: pm0 };
-                return { type: 'ignore' };
-            case 1:
-                var pm = detectPaymentMode(cleaned);
-                if (pm) return { type: 'payment_mode', mode: pm };
-                return { type: 'ignore' };
-            case 2:
-                var n = extractNumberFromTranscript(cleaned);
-                if (n !== null && n > 0) return { type: 'number', value: n };
-                if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || 
-                    cleaned.includes('confirmer') || cleaned.includes('ok') || cleaned.includes('finaliser')) {
-                    return { type: 'validate' };
-                }
-                return { type: 'ignore' };
+    // ÉTAPE 1 : Recherche produit
+    if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 1) {
+        var products = fastFindProduct(cleaned);
+        if (products.length > 0) {
+            return { type: 'search_product', product: products[0], products: products, text: cleaned, page: 'pos' };
         }
+        if (cleaned.includes('valide') || cleaned.includes('valider')) return { type: 'validate' };
+        if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
+        if (cleaned.includes('vider') || cleaned.includes('efface')) return { type: 'clear' };
     }
 
-    // === ÉTAPE 1 : RECHERCHE PRODUIT (POS) ===
-    if (voiceMode === 'search' || posStep === 1) {
-        if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 1) {
-            var products = window.posProductsList || [];
-            if (products.length) {
-                // ✅ Récupérer TOUS les produits correspondants
-                var foundProducts = fastFindProduct(cleaned);
-                if (foundProducts && foundProducts.length > 0) {
-                    // ✅ Retourner le premier produit ET la liste complète
-                    return { 
-                        type: 'search_product', 
-                        product: foundProducts[0],
-                        products: foundProducts,  // ✅ Tous les produits trouvés
-                        text: cleaned,
-                        page: 'pos' 
-                    };
-                }
-            }
-            
-            // Commandes spéciales
-            if (cleaned.includes('passe') || cleaned.includes('passer') || cleaned.includes('suivant') || cleaned.includes('z') || cleaned.includes('zip')) {
-                return { type: 'next' };
-            }
-            if (cleaned.includes('valide') || cleaned.includes('validé') || cleaned.includes('valider') || 
-                cleaned.includes('confirmer') || cleaned.includes('ok')) {
-                return { type: 'validate' };
-            }
-            if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
-            if (cleaned.includes('efface') || cleaned.includes('vider')) return { type: 'clear' };
-            if (cleaned.includes('termine') || cleaned.includes('terminer') || cleaned.includes('fin')) return { type: 'finalize' };
-        }
-        else if (currentPage === 'Produits') {
-            var bestAdmin = fastFindProductAdmin(cleaned)[0];
-            if (bestAdmin) return { type: 'search_product', product: bestAdmin, page: 'products' };
-        }
+    // ÉTAPE 2 : Paiement
+    if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
+        var clients = fastFindClient(cleaned);
+        if (clients.length === 1) return { type: 'client', client: clients[0] };
+        if (clients.length > 1) return { type: 'client', client: clients[0] };
+        var pm = detectPaymentMode(cleaned);
+        if (pm) return { type: 'payment_mode', mode: pm };
+        if (cleaned.includes('valide') || cleaned.includes('finaliser')) return { type: 'validate' };
     }
 
     return { type: 'ignore' };
@@ -489,294 +248,71 @@ function detectPaymentMode(transcript) {
 function handleVoiceCommand(cmd) {
     var cp = document.getElementById('pageTitle')?.textContent || '';
     switch (cmd.type) {
-        case 'period_filter':
-            var period = cmd.period;
-            var periodLabels = {
-                'today': "Aujourd'hui",
-                '7': "7 jours",
-                '15': "15 jours",
-                '30': "30 jours",
-                '90': "3 mois",
-                '180': "6 mois",
-                '365': "1 an",
-                'all': "Tout"
-            };
-
-            if (cp === 'Crédits') {
-                var periodSelect = document.getElementById('creditsPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.creditsPeriod = period;
-                    window.currentPages.credits = 1;
-                    if (window.allCreditsData.length === 0) {
-                        if (typeof loadCredits === 'function') loadCredits();
-                    } else {
-                        if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                    }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Ventes') {
-                var periodSelect = document.getElementById('ventesPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.ventesPeriod = period;
-                    window.currentPages.ventes = 1;
-                    if (window.allVentesData.length === 0) {
-                        if (typeof loadVentes === 'function') loadVentes();
-                    } else {
-                        if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                    }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Dépenses') {
-                var periodSelect = document.getElementById('globalPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    globalPeriod = period;
-                    if (typeof loadDepenses === 'function') loadDepenses();
-                    if (typeof loadPersonnel === 'function') loadPersonnel();
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Commandes en ligne') {
-                var periodSelect = document.getElementById('commandesPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    window.commandesPeriod = period;
-                    window.currentPages.commandes = 1;
-                    if (window.allCommandesData.length === 0) {
-                        if (typeof loadCommandes === 'function') loadCommandes();
-                    } else {
-                        if (typeof applyCommandesFilters === 'function') applyCommandesFilters();
-                    }
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'Statistiques') {
-                var periodSelect = document.getElementById('statPeriodSelect');
-                if (periodSelect) {
-                    periodSelect.value = period;
-                    var event = new Event('change', { bubbles: true });
-                    periodSelect.dispatchEvent(event);
-                    showVoiceResult('📅 ' + (periodLabels[period] || period));
-                }
-            } else if (cp === 'POS' || cp === 'Dashboard') {
-                if (typeof navigateTo === 'function') {
-                    navigateTo('credits');
-                    setTimeout(function() {
-                        var periodSelect = document.getElementById('creditsPeriodSelect');
-                        if (periodSelect) {
-                            periodSelect.value = period;
-                            window.creditsPeriod = period;
-                            window.currentPages.credits = 1;
-                            if (window.allCreditsData.length === 0) {
-                                if (typeof loadCredits === 'function') loadCredits();
-                            } else {
-                                if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                            }
-                            showVoiceResult('📅 ' + (periodLabels[period] || period));
-                        }
-                    }, 500);
-                }
-            }
-            hideVoiceFlowIndicator();
-            break;
-
-        // ✅ RECHERCHE PRODUIT - AFFICHE TOUS LES PRODUITS CORRESPONDANTS
         case 'search_product':
-            if (cmd.page === 'products' || cp === 'Produits') {
-                var adminInput = document.getElementById('productSearchInput');
-                if (adminInput && cmd.product) {
-                    adminInput.value = cmd.product.nom;
-                    window.productSearchQuery = cmd.product.nom.toLowerCase().trim();
-                    if (typeof renderProductsTable === 'function') renderProductsTable();
-                    showVoiceResult('🔍 ' + cmd.product.nom);
+            var searchInput = document.getElementById('posSearchInput');
+            if (searchInput) {
+                var searchText = cmd.product ? cmd.product.nom : cmd.text || '';
+                window.posSearchQuery = searchText.toLowerCase().trim();
+                searchInput.value = searchText;
+                if (typeof window.posSearchProducts === 'function') {
+                    window.posSearchProducts(searchText);
                 }
-            } else {
-                var searchInput = document.getElementById('posSearchInput');
-                if (searchInput) {
-                    // ✅ Utiliser le nom du produit trouvé pour la recherche
-                    var searchText = cmd.product ? cmd.product.nom : cmd.text || '';
-                    
-                    // ✅ Mettre à jour posSearchQuery directement (variable globale dans pos.js)
-                    window.posSearchQuery = searchText.toLowerCase().trim();
-                    
-                    // ✅ Remplir le champ de recherche
-                    searchInput.value = searchText;
-                    
-                    // ✅ Déclencher la recherche POS directement
-                    if (typeof window.posSearchProducts === 'function') {
-                        window.posSearchProducts(searchText);
+                setTimeout(function() {
+                    if (typeof window.filterProductGrid === 'function') {
+                        window.filterProductGrid();
                     }
-                    
-                    // ✅ CORRECTION : Attendre que posSearchProducts ait terminé (150ms de délai)
-                    // puis forcer la mise à jour de la grille
-                    setTimeout(function() {
-                        if (typeof window.filterProductGrid === 'function') {
-                            window.filterProductGrid();
-                        }
-                    }, 300);
-                    
-                    // ✅ Afficher le résultat vocal
-                    if (cmd.products && cmd.products.length > 1) {
-                        showVoiceResult('🔍 ' + cmd.products.length + ' produits trouvés');
-                    } else if (cmd.product) {
-                        showVoiceResult('🔍 ' + cmd.product.nom);
-                    } else {
-                        showVoiceResult('🔍 Recherche...');
-                    }
-                }
-            }
-            hideVoiceFlowIndicator();
-            break;
-            
-        case 'number':
-            if (voiceMode === 'quantity' && lastAddedProductId) {
-                var qty = cmd.value, it = window.posCart?.find(function(x) { return x.id === lastAddedProductId; });
-                if (it) {
-                    var p = window.posProductsList?.find(function(x) { return x.id === lastAddedProductId; });
-                    if (p && p.stock !== undefined && qty > p.stock) { showVoiceResult('⚠️ Stock max: ' + p.stock); return; }
-                    it.quantite = qty; lastAddedProductId = null;
-                    setVoiceMode('search', '🎤 Recherche vocale active', null);
-                    if (typeof window.updateCartOnly === 'function') window.updateCartOnly();
-                    showVoiceResult('✅ Qté: ' + qty);
-                }
-            } else if (voiceMode === 'payment' && window.voicePaymentState === 2) {
-                window.posAmountGiven = cmd.value;
-                var ce = document.getElementById('posChangeDisplay');
-                if (ce) {
-                    var st = typeof window.posCalculateTotal === 'function' ? window.posCalculateTotal() : 0;
-                    var t = st - (window.posDiscountMAD || 0);
-                    var c = window.posAmountGiven - t;
-                    ce.innerHTML = c >= 0 ? '<div class="pos-change-positive"><span>Rendu</span><span>' + c.toFixed(2) + ' MAD</span></div>' : '<div class="pos-change-negative"><span>Manquant</span><span>' + Math.abs(c).toFixed(2) + ' MAD</span></div>';
-                }
-                var ai = document.getElementById('posAmountGiven');
-                if (ai) ai.value = window.posAmountGiven;
-                showVoiceResult('💰 ' + window.posAmountGiven.toFixed(2) + ' MAD');
-            }
-            hideVoiceFlowIndicator();
-            break;
-        
-        // ✅ CLIENT TROUVÉ PAR AUDIO - SÉLECTION AUTOMATIQUE COMPLÈTE
-        case 'client':
-            // Sélectionner le client
-            window.posCurrentClient = { id: cmd.client.id, name: cmd.client.nom + ' ' + cmd.client.prenom };
-            window.posCurrentTable = '';
-            
-            // Mettre à jour le champ client
-            var ci = document.getElementById('posClientSearchInput');
-            if (ci) {
-                ci.value = window.posCurrentClient.name;
-                var evt = new Event('input', { bubbles: true });
-                ci.dispatchEvent(evt);
-            }
-            
-            // Mettre à jour l'affichage du crédit
-            if (typeof window.updateClientCreditDisplay === 'function') {
-                window.updateClientCreditDisplay(cmd.client.id);
-            }
-            
-            // Mettre à jour les boutons de paiement
-            if (typeof window.updatePaymentButtons === 'function') {
-                window.updatePaymentButtons();
-            }
-            
-            // Forcer l'affichage du crédit dans la zone dédiée
-            var creditDisplay = document.getElementById('clientCreditDisplay');
-            if (creditDisplay) {
-                if (typeof window.loadClientCredits === 'function') {
-                    window.loadClientCredits(cmd.client.id).then(function(amount) {
-                        if (amount > 0) {
-                            creditDisplay.textContent = '💳 Crédit: ' + amount.toFixed(2) + ' MAD';
-                            creditDisplay.style.color = '#ef4444';
-                            creditDisplay.style.fontWeight = '700';
-                        } else {
-                            creditDisplay.textContent = '✅ Aucun crédit';
-                            creditDisplay.style.color = '#16a34a';
-                            creditDisplay.style.fontWeight = '600';
-                        }
-                        creditDisplay.style.display = 'block';
-                    });
-                }
-            }
-            
-            window.voicePaymentState = 1;
-            showVoiceResult('👤 ' + window.posCurrentClient.name);
-            hideVoiceFlowIndicator();
-            
-            // ✅ PASSER AUTOMATIQUEMENT À L'ÉTAPE PAIEMENT
-            setTimeout(function() {
-                if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
-                    window.posGoToStep2();
-                }
-                if (typeof window.renderPOS === 'function') {
-                    setTimeout(function() { window.renderPOS(); }, 100);
-                }
-                setTimeout(function() { 
-                    showVoiceFlowIndicator('payment_mode'); 
                 }, 300);
+                showVoiceResult('🔍 ' + searchText);
+            }
+            break;
+        case 'client':
+            window.posCurrentClient = { id: cmd.client.id, name: cmd.client.nom + ' ' + cmd.client.prenom };
+            var ci = document.getElementById('posClientSearchInput');
+            if (ci) ci.value = window.posCurrentClient.name;
+            if (typeof window.updateClientCreditDisplay === 'function') window.updateClientCreditDisplay(cmd.client.id);
+            if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButtons();
+            showVoiceResult('👤 ' + window.posCurrentClient.name);
+            setTimeout(function() {
+                if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') window.posGoToStep2();
+                if (typeof window.renderPOS === 'function') window.renderPOS();
             }, 400);
             break;
-            
         case 'payment_mode':
             if (typeof window.posSetPaymentMethod === 'function') {
                 window.posSetPaymentMethod(cmd.mode);
-                window.voicePaymentState = 2;
                 showVoiceResult('💳 ' + cmd.mode);
-                if (cmd.mode === 'espece') {
-                    setTimeout(function() { var ai = document.getElementById('posAmountGiven'); if (ai) ai.focus(); }, 200);
-                }
             }
-            hideVoiceFlowIndicator();
-            setTimeout(function() { showVoiceFlowIndicator('payment_amount'); }, 100);
+            break;
+        case 'number':
+            var ai = document.getElementById('posAmountGiven');
+            if (ai) {
+                ai.value = cmd.value;
+                window.posAmountGiven = cmd.value;
+                if (typeof window.posCalculateChange === 'function') window.posCalculateChange();
+                showVoiceResult('💰 ' + cmd.value);
+            }
             break;
         case 'validate': case 'finalize':
             if (window.posStep === 2 && typeof window.posFinalizeSale === 'function') {
                 window.posFinalizeSale();
-                hideVoiceFlowIndicator();
             } else if (window.posCart?.length > 0 && window.posStep === 1) {
                 window.posGoToStep2();
-                hideVoiceFlowIndicator();
             }
             break;
         case 'clear':
             if (typeof window.posResetCart === 'function') { window.posResetCart(); showVoiceResult('🗑️ Panier vidé'); }
-            hideVoiceFlowIndicator();
-            break;
-        case 'next':
-            if (window.posCart?.length > 0 && window.posStep === 1) window.posGoToStep2();
-            hideVoiceFlowIndicator();
             break;
         case 'cancel':
             setVoiceMode('search', '🎤 Recherche vocale active', null);
-            showVoiceResult('↩️ Recherche');
             if (typeof window.renderPOS === 'function') window.renderPOS();
-            hideVoiceFlowIndicator();
             break;
         case 'navigate':
-            var pages = { 
-                'credits': 'Crédits', 
-                'ventes': 'Ventes', 
-                'dashboard': 'Dashboard', 
-                'products': 'Produits', 
-                'clients': 'Clients', 
-                'commandes': 'Commandes en ligne', 
-                'categories': 'Catégories', 
-                'pos': 'POS',
-                'depenses': 'Dépenses',
-                'statistiques': 'Statistiques',
-                'options': 'Options'
-            };
-            if (cp === pages[cmd.page]) { 
-                showVoiceResult('✅ ' + pages[cmd.page]); 
-            } else {
-                if (typeof navigateTo === 'function') {
-                    navigateTo(cmd.page);
-                    showVoiceResult('📍 ' + pages[cmd.page]);
-                }
+            var pages = { 'credits': 'Crédits', 'ventes': 'Ventes', 'dashboard': 'Dashboard', 'products': 'Produits', 'clients': 'Clients', 'commandes': 'Commandes en ligne', 'depenses': 'Dépenses', 'statistiques': 'Statistiques' };
+            if (typeof navigateTo === 'function') {
+                navigateTo(cmd.page);
+                showVoiceResult('📍 ' + pages[cmd.page]);
             }
-            hideVoiceFlowIndicator();
             break;
-        default:
-            if (cmd.text && typeof window.posSearchProducts === 'function') window.posSearchProducts(cmd.text);
     }
 }
 
@@ -813,7 +349,6 @@ function posStartVoiceRecording() {
     voiceRecognition.maxAlternatives = 1;
 
     if (mb) {
-        mb.classList.add('recording');
         mb.innerHTML = '<i class="fas fa-circle" style="color:#ef4444;animation:pulse 0.5s ease-in-out infinite;"></i>';
         mb.style.background = '#fee2e2'; mb.style.borderColor = '#ef4444';
     }
@@ -826,152 +361,24 @@ function posStartVoiceRecording() {
             if (e.results[i].isFinal) final += t;
             else interim += t;
         }
-        var cp = document.getElementById('pageTitle')?.textContent || '';
-
-        if (cp === 'Crédits') {
-            var vd = document.getElementById('creditsVoiceDisplay');
-            var searchInput = document.getElementById('creditsSearchInput');
-            var periodSelect = document.getElementById('creditsPeriodSelect');
-
-            if (vd && searchInput && periodSelect) {
-                if (final) {
-                    var period = detectPeriodFilter(final);
-                    if (period !== null) {
-                        periodSelect.value = period;
-                        window.creditsPeriod = period;
-                        window.currentPages.credits = 1;
-                        if (window.allCreditsData.length === 0) {
-                            if (typeof loadCredits === 'function') loadCredits();
-                        } else {
-                            if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                        }
-                        showVoiceResult('📅 ' + final);
-                    } else {
-                        searchInput.value = final;
-                        vd.value = final;
-                        window.creditsSearch = final;
-                        window.currentPages.credits = 1;
-                        if (window.allCreditsData.length === 0) {
-                            if (typeof loadCredits === 'function') loadCredits();
-                        } else {
-                            if (typeof applyCreditsFilters === 'function') applyCreditsFilters();
-                        }
-                        showVoiceResult('👤 ' + final);
-                    }
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                } else if (interim && interim !== lastInterim) {
-                    searchInput.value = interim + ' ✍️';
-                    vd.value = interim + ' ✍️';
-                    lastInterim = interim;
+        var si = document.getElementById('posSearchInput');
+        if (si) {
+            if (final) {
+                window.posSearchQuery = final.toLowerCase().trim();
+                si.value = final;
+                if (typeof window.posSearchProducts === 'function') {
+                    window.posSearchProducts(final);
                 }
-            }
-        } else if (cp === 'Ventes') {
-            var vd2 = document.getElementById('ventesVoiceDisplay');
-            var searchInput = document.getElementById('ventesSearchInput');
-            var periodSelect = document.getElementById('ventesPeriodSelect');
-
-            if (vd2 && searchInput && periodSelect) {
-                if (final) {
-                    var period = detectPeriodFilter(final);
-                    if (period !== null) {
-                        periodSelect.value = period;
-                        window.ventesPeriod = period;
-                        window.currentPages.ventes = 1;
-                        if (window.allVentesData.length === 0) {
-                            if (typeof loadVentes === 'function') loadVentes();
-                        } else {
-                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                        }
-                        showVoiceResult('📅 ' + final);
-                    } else {
-                        searchInput.value = final;
-                        vd2.value = final;
-                        window.ventesSearch = final;
-                        window.currentPages.ventes = 1;
-                        if (window.allVentesData.length === 0) {
-                            if (typeof loadVentes === 'function') loadVentes();
-                        } else {
-                            if (typeof applyVentesFilters === 'function') applyVentesFilters();
-                        }
-                        showVoiceResult('👤 ' + final);
+                setTimeout(function() {
+                    if (typeof window.filterProductGrid === 'function') {
+                        window.filterProductGrid();
                     }
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                } else if (interim && interim !== lastInterim) {
-                    searchInput.value = interim + ' ✍️';
-                    vd2.value = interim + ' ✍️';
-                    lastInterim = interim;
-                }
-            }
-        } else if (cp === 'Produits') {
-            var pi = document.getElementById('productSearchInput');
-            if (pi) {
-                if (final) {
-                    pi.value = final;
-                    window.productSearchQuery = final.toLowerCase().trim();
-                    if (typeof renderProductsTable === 'function') renderProductsTable();
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                    showVoiceResult('🔍 ' + final);
-                } else if (interim && interim !== lastInterim) {
-                    pi.value = interim + ' ✍️';
-                    lastInterim = interim;
-                }
-            }
-        } else {
-            var si = document.getElementById('posSearchInput');
-            if (si) {
-                if (final) {
-                    var lowerFinal = final.toLowerCase().trim();
-                    
-                    // Vérifier les commandes de navigation
-                    if (lowerFinal.includes('crédits') || lowerFinal.includes('impayés') || 
-                        lowerFinal.includes('dettes') || lowerFinal.includes('ardoises') ||
-                        lowerFinal.includes('liste des crédits')) {
-                        if (typeof navigateTo === 'function') {
-                            navigateTo('credits');
-                        }
-                        if (typeof showVoiceResult === 'function') {
-                            showVoiceResult('📍 Crédits');
-                        }
-                        lastInterim = '';
-                        si.value = '';
-                        return;
-                    }
-                    
-                    // ✅ CORRECTION : Mettre à jour posSearchQuery directement
-                    window.posSearchQuery = final.toLowerCase().trim();
-                    
-                    // ✅ Remplir le champ de recherche
-                    si.value = final;
-                    
-                    // ✅ Déclencher la recherche automatiquement
-                    if (typeof window.posSearchProducts === 'function') {
-                        window.posSearchProducts(final);
-                    }
-                    
-                    // ✅ CORRECTION : Attendre que posSearchProducts ait terminé
-                    setTimeout(function() {
-                        if (typeof window.filterProductGrid === 'function') {
-                            window.filterProductGrid();
-                        }
-                    }, 300);
-                    
-                    showProcessingIndicator();
-                    var cmd = parseVoiceCommand(final);
-                    if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                    hideVoiceFlowIndicator();
-                } else if (interim && interim !== lastInterim) {
-                    si.value = interim + ' ✍️';
-                    lastInterim = interim;
-                }
+                }, 300);
+                var cmd = parseVoiceCommand(final);
+                if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
+            } else if (interim && interim !== lastInterim) {
+                si.value = interim + ' ✍️';
+                lastInterim = interim;
             }
         }
     };
@@ -994,11 +401,9 @@ function posStartVoiceRecording() {
         isRecording = true;
         showVoiceModeIndicator();
         showVoiceResult('🎤 Écoute...');
-        showVoiceFlowIndicator('product');
     } catch (e) {
         isRecording = false;
         if (mb) {
-            mb.classList.remove('recording');
             mb.innerHTML = '<i class="fas fa-microphone"></i>';
             mb.style.background = '#dcfce7'; mb.style.borderColor = '#16a34a';
         }
@@ -1008,16 +413,10 @@ function posStartVoiceRecording() {
 function posStopVoiceSearch() {
     if (voiceRecognition) { try { voiceRecognition.abort(); } catch (e) {} voiceRecognition = null; }
     isRecording = false;
-    var mb = document.getElementById('posMicBtn'), si = document.getElementById('posSearchInput');
+    var mb = document.getElementById('posMicBtn');
     if (mb) {
-        mb.classList.remove('recording');
         mb.innerHTML = '<i class="fas fa-microphone"></i>';
         mb.style.background = '#dcfce7'; mb.style.borderColor = '#16a34a';
-    }
-    if (si) {
-        si.placeholder = '🔍 Rechercher...';
-        si.style.background = '#fff';
-        si.style.borderColor = '#e2e8f0';
     }
     hideVoiceFlowIndicator();
     showVoiceResult('🎤 Micro désactivé');
@@ -1025,6 +424,7 @@ function posStopVoiceSearch() {
 
 // ========== EXPORTS ==========
 window.posToggleVoiceSearch = posToggleVoiceSearch;
+window.posAudioToggleVoiceSearch = posToggleVoiceSearch; // ✅ CORRECTION : double export
 window.showVoiceResult = showVoiceResult;
 window.setVoiceMode = setVoiceMode;
 window.showVoiceModeIndicator = showVoiceModeIndicator;
@@ -1037,16 +437,11 @@ window.showProcessingIndicator = showProcessingIndicator;
 window.onProductAdded = function(pid) {
     lastAddedProductId = pid;
     setVoiceMode('quantity', '🔢 Qté', pid);
-    showVoiceModeIndicator();
-    hideVoiceFlowIndicator();
-    setTimeout(function() { showVoiceFlowIndicator('quantity'); }, 100);
 };
 window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
-window.buildProductAdminIndex = buildProductAdminIndex;
-window.fastFindProductAdmin = fastFindProductAdmin;
 window.fastFindProduct = fastFindProduct;
 
-console.log('🎤 Module vocal v11 – corrigé recherche vocale (timing synchronisé avec pos.js)');
-console.log('✅ Recherche vocale identique à la recherche écrite - affiche tous les produits correspondants');
-console.log('✅ Recherche automatique - pas besoin d\'appuyer sur Entrée');
+console.log('🎤 Module vocal v12 – corrigé avec double export');
+console.log('✅ window.posToggleVoiceSearch:', typeof window.posToggleVoiceSearch);
+console.log('✅ window.posAudioToggleVoiceSearch:', typeof window.posAudioToggleVoiceSearch);
