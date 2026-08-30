@@ -1334,7 +1334,7 @@ max-height: 400px !important;
     
     /* ✅ IMAGE SANS BORDURE */
     .pos-product-img {
-        height: 100px !important;
+        height: 105px !important;
         width: 90% !important;
         border: 0px solid transparent !important;
         border-radius: 8px !important;
@@ -1342,8 +1342,8 @@ max-height: 400px !important;
     }
     
     .pos-product-img img {
-        width: 100% !important;
-        height: 100% !important;
+        width: 90% !important;
+        height: 90% !important;
         object-fit: cover !important;
         border-radius: 8px !important;
     }
