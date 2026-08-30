@@ -91,12 +91,26 @@ function posToggleTools() {
     if (categoriesBar) categoriesBar.style.display = posToolsVisible ? '' : 'none';
 }
 
-// ✅ Fonction recherche vocale (délègue à pos-audio.js)
+// ✅ CORRECTION : Fonction recherche vocale SANS boucle infinie
+// Cette fonction sera ÉCRASÉE par pos-audio.js qui est chargé APRÈS
+// Donc on ne l'expose PAS avec window.posToggleVoiceSearch ici
 function posToggleVoiceSearch() {
-    if (typeof window.posToggleVoiceSearch === 'function') {
-        window.posToggleVoiceSearch();
+    // Vérifier si pos-audio.js a déjà chargé sa version
+    if (typeof window.posAudioToggleVoiceSearch === 'function') {
+        window.posAudioToggleVoiceSearch();
+        return;
+    }
+    
+    // Vérifier si SpeechRecognition est disponible directement
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        // Essayer d'appeler la version de pos-audio.js si elle existe
+        if (typeof window.startVoiceRecording === 'function') {
+            window.startVoiceRecording();
+            return;
+        }
+        alert('Module audio en cours de chargement...');
     } else {
-        alert('Module audio non chargé');
+        alert('Reconnaissance vocale non supportée par ce navigateur');
     }
 }
 
