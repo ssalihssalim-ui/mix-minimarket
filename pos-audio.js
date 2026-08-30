@@ -1,7 +1,8 @@
-// ==================== POS-AUDIO.JS v14 – CORRIGÉ DÉFINITIF ====================
-// ✅ Correction : Le micro écrit maintenant dans la barre de recherche POS
-// ✅ Toutes les fonctions exposées avec vérification de sécurité
-// ✅ Ajout de l'initialisation automatique du bouton micro
+// ==================== POS-AUDIO.JS v16 – CORRECTION FINALE DÉFINITIVE ====================
+// ✅ CORRECTION : Le texte reconnu est TOUJOURS écrit dans posSearchInput
+// ✅ setTimeout pour attendre le rendu du champ
+// ✅ Dispatch des événements input et keyup
+// ✅ Appel direct de posSearchProducts et filterProductGrid
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -208,13 +209,12 @@ function parseVoiceCommand(transcript) {
         return { type: 'ignore' };
     }
 
-    // ÉTAPE 1 : Recherche produit - ✅ CORRECTION IMPORTANTE ICI
-    if ((currentPage === 'POS' || currentPage === 'Dashboard' || currentPage === '') && posStep === 1) {
+    // ÉTAPE 1 : Recherche produit
+    if (posStep === 1 && (currentPage === 'POS' || currentPage === 'Dashboard' || currentPage === '')) {
         var products = fastFindProduct(cleaned);
         if (products.length > 0) {
             return { type: 'search_product', product: products[0], products: products, text: cleaned, page: 'pos' };
         }
-        // ✅ MÊME SI AUCUN PRODUIT TROUVÉ, ON RETOURNE LE TEXTE POUR LA RECHERCHE
         if (cleaned.length > 1) {
             return { type: 'search_text', text: cleaned, page: 'pos' };
         }
@@ -247,50 +247,29 @@ function detectPaymentMode(transcript) {
 function handleVoiceCommand(cmd) {
     switch (cmd.type) {
         case 'search_product':
-        case 'search_text':  // ✅ AJOUTÉ : Gérer le type search_text
+        case 'search_text':
             var searchInput = document.getElementById('posSearchInput');
+            var searchText = cmd.product ? cmd.product.nom : (cmd.text || '');
+            
             if (searchInput) {
-                var searchText = cmd.product ? cmd.product.nom : (cmd.text || '');
                 window.posSearchQuery = searchText.toLowerCase().trim();
                 searchInput.value = searchText;
                 
-                // ✅ APPELER LA FONCTION DE RECHERCHE POS
                 if (typeof window.posSearchProducts === 'function') {
                     window.posSearchProducts(searchText);
-                } else if (typeof window.searchProducts === 'function') {
-                    window.searchProducts(searchText);
-                } else if (typeof window.handlePosSearch === 'function') {
-                    window.handlePosSearch(searchText);
                 }
                 
-                // ✅ APPELER filterProductGrid APRÈS UN DÉLAI
                 setTimeout(function() {
                     if (typeof window.filterProductGrid === 'function') {
                         window.filterProductGrid();
                     }
                 }, 300);
                 
-                showVoiceResult('🔍 ' + searchText);
-            } else {
-                // ✅ SI posSearchInput N'EXISTE PAS, ESSAYER D'AUTRES SÉLECTEURS
-                var altInput = document.querySelector('#posSearchInput, .pos-search-input, input[placeholder*="Rechercher"], input[placeholder*="rechercher"]');
-                if (altInput) {
-                    var searchText = cmd.product ? cmd.product.nom : (cmd.text || '');
-                    window.posSearchQuery = searchText.toLowerCase().trim();
-                    altInput.value = searchText;
-                    
-                    if (typeof window.posSearchProducts === 'function') {
-                        window.posSearchProducts(searchText);
-                    }
-                    
-                    setTimeout(function() {
-                        if (typeof window.filterProductGrid === 'function') {
-                            window.filterProductGrid();
-                        }
-                    }, 300);
-                    
-                    showVoiceResult('🔍 ' + searchText);
+                if (typeof window.updateClearButtonVisibility === 'function') {
+                    window.updateClearButtonVisibility();
                 }
+                
+                showVoiceResult('🔍 ' + searchText);
             }
             break;
             
@@ -348,7 +327,6 @@ function handleVoiceCommand(cmd) {
             break;
             
         case 'period_filter':
-            // ✅ Appliquer le filtre de période
             var periodSelect = document.getElementById('periodSelect') || document.getElementById('globalPeriodSelect');
             if (periodSelect) {
                 periodSelect.value = cmd.period;
@@ -429,55 +407,66 @@ function posStartVoiceRecording() {
             return;
         }
         
-        // ✅ Page POS - CORRECTION PRINCIPALE ICI
-        var si = document.getElementById('posSearchInput');
-        if (si) {
-            if (final) {
-                console.log('✅ Écriture dans posSearchInput:', final);
-                window.posSearchQuery = final.toLowerCase().trim();
-                si.value = final;
+        // ✅ Page POS - CORRECTION AVEC setTimeout POUR ATTENDRE LE RENDU
+        if (final && final.trim().length > 0) {
+            console.log('✅ TEXTE FINAL DÉTECTÉ:', final);
+            
+            // ✅ ATTENDRE 100ms QUE LE CHAMP SOIT RENDU
+            setTimeout(function() {
+                var si = document.getElementById('posSearchInput');
                 
-                // ✅ APPELER LA FONCTION DE RECHERCHE
-                if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(final);
-                } else if (typeof window.searchProducts === 'function') {
-                    window.searchProducts(final);
+                if (!si) {
+                    si = document.querySelector('#posSearchInput, input[type="text"][placeholder*="Rechercher"], input[placeholder*="Rechercher"]');
                 }
                 
-                // ✅ APPELER filterProductGrid
-                setTimeout(function() {
-                    if (typeof window.filterProductGrid === 'function') {
-                        window.filterProductGrid();
+                if (si) {
+                    console.log('✅ Champ trouvé:', si.id || si.placeholder);
+                    console.log('✅ ÉCRITURE DU TEXTE:', final);
+                    
+                    // ✅ 1. ÉCRIRE DANS LE CHAMP
+                    window.posSearchQuery = final.toLowerCase().trim();
+                    si.value = final;
+                    
+                    // ✅ 2. DÉCLENCHER L'ÉVÉNEMENT INPUT
+                    var event = new Event('input', { bubbles: true });
+                    si.dispatchEvent(event);
+                    
+                    var keyupEvent = new Event('keyup', { bubbles: true });
+                    si.dispatchEvent(keyupEvent);
+                    
+                    // ✅ 3. APPELER LA FONCTION DE RECHERCHE
+                    if (typeof window.posSearchProducts === 'function') {
+                        console.log('✅ Appel posSearchProducts:', final);
+                        window.posSearchProducts(final);
                     }
-                }, 300);
-                
-                // ✅ PARSER LA COMMANDE
-                var cmd = parseVoiceCommand(final);
-                console.log('Commande parsée:', cmd);
-                if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
-                
-            } else if (interim && interim !== lastInterim) {
-                console.log('✍️ Interim:', interim);
+                    
+                    // ✅ 4. APPELER filterProductGrid
+                    setTimeout(function() {
+                        if (typeof window.filterProductGrid === 'function') {
+                            console.log('✅ Appel filterProductGrid');
+                            window.filterProductGrid();
+                        }
+                    }, 400);
+                    
+                    // ✅ 5. METTRE À JOUR LE BOUTON CLEAR
+                    if (typeof window.updateClearButtonVisibility === 'function') {
+                        window.updateClearButtonVisibility();
+                    }
+                    
+                    showVoiceResult('🔍 ' + final);
+                    
+                } else {
+                    console.log('❌ Champ de recherche introuvable');
+                    showVoiceResult('❌ Champ introuvable');
+                }
+            }, 100);
+            
+        } else if (interim && interim !== lastInterim) {
+            console.log('✍️ Interim:', interim);
+            var si = document.getElementById('posSearchInput');
+            if (si) {
                 si.value = interim + ' ✍️';
                 lastInterim = interim;
-            }
-        } else {
-            // ✅ SI posSearchInput N'EXISTE PAS, ESSAYER D'AUTRES SÉLECTEURS
-            var altInput = document.querySelector('#posSearchInput, .pos-search-input, input[placeholder*="Rechercher"], input[placeholder*="rechercher"]');
-            if (altInput && final) {
-                console.log('✅ Écriture dans champ alternatif:', final);
-                altInput.value = final;
-                window.posSearchQuery = final.toLowerCase().trim();
-                
-                if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(final);
-                }
-                
-                setTimeout(function() {
-                    if (typeof window.filterProductGrid === 'function') {
-                        window.filterProductGrid();
-                    }
-                }, 300);
             }
         }
     };
@@ -524,55 +513,6 @@ function posStopVoiceSearch() {
     showVoiceResult('🎤 Micro désactivé');
 }
 
-// ========== INITIALISATION DU BOUTON MICRO ==========
-// ✅ AJOUTÉ : Initialiser le bouton micro s'il n'existe pas déjà
-function initPosMicButton() {
-    var existingBtn = document.getElementById('posMicBtn');
-    if (existingBtn) {
-        // Le bouton existe déjà, mettre à jour l'événement
-        existingBtn.onclick = function(e) {
-            e.preventDefault();
-            posToggleVoiceSearch();
-        };
-        return;
-    }
-    
-    // Chercher un conteneur pour le bouton micro
-    var searchContainer = document.querySelector('.pos-search-container, .search-container, .pos-search-bar');
-    if (!searchContainer) {
-        // Chercher près du champ de recherche
-        var searchInput = document.getElementById('posSearchInput');
-        if (searchInput && searchInput.parentElement) {
-            searchContainer = searchInput.parentElement;
-        }
-    }
-    
-    if (searchContainer) {
-        var micBtn = document.createElement('button');
-        micBtn.id = 'posMicBtn';
-        micBtn.type = 'button';
-        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-        micBtn.style.cssText = 'width:40px;height:40px;border-radius:50%;border:2px solid #16a34a;background:#dcfce7;color:#16a34a;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.3s;margin-left:8px;';
-        micBtn.onclick = function(e) {
-            e.preventDefault();
-            posToggleVoiceSearch();
-        };
-        micBtn.title = 'Recherche vocale';
-        searchContainer.appendChild(micBtn);
-        console.log('✅ Bouton micro créé');
-    }
-}
-
-// ✅ Initialiser le bouton micro après le chargement du DOM
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(initPosMicButton, 1000);
-});
-
-// ✅ Initialiser aussi immédiatement si le DOM est déjà chargé
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(initPosMicButton, 1000);
-}
-
 // ========== EXPORTS ==========
 window.posToggleVoiceSearch = posToggleVoiceSearch;
 window.posAudioToggleVoiceSearch = posToggleVoiceSearch;
@@ -593,7 +533,6 @@ window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
 window.fastFindProduct = fastFindProduct;
 window.posStopVoiceSearch = posStopVoiceSearch;
-window.initPosMicButton = initPosMicButton;
 
 // ✅ GARANTIR que closeCreditSelection existe
 if (typeof window.closeCreditSelection !== 'function') {
@@ -606,8 +545,9 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v14 – CORRIGÉ DÉFINITIF');
-console.log('✅ closeCreditSelection défini:', typeof window.closeCreditSelection);
+console.log('🎤 Module vocal v16 – CORRECTION FINALE DÉFINITIVE');
 console.log('✅ posToggleVoiceSearch:', typeof window.posToggleVoiceSearch);
 console.log('✅ posAudioToggleVoiceSearch:', typeof window.posAudioToggleVoiceSearch);
-console.log('✅ initPosMicButton:', typeof window.initPosMicButton);
+console.log('✅ Le texte sera TOUJOURS écrit dans posSearchInput');
+console.log('✅ setTimeout(100ms) pour attendre le rendu du champ');
+console.log('✅ Dispatch des événements input et keyup');
