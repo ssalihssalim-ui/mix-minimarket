@@ -1323,7 +1323,7 @@ max-height: 400px !important;
         padding: 8px 6px !important;
         border: 0px solid transparent !important;
         border-radius: 10px !important;
-        gap: 4px !important;
+        gap: 8px !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
     }
     
@@ -1334,8 +1334,8 @@ max-height: 400px !important;
     
     /* ✅ IMAGE SANS BORDURE */
     .pos-product-img {
-        height: 95px !important;
-        width: 95% !important;
+        height: 100px !important;
+        width: 90% !important;
         border: 0px solid transparent !important;
         border-radius: 8px !important;
         margin: 0 auto !important;
@@ -1350,7 +1350,7 @@ max-height: 400px !important;
     
     /* ✅ ESPACEMENT ENTRE CARDS */
     .pos-products-grid {
-        gap: 12px !important;
+        gap: 14px !important;
         padding: 10px !important;
         grid-template-columns: repeat(4, 1fr) !important;
     }
@@ -1362,16 +1362,16 @@ max-height: 400px !important;
     }
 
     .pos-product-name {
-        font-size: 10px !important;
+        font-size: 12px !important;
         margin-top: 3px !important;
         padding: 0 3px !important;
     }
     .pos-product-price {
-        font-size: 12px !important;
+        font-size: 14px !important;
         margin-top: 1px !important;
     }
     .pos-promo-price {
-        font-size: 12px !important;
+        font-size: 14px !important;
     }
 
     /* ✅ CATÉGORIES MOBILE */
