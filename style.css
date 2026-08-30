@@ -1362,16 +1362,16 @@ max-height: 400px !important;
     }
 
     .pos-product-name {
-        font-size: 16px !important;
+        font-size: 19px !important;
         margin-top: 3px !important;
         padding: 0 3px !important;
     }
     .pos-product-price {
-        font-size: 18px !important;
+        font-size: 21px !important;
         margin-top: 1px !important;
     }
     .pos-promo-price {
-        font-size: 18px !important;
+        font-size: 21px !important;
     }
 
     /* ✅ CATÉGORIES MOBILE */
@@ -1395,10 +1395,10 @@ max-height: 400px !important;
         font-size: 42px !important;
     }
     .pos-category-card .category-name {
-        font-size: 16px !important;
+        font-size: 20px !important;
     }
     .pos-category-card .category-count {
-        font-size: 16px !important;
+        font-size: 20px !important;
     }
 
     .pos-steps-nav {
@@ -1411,8 +1411,8 @@ max-height: 400px !important;
         flex-shrink: 0 !important;
         margin-bottom: 4px !important;
         border-bottom: 1px solid var(--border) !important;
-        min-height: 20px !important;
-        max-height: 24px !important;
+        min-height: 25px !important;
+        max-height: 28px !important;
     }
 
     .pos-cart-items {
@@ -1425,15 +1425,15 @@ max-height: 400px !important;
     }
 
     .pos-step {
-        font-size: 16px !important;
+        font-size: 20px !important;
     }
     .step-number {
         width: 16px !important;
         height: 16px !important;
-        font-size: 14px !important;
+        font-size: 18px !important;
     }
     .pos-step span:last-child {
-        font-size: 16px !important;
+        font-size: 18px !important;
     }
 }
 
