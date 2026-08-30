@@ -667,8 +667,8 @@ flex: 1 !important;
 
 /* ✅ CARTES PRODUITS */
 .pos-product-card {
-min-height: 150px !important;
-max-height: 180px !important;
+min-height: 180px !important;
+max-height: 220px !important;
 padding: 3px 2px !important;
 border-radius: 8px !important;
 border: 2px solid var(--border) !important;
@@ -691,8 +691,8 @@ box-shadow: var(--shadow-md) !important;
 
 /* ✅ CONTENEUR IMAGE PRODUIT - AGRANDI */
 .pos-product-img {
-height: 85px !important;
-width: 85% !important;
+height: 130px !important;
+width: 95% !important;
 margin-bottom: 1px !important;
 border-radius: 8px !important;
 overflow: hidden !important;
@@ -1027,13 +1027,13 @@ padding-top: 10px !important;
 /* ✅ SUR PC (> 1024px) - CATÉGORIES AGRANDIES */
 @media(min-width: 1024px) {
 .pos-product-card {
-min-height: 180px !important;
-max-height: 210px !important;
+min-height: 210px !important;
+max-height: 250px !important;
 padding: 5px 4px !important;
 }
 .pos-product-img {
-height: 100px !important;
-width: 85% !important;
+height: 150px !important;
+width: 95% !important;
 }
 .pos-product-name {
 font-size: 14px !important;
@@ -1112,13 +1112,13 @@ max-height: 400px !important;
     
     /* --- PRODUITS --- */
     .pos-product-card {
-        min-height: 180px !important;
-        max-height: 210px !important;
+        min-height: 200px !important;
+        max-height: 240px !important;
         padding: 5px 4px !important;
     }
     .pos-product-img {
-        height: 110px !important;
-        width: 90% !important;
+        height: 140px !important;
+        width: 95% !important;
     }
     .pos-product-name {
         font-size: 13px !important;
@@ -1332,14 +1332,14 @@ max-height: 400px !important;
     }
 
 .pos-product-card {
-min-height: 115px !important;
-max-height: 140px !important;
+min-height: 135px !important;
+max-height: 165px !important;
 padding: 3px 2px !important;
 border-width: 1px !important;
 }
 .pos-product-img {
-height: 60px !important;
-width: 80% !important;
+height: 85px !important;
+width: 95% !important;
 }
 .pos-product-name {
 font-size: 10px !important;
@@ -1461,13 +1461,13 @@ padding: 2px !important;
 grid-template-columns: repeat(3, 1fr) !important;
 }
 .pos-product-card {
-min-height: 95px !important;
-max-height: 115px !important;
+min-height: 110px !important;
+max-height: 135px !important;
 padding: 2px 1px !important;
 }
 .pos-product-img {
-height: 48px !important;
-width: 75% !important;
+height: 65px !important;
+width: 95% !important;
 }
 .pos-product-name {
 font-size: 9px !important;
