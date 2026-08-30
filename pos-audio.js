@@ -1,6 +1,7 @@
-// ==================== POS-AUDIO.JS v13 – CORRIGÉ POUR ADMIN-CREDITS ====================
-// ✅ Correction : closeCreditSelection défini comme fallback si non présent
+// ==================== POS-AUDIO.JS v14 – CORRIGÉ DÉFINITIF ====================
+// ✅ Correction : Le micro écrit maintenant dans la barre de recherche POS
 // ✅ Toutes les fonctions exposées avec vérification de sécurité
+// ✅ Ajout de l'initialisation automatique du bouton micro
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -207,11 +208,15 @@ function parseVoiceCommand(transcript) {
         return { type: 'ignore' };
     }
 
-    // ÉTAPE 1 : Recherche produit
-    if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 1) {
+    // ÉTAPE 1 : Recherche produit - ✅ CORRECTION IMPORTANTE ICI
+    if ((currentPage === 'POS' || currentPage === 'Dashboard' || currentPage === '') && posStep === 1) {
         var products = fastFindProduct(cleaned);
         if (products.length > 0) {
             return { type: 'search_product', product: products[0], products: products, text: cleaned, page: 'pos' };
+        }
+        // ✅ MÊME SI AUCUN PRODUIT TROUVÉ, ON RETOURNE LE TEXTE POUR LA RECHERCHE
+        if (cleaned.length > 1) {
+            return { type: 'search_text', text: cleaned, page: 'pos' };
         }
         if (cleaned.includes('valide') || cleaned.includes('valider')) return { type: 'validate' };
         if (cleaned.includes('annule') || cleaned.includes('annuler')) return { type: 'cancel' };
@@ -242,22 +247,53 @@ function detectPaymentMode(transcript) {
 function handleVoiceCommand(cmd) {
     switch (cmd.type) {
         case 'search_product':
+        case 'search_text':  // ✅ AJOUTÉ : Gérer le type search_text
             var searchInput = document.getElementById('posSearchInput');
             if (searchInput) {
-                var searchText = cmd.product ? cmd.product.nom : cmd.text || '';
+                var searchText = cmd.product ? cmd.product.nom : (cmd.text || '');
                 window.posSearchQuery = searchText.toLowerCase().trim();
                 searchInput.value = searchText;
+                
+                // ✅ APPELER LA FONCTION DE RECHERCHE POS
                 if (typeof window.posSearchProducts === 'function') {
                     window.posSearchProducts(searchText);
+                } else if (typeof window.searchProducts === 'function') {
+                    window.searchProducts(searchText);
+                } else if (typeof window.handlePosSearch === 'function') {
+                    window.handlePosSearch(searchText);
                 }
+                
+                // ✅ APPELER filterProductGrid APRÈS UN DÉLAI
                 setTimeout(function() {
                     if (typeof window.filterProductGrid === 'function') {
                         window.filterProductGrid();
                     }
                 }, 300);
+                
                 showVoiceResult('🔍 ' + searchText);
+            } else {
+                // ✅ SI posSearchInput N'EXISTE PAS, ESSAYER D'AUTRES SÉLECTEURS
+                var altInput = document.querySelector('#posSearchInput, .pos-search-input, input[placeholder*="Rechercher"], input[placeholder*="rechercher"]');
+                if (altInput) {
+                    var searchText = cmd.product ? cmd.product.nom : (cmd.text || '');
+                    window.posSearchQuery = searchText.toLowerCase().trim();
+                    altInput.value = searchText;
+                    
+                    if (typeof window.posSearchProducts === 'function') {
+                        window.posSearchProducts(searchText);
+                    }
+                    
+                    setTimeout(function() {
+                        if (typeof window.filterProductGrid === 'function') {
+                            window.filterProductGrid();
+                        }
+                    }, 300);
+                    
+                    showVoiceResult('🔍 ' + searchText);
+                }
             }
             break;
+            
         case 'client':
             window.posCurrentClient = { id: cmd.client.id, name: cmd.client.nom + ' ' + cmd.client.prenom };
             var ci = document.getElementById('posClientSearchInput');
@@ -270,12 +306,14 @@ function handleVoiceCommand(cmd) {
                 if (typeof window.renderPOS === 'function') window.renderPOS();
             }, 400);
             break;
+            
         case 'payment_mode':
             if (typeof window.posSetPaymentMethod === 'function') {
                 window.posSetPaymentMethod(cmd.mode);
                 showVoiceResult('💳 ' + cmd.mode);
             }
             break;
+            
         case 'number':
             var ai = document.getElementById('posAmountGiven');
             if (ai) {
@@ -284,24 +322,37 @@ function handleVoiceCommand(cmd) {
                 if (typeof window.posCalculateChange === 'function') window.posCalculateChange();
             }
             break;
+            
         case 'validate': case 'finalize':
             if (window.posStep === 2 && typeof window.posFinalizeSale === 'function') {
                 window.posFinalizeSale();
             } else if (window.posCart?.length > 0 && window.posStep === 1) {
-                window.posGoToStep2();
+                if (typeof window.posGoToStep2 === 'function') window.posGoToStep2();
             }
             break;
+            
         case 'clear':
             if (typeof window.posResetCart === 'function') { window.posResetCart(); showVoiceResult('🗑️ Panier vidé'); }
             break;
+            
         case 'cancel':
             setVoiceMode('search', '🎤 Recherche vocale active', null);
             if (typeof window.renderPOS === 'function') window.renderPOS();
             break;
+            
         case 'navigate':
             if (typeof navigateTo === 'function') {
                 navigateTo(cmd.page);
                 showVoiceResult('📍 ' + cmd.page);
+            }
+            break;
+            
+        case 'period_filter':
+            // ✅ Appliquer le filtre de période
+            var periodSelect = document.getElementById('periodSelect') || document.getElementById('globalPeriodSelect');
+            if (periodSelect) {
+                periodSelect.value = cmd.period;
+                if (typeof window.applyFilters === 'function') window.applyFilters();
             }
             break;
     }
@@ -318,6 +369,7 @@ function setVoiceMode(mode, msg, productId) {
 
 // ========== MICRO ==========
 function posToggleVoiceSearch() {
+    console.log('🎤 posToggleVoiceSearch appelé');
     var s = checkVoiceSupport();
     if (!s.supported) { alert('⚠️ ' + s.reason); return; }
     if (!navigator.onLine) { alert('⚠️ Connexion internet requise.'); return; }
@@ -329,6 +381,7 @@ function posToggleVoiceSearch() {
 }
 
 function posStartVoiceRecording() {
+    console.log('🎤 Démarrage enregistrement vocal...');
     var mb = document.getElementById('posMicBtn');
     if (voiceRecognition) { try { voiceRecognition.abort(); } catch (e) {} voiceRecognition = null; }
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -353,6 +406,8 @@ function posStartVoiceRecording() {
             else interim += t;
         }
         
+        console.log('🎤 Résultat vocal - Interim:', interim, 'Final:', final);
+        
         // Page Crédits
         var cp = document.getElementById('pageTitle')?.textContent || '';
         if (cp === 'Crédits') {
@@ -374,30 +429,61 @@ function posStartVoiceRecording() {
             return;
         }
         
-        // Page POS
+        // ✅ Page POS - CORRECTION PRINCIPALE ICI
         var si = document.getElementById('posSearchInput');
         if (si) {
             if (final) {
+                console.log('✅ Écriture dans posSearchInput:', final);
                 window.posSearchQuery = final.toLowerCase().trim();
                 si.value = final;
+                
+                // ✅ APPELER LA FONCTION DE RECHERCHE
                 if (typeof window.posSearchProducts === 'function') {
                     window.posSearchProducts(final);
+                } else if (typeof window.searchProducts === 'function') {
+                    window.searchProducts(final);
                 }
+                
+                // ✅ APPELER filterProductGrid
                 setTimeout(function() {
                     if (typeof window.filterProductGrid === 'function') {
                         window.filterProductGrid();
                     }
                 }, 300);
+                
+                // ✅ PARSER LA COMMANDE
                 var cmd = parseVoiceCommand(final);
+                console.log('Commande parsée:', cmd);
                 if (cmd.type !== 'ignore') handleVoiceCommand(cmd);
+                
             } else if (interim && interim !== lastInterim) {
+                console.log('✍️ Interim:', interim);
                 si.value = interim + ' ✍️';
                 lastInterim = interim;
+            }
+        } else {
+            // ✅ SI posSearchInput N'EXISTE PAS, ESSAYER D'AUTRES SÉLECTEURS
+            var altInput = document.querySelector('#posSearchInput, .pos-search-input, input[placeholder*="Rechercher"], input[placeholder*="rechercher"]');
+            if (altInput && final) {
+                console.log('✅ Écriture dans champ alternatif:', final);
+                altInput.value = final;
+                window.posSearchQuery = final.toLowerCase().trim();
+                
+                if (typeof window.posSearchProducts === 'function') {
+                    window.posSearchProducts(final);
+                }
+                
+                setTimeout(function() {
+                    if (typeof window.filterProductGrid === 'function') {
+                        window.filterProductGrid();
+                    }
+                }, 300);
             }
         }
     };
 
     voiceRecognition.onend = function() {
+        console.log('🛑 Reconnaissance terminée');
         if (isRecording) {
             setTimeout(function() {
                 try { voiceRecognition.start(); } catch (e) { posStopVoiceSearch(); }
@@ -405,6 +491,7 @@ function posStartVoiceRecording() {
         }
     };
     voiceRecognition.onerror = function(e) {
+        console.error('❌ Erreur reconnaissance:', e.error);
         if (e.error === 'aborted' || e.error === 'no-speech') return;
         if (e.error === 'network') showVoiceResult('❌ Réseau');
         posStopVoiceSearch();
@@ -416,6 +503,7 @@ function posStartVoiceRecording() {
         showVoiceModeIndicator();
         showVoiceResult('🎤 Écoute...');
     } catch (e) {
+        console.error('❌ Erreur démarrage:', e);
         isRecording = false;
         if (mb) {
             mb.innerHTML = '<i class="fas fa-microphone"></i>';
@@ -434,6 +522,55 @@ function posStopVoiceSearch() {
     }
     hideVoiceFlowIndicator();
     showVoiceResult('🎤 Micro désactivé');
+}
+
+// ========== INITIALISATION DU BOUTON MICRO ==========
+// ✅ AJOUTÉ : Initialiser le bouton micro s'il n'existe pas déjà
+function initPosMicButton() {
+    var existingBtn = document.getElementById('posMicBtn');
+    if (existingBtn) {
+        // Le bouton existe déjà, mettre à jour l'événement
+        existingBtn.onclick = function(e) {
+            e.preventDefault();
+            posToggleVoiceSearch();
+        };
+        return;
+    }
+    
+    // Chercher un conteneur pour le bouton micro
+    var searchContainer = document.querySelector('.pos-search-container, .search-container, .pos-search-bar');
+    if (!searchContainer) {
+        // Chercher près du champ de recherche
+        var searchInput = document.getElementById('posSearchInput');
+        if (searchInput && searchInput.parentElement) {
+            searchContainer = searchInput.parentElement;
+        }
+    }
+    
+    if (searchContainer) {
+        var micBtn = document.createElement('button');
+        micBtn.id = 'posMicBtn';
+        micBtn.type = 'button';
+        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        micBtn.style.cssText = 'width:40px;height:40px;border-radius:50%;border:2px solid #16a34a;background:#dcfce7;color:#16a34a;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.3s;margin-left:8px;';
+        micBtn.onclick = function(e) {
+            e.preventDefault();
+            posToggleVoiceSearch();
+        };
+        micBtn.title = 'Recherche vocale';
+        searchContainer.appendChild(micBtn);
+        console.log('✅ Bouton micro créé');
+    }
+}
+
+// ✅ Initialiser le bouton micro après le chargement du DOM
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(initPosMicButton, 1000);
+});
+
+// ✅ Initialiser aussi immédiatement si le DOM est déjà chargé
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(initPosMicButton, 1000);
 }
 
 // ========== EXPORTS ==========
@@ -456,6 +593,7 @@ window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
 window.fastFindProduct = fastFindProduct;
 window.posStopVoiceSearch = posStopVoiceSearch;
+window.initPosMicButton = initPosMicButton;
 
 // ✅ GARANTIR que closeCreditSelection existe
 if (typeof window.closeCreditSelection !== 'function') {
@@ -468,7 +606,8 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v13 – corrigé pour compatibilité admin-credits');
+console.log('🎤 Module vocal v14 – CORRIGÉ DÉFINITIF');
 console.log('✅ closeCreditSelection défini:', typeof window.closeCreditSelection);
 console.log('✅ posToggleVoiceSearch:', typeof window.posToggleVoiceSearch);
 console.log('✅ posAudioToggleVoiceSearch:', typeof window.posAudioToggleVoiceSearch);
+console.log('✅ initPosMicButton:', typeof window.initPosMicButton);
