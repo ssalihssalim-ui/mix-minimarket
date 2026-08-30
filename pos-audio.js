@@ -1,10 +1,11 @@
-// ==================== POS-AUDIO.JS v10 – COMPATIBLE AVEC LE NOUVEAU POS ====================
+// ==================== POS-AUDIO.JS v11 – CORRIGÉ RECHERCHE VOCALE ====================
 // Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
 // ✅ Sélection automatique du client par audio avec passage à l'étape paiement
 // ✅ Recherche adaptée selon l'étape POS : produits en étape 1, clients/paiement en étape 2
 // ✅ Affichage automatique du crédit après sélection vocale du client
 // ✅ RECHERCHE VOCALE IDENTIQUE À LA RECHERCHE ÉCRITE - AFFICHE TOUS LES PRODUITS CORRESPONDANTS
 // ✅ RECHERCHE AUTOMATIQUE - PAS BESOIN D'APPUYER SUR ENTRÉE
+// ✅ CORRECTION : TIMING DE RECHERCHE SYNCHRONISÉ AVEC POS.JS
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -595,20 +596,24 @@ function handleVoiceCommand(cmd) {
                     // ✅ Utiliser le nom du produit trouvé pour la recherche
                     var searchText = cmd.product ? cmd.product.nom : cmd.text || '';
                     
+                    // ✅ Mettre à jour posSearchQuery directement (variable globale dans pos.js)
+                    window.posSearchQuery = searchText.toLowerCase().trim();
+                    
                     // ✅ Remplir le champ de recherche
                     searchInput.value = searchText;
                     
-                    // ✅ Déclencher la recherche POS directement (comme si l'utilisateur avait tapé et appuyé sur Entrée)
+                    // ✅ Déclencher la recherche POS directement
                     if (typeof window.posSearchProducts === 'function') {
                         window.posSearchProducts(searchText);
                     }
                     
-                    // ✅ Forcer la mise à jour de la grille
-                    if (typeof window.filterProductGrid === 'function') {
-                        setTimeout(function() {
+                    // ✅ CORRECTION : Attendre que posSearchProducts ait terminé (150ms de délai)
+                    // puis forcer la mise à jour de la grille
+                    setTimeout(function() {
+                        if (typeof window.filterProductGrid === 'function') {
                             window.filterProductGrid();
-                        }, 100);
-                    }
+                        }
+                    }, 300);
                     
                     // ✅ Afficher le résultat vocal
                     if (cmd.products && cmd.products.length > 1) {
@@ -660,7 +665,6 @@ function handleVoiceCommand(cmd) {
             var ci = document.getElementById('posClientSearchInput');
             if (ci) {
                 ci.value = window.posCurrentClient.name;
-                // Déclencher l'événement input pour que la recherche client prenne en compte le changement
                 var evt = new Event('input', { bubbles: true });
                 ci.dispatchEvent(evt);
             }
@@ -678,26 +682,19 @@ function handleVoiceCommand(cmd) {
             // Forcer l'affichage du crédit dans la zone dédiée
             var creditDisplay = document.getElementById('clientCreditDisplay');
             if (creditDisplay) {
-                // Si la fonction updateClientCreditDisplay ne l'a pas fait, on force l'affichage
-                var total = 0;
-                try {
-                    // Appel direct pour charger et afficher le crédit
-                    if (typeof window.loadClientCredits === 'function') {
-                        window.loadClientCredits(cmd.client.id).then(function(amount) {
-                            if (amount > 0) {
-                                creditDisplay.textContent = '💳 Crédit: ' + amount.toFixed(2) + ' MAD';
-                                creditDisplay.style.color = '#ef4444';
-                                creditDisplay.style.fontWeight = '700';
-                            } else {
-                                creditDisplay.textContent = '✅ Aucun crédit';
-                                creditDisplay.style.color = '#16a34a';
-                                creditDisplay.style.fontWeight = '600';
-                            }
-                            creditDisplay.style.display = 'block';
-                        });
-                    }
-                } catch(e) {
-                    console.warn('Erreur affichage crédit:', e);
+                if (typeof window.loadClientCredits === 'function') {
+                    window.loadClientCredits(cmd.client.id).then(function(amount) {
+                        if (amount > 0) {
+                            creditDisplay.textContent = '💳 Crédit: ' + amount.toFixed(2) + ' MAD';
+                            creditDisplay.style.color = '#ef4444';
+                            creditDisplay.style.fontWeight = '700';
+                        } else {
+                            creditDisplay.textContent = '✅ Aucun crédit';
+                            creditDisplay.style.color = '#16a34a';
+                            creditDisplay.style.fontWeight = '600';
+                        }
+                        creditDisplay.style.display = 'block';
+                    });
                 }
             }
             
@@ -710,7 +707,6 @@ function handleVoiceCommand(cmd) {
                 if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
                     window.posGoToStep2();
                 }
-                // Forcer le re-rendu pour afficher le crédit
                 if (typeof window.renderPOS === 'function') {
                     setTimeout(function() { window.renderPOS(); }, 100);
                 }
@@ -950,20 +946,23 @@ function posStartVoiceRecording() {
                         return;
                     }
                     
+                    // ✅ CORRECTION : Mettre à jour posSearchQuery directement
+                    window.posSearchQuery = final.toLowerCase().trim();
+                    
                     // ✅ Remplir le champ de recherche
                     si.value = final;
                     
-                    // ✅ Déclencher la recherche automatiquement (comme si l'utilisateur avait appuyé sur Entrée)
+                    // ✅ Déclencher la recherche automatiquement
                     if (typeof window.posSearchProducts === 'function') {
                         window.posSearchProducts(final);
                     }
                     
-                    // ✅ Forcer la mise à jour de la grille
-                    if (typeof window.filterProductGrid === 'function') {
-                        setTimeout(function() {
+                    // ✅ CORRECTION : Attendre que posSearchProducts ait terminé
+                    setTimeout(function() {
+                        if (typeof window.filterProductGrid === 'function') {
                             window.filterProductGrid();
-                        }, 100);
-                    }
+                        }
+                    }, 300);
                     
                     showProcessingIndicator();
                     var cmd = parseVoiceCommand(final);
@@ -1048,6 +1047,6 @@ window.buildProductAdminIndex = buildProductAdminIndex;
 window.fastFindProductAdmin = fastFindProductAdmin;
 window.fastFindProduct = fastFindProduct;
 
-console.log('🎤 Module vocal – prêt avec retour visuel (recherche adaptée selon étape POS + sélection client audio complète)');
+console.log('🎤 Module vocal v11 – corrigé recherche vocale (timing synchronisé avec pos.js)');
 console.log('✅ Recherche vocale identique à la recherche écrite - affiche tous les produits correspondants');
 console.log('✅ Recherche automatique - pas besoin d\'appuyer sur Entrée');
