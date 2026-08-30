@@ -3,6 +3,7 @@
 // ✅ Nom produit peut sauter à la ligne
 // ✅ Image taille fixe et conteneur agrandi
 // ✅ Pas de scroll horizontal
+// ✅ CORRECTION : Fonctions vocales exposées correctement
 
 var posCart = [];
 var posStep = 1;
@@ -18,6 +19,7 @@ var posAllClients = [];
 var posFilteredClients = [];
 var posCurrentProductId = null;
 var posSearchQuery = '';
+var posToolsVisible = false;
 
 var productNameIndex = {};
 var productIndexBuilt = false;
@@ -64,6 +66,38 @@ var btn = document.getElementById('posStaticBackBtn');
 if (btn) {
 btn.style.display = visible ? 'block' : 'none';
 }
+}
+
+// ✅ Fonction toggle outils POS
+function posToggleTools() {
+    posToolsVisible = !posToolsVisible;
+    var toolsContainer = document.getElementById('posToolsContainer');
+    var toggleBtn = document.getElementById('posToggleToolsBtn');
+    
+    if (toolsContainer) {
+        toolsContainer.style.display = posToolsVisible ? 'flex' : 'none';
+    }
+    if (toggleBtn) {
+        toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout';
+        toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
+    }
+    
+    var searchInput = document.getElementById('posSearchInput');
+    var micBtn = document.getElementById('posMicBtn');
+    var categoriesBar = document.querySelector('.pos-categories-bar');
+    
+    if (searchInput) searchInput.style.display = posToolsVisible ? '' : 'none';
+    if (micBtn) micBtn.style.display = posToolsVisible ? '' : 'none';
+    if (categoriesBar) categoriesBar.style.display = posToolsVisible ? '' : 'none';
+}
+
+// ✅ Fonction recherche vocale (délègue à pos-audio.js)
+function posToggleVoiceSearch() {
+    if (typeof window.posToggleVoiceSearch === 'function') {
+        window.posToggleVoiceSearch();
+    } else {
+        alert('Module audio non chargé');
+    }
 }
 
 async function loadClientCredits(clientId) {
@@ -177,6 +211,7 @@ function posSearchProducts(query){
     window._searchTimeout = setTimeout(function(){
         posProductOffset = 0;
         posSearchQuery = query.toLowerCase().trim();
+        window.posSearchQuery = posSearchQuery;
         
         if (posViewMode === 'categories' && posSearchQuery.length > 0) {
             posViewMode = 'products';
@@ -192,6 +227,7 @@ var input = document.getElementById('posSearchInput');
 if (input) {
 input.value = '';
 posSearchQuery = '';
+window.posSearchQuery = '';
 posProductOffset = 0;
 if (isOnPOSPage()) {
 filterProductGrid();
@@ -304,17 +340,14 @@ function filterProductGrid(){
 
             var isMobile = window.innerWidth < 700;
             
-            // ✅ Carte produit avec nom sur plusieurs lignes et image conteneur agrandi
             var cardStyle = isMobile ? 
                 'padding:4px 2px;min-height:110px;max-height:140px;aspect-ratio:1/1;border-radius:6px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' : 
                 'padding:6px 8px;min-height:150px;max-height:190px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
             
-            // ✅ Image - conteneur agrandi (hauteur augmentée)
             var imgStyle = isMobile ? 
                 'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;' : 
                 'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
             
-            // ✅ Nom produit - peut sauter à la ligne
             var nameStyle = isMobile ? 
                 'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:1px 0;' : 
                 'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:2px 0;';
@@ -429,6 +462,7 @@ function selectionnerCategorie(catName) {
     posViewMode = 'products';
     posProductOffset = 0;
     posSearchQuery = '';
+    window.posSearchQuery = '';
     
     posSelectedCategory = catName;
     
@@ -456,6 +490,7 @@ function retournerCategories() {
     posSelectedCategoryForView = null;
     posSelectedCategory = 'all';
     posSearchQuery = '';
+    window.posSearchQuery = '';
     posProductOffset = 0;
     
     var catBtns = document.querySelectorAll('.pos-cat-btn');
@@ -1135,8 +1170,6 @@ if (noBtn) { noBtn.addEventListener('click', function() { window.closeModal = or
 finally { isFinalizing=false; if(fb){ fb.disabled=false; fb.innerHTML='<i class="fas fa-check-circle"></i> Finaliser'; } }
 }
 
-// ==================== FONCTIONS MANQUANTES AJOUTÉES ====================
-
 function posResetCart() {
     posCart = [];
     posDiscountMAD = 0;
@@ -1167,14 +1200,6 @@ function posAfficherCommandesTables() {
     alert('Fonction à implémenter selon votre logique');
 }
 
-function posToggleVoiceSearch() {
-    if (typeof window.toggleVoiceSearch === 'function') {
-        window.toggleVoiceSearch();
-    } else {
-        alert('Fonction de recherche vocale non disponible');
-    }
-}
-
 function updateClearButtonVisibility() {
     var input = document.getElementById('posSearchInput');
     var btn = document.getElementById('posSearchClearBtn');
@@ -1187,7 +1212,34 @@ function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userD
 
 // ==================== EXPOSITION DES FONCTIONS GLOBALES ====================
 
-window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.clearPosSearch=clearPosSearch; window.clearClientSearch=clearClientSearch; window.updateClearButtonVisibility=updateClearButtonVisibility; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.loadClientCredits=loadClientCredits; window.updateClientCreditDisplay=updateClientCreditDisplay; window.posCalculateChange=posCalculateChange; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
+window.posCart=posCart; 
+window.posStep=posStep; 
+window.posProductsList=posProductsList; 
+window.posAllClients=posAllClients; 
+window.posCurrentClient=posCurrentClient; 
+window.posCurrentTable=posCurrentTable; 
+window.posDiscountMAD=posDiscountMAD; 
+window.posAmountGiven=posAmountGiven; 
+window.posPaymentMethod=posPaymentMethod; 
+window.posResetCart=posResetCart; 
+window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; 
+window.posSetPaymentMethod=posSetPaymentMethod; 
+window.posCalculateTotal=posCalculateTotal; 
+window.posFinalizeSale=posFinalizeSale; 
+window.posGoToStep2=posGoToStep2; 
+window.posGoToStep1=posGoToStep1; 
+window.posSearchProducts=posSearchProducts; 
+window.clearPosSearch=clearPosSearch; 
+window.clearClientSearch=clearClientSearch; 
+window.updateClearButtonVisibility=updateClearButtonVisibility; 
+window.updateCartOnly=updateCartOnly; 
+window.renderPOS=renderPOS; 
+window.updatePaymentButtons=updatePaymentButtons; 
+window.loadMoreProducts=loadMoreProducts; 
+window.loadClientCredits=loadClientCredits; 
+window.updateClientCreditDisplay=updateClientCreditDisplay; 
+window.posCalculateChange=posCalculateChange; 
+window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 window.posNaviguerEtape = posNaviguerEtape;
 window.buildFullPOS = buildFullPOS;
 window.decrementerIngredientsStock = decrementerIngredientsStock;
@@ -1197,5 +1249,8 @@ window.retournerCategories = retournerCategories;
 window.posFilterCategory = posFilterCategory;
 window.posViewMode = posViewMode;
 window.posSelectedCategoryForView = posSelectedCategoryForView;
+window.posSearchQuery = posSearchQuery;
+window.posToggleTools = posToggleTools;
+window.filterProductGrid = filterProductGrid;
 
 console.log('🚀 E-SOLUTION - POS chargé avec mode Catégories');
