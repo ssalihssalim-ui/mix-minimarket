@@ -3,7 +3,7 @@
 // ✅ Nom produit peut sauter à la ligne
 // ✅ Image taille fixe et conteneur agrandi
 // ✅ Pas de scroll horizontal
-// ✅ CORRECTION : Fonctions vocales exposées correctement
+// ✅ CORRECTION : posToggleVoiceSearch retiré - pos-audio.js le fournit
 
 var posCart = [];
 var posStep = 1;
@@ -89,29 +89,6 @@ function posToggleTools() {
     if (searchInput) searchInput.style.display = posToolsVisible ? '' : 'none';
     if (micBtn) micBtn.style.display = posToolsVisible ? '' : 'none';
     if (categoriesBar) categoriesBar.style.display = posToolsVisible ? '' : 'none';
-}
-
-// ✅ CORRECTION : Fonction recherche vocale SANS boucle infinie
-// Cette fonction sera ÉCRASÉE par pos-audio.js qui est chargé APRÈS
-// Donc on ne l'expose PAS avec window.posToggleVoiceSearch ici
-function posToggleVoiceSearch() {
-    // Vérifier si pos-audio.js a déjà chargé sa version
-    if (typeof window.posAudioToggleVoiceSearch === 'function') {
-        window.posAudioToggleVoiceSearch();
-        return;
-    }
-    
-    // Vérifier si SpeechRecognition est disponible directement
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        // Essayer d'appeler la version de pos-audio.js si elle existe
-        if (typeof window.startVoiceRecording === 'function') {
-            window.startVoiceRecording();
-            return;
-        }
-        alert('Module audio en cours de chargement...');
-    } else {
-        alert('Reconnaissance vocale non supportée par ce navigateur');
-    }
 }
 
 async function loadClientCredits(clientId) {
@@ -953,7 +930,7 @@ stepIndicator +
 '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:'+(isMobile?'14px':'20px')+';padding-right:28px;height:'+(isMobile?'34px':'40px')+';">' +
 '<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:6px;background:none;border:none;cursor:pointer;padding:2px;color:#94a3b8;font-size:'+(isMobile?'18px':'20px')+';align-items:center;justify-content:center;" title="Effacer la recherche"><i class="fas fa-times-circle"></i></button>' +
 '</div>' +
-'<button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #14B8A6;border-radius:50%;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'18px')+';" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
+'<button id="posMicBtn" title="Micro" style="background:#dcfce7;border:3px solid #14B8A6;border-radius:50%;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'18px')+';" onclick="window.posToggleVoiceSearch ? window.posToggleVoiceSearch() : alert(\'Module audio non chargé\')"><i class="fas fa-microphone"></i></button>' +
 '<div style="display:flex;gap:3px;"><button onclick="posAfficherCommandesTables()" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:3px 8px;font-weight:600;font-size:'+(isMobile?'0.5rem':'0.6rem')+';">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 5px;font-size:'+(isMobile?'0.4rem':'0.5rem')+';">'+posCommandesTablesCount+'</span></button><button onclick="navigateTo(\'commandes\')" style="background:#fff;border:2px solid #e2e8f0;border-radius:50px;padding:3px 8px;font-weight:600;font-size:'+(isMobile?'0.5rem':'0.6rem')+';">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:1px 5px;font-size:'+(isMobile?'0.4rem':'0.5rem')+';">'+posCommandesEnLigneCount+'</span></button></div>' +
 '</div>' +
 '<div class="pos-categories-bar"><button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')" style="padding:'+(isMobile?'4px 8px':'8px 16px')+';font-size:'+(isMobile?'12px':'0.8rem')+';gap:'+(isMobile?'3px':'6px')+';">📋 Tous</button>';
