@@ -1,6 +1,6 @@
-// ==================== POS-AUDIO.JS v12 – CORRIGÉ DÉFINITIF ====================
-// Mixmax Minimarket – Reconnaissance vocale avec retour visuel intégré
-// ✅ CORRECTION : Export double window.posToggleVoiceSearch ET window.posAudioToggleVoiceSearch
+// ==================== POS-AUDIO.JS v13 – CORRIGÉ POUR ADMIN-CREDITS ====================
+// ✅ Correction : closeCreditSelection défini comme fallback si non présent
+// ✅ Toutes les fonctions exposées avec vérification de sécurité
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -19,6 +19,18 @@ var productIndexBuilt = false;
 
 // ========== PAYMENT STATE MACHINE ==========
 window.voicePaymentState = 0;
+
+// ✅ DÉFINIR closeCreditSelection comme FALLBACK si non défini
+if (typeof window.closeCreditSelection !== 'function') {
+    window.closeCreditSelection = function() {
+        console.log('closeCreditSelection appelé (fallback pos-audio)');
+        window.creditSelectionMode = false;
+        window.creditSelectedIds = [];
+        if (typeof renderCreditsTablePro === 'function') {
+            renderCreditsTablePro();
+        }
+    };
+}
 
 var paymentKeywords = {
     'espece': ['espèces', 'espece', 'argent', 'cash', 'comptant', 'liquide', 'espèce'],
@@ -51,6 +63,7 @@ function ensureVoiceDisplay() {
 function showVoiceResult(msg) {
     ensureVoiceDisplay();
     var el = document.getElementById('voiceDisplay');
+    if (!el) return;
     el.textContent = msg;
     el.style.display = 'block';
     clearTimeout(window._voiceTimeout);
@@ -92,11 +105,6 @@ function buildClientIndex() {
                 if (!clientSearchIndex[mot].includes(c)) clientSearchIndex[mot].push(c);
             }
         });
-        const fullName = (c.nom + ' ' + c.prenom).toLowerCase().trim();
-        if (fullName.length >= 2) {
-            if (!clientSearchIndex[fullName]) clientSearchIndex[fullName] = [];
-            if (!clientSearchIndex[fullName].includes(c)) clientSearchIndex[fullName].push(c);
-        }
     });
     clientIndexBuilt = true;
 }
@@ -113,13 +121,6 @@ function fastFindClient(query) {
         if (!mot) return;
         (clientSearchIndex[mot] || []).forEach(c => { if (!seen[c.id]) { seen[c.id] = true; results.push(c); } });
     });
-    if (results.length === 0 && window.posAllClients) {
-        results.push(...window.posAllClients.filter(c => {
-            const nom = (c.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const prenom = (c.prenom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return nom.includes(normalized) || prenom.includes(normalized);
-        }));
-    }
     return results;
 }
 
@@ -156,12 +157,6 @@ function fastFindProduct(query) {
             if (!seen[p.id]) { seen[p.id] = true; results.push(p); }
         });
     });
-    if (results.length === 0 && window.posProductsList) {
-        window.posProductsList.forEach(function(p) {
-            var nom = (p.nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            if (nom.indexOf(cleaned) !== -1 && !seen[p.id]) { seen[p.id] = true; results.push(p); }
-        });
-    }
     return results;
 }
 
@@ -178,9 +173,9 @@ function detectPeriodFilter(transcript) {
     var cleaned = transcript.toLowerCase().trim();
     if (cleaned.includes("aujourd'hui") || cleaned.includes("today")) return 'today';
     if (cleaned.includes("semaine") || cleaned.includes("7 jours")) return '7';
-    if (cleaned.includes("mois") && !cleaned.includes("3 mois") && !cleaned.includes("6 mois")) return '30';
     if (cleaned.includes("3 mois")) return '90';
     if (cleaned.includes("6 mois")) return '180';
+    if (cleaned.includes("mois")) return '30';
     if (cleaned.includes("an") || cleaned.includes("année")) return '365';
     if (cleaned.includes("tout") || cleaned.includes("toutes")) return 'all';
     return null;
@@ -226,8 +221,7 @@ function parseVoiceCommand(transcript) {
     // ÉTAPE 2 : Paiement
     if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
         var clients = fastFindClient(cleaned);
-        if (clients.length === 1) return { type: 'client', client: clients[0] };
-        if (clients.length > 1) return { type: 'client', client: clients[0] };
+        if (clients.length >= 1) return { type: 'client', client: clients[0] };
         var pm = detectPaymentMode(cleaned);
         if (pm) return { type: 'payment_mode', mode: pm };
         if (cleaned.includes('valide') || cleaned.includes('finaliser')) return { type: 'validate' };
@@ -246,7 +240,6 @@ function detectPaymentMode(transcript) {
 
 // ========== HANDLE COMMAND ==========
 function handleVoiceCommand(cmd) {
-    var cp = document.getElementById('pageTitle')?.textContent || '';
     switch (cmd.type) {
         case 'search_product':
             var searchInput = document.getElementById('posSearchInput');
@@ -289,7 +282,6 @@ function handleVoiceCommand(cmd) {
                 ai.value = cmd.value;
                 window.posAmountGiven = cmd.value;
                 if (typeof window.posCalculateChange === 'function') window.posCalculateChange();
-                showVoiceResult('💰 ' + cmd.value);
             }
             break;
         case 'validate': case 'finalize':
@@ -307,10 +299,9 @@ function handleVoiceCommand(cmd) {
             if (typeof window.renderPOS === 'function') window.renderPOS();
             break;
         case 'navigate':
-            var pages = { 'credits': 'Crédits', 'ventes': 'Ventes', 'dashboard': 'Dashboard', 'products': 'Produits', 'clients': 'Clients', 'commandes': 'Commandes en ligne', 'depenses': 'Dépenses', 'statistiques': 'Statistiques' };
             if (typeof navigateTo === 'function') {
                 navigateTo(cmd.page);
-                showVoiceResult('📍 ' + pages[cmd.page]);
+                showVoiceResult('📍 ' + cmd.page);
             }
             break;
     }
@@ -361,6 +352,29 @@ function posStartVoiceRecording() {
             if (e.results[i].isFinal) final += t;
             else interim += t;
         }
+        
+        // Page Crédits
+        var cp = document.getElementById('pageTitle')?.textContent || '';
+        if (cp === 'Crédits') {
+            var searchInput = document.getElementById('creditsSearchInput');
+            var voiceDisplay = document.getElementById('creditsVoiceDisplay');
+            if (final && searchInput) {
+                if (typeof window.processCreditsSearchFromVoice === 'function') {
+                    window.processCreditsSearchFromVoice(final);
+                } else {
+                    searchInput.value = final;
+                    window.creditsSearch = final;
+                    if (typeof window.applyCreditsFilters === 'function') window.applyCreditsFilters();
+                }
+                if (voiceDisplay) voiceDisplay.value = final;
+            } else if (interim && searchInput) {
+                searchInput.value = interim + ' ✍️';
+                if (voiceDisplay) voiceDisplay.value = interim + ' ✍️';
+            }
+            return;
+        }
+        
+        // Page POS
         var si = document.getElementById('posSearchInput');
         if (si) {
             if (final) {
@@ -424,7 +438,7 @@ function posStopVoiceSearch() {
 
 // ========== EXPORTS ==========
 window.posToggleVoiceSearch = posToggleVoiceSearch;
-window.posAudioToggleVoiceSearch = posToggleVoiceSearch; // ✅ CORRECTION : double export
+window.posAudioToggleVoiceSearch = posToggleVoiceSearch;
 window.showVoiceResult = showVoiceResult;
 window.setVoiceMode = setVoiceMode;
 window.showVoiceModeIndicator = showVoiceModeIndicator;
@@ -441,7 +455,20 @@ window.onProductAdded = function(pid) {
 window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
 window.fastFindProduct = fastFindProduct;
+window.posStopVoiceSearch = posStopVoiceSearch;
 
-console.log('🎤 Module vocal v12 – corrigé avec double export');
-console.log('✅ window.posToggleVoiceSearch:', typeof window.posToggleVoiceSearch);
-console.log('✅ window.posAudioToggleVoiceSearch:', typeof window.posAudioToggleVoiceSearch);
+// ✅ GARANTIR que closeCreditSelection existe
+if (typeof window.closeCreditSelection !== 'function') {
+    window.closeCreditSelection = function() {
+        window.creditSelectionMode = false;
+        window.creditSelectedIds = [];
+        if (typeof renderCreditsTablePro === 'function') {
+            renderCreditsTablePro();
+        }
+    };
+}
+
+console.log('🎤 Module vocal v13 – corrigé pour compatibilité admin-credits');
+console.log('✅ closeCreditSelection défini:', typeof window.closeCreditSelection);
+console.log('✅ posToggleVoiceSearch:', typeof window.posToggleVoiceSearch);
+console.log('✅ posAudioToggleVoiceSearch:', typeof window.posAudioToggleVoiceSearch);
