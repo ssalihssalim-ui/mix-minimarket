@@ -1,10 +1,10 @@
-// ==================== POS-AUDIO.JS v17 – CORRECTION FINALE DÉFINITIVE ====================
+// ==================== POS-AUDIO.JS v18 – CORRECTION FINALE ====================
+// ✅ CORRECTION : Navigation "pos" depuis n'importe quelle page
+// ✅ CORRECTION : Mode quantité après sélection d'un produit
 // ✅ CORRECTION : Navigation vocale améliorée (crédits, ventes, dashboard, etc.)
 // ✅ CORRECTION : Détection et sélection automatique des clients en étape 2
 // ✅ CORRECTION : Détection des périodes (aujourd'hui, ce mois, cette année)
 // ✅ CORRECTION : Détection des montants en étape 2
-// ✅ CORRECTION : Utilisation de InputEvent pour meilleure compatibilité
-// ✅ CORRECTION : Fallback avec querySelector générique
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -12,6 +12,7 @@ var voiceMode = 'search';
 var lastAddedProductId = null;
 var voiceModeMessage = '🎤 Recherche vocale active';
 var micPermissionGranted = false;
+var posProductAddedCount = 0;
 
 // ========== INDEX CLIENT ==========
 var clientSearchIndex = {};
@@ -197,14 +198,17 @@ function parseVoiceCommand(transcript) {
     var posStep = window.posStep || 1;
 
     console.log('🔍 Parsing commande:', cleaned);
+    console.log('📄 Page actuelle:', currentPage);
+    console.log('📌 PosStep:', posStep);
 
     // ============================================================
     // 1. NAVIGATION AVEC DÉTECTION AMÉLIORÉE
     // ============================================================
     
     var navWords = {
+        'pos': ['pos', 'caisse', 'point de vente', 'vente directe', 'retour pos', 'aller pos', 'ouvrir pos', 'lancer pos', 'caissier'],
         'credits': ['credits', 'credit', 'crédit', 'impayes', 'impaye', 'dettes', 'dette', 'creance', 'creances', 'liste credits', 'liste crédits', 'voir credits'],
-        'ventes': ['ventes', 'vente', 'recettes', 'recette', 'chiffre', 'caissier', 'liste ventes', 'voir ventes'],
+        'ventes': ['ventes', 'vente', 'recettes', 'recette', 'chiffre', 'liste ventes', 'voir ventes'],
         'dashboard': ['dashboard', 'accueil', 'tableau de bord', 'tableau', 'bord', 'home', 'acceuil'],
         'clients': ['clients', 'client', 'cliente', 'clientel', 'liste clients', 'voir clients'],
         'commandes': ['commandes', 'commande', 'en ligne', 'online', 'liste commandes', 'voir commandes'],
@@ -212,8 +216,7 @@ function parseVoiceCommand(transcript) {
         'statistiques': ['statistiques', 'stat', 'stats', 'analyses', 'analyse', 'voir statistiques'],
         'produits': ['produits', 'produit', 'catalogue', 'stock', 'marchandise', 'liste produits', 'voir produits'],
         'fournisseurs': ['fournisseurs', 'fournisseur', 'fournitures', 'liste fournisseurs', 'voir fournisseurs'],
-        'categories': ['categories', 'categorie', 'categoriel', 'cat', 'liste categories', 'voir categories'],
-        'pos': ['pos', 'caisse', 'point de vente', 'vente directe', 'retour pos']
+        'categories': ['categories', 'categorie', 'categoriel', 'cat', 'liste categories', 'voir categories']
     };
 
     for (var page in navWords) {
@@ -272,6 +275,7 @@ function parseVoiceCommand(transcript) {
         var products = fastFindProduct(cleaned);
         if (products.length > 0) {
             console.log('✅ Produit trouvé:', products[0].nom);
+            // 🔥 Passer en mode quantité après sélection
             return { type: 'search_product', product: products[0], products: products, text: cleaned, page: 'pos' };
         }
         
@@ -286,7 +290,6 @@ function parseVoiceCommand(transcript) {
     
     if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
         
-        // 🔥 Détection de "client" + nom
         var clientMatch = cleaned.match(/client\s+([a-zA-Zéèêëïîôöûüç\s]+)/i);
         if (clientMatch && clientMatch[1]) {
             var clientName = clientMatch[1].trim();
@@ -297,27 +300,23 @@ function parseVoiceCommand(transcript) {
             }
         }
         
-        // 🔥 Recherche directe de client
         var clients = fastFindClient(cleaned);
         if (clients.length >= 1) {
             console.log('✅ Client trouvé:', clients[0].nom);
             return { type: 'client', client: clients[0] };
         }
         
-        // 🔥 Détection du mode de paiement
         var pm = detectPaymentMode(cleaned);
         if (pm) {
             console.log('✅ Mode paiement détecté:', pm);
             return { type: 'payment_mode', mode: pm };
         }
         
-        // 🔥 Finalisation
         if (cleaned.includes('valide') || cleaned.includes('finaliser') || 
             cleaned.includes('terminer') || cleaned.includes('payer')) {
             return { type: 'validate' };
         }
         
-        // 🔥 Détection d'un montant
         var amount = extractNumberFromTranscript(cleaned);
         if (amount !== null && amount > 0) {
             console.log('✅ Montant détecté:', amount);
@@ -345,8 +344,53 @@ function handleVoiceCommand(cmd) {
 
     switch (cmd.type) {
         case 'search_product':
+            // 🔥 SÉLECTIONNER LE PRODUIT ET PASSER EN MODE QUANTITÉ
+            var product = cmd.product;
+            console.log('🛒 Produit sélectionné:', product.nom);
+            
+            // Ajouter le produit au panier (1 par défaut)
+            if (typeof window.posAddToCartOrOpenOptions === 'function') {
+                // Si le produit a des options (recette), ouvrir le modal
+                var cat = window.posCategoriesList?.find(function(c) { 
+                    return c.nom === product.categorie; 
+                });
+                var isRecette = cat && cat.recette === true;
+                
+                if (isRecette) {
+                    // Produit avec recette → ouvrir le modal d'options
+                    window.posCurrentProductId = product.id;
+                    if (typeof window.posOpenOptionsModal === 'function') {
+                        window.posOpenOptionsModal(product.id);
+                        showVoiceResult('📋 ' + product.nom + ' - Personnalisation');
+                    } else {
+                        // Fallback: ajouter directement
+                        window.posAddToCartOrOpenOptions(product.id);
+                        showVoiceResult('➕ ' + product.nom + ' ajouté');
+                    }
+                } else {
+                    // Produit simple → ajouter directement
+                    window.posAddToCartOrOpenOptions(product.id);
+                    showVoiceResult('➕ ' + product.nom + ' ajouté');
+                    
+                    // 🔥 PASSER EN MODE QUANTITÉ
+                    posProductAddedCount++;
+                    setVoiceMode('quantity', '🔢 Dites la quantité (' + product.nom + ')', product.id);
+                    showVoiceResult('🔢 Dites la quantité pour ' + product.nom);
+                    showVoiceFlowIndicator('quantity');
+                }
+                
+                // Mettre à jour le panier
+                if (typeof window.updateCartOnly === 'function') {
+                    setTimeout(function() { window.updateCartOnly(); }, 300);
+                }
+                
+            } else {
+                showVoiceResult('❌ Fonction produit non disponible');
+            }
+            break;
+            
         case 'search_text':
-            var searchText = cmd.product ? cmd.product.nom : (cmd.text || '');
+            var searchText = cmd.text || '';
             
             var searchInput = document.getElementById('posSearchInput');
             if (!searchInput) {
@@ -397,45 +441,37 @@ function handleVoiceCommand(cmd) {
         case 'client':
             console.log('👤 Sélection client:', cmd.client);
             
-            // ✅ Sélectionner le client
             window.posCurrentClient = { 
                 id: cmd.client.id, 
                 name: (cmd.client.nom || '') + ' ' + (cmd.client.prenom || '')
             };
             
-            // ✅ Mettre à jour le champ de recherche client
             var ci = document.getElementById('posClientSearchInput');
             if (ci) {
                 ci.value = window.posCurrentClient.name;
-                // Déclencher l'événement pour fermer le dropdown
                 try {
                     var ev = new Event('input', { bubbles: true });
                     ci.dispatchEvent(ev);
                 } catch(e) {}
             }
             
-            // ✅ Cacher le dropdown
             var dropdown = document.getElementById('posClientDropdown');
             if (dropdown) dropdown.style.display = 'none';
             
-            // ✅ Afficher le crédit du client
             if (typeof window.updateClientCreditDisplay === 'function') {
                 window.updateClientCreditDisplay(cmd.client.id);
             }
             
-            // ✅ Mettre à jour les boutons de paiement
             if (typeof window.updatePaymentButtons === 'function') {
                 window.updatePaymentButtons();
             }
             
-            // ✅ Forcer le rendu du POS
             if (typeof window.renderPOS === 'function') {
                 window.renderPOS();
             }
             
             showVoiceResult('👤 ' + window.posCurrentClient.name);
             
-            // ✅ Si on est en étape 1, passer à l'étape 2
             if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
                 setTimeout(function() {
                     window.posGoToStep2();
@@ -462,6 +498,23 @@ function handleVoiceCommand(cmd) {
                     window.posCalculateChange();
                 }
                 showVoiceResult('💰 ' + cmd.value + ' MAD');
+            } else {
+                // Si pas de champ montant, c'est peut-être une quantité
+                if (window.posCart && window.posCart.length > 0) {
+                    var lastItem = window.posCart[window.posCart.length - 1];
+                    if (lastItem) {
+                        var diff = cmd.value - lastItem.quantite;
+                        if (diff > 0) {
+                            if (typeof window.posUpdateQty === 'function') {
+                                var idx = window.posCart.length - 1;
+                                for (var i = 0; i < diff; i++) {
+                                    window.posUpdateQty(idx, 1);
+                                }
+                                showVoiceResult('📦 ' + lastItem.nom + ' x' + cmd.value);
+                            }
+                        }
+                    }
+                }
             }
             break;
             
@@ -496,7 +549,21 @@ function handleVoiceCommand(cmd) {
             
         case 'navigate':
             console.log('📍 Navigation vers:', cmd.page);
-            if (typeof navigateTo === 'function') {
+            
+            // 🔥 NAVIGATION SPÉCIALE VERS POS
+            if (cmd.page === 'pos') {
+                console.log('🛒 Navigation vers POS demandée');
+                if (typeof navigateTo === 'function') {
+                    navigateTo('pos');
+                    // Réinitialiser le mode vocal pour la recherche
+                    setTimeout(function() {
+                        setVoiceMode('search', '🎤 Recherche vocale active', null);
+                        showVoiceResult('🛒 POS ouvert');
+                    }, 500);
+                } else {
+                    showVoiceResult('❌ Navigation non disponible');
+                }
+            } else if (typeof navigateTo === 'function') {
                 navigateTo(cmd.page);
                 var pageLabels = {
                     'credits': '📋 Crédits',
@@ -564,6 +631,7 @@ function setVoiceMode(mode, msg, productId) {
     if (productId !== undefined) lastAddedProductId = productId;
     if (mode === 'payment') window.voicePaymentState = 0;
     showVoiceModeIndicator();
+    console.log('🎤 Mode vocal changé:', mode, msg);
 }
 
 // ========== MICRO ==========
@@ -640,9 +708,8 @@ function posStartVoiceRecording() {
             // 🔥 Analyser la commande
             var cmd = parseVoiceCommand(final);
             if (cmd && cmd.type !== 'ignore') {
-                // Éviter les doublons de commandes
                 var now = Date.now();
-                if (now - lastCommandTime > 2000 || cmd.type === 'search_text' || cmd.type === 'search_product') {
+                if (now - lastCommandTime > 1500 || cmd.type === 'search_product' || cmd.type === 'search_text') {
                     lastCommandTime = now;
                     handleVoiceCommand(cmd);
                 }
@@ -763,10 +830,10 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v17 – CORRECTION FINALE DÉFINITIVE');
+console.log('🎤 Module vocal v18 – CORRECTION FINALE');
+console.log('✅ Navigation "pos" depuis n\'importe quelle page');
+console.log('✅ Mode quantité après sélection d\'un produit');
 console.log('✅ Navigation vocale améliorée (crédits, ventes, dashboard, etc.)');
 console.log('✅ Détection et sélection automatique des clients en étape 2');
 console.log('✅ Détection des périodes (aujourd\'hui, ce mois, cette année)');
 console.log('✅ Détection des montants en étape 2');
-console.log('✅ Utilisation de InputEvent pour meilleure compatibilité');
-console.log('✅ Fallback avec querySelector générique');
