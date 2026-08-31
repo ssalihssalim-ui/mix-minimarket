@@ -1,10 +1,9 @@
-// ==================== POS-AUDIO.JS v21 – CORRECTION FINALE ====================
-// ✅ CORRECTION : Produit dit → s'affiche dans la barre de recherche (pas d'ajout auto)
-// ✅ CORRECTION : L'utilisateur clique sur le produit pour l'ajouter au panier
+// ==================== POS-AUDIO.JS v23 – CORRECTION FINALE ====================
+// ✅ CORRECTION : En étape 2 (paiement), la recherche client sélectionne automatiquement le client
+// ✅ CORRECTION : Recherche par nom, prénom et description du client
+// ✅ CORRECTION : Navigation "POS" fonctionne depuis TOUTES les pages
+// ✅ CORRECTION : Produit dit → affiché dans barre de recherche (pas d'ajout auto)
 // ✅ CORRECTION : Mode quantité activé APRÈS le clic sur le produit
-// ✅ CORRECTION : Si nouveau produit dit, on ignore la quantité et on cherche le nouveau
-// ✅ CORRECTION : Navigation "pos" depuis n'importe quelle page
-// ✅ CORRECTION : Détection et sélection automatique des clients en étape 2
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -102,12 +101,13 @@ function isIOSStandalone() { return /iPad|iPhone|iPod/.test(navigator.userAgent)
 function checkVoiceSupport() { var i = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (i && isIOSStandalone()) return { supported: false, reason: 'Ouvrez dans Safari' }; if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return { supported: false, reason: 'Non supporté' }; return { supported: true }; }
 async function requestMicrophonePermission() { if (micPermissionGranted) return true; try { if (!navigator.mediaDevices?.getUserMedia) return false; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach(t => t.stop()); micPermissionGranted = true; return true; } catch (e) { return false; } }
 
-// ========== INDEX CLIENT ==========
+// ========== INDEX CLIENT (AMÉLIORÉ AVEC DESCRIPTION) ==========
 function buildClientIndex() {
     if (clientIndexBuilt || !window.posAllClients?.length) return;
     clientSearchIndex = {};
     window.posAllClients.forEach(c => {
         if (!c?.id) return;
+        // 🔥 Inclure nom, prénom, téléphone ET description
         const allText = (c.nom + ' ' + c.prenom + ' ' + c.telephone + ' ' + (c.description || '')).toLowerCase();
         allText.split(/[\s,;.]+/).forEach(mot => {
             mot = mot.trim();
@@ -118,6 +118,7 @@ function buildClientIndex() {
         });
     });
     clientIndexBuilt = true;
+    console.log('📇 Index client construit avec ' + window.posAllClients.length + ' clients');
 }
 
 function fastFindClient(query) {
@@ -207,10 +208,9 @@ function parseVoiceCommand(transcript) {
     console.log('📄 Page actuelle:', currentPage);
     console.log('📌 PosStep:', posStep);
     console.log('🎤 VoiceMode:', voiceMode);
-    console.log('📦 waitingForQuantity:', waitingForQuantity);
 
     // ============================================================
-    // 1. NAVIGATION
+    // 🔥 PRIORITÉ 1 : NAVIGATION (fonctionne sur TOUTES les pages)
     // ============================================================
     
     var navWords = {
@@ -241,7 +241,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 2. DÉTECTION DES PÉRIODES
+    // PRIORITÉ 2 : DÉTECTION DES PÉRIODES
     // ============================================================
     
     var period = detectPeriodFilter(cleaned);
@@ -251,7 +251,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 3. MODE QUANTITÉ - Si on attend une quantité
+    // PRIORITÉ 3 : MODE QUANTITÉ
     // ============================================================
     
     if (waitingForQuantity && pendingProductForQuantity) {
@@ -265,15 +265,12 @@ function parseVoiceCommand(transcript) {
             };
         }
         
-        // 🔥 Si l'utilisateur dit un autre produit, on IGNORE la quantité et on cherche le nouveau produit
         var products = fastFindProduct(cleaned);
         if (products.length > 0 && products[0].id !== pendingProductForQuantity) {
             console.log('🔄 Nouveau produit détecté, on ignore la quantité en cours');
-            // Annuler le mode quantité mais ne pas retourner d'erreur
             waitingForQuantity = false;
             pendingProductForQuantity = null;
             setVoiceMode('search', '🎤 Recherche vocale active', null);
-            // Continuer vers la recherche du nouveau produit
         } else if (cleaned.length > 0 && !cleaned.includes('annule') && !cleaned.includes('cancel')) {
             showVoiceResult('🔢 Dites un nombre (ex: 2, 3, 5...) ou un autre produit');
             return { type: 'ignore' };
@@ -281,7 +278,18 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 4. RECHERCHE DE PRODUITS (étape 1)
+    // PRIORITÉ 4 : PAGE CRÉDITS - RECHERCHE
+    // ============================================================
+    
+    if (currentPage === 'Crédits') {
+        if (cleaned.length > 1) {
+            return { type: 'search_credits', text: cleaned };
+        }
+        return { type: 'ignore' };
+    }
+
+    // ============================================================
+    // PRIORITÉ 5 : RECHERCHE DE PRODUITS (étape 1)
     // ============================================================
     
     if (posStep === 1 && (currentPage === 'POS' || currentPage === 'Dashboard' || currentPage === '')) {
@@ -307,7 +315,6 @@ function parseVoiceCommand(transcript) {
             return { type: 'clear' };
         }
         
-        // 🔥 RECHERCHE DE PRODUIT - AFFICHE DANS LA BARRE DE RECHERCHE
         var products = fastFindProduct(cleaned);
         if (products.length > 0) {
             console.log('✅ Produit trouvé:', products[0].nom);
@@ -326,38 +333,51 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 5. PAIEMENT (étape 2)
+    // 🔥 PRIORITÉ 6 : PAIEMENT (étape 2) - RECHERCHE CLIENT AUTOMATIQUE
     // ============================================================
     
     if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
         
-        var clientMatch = cleaned.match(/client\s+([a-zA-Zéèêëïîôöûüç\s]+)/i);
-        if (clientMatch && clientMatch[1]) {
-            var clientName = clientMatch[1].trim();
-            var clients = fastFindClient(clientName);
-            if (clients.length > 0) {
-                console.log('✅ Client trouvé via "client X":', clients[0].nom);
-                return { type: 'client', client: clients[0] };
-            }
-        }
-        
+        // 🔥 Recherche de client par nom, prénom OU description
         var clients = fastFindClient(cleaned);
+        
         if (clients.length >= 1) {
-            console.log('✅ Client trouvé:', clients[0].nom);
-            return { type: 'client', client: clients[0] };
+            // Si un seul client trouvé, on le sélectionne automatiquement
+            var client = clients[0];
+            console.log('✅ Client trouvé:', client.nom, client.prenom, 'description:', client.description);
+            return { 
+                type: 'client', 
+                client: client,
+                // 🔥 On garde la recherche complète pour affichage
+                searchText: cleaned
+            };
         }
         
+        // Si plusieurs clients trouvés, on prend le premier (le plus pertinent)
+        if (clients.length > 0) {
+            var client = clients[0];
+            console.log('✅ Client sélectionné (parmi ' + clients.length + '):', client.nom);
+            return { 
+                type: 'client', 
+                client: client,
+                searchText: cleaned
+            };
+        }
+        
+        // Détection du mode de paiement
         var pm = detectPaymentMode(cleaned);
         if (pm) {
             console.log('✅ Mode paiement détecté:', pm);
             return { type: 'payment_mode', mode: pm };
         }
         
+        // Finalisation
         if (cleaned.includes('valide') || cleaned.includes('finaliser') || 
             cleaned.includes('terminer') || cleaned.includes('payer')) {
             return { type: 'validate' };
         }
         
+        // Détection d'un montant
         var amount = extractNumberFromTranscript(cleaned);
         if (amount !== null && amount > 0) {
             console.log('✅ Montant détecté:', amount);
@@ -385,7 +405,6 @@ function handleVoiceCommand(cmd) {
 
     switch (cmd.type) {
         case 'search_product':
-            // 🔥 AFFICHER LE PRODUIT DANS LA BARRE DE RECHERCHE - PAS D'AJOUT DIRECT
             var product = cmd.product;
             console.log('🔍 Produit trouvé:', product.nom);
             
@@ -395,11 +414,9 @@ function handleVoiceCommand(cmd) {
             }
             
             if (searchInput) {
-                // Afficher le nom du produit dans la barre de recherche
                 searchInput.value = product.nom;
                 window.posSearchQuery = product.nom.toLowerCase().trim();
                 
-                // Filtrer les produits pour afficher celui trouvé
                 if (typeof window.posSearchProducts === 'function') {
                     window.posSearchProducts(product.nom);
                 } else if (typeof window.filterProductGrid === 'function') {
@@ -412,14 +429,10 @@ function handleVoiceCommand(cmd) {
                 
                 showVoiceResult('🔍 ' + product.nom + ' - Cliquez sur le produit pour l\'ajouter');
                 showVoiceFlowIndicator('product');
-                
-            } else {
-                showVoiceResult('❌ Champ de recherche introuvable');
             }
             break;
             
         case 'quantity':
-            // 🔥 METTRE À JOUR LA QUANTITÉ DU PRODUIT DÉJÀ DANS LE PANIER
             var productId = cmd.productId;
             var quantity = cmd.value;
             
@@ -443,12 +456,10 @@ function handleVoiceCommand(cmd) {
                     showVoiceResult('✅ Quantité mise à jour: ' + quantity);
                 }
                 
-                // 🔥 RETOUR EN MODE RECHERCHE
                 waitingForQuantity = false;
                 pendingProductForQuantity = null;
                 setVoiceMode('search', '🎤 Recherche vocale active', null);
                 
-                // Vider la barre de recherche
                 var searchInput = document.getElementById('posSearchInput');
                 if (searchInput) {
                     searchInput.value = '';
@@ -463,18 +474,28 @@ function handleVoiceCommand(cmd) {
             }
             break;
             
+        case 'search_credits':
+            var searchText = cmd.text || '';
+            var creditsInput = document.getElementById('creditsSearchInput');
+            if (creditsInput) {
+                creditsInput.value = searchText;
+                window.creditsSearch = searchText;
+                if (typeof window.applyCreditsFilters === 'function') {
+                    window.applyCreditsFilters();
+                }
+                showVoiceResult('🔍 ' + searchText);
+            }
+            break;
+            
         case 'search_text':
             var searchText = cmd.text || '';
-            
             var searchInput = document.getElementById('posSearchInput');
             if (!searchInput) {
                 searchInput = document.querySelector('#posSearchInput, input[type="text"][placeholder*="Rechercher"], input[placeholder*="Rechercher"]');
             }
-            
             if (searchInput) {
                 window.posSearchQuery = searchText.toLowerCase().trim();
                 searchInput.value = searchText;
-                
                 try {
                     var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
                     searchInput.dispatchEvent(inputEvent);
@@ -482,17 +503,14 @@ function handleVoiceCommand(cmd) {
                     var event = new Event('input', { bubbles: true });
                     searchInput.dispatchEvent(event);
                 }
-                
                 if (typeof window.posSearchProducts === 'function') {
                     window.posSearchProducts(searchText);
                 } else if (typeof window.filterProductGrid === 'function') {
                     window.filterProductGrid();
                 }
-                
                 if (typeof window.updateClearButtonVisibility === 'function') {
                     window.updateClearButtonVisibility();
                 }
-                
                 showVoiceResult('🔍 ' + searchText);
             }
             break;
@@ -500,37 +518,50 @@ function handleVoiceCommand(cmd) {
         case 'client':
             console.log('👤 Sélection client:', cmd.client);
             
+            // 🔥 Sélectionner le client
             window.posCurrentClient = { 
                 id: cmd.client.id, 
                 name: (cmd.client.nom || '') + ' ' + (cmd.client.prenom || '')
             };
             
+            // 🔥 Afficher le client dans le champ de recherche
             var ci = document.getElementById('posClientSearchInput');
             if (ci) {
                 ci.value = window.posCurrentClient.name;
+                // Déclencher l'événement pour fermer le dropdown
                 try {
                     var ev = new Event('input', { bubbles: true });
                     ci.dispatchEvent(ev);
                 } catch(e) {}
             }
             
+            // 🔥 Cacher le dropdown
             var dropdown = document.getElementById('posClientDropdown');
             if (dropdown) dropdown.style.display = 'none';
             
+            // 🔥 Afficher le crédit du client
             if (typeof window.updateClientCreditDisplay === 'function') {
                 window.updateClientCreditDisplay(cmd.client.id);
             }
             
+            // 🔥 Mettre à jour les boutons de paiement
             if (typeof window.updatePaymentButtons === 'function') {
                 window.updatePaymentButtons();
             }
             
+            // 🔥 Forcer le rendu du POS
             if (typeof window.renderPOS === 'function') {
                 window.renderPOS();
             }
             
-            showVoiceResult('👤 ' + window.posCurrentClient.name);
+            // 🔥 Afficher le résultat vocal
+            var displayName = window.posCurrentClient.name;
+            if (cmd.client.description) {
+                displayName += ' (' + cmd.client.description + ')';
+            }
+            showVoiceResult('👤 ' + displayName);
             
+            // Si on est en étape 1, passer à l'étape 2
             if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
                 setTimeout(function() {
                     window.posGoToStep2();
@@ -634,14 +665,12 @@ function handleVoiceCommand(cmd) {
             
         case 'period_filter':
             console.log('📅 Filtre période:', cmd.period);
-            
             var periodSelect = document.getElementById('periodSelect') || 
                                document.getElementById('globalPeriodSelect') ||
                                document.getElementById('ventesPeriodSelect') ||
                                document.getElementById('creditsPeriodSelect') ||
                                document.getElementById('commandesPeriodSelect') ||
                                document.querySelector('select[onchange*="Period"]');
-            
             if (periodSelect) {
                 periodSelect.value = cmd.period;
                 try {
@@ -733,23 +762,58 @@ function posStartVoiceRecording() {
         
         console.log('🎤 Résultat vocal - Interim:', interim, 'Final:', final);
 
-        // Page Crédits
+        // 🔥 VÉRIFIER LA NAVIGATION EN PREMIER
+        if (final && final.trim().length > 0 && final !== lastFinal) {
+            lastFinal = final;
+            var navCheck = parseVoiceCommand(final);
+            if (navCheck && navCheck.type === 'navigate') {
+                console.log('🚀 Navigation détectée:', navCheck);
+                handleVoiceCommand(navCheck);
+                return;
+            }
+        }
+
+        // Page Crédits - Recherche
         var cp = document.getElementById('pageTitle')?.textContent || '';
         if (cp === 'Crédits') {
-            var searchInput = document.getElementById('creditsSearchInput');
-            var voiceDisplay = document.getElementById('creditsVoiceDisplay');
-            if (final && searchInput) {
-                if (typeof window.processCreditsSearchFromVoice === 'function') {
-                    window.processCreditsSearchFromVoice(final);
-                } else {
+            if (final && final.trim().length > 0 && final !== lastFinal) {
+                var searchInput = document.getElementById('creditsSearchInput');
+                var voiceDisplay = document.getElementById('creditsVoiceDisplay');
+                if (searchInput) {
+                    var period = detectPeriodFilter(final);
+                    if (period) {
+                        var periodSelect = document.getElementById('creditsPeriodSelect');
+                        if (periodSelect) {
+                            periodSelect.value = period;
+                            try {
+                                var changeEvent = new Event('change', { bubbles: true });
+                                periodSelect.dispatchEvent(changeEvent);
+                            } catch(e) {}
+                            var labels = {
+                                'today': "📅 Aujourd'hui",
+                                'week': '📅 Cette semaine',
+                                'month': '📅 Ce mois',
+                                'year': '📅 Cette année',
+                                'all': '📅 Toutes les périodes'
+                            };
+                            showVoiceResult(labels[period] || '📅 Filtre appliqué');
+                            if (voiceDisplay) voiceDisplay.value = labels[period] || '📅 Filtre appliqué';
+                            return;
+                        }
+                    }
                     searchInput.value = final;
                     window.creditsSearch = final;
-                    if (typeof window.applyCreditsFilters === 'function') window.applyCreditsFilters();
+                    if (typeof window.applyCreditsFilters === 'function') {
+                        window.applyCreditsFilters();
+                    }
+                    if (voiceDisplay) voiceDisplay.value = final;
+                    showVoiceResult('🔍 ' + final);
                 }
-                if (voiceDisplay) voiceDisplay.value = final;
-            } else if (interim && searchInput) {
-                searchInput.value = interim + ' ✍️';
-                if (voiceDisplay) voiceDisplay.value = interim + ' ✍️';
+            } else if (interim) {
+                var si = document.getElementById('creditsSearchInput');
+                if (si) si.value = interim + ' ✍️';
+                var vd = document.getElementById('creditsVoiceDisplay');
+                if (vd) vd.value = interim + ' ✍️';
             }
             return;
         }
@@ -765,7 +829,9 @@ function posStartVoiceRecording() {
                 if (now - lastCommandTime > 1500 || 
                     cmd.type === 'search_product' || 
                     cmd.type === 'search_text' ||
-                    cmd.type === 'quantity') {
+                    cmd.type === 'quantity' ||
+                    cmd.type === 'client' ||
+                    cmd.type === 'navigate') {
                     lastCommandTime = now;
                     handleVoiceCommand(cmd);
                 }
@@ -893,9 +959,9 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v21 – CORRECTION FINALE');
+console.log('🎤 Module vocal v23 – CORRECTION FINALE');
+console.log('✅ En étape 2, recherche client par nom, prénom ET description');
+console.log('✅ Client sélectionné automatiquement et affiché dans le champ');
+console.log('✅ Navigation "POS" fonctionne depuis TOUTES les pages');
 console.log('✅ Produit dit → affiché dans barre de recherche (pas d\'ajout auto)');
-console.log('✅ L\'utilisateur clique sur le produit pour l\'ajouter');
 console.log('✅ Mode quantité activé APRÈS le clic sur le produit');
-console.log('✅ Si nouveau produit dit, on ignore la quantité et on cherche le nouveau');
-console.log('✅ Navigation "pos" depuis n\'importe quelle page');
