@@ -1,8 +1,7 @@
-// ==================== POS-AUDIO.JS v23 – CORRECTION FINALE ====================
-// ✅ CORRECTION : En étape 2 (paiement), la recherche client sélectionne automatiquement le client
-// ✅ CORRECTION : Recherche par nom, prénom et description du client
+// ==================== POS-AUDIO.JS v24 – CORRECTION FINALE ====================
+// ✅ CORRECTION : Produit dit → s'écrit ET la recherche se lance automatiquement (comme Entrée)
+// ✅ CORRECTION : En étape 2, client détecté et sélectionné automatiquement
 // ✅ CORRECTION : Navigation "POS" fonctionne depuis TOUTES les pages
-// ✅ CORRECTION : Produit dit → affiché dans barre de recherche (pas d'ajout auto)
 // ✅ CORRECTION : Mode quantité activé APRÈS le clic sur le produit
 
 var voiceRecognition = null;
@@ -101,13 +100,12 @@ function isIOSStandalone() { return /iPad|iPhone|iPod/.test(navigator.userAgent)
 function checkVoiceSupport() { var i = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (i && isIOSStandalone()) return { supported: false, reason: 'Ouvrez dans Safari' }; if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return { supported: false, reason: 'Non supporté' }; return { supported: true }; }
 async function requestMicrophonePermission() { if (micPermissionGranted) return true; try { if (!navigator.mediaDevices?.getUserMedia) return false; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach(t => t.stop()); micPermissionGranted = true; return true; } catch (e) { return false; } }
 
-// ========== INDEX CLIENT (AMÉLIORÉ AVEC DESCRIPTION) ==========
+// ========== INDEX CLIENT (AVEC DESCRIPTION) ==========
 function buildClientIndex() {
     if (clientIndexBuilt || !window.posAllClients?.length) return;
     clientSearchIndex = {};
     window.posAllClients.forEach(c => {
         if (!c?.id) return;
-        // 🔥 Inclure nom, prénom, téléphone ET description
         const allText = (c.nom + ' ' + c.prenom + ' ' + c.telephone + ' ' + (c.description || '')).toLowerCase();
         allText.split(/[\s,;.]+/).forEach(mot => {
             mot = mot.trim();
@@ -207,10 +205,9 @@ function parseVoiceCommand(transcript) {
     console.log('🔍 Parsing commande:', cleaned);
     console.log('📄 Page actuelle:', currentPage);
     console.log('📌 PosStep:', posStep);
-    console.log('🎤 VoiceMode:', voiceMode);
 
     // ============================================================
-    // 🔥 PRIORITÉ 1 : NAVIGATION (fonctionne sur TOUTES les pages)
+    // 🔥 PRIORITÉ 1 : NAVIGATION (TOUTES LES PAGES)
     // ============================================================
     
     var navWords = {
@@ -342,21 +339,8 @@ function parseVoiceCommand(transcript) {
         var clients = fastFindClient(cleaned);
         
         if (clients.length >= 1) {
-            // Si un seul client trouvé, on le sélectionne automatiquement
             var client = clients[0];
             console.log('✅ Client trouvé:', client.nom, client.prenom, 'description:', client.description);
-            return { 
-                type: 'client', 
-                client: client,
-                // 🔥 On garde la recherche complète pour affichage
-                searchText: cleaned
-            };
-        }
-        
-        // Si plusieurs clients trouvés, on prend le premier (le plus pertinent)
-        if (clients.length > 0) {
-            var client = clients[0];
-            console.log('✅ Client sélectionné (parmi ' + clients.length + '):', client.nom);
             return { 
                 type: 'client', 
                 client: client,
@@ -405,6 +389,7 @@ function handleVoiceCommand(cmd) {
 
     switch (cmd.type) {
         case 'search_product':
+            // 🔥 AFFICHER LE PRODUIT ET LANCER LA RECHERCHE AUTOMATIQUEMENT
             var product = cmd.product;
             console.log('🔍 Produit trouvé:', product.nom);
             
@@ -414,15 +399,28 @@ function handleVoiceCommand(cmd) {
             }
             
             if (searchInput) {
+                // 🔥 1. ÉCRIRE LE PRODUIT
                 searchInput.value = product.nom;
                 window.posSearchQuery = product.nom.toLowerCase().trim();
                 
+                // 🔥 2. DÉCLENCHER L'ÉVÉNEMENT INPUT
+                try {
+                    var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
+                    searchInput.dispatchEvent(inputEvent);
+                } catch(e) {
+                    var event = new Event('input', { bubbles: true });
+                    searchInput.dispatchEvent(event);
+                }
+                
+                // 🔥 3. LANCER LA RECHERCHE (comme si on avait appuyé sur Entrée)
                 if (typeof window.posSearchProducts === 'function') {
+                    console.log('✅ Lancement recherche pour:', product.nom);
                     window.posSearchProducts(product.nom);
                 } else if (typeof window.filterProductGrid === 'function') {
                     window.filterProductGrid();
                 }
                 
+                // 🔥 4. METTRE À JOUR LE BOUTON CLEAR
                 if (typeof window.updateClearButtonVisibility === 'function') {
                     window.updateClearButtonVisibility();
                 }
@@ -554,7 +552,6 @@ function handleVoiceCommand(cmd) {
                 window.renderPOS();
             }
             
-            // 🔥 Afficher le résultat vocal
             var displayName = window.posCurrentClient.name;
             if (cmd.client.description) {
                 displayName += ' (' + cmd.client.description + ')';
@@ -959,9 +956,8 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v23 – CORRECTION FINALE');
-console.log('✅ En étape 2, recherche client par nom, prénom ET description');
-console.log('✅ Client sélectionné automatiquement et affiché dans le champ');
+console.log('🎤 Module vocal v24 – CORRECTION FINALE');
+console.log('✅ Produit dit → s\'écrit ET la recherche se lance automatiquement');
+console.log('✅ En étape 2, client détecté et sélectionné automatiquement');
 console.log('✅ Navigation "POS" fonctionne depuis TOUTES les pages');
-console.log('✅ Produit dit → affiché dans barre de recherche (pas d\'ajout auto)');
 console.log('✅ Mode quantité activé APRÈS le clic sur le produit');
