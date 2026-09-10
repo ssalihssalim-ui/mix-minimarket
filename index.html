@@ -4,14 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0A0D12">
-<meta name="description" content="Système de gestion pour minimarket - Mixmax Minimarket">
+<meta name="description" content="Système de gestion E-SOLUTION POS">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Mixmax Minimarket</title>
+<title>E-SOLUTION POS</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="logo.png">
+<link rel="shortcut icon" href="logo.png" type="image/png">
 <link rel="apple-touch-icon" href="logo.png">
+<link rel="apple-touch-icon" sizes="180x180" href="logo.png">
+<meta name="msapplication-TileImage" content="logo.png">
+<meta name="msapplication-TileColor" content="#0A0D12">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="style.css">
@@ -26,9 +30,9 @@
 <div id="authPage" class="login-wrapper">
 <div class="login-container" id="loginContainer">
 <div class="login-brand">
-<div class="brand-icon"><img src="logo.png" alt="Mixmax Minimarket" class="brand-logo"></div>
-<h1><span>Mixmax</span> Minimarket</h1>
-<p style="color:rgba(255,255,255,0.8); font-size:0.9rem;">Gestion complète • Minimarket</p>
+<div class="brand-icon"><img src="logo.png" alt="E-SOLUTION POS" class="brand-logo" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-store\' style=\'font-size:50px;color:#14B8A6;\'></i>';"></div>
+<h1><span>E-SOLUTION</span> POS</h1>
+<p style="color:rgba(255,255,255,0.8); font-size:0.9rem;">Point de vente • Gestion complète</p>
 </div>
 <div class="login-form">
 <h2>🔐 Connexion</h2>
@@ -42,8 +46,8 @@
 </div>
 <div class="register-container hidden" id="registerContainer">
 <div class="register-brand">
-<div class="brand-icon"><img src="logo.png" alt="Mixmax Minimarket" class="brand-logo"></div>
-<h1><span>Mixmax</span> Minimarket</h1>
+<div class="brand-icon"><img src="logo.png" alt="E-SOLUTION POS" class="brand-logo" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-store\' style=\'font-size:50px;color:#14B8A6;\'></i>';"></div>
+<h1><span>E-SOLUTION</span> POS</h1>
 <p style="color:rgba(255,255,255,0.8);">Inscription rapide</p>
 </div>
 <div class="register-form">
@@ -75,9 +79,9 @@
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <div class="sidebar" id="sidebar">
 <div class="sidebar-header">
-<div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img"></div>
-<h2>Mixmax <span>Market</span></h2>
-<div class="sidebar-subtitle">MINIMARKET</div>
+<div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-store\' style=\'font-size:30px;color:#14B8A6;\'></i>';"></div>
+<h2>E-SOLUTION <span>POS</span></h2>
+<div class="sidebar-subtitle">POINT DE VENTE</div>
 </div>
 <div class="sidebar-nav">
 <ul id="navMenu"></ul>
@@ -104,8 +108,8 @@
 <div class="sidebar-overlay" id="clientSidebarOverlay" onclick="closeClientSidebar()"></div>
 <div class="sidebar" id="clientSidebar">
 <div class="sidebar-header">
-<div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img"></div>
-<h2>Mixmax <span>Market</span></h2>
+<div class="sidebar-logo"><img src="logo.png" alt="Logo" class="sidebar-logo-img" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-store\' style=\'font-size:30px;color:#14B8A6;\'></i>';"></div>
+<h2>E-SOLUTION <span>POS</span></h2>
 <div class="sidebar-subtitle">BIENVENUE</div>
 </div>
 <div class="sidebar-nav">
@@ -146,16 +150,16 @@ Contenu du modal
 </div>
 </div>
 
-<!-- ==================== SCRIPTS ==================== -->
+<!-- ==================== SCRIPTS (ORDRE CORRIGÉ POUR PAGINATION) ==================== -->
 <script src="db-cache.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js"></script>
-<script src="script.js"></script>
+<script src="admin-crud.js"></script>   <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="admin-ventes.js"></script>  <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="admin-credits.js"></script>  <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="admin.js"></script>  <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="script.js"></script>  <!-- ✅ script.js APRÈS les autres -->
 <script src="pos.js"></script>
-<script src="admin.js"></script>
-<script src="admin-crud.js"></script>
-<script src="admin-ventes.js"></script>
-<script src="admin-credits.js"></script>
 <script src="client.js"></script>
 <script src="menutactile.js"></script>
 <script src="depenses.js"></script>
@@ -167,6 +171,19 @@ Contenu du modal
 if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)).catch(err => console.error('SW ✗', err));
 }
+
+// ✅ AJOUT : Sauvegarde automatique au chargement de l'application
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+            console.log('💾 Sauvegarde initiale des données...');
+            CacheDB.saveAll();
+            if (typeof CacheDB.setupRealtime === 'function') {
+                CacheDB.setupRealtime();
+            }
+        }
+    }, 2000);
+});
 </script>
 
 </body>
