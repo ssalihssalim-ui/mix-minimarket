@@ -24,6 +24,11 @@ window._fromPos = false;  // ✅ Indique si on vient du POS
 window.creditsDateDebut = window.creditsDateDebut || '';
 window.creditsDateFin = window.creditsDateFin || '';
 
+// ✅ INITIALISATION PAGINATION
+if (!window.currentPages) window.currentPages = {};
+if (!window.currentPages.credits) window.currentPages.credits = 1;
+if (!window.itemsPerPage) window.itemsPerPage = 15;
+
 // ========== FONCTIONS UTILITAIRES ==========
 
 function escapeHtml(str) {
@@ -707,6 +712,10 @@ injectCreditsStyles();
 
 await loadClientsForSearchCredits();
 
+// ✅ Initialisation pagination
+if (!window.currentPages) window.currentPages = {};
+window.currentPages.credits = 1;
+
 // ✅ Vérifier si on vient du POS avec un client pré-sélectionné
 var savedClientId = localStorage.getItem('posSelectedCreditClientId');
 var savedClientName = localStorage.getItem('posSelectedCreditClientName');
@@ -1095,6 +1104,75 @@ document.getElementById('creditsStatsCount').textContent = data.length;
 document.getElementById('creditsStatsPaye').textContent = totalPaye.toFixed(2);
 }
 
+// ==================== PAGINATION - DÉPLACÉE ICI POUR ÊTRE DISPONIBLE ====================
+
+// Fonction de pagination générique
+function getPaginationHTML(pageType, totalItems) {
+    var perPage = window.itemsPerPage || 15;
+    var totalPages = Math.ceil(totalItems / perPage);
+    if (!window.currentPages) window.currentPages = {};
+    var cp = window.currentPages[pageType] || 1;
+    if (totalPages <= 1) return '';
+    var html = '<div style="display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap;">';
+    html += '<button onclick="changePage(\'' + pageType + '\', 1)" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏮</button>';
+    html += '<button onclick="changePage(\'' + pageType + '\', ' + Math.max(1, cp - 1) + ')" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">◀</button>';
+    html += '<span style="padding:6px 12px;">' + cp + ' / ' + totalPages + '</span>';
+    html += '<button onclick="changePage(\'' + pageType + '\', ' + Math.min(totalPages, cp + 1) + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">▶</button>';
+    html += '<button onclick="changePage(\'' + pageType + '\', ' + totalPages + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏭</button>';
+    html += '</div>';
+    return html;
+}
+window.getPaginationHTML = getPaginationHTML;
+
+// Fonction pour changer de page
+function changePage(pageType, page) {
+    console.log('🔄 changePage crédits appelé:', pageType, page);
+    
+    var totalItems = 0;
+    if (pageType === 'credits') {
+        totalItems = window.filteredCredits ? window.filteredCredits.length : (window.allCreditsData || []).length;
+    } else if (pageType === 'ventes') {
+        totalItems = window.filteredVentes ? window.filteredVentes.length : (window.allVentesData || []).length;
+    } else if (pageType === 'commandes') {
+        totalItems = window.filteredCommandes ? window.filteredCommandes.length : (window.allCommandesData || []).length;
+    }
+    
+    var perPage = window.itemsPerPage || 15;
+    var totalPages = Math.ceil(totalItems / perPage);
+    if (page < 1 || page > totalPages) return;
+    
+    if (!window.currentPages) window.currentPages = {};
+    window.currentPages[pageType] = page;
+    console.log('📄 Page courante crédits:', page);
+    
+    // Re-rendre la page correspondante
+    if (pageType === 'credits') {
+        if (typeof renderCreditsTablePro === 'function') {
+            renderCreditsTablePro();
+        }
+    } else if (pageType === 'ventes') {
+        if (typeof window.renderVentesTablePro === 'function') {
+            window.renderVentesTablePro();
+        }
+    } else if (pageType === 'commandes') {
+        if (typeof window.renderCommandesTablePro === 'function') {
+            window.renderCommandesTablePro();
+        }
+    }
+}
+window.changePage = changePage;
+
+// Fonction pour obtenir les données de la page courante
+function getPageData(pageType, data) {
+    if (!window.currentPages) window.currentPages = {};
+    var currentPage = window.currentPages[pageType] || 1;
+    var itemsPerPage = window.itemsPerPage || 15;
+    var start = (currentPage - 1) * itemsPerPage;
+    var end = start + itemsPerPage;
+    return data.slice(start, end);
+}
+window.getPageData = getPageData;
+
 // ==================== RENDER CREDITS TABLE PRO ====================
 function renderCreditsTablePro() {
 var cont = document.getElementById('creditsTableContainer');
@@ -1229,6 +1307,7 @@ h += `
 cont.innerHTML = h;
 document.getElementById('creditsPagination').innerHTML = getPaginationHTML('credits', data.length);
 }
+window.renderCreditsTablePro = renderCreditsTablePro;
 
 // ==================== SÉLECTION CRÉDITS ====================
 
@@ -2078,64 +2157,6 @@ throw e;
 }
 }
 
-// ==================== PAGINATION ====================
-
-// Fonction de pagination générique
-function getPaginationHTML(pageType, totalItems) {
-    var perPage = window.itemsPerPage || 15;
-    var totalPages = Math.ceil(totalItems / perPage);
-    var cp = window.currentPages[pageType] || 1;
-    if (totalPages <= 1) return '';
-    var html = '<div style="display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap;">';
-    html += '<button onclick="changePage(\'' + pageType + '\', 1)" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏮</button>';
-    html += '<button onclick="changePage(\'' + pageType + '\', ' + Math.max(1, cp - 1) + ')" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">◀</button>';
-    html += '<span style="padding:6px 12px;">' + cp + ' / ' + totalPages + '</span>';
-    html += '<button onclick="changePage(\'' + pageType + '\', ' + Math.min(totalPages, cp + 1) + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">▶</button>';
-    html += '<button onclick="changePage(\'' + pageType + '\', ' + totalPages + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏭</button>';
-    html += '</div>';
-    return html;
-}
-
-// Fonction pour changer de page
-function changePage(pageType, page) {
-    console.log('🔄 changePage crédits appelé:', pageType, page);
-    
-    var totalItems = 0;
-    if (pageType === 'credits') {
-        totalItems = window.filteredCredits ? window.filteredCredits.length : (window.allCreditsData || []).length;
-    } else if (pageType === 'ventes') {
-        totalItems = window.filteredVentes ? window.filteredVentes.length : (window.allVentesData || []).length;
-    } else if (pageType === 'commandes') {
-        totalItems = window.filteredCommandes ? window.filteredCommandes.length : (window.allCommandesData || []).length;
-    }
-    
-    var perPage = window.itemsPerPage || 15;
-    var totalPages = Math.ceil(totalItems / perPage);
-    if (page < 1 || page > totalPages) return;
-    
-    window.currentPages[pageType] = page;
-    console.log('📄 Page courante crédits:', page);
-    
-    // Re-rendre la page correspondante
-    if (pageType === 'credits' && typeof window.renderCreditsTablePro === 'function') {
-        window.renderCreditsTablePro();
-    } else if (pageType === 'ventes' && typeof window.renderVentesTablePro === 'function') {
-        window.renderVentesTablePro();
-    } else if (pageType === 'commandes' && typeof window.renderCommandesTablePro === 'function') {
-        window.renderCommandesTablePro();
-    }
-}
-
-// Fonction pour obtenir les données de la page courante
-function getPageData(pageType, data) {
-    if (!window.currentPages) window.currentPages = {};
-    var currentPage = window.currentPages[pageType] || 1;
-    var itemsPerPage = window.itemsPerPage || 15;
-    var start = (currentPage - 1) * itemsPerPage;
-    var end = start + itemsPerPage;
-    return data.slice(start, end);
-}
-
 // ==================== FONCTIONS MANQUANTES AJOUTÉES ====================
 
 // ✅ FONCTION AJOUTÉE : closeCreditSelection
@@ -2301,10 +2322,7 @@ window.validateCreditPayment = validateCreditPayment;
 // ✅ AJOUT DE LA FONCTION WHATSAPP
 window.sendCreditWhatsApp = sendCreditWhatsApp;
 
-// ✅ AJOUT DES FONCTIONS PAGINATION
-window.getPaginationHTML = window.getPaginationHTML || getPaginationHTML;
-window.changePage = window.changePage || changePage;
-window.getPageData = window.getPageData || getPageData;
+// ✅ AJOUT DES FONCTIONS PAGINATION - DÉJÀ EXPOSÉES PLUS HAUT
 
 console.log('🚀 E-SOLUTION - Admin Credits PRO chargé');
 console.log('✅ Détails facture crédit modal ajouté - Font size agrandi');
