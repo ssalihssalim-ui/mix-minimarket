@@ -2301,10 +2301,13 @@ window.validateCreditPayment = validateCreditPayment;
 // ✅ AJOUT DE LA FONCTION WHATSAPP
 window.sendCreditWhatsApp = sendCreditWhatsApp;
 
-// ✅ AJOUT DES FONCTIONS PAGINATION - FORCER LA REDÉFINITION
-window.getPaginationHTML = getPaginationHTML;
-window.changePage = changePage;
-window.getPageData = getPageData;
+// ✅ ALIAS POUR COMPATIBILITÉ avec admin.js (qui appelle renderCreditsTable sans "Pro")
+window.renderCreditsTable = renderCreditsTablePro;
+
+// ✅ PAGINATION - NE PAS écraser les fonctions existantes (admin.js/script.js fonctionnent déjà)
+window.getPaginationHTML = window.getPaginationHTML || getPaginationHTML;
+window.changePage = window.changePage || changePage;
+window.getPageData = window.getPageData || getPageData;
 
 console.log('🚀 E-SOLUTION - Admin Credits PRO chargé');
 console.log('✅ Détails facture crédit modal ajouté - Font size agrandi');
@@ -2320,3 +2323,5 @@ console.log('✅ Filtres rapides : Aujourd\'hui, 3j, 7j, 15j, 30j, 90j, 365j');
 console.log('✅ Paiement crédit : Le champ "Reste à payer" diminue correctement');
 console.log('✅ Synchronisation avec admin ventes : Quand un crédit est payé, la vente se met à jour');
 console.log('✅ Gestion des crédits à 0 MAD : Marqué comme payé automatiquement');
+console.log('✅ ALIAS renderCreditsTable = renderCreditsTablePro (compatibilité admin.js)');
+console.log('✅ changePage NON écrasée (garde la version d\'admin.js)');
