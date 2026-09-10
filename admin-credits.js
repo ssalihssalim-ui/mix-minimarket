@@ -1147,8 +1147,8 @@ function changePage(pageType, page) {
     
     // Re-rendre la page correspondante
     if (pageType === 'credits') {
-        if (typeof renderCreditsTablePro === 'function') {
-            renderCreditsTablePro();
+        if (typeof window.renderCreditsTablePro === 'function') {
+            window.renderCreditsTablePro();
         }
     } else if (pageType === 'ventes') {
         if (typeof window.renderVentesTablePro === 'function') {
