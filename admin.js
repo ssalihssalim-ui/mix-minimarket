@@ -227,11 +227,18 @@ html += '</div>';
 return html;
 }
 
+// ✅ CORRECTION : Utiliser window. pour les fonctions de rendu
 function changePage(tableName, newPage) {
 var renderFunctions = {
-categories: renderCategoriesTable, products: renderProductsTable, clients: renderClientsTable,
-fournisseurs: renderFournisseursTable, depenses: renderDepensesTable, commandes: renderCommandesTable,
-ventes: renderVentesTable, credits: renderCreditsTable, users: renderUsersTable
+categories: function() { if (typeof window.renderCategoriesTable === 'function') window.renderCategoriesTable(); },
+products: function() { if (typeof window.renderProductsTable === 'function') window.renderProductsTable(); },
+clients: function() { if (typeof window.renderClientsTable === 'function') window.renderClientsTable(); },
+fournisseurs: function() { if (typeof window.renderFournisseursTable === 'function') window.renderFournisseursTable(); },
+depenses: function() { if (typeof window.renderDepensesTable === 'function') window.renderDepensesTable(); },
+commandes: function() { if (typeof window.renderCommandesTable === 'function') window.renderCommandesTable(); },
+ventes: function() { if (typeof window.renderVentesTable === 'function') window.renderVentesTable(); },
+credits: function() { if (typeof window.renderCreditsTable === 'function') window.renderCreditsTable(); },
+users: function() { if (typeof window.renderUsersTable === 'function') window.renderUsersTable(); }
 };
 var dataArrays = {
 categories: window.allCategoriesData, products: window.allProductsData, clients: window.allClientsData,
@@ -312,6 +319,13 @@ c.innerHTML = '<div class="stats-grid">' +
 '</div>';
 loadDashboardStats();
 loadPendingRegistrations();
+
+// ✅ AJOUT : Sauvegarde systématique
+if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+    setTimeout(function() {
+        CacheDB.saveAll();
+    }, 500);
+}
 }
 
 function loadDashboardStats() {
@@ -343,15 +357,15 @@ d.innerHTML = `
 </div>
 `;
 
-// 🔥 Utiliser Firestore directement (pas le cache)
+// 🔥 CORRECTION : Suppression de la requête avec index (filtrage en mémoire)
 db.collection('users')
-.where('authorized', '==', 'no')
-.orderBy('createdAt', 'desc')
 .get()
 .then(function(snapshot) {
 window.pendingUsersData = [];
 snapshot.forEach(function(dc) {
 var u = dc.data();
+// Filtrer en mémoire les utilisateurs non autorisés
+if (u.authorized === 'no') {
 window.pendingUsersData.push({
 id: dc.id,
 prenom: (u.prenom || '') + ' ' + (u.nom || ''),
@@ -360,7 +374,16 @@ role: u.role || 'client',
 createdAt: u.createdAt,
 data: u
 });
+}
 });
+
+// Trier par date de création (la plus récente en premier)
+window.pendingUsersData.sort(function(a, b) {
+var dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000).getTime() : 0;
+var dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000).getTime() : 0;
+return dateB - dateA;
+});
+
 renderPendingTable();
 })
 .catch(function(err) {
@@ -470,6 +493,12 @@ await CacheDB.set('users', 'current', window.currentUserData);
 // 6. Synchroniser
 await CacheDB.sync();
 
+// ✅ AJOUT : Sauvegarde du cache
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('users');
+    CacheDB.saveCollection('clients');
+}
+
 alert('✅ Utilisateur accepté avec succès !');
 
 // 7. Rafraîchir les listes
@@ -510,6 +539,12 @@ await CacheDB.delete('clients', uid);
 // 4. Synchroniser
 await CacheDB.sync();
 
+// ✅ AJOUT : Sauvegarde du cache
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('users');
+    CacheDB.saveCollection('clients');
+}
+
 alert('✅ Utilisateur supprimé');
 
 // 5. Rafraîchir
@@ -545,6 +580,13 @@ c.innerHTML = '<div class="stats-grid">' +
 '<div class="content-card"><div class="card-header"><h3><i class="fas fa-users"></i> Utilisateurs</h3><div style="display:flex;gap:10px;"><input type="text" id="usersSearchInput" placeholder="🔍 Rechercher..." style="padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;width:220px;" onkeyup="window.usersSearchQuery=this.value.trim().toLowerCase();renderUsersTable();"><button class="btn-add" onclick="loadUsersList()">Actualiser</button></div></div><div class="table-container"><table class="data-table" id="usersTable"><thead><tr><th>Username</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>';
 loadUsersList();
 loadFideliteSettings();
+
+// ✅ AJOUT : Sauvegarde systématique
+if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+    setTimeout(function() {
+        CacheDB.saveAll();
+    }, 500);
+}
 }
 
 function loadUsersList() {
@@ -621,12 +663,26 @@ localStorage.setItem('fidelite_active', a); localStorage.setItem('fidelite_point
 alert('✅ Enregistré');
 }
 
-// ==================== NAVIGATION ====================
+// ==================== NAVIGATION (AVEC GESTION CAISSIER) ====================
 function navigateTo(page) {
 console.log('📍 Navigation vers:', page);
 
 var content = document.getElementById('dynamicContent');
 if (!content) return;
+
+// 🔥 Cas particulier pour le caissier : page "depenses"
+if (page === 'depenses' && window.currentUserData && window.currentUserData.userData.role === 'caissier') {
+    content.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
+    if (typeof window.loadDepensesPage === 'function') {
+        window.loadDepensesPage(content);
+    } else if (typeof loadDepensesPage === 'function') {
+        loadDepensesPage(content);
+    } else {
+        content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Dépenses non disponibles</p></div>';
+    }
+    closeSidebar();
+    return;
+}
 
 var titles = {
 'dashboard': 'Dashboard',
@@ -639,7 +695,6 @@ var titles = {
 'ventes': 'Ventes',
 'credits': 'Crédits',
 'depenses': 'Dépenses',
-'stock': 'Stock',
 'statistiques': 'Statistiques',
 'options': 'Options'
 };
@@ -655,7 +710,6 @@ var icons = {
 'ventes': 'fa-shopping-cart',
 'credits': 'fa-credit-card',
 'depenses': 'fa-money-bill-wave',
-'stock': 'fa-boxes',
 'statistiques': 'fa-chart-bar',
 'options': 'fa-cog'
 };
@@ -691,22 +745,6 @@ closeSidebar();
 return;
 }
 
-// ✅ Gestion du Stock pour caissier
-if (page === 'stock') {
-if (typeof window.loadCaissierStock === 'function') {
-window.loadCaissierStock(content);
-} else if (typeof loadCaissierStock === 'function') {
-loadCaissierStock(content);
-} else {
-content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Stock - En développement</p></div>';
-}
-closeSidebar();
-return;
-}
-
-// ✅ Gestion des Dépenses pour caissier (déjà géré par la fonction existante)
-// Les dépenses sont déjà gérées par loadDepensesPage
-
 // ✅ Autres pages
 var pageFunctions = {
 'dashboard': window.loadDashboardPage || loadDashboardPage,
@@ -735,99 +773,6 @@ content.innerHTML = '<div class="content-card"><p style="text-align:center;paddi
 }
 
 closeSidebar();
-}
-
-// ==================== CRÉDITS ====================
-function loadCreditsPage(c) {
-console.log('📋 Chargement de la page Crédits...');
-
-c.innerHTML = `
-<div class="content-card">
-<div class="card-header">
-<h3><i class="fas fa-credit-card"></i> Crédits</h3>
-<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-<input type="text" id="creditsSearchInput" placeholder="🔍 Rechercher..." style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; width:200px;" onkeyup="window.creditsSearch = this.value; window.currentPages.credits=1; applyCreditsFilters();">
-<select id="creditsPeriodSelect" style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px;" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">
-${getPeriodOptions('all')}
-</select>
-<button class="btn-add" onclick="loadCreditsData()"><i class="fas fa-sync"></i> Actualiser</button>
-</div>
-</div>
-<div id="creditsTableContainer">
-<p style="text-align:center;padding:40px;">Chargement des crédits...</p>
-</div>
-<div id="creditsPagination"></div>
-</div>
-`;
-
-loadCreditsData();
-}
-
-async function loadCreditsData() {
-console.log('📋 Chargement des crédits depuis Firestore...');
-try {
-var snapshot = await db.collection('credits').orderBy('createdAt', 'desc').limit(100).get();
-
-var container = document.getElementById('creditsTableContainer');
-if (!container) return;
-
-if (snapshot.empty) {
-container.innerHTML = '<p style="text-align:center;padding:40px;color:#94a3b8;">Aucun crédit trouvé. Créez un crédit depuis le POS.</p>';
-return;
-}
-
-var html = '<div class="table-container"><table class="data-table"><thead><tr>';
-html += '<th>Client</th><th>Total</th><th>Payé</th><th>Restant</th><th>Mode</th><th>Date</th><th>Actions</th>';
-html += '</thead><tbody>';
-
-var totalImpayes = 0;
-var count = 0;
-snapshot.forEach(function(doc) {
-var d = doc.data();
-var reste = d.remainingAmount || d.total || 0;
-var paye = d.amountGiven || 0;
-if (reste > 0) totalImpayes += reste;
-count++;
-
-html += '<tr>';
-html += '<td><strong>' + escapeHtml(d.clientName || '-') + '</strong></td>';
-html += '<td>' + (d.total || 0).toFixed(2) + ' MAD</td>';
-html += '<td>' + paye.toFixed(2) + ' MAD</td>';
-html += '<td style="color:' + (reste > 0 ? '#ef4444' : '#16a34a') + ';font-weight:700;">' + reste.toFixed(2) + ' MAD</td>';
-html += '<td>' + escapeHtml(d.paymentMethod || '-') + '</td>';
-html += '<td>' + (d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : '-') + '</td>';
-html += '<td>';
-if (reste > 0) {
-html += '<button class="btn-add" style="padding:4px 8px;font-size:0.65rem;" onclick="payerCreditVersPOS(\'' + d.id + '\')">💳 Payer</button> ';
-}
-html += '<button class="btn-edit" onclick="alert(\'Voir détail\')"><i class="fas fa-eye"></i></button>';
-html += '</td>';
-html += '</tr>';
-});
-
-html += '</tbody></table></div>';
-html += '<div style="margin-top:15px;padding:15px;background:#fef2f2;border-radius:12px;text-align:center;">';
-html += '<strong>Total crédits: ' + count + ' | Impayés: ' + totalImpayes.toFixed(2) + ' MAD</strong>';
-html += '</div>';
-
-container.innerHTML = html;
-
-var pagination = document.getElementById('creditsPagination');
-if (pagination) {
-pagination.innerHTML = getPaginationHTML('credits', count);
-}
-
-} catch(e) {
-console.error('Erreur chargement crédits:', e);
-var container = document.getElementById('creditsTableContainer');
-if (container) {
-container.innerHTML = '<p style="color:#ef4444;">❌ Erreur: ' + e.message + '</p>';
-}
-}
-}
-
-function applyCreditsFilters() {
-loadCreditsData();
 }
 
 // ==================== EXPORTS ====================
@@ -865,8 +810,9 @@ window.toggleMarketingProgram = toggleMarketingProgram;
 window.loadFideliteSettings = loadFideliteSettings;
 window.saveFideliteSettings = saveFideliteSettings;
 window.navigateTo = navigateTo;
-window.loadCreditsPage = loadCreditsPage;
-window.loadCreditsData = loadCreditsData;
-window.applyCreditsFilters = applyCreditsFilters;
+
+// ✅ FONCTIONS CRÉDITS DÉLÉGUÉES À ADMIN-CREDITS.JS
+// (Les fonctions loadCreditsPage, loadCreditsData et applyCreditsFilters
+//  sont définies dans admin-credits.js pour éviter les conflits)
 
 console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
