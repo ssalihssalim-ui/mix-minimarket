@@ -1,15 +1,14 @@
-// ==================== ADMIN-CRUD.JS - MIXMAX MINIMARKET (COMPLET AVEC GEMINI) ====================
+// ==================== ADMIN-CRUD.JS - E-SOLUTION ====================
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseur avec modal 90% (écran)
-// ✅ Reconnaissance par Gemini (IA) avec votre clé AQ.
+// ✅ Reconnaissance par Gemini (IA)
 // ✅ Gestion du stock, prix boîte, date d'expiration
-// ✅ Calcul automatique du total
 
 // ====================================================
 //  🔑  CONFIGURATION GEMINI
 // ====================================================
-const GEMINI_API_KEY = 'AQ.Ab8RN6JbffZAlm3MjJmydKe1qN36P6kRS0PrQ4gpgcfMEEm4Fw';
+const GEMINI_API_KEY = 'VOTRE_CLE_GEMINI';
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -60,16 +59,28 @@ function loadCategoriesPage(c) {
     loadCategories();
 }
 
+// ✅ CORRECTION : Toujours recharger les données à chaque visite
 async function loadCategories() {
-    currentPages.categories = 1; allCategoriesData = [];
-    try {
-        const snapshot = await db.collection('categories').get();
-        snapshot.forEach(d => allCategoriesData.push({ id: d.id, ...d.data() }));
-        for (let doc of allCategoriesData) await CacheDB.set('categories', doc.id, doc);
-    } catch (e) { console.error(e); }
-    renderCategoriesTable();
+    // ✅ 1. Toujours recharger depuis le cache (rapide)
+    const cached = await CacheDB.getAll('categories');
+    if (cached.length) {
+        allCategoriesData = cached;
+        renderCategoriesTable();
+    }
+    
+    // ✅ 2. Mettre à jour depuis Firestore si nécessaire (données manquantes ou rafraîchissement)
+    if (allCategoriesData.length === 0) {
+        try {
+            const snapshot = await db.collection('categories').get();
+            allCategoriesData = [];
+            snapshot.forEach(d => allCategoriesData.push({ id: d.id, ...d.data() }));
+            for (let doc of allCategoriesData) await CacheDB.set('categories', doc.id, doc);
+            renderCategoriesTable();
+        } catch (e) { console.error(e); }
+    }
 }
 
+// ✅ CORRECTION MAJEURE : SUPPRESSION DES REQUÊTES FIRESTORE EN BOUCLE
 async function renderCategoriesTable() {
     var tb = document.querySelector('#categoriesTable tbody');
     if (!tb) return;
@@ -80,11 +91,32 @@ async function renderCategoriesTable() {
         tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;font-size:24px;">Aucune catégorie</td></tr>';
         document.getElementById('categoriesPagination').innerHTML = ''; return;
     }
+    
+    // ✅ CORRECTION : Créer un dictionnaire pour compter les produits en mémoire
+    var counts = {};
+    (window.allProductsData || []).forEach(function(p) {
+        // On compte pour toutes les catégories
+        if (p.categorie) {
+            if (!counts[p.categorie]) counts[p.categorie] = 0;
+            counts[p.categorie]++;
+        }
+        // On compte aussi pour les catégories multiples (si utilisées)
+        if (p.categories) {
+            p.categories.forEach(function(cat) {
+                if (!counts[cat]) counts[cat] = 0;
+                counts[cat]++;
+            });
+        }
+    });
+
+    // ✅ CORRECTION : Utiliser le dictionnaire au lieu d'une requête Firestore
     for (var i = 0; i < pageData.length; i++) {
-        var d = pageData[i]; var pc = 0;
-        try { var ps = await db.collection('products').where('categorie', '==', d.nom).get(); pc = ps.size; } catch (e) { }
-        var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">' : '<i class="fas fa-folder fa-3x" style="color:#2E7D32;"></i>';
-        var pcol = (d.profit || 0) >= 0 ? '#2E7D32' : '#dc2626';
+        var d = pageData[i];
+        // On récupère le nombre depuis le dictionnaire
+        var pc = counts[d.nom] || 0; 
+
+        var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">' : '<i class="fas fa-folder fa-3x" style="color:#14B8A6;"></i>';
+        var pcol = (d.profit || 0) >= 0 ? '#14B8A6' : '#dc2626';
         var recetteBadge = d.recette ? '<span class="status-success" style="font-size:20px; padding:6px 14px;">✅ Oui</span>' : '<span class="status-warning" style="font-size:20px; padding:6px 14px;">❌ Non</span>';
         tb.innerHTML += '<tr><td style="padding:14px 10px;">' + im + '</td><td style="padding:14px 10px; font-size:24px; font-weight:600;"><strong>' + escapeHtml(d.nom || '') + '</strong></td><td style="padding:14px 10px; font-size:22px;">' + escapeHtml(d.description || '-') + '</td><td style="padding:14px 10px; font-size:22px;">' + (d.ordre || 0) + '</td><td style="padding:14px 10px; font-size:22px;">' + (d.ca || 0).toFixed(2) + ' MAD</td><td style="padding:14px 10px; font-size:22px; color:' + pcol + ';">' + (d.profit || 0).toFixed(2) + ' MAD</td><td style="padding:14px 10px; font-size:22px;">' + pc + '</td><td style="padding:14px 10px;">' + recetteBadge + '</td><td style="padding:14px 10px;"><button class="btn-edit" onclick="editDocument(\'categories\',\'' + d.id + '\')" style="font-size:22px; padding:10px 16px;"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'categories\',\'' + d.id + '\')" style="font-size:22px; padding:10px 16px;"><i class="fas fa-trash"></i></button></td></tr>';
     }
@@ -119,7 +151,15 @@ function saveCategory() {
             ordre: parseInt(document.getElementById('catOrdre').value) || 0
         };
         d.imageBase64 = img || existingImage;
-        saveDocument('categories', d, function() { closeModal(); refreshCurrentPage(); });
+        saveDocument('categories', d, function() { 
+            closeModal(); 
+            refreshCurrentPage(); 
+            
+            // ✅ AJOUT : Sauvegarde du cache
+            if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+                CacheDB.saveCollection('categories');
+            }
+        });
     };
     if (f) fileToBase64(f, sf); else sf(null);
 }
@@ -199,15 +239,23 @@ async function loadCategoriesInFilter() {
 
 function filterProducts() { selectedCategoryFilter = document.getElementById('categoryFilter').value; currentPages.products = 1; renderProductsTable(); }
 
+// ✅ CORRECTION : SUPPRESSION DU VERROU ANTI-DOUBLONS
 async function loadProducts() {
-    currentPages.products = 1;
-    window.allProductsData = [];
+    // ✅ 1. Charger depuis le cache (RAPIDE)
+    const cached = await CacheDB.getAll('products');
+    if (cached.length) {
+        window.allProductsData = cached;
+        renderProductsTable();
+    }
+    
+    // ✅ 2. Mettre à jour depuis Firestore
     try {
         const snapshot = await db.collection('products').get();
+        window.allProductsData = [];
         snapshot.forEach(d => { let dd = d.data(); dd.id = d.id; let prix = (dd.prixPromo && dd.prixPromo > 0) ? dd.prixPromo : (dd.prixVente || 0); dd.profit = (prix - (dd.prixAchat || 0)); window.allProductsData.push(dd); });
         for (let doc of window.allProductsData) await CacheDB.set('products', doc.id, doc);
+        renderProductsTable();
     } catch (e) { console.error(e); }
-    renderProductsTable();
 }
 
 function renderProductsTable() {
@@ -232,7 +280,7 @@ function renderProductsTable() {
         var d = pageData[i];
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">' : '<i class="fas fa-box" style="color:#94a3b8; font-size:28px;"></i>';
         var disp = d.disponible !== false ? '<span class="status-success" style="font-size:20px; padding:4px 12px;">Oui</span>' : '<span class="status-danger" style="font-size:20px; padding:4px 12px;">Non</span>';
-        var profitVal = (d.profit !== undefined && !isNaN(d.profit)) ? d.profit : 0; var pc = profitVal >= 0 ? '#2E7D32' : '#dc2626';
+        var profitVal = (d.profit !== undefined && !isNaN(d.profit)) ? d.profit : 0; var pc = profitVal >= 0 ? '#14B8A6' : '#dc2626';
         var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories.join(', ') : (d.categorie || '-');
         var fournisseurDisplay = d.fournisseurNom || d.fournisseurId || '-';
         tb.innerHTML += '<tr>' +
@@ -404,6 +452,11 @@ function saveProduct() {
                 var idx = window.allProductsData.findIndex(function(x) { return x.id === editingId; }); 
                 if (idx !== -1) window.allProductsData[idx] = Object.assign({}, window.allProductsData[idx], d, { id: editingId }); 
                 closeModal(); renderProductsTable(); CacheDB.sync(); 
+                
+                // ✅ AJOUT : Sauvegarde du cache
+                if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+                    CacheDB.saveCollection('products');
+                }
             }); 
         }
         else { 
@@ -411,6 +464,11 @@ function saveProduct() {
                 d.id = newId; 
                 window.allProductsData.push(d); 
                 closeModal(); renderProductsTable(); CacheDB.sync(); 
+                
+                // ✅ AJOUT : Sauvegarde du cache
+                if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+                    CacheDB.saveCollection('products');
+                }
             }); 
         }
     };
@@ -438,10 +496,23 @@ function loadClientsPage(c) {
 
 function clientSearch(query) { clientSearchQuery = query.toLowerCase().trim(); currentPages.clients = 1; renderClientsTable(); }
 
+// ✅ CORRECTION : SUPPRESSION DU VERROU ANTI-DOUBLONS
 async function loadClients() {
-    try { const cached = await CacheDB.getAll('clients'); if (cached.length) allClientsData = cached; const snapshot = await db.collection('clients').get(); allClientsData = []; snapshot.forEach(d => { let dd = d.data(); dd.id = d.id; allClientsData.push(dd); }); for (let doc of allClientsData) await CacheDB.set('clients', doc.id, doc); }
-    catch (e) { console.error(e); }
-    currentPages.clients = 1; renderClientsTable();
+    // ✅ 1. Charger depuis le cache (RAPIDE)
+    const cached = await CacheDB.getAll('clients');
+    if (cached.length) {
+        allClientsData = cached;
+        renderClientsTable();
+    }
+    
+    // ✅ 2. Mettre à jour depuis Firestore
+    try {
+        const snapshot = await db.collection('clients').get();
+        allClientsData = [];
+        snapshot.forEach(d => { let dd = d.data(); dd.id = d.id; allClientsData.push(dd); });
+        for (let doc of allClientsData) await CacheDB.set('clients', doc.id, doc);
+        renderClientsTable();
+    } catch (e) { console.error(e); }
 }
 
 function renderClientsTable() {
@@ -466,9 +537,9 @@ function renderClientsTable() {
             '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.whatsapp || '-') + '</td>' +
             '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.facebook || '-') + '</td>' +
             '<td style="padding:14px 10px; font-size:20px;">' + escapeHtml(d.instagram || '-') + '</td>' +
-            '<td style="padding:14px 10px; font-size:20px; color:#2E7D32; font-weight:600;">' + (d.ca || 0).toFixed(2) + '</td>' +
-            '<td style="padding:14px 10px; font-size:20px; color:#2E7D32;">' + (d.profit || 0).toFixed(2) + '</td>' +
-            '<td style="padding:14px 10px; font-size:20px; color:#2E7D32; font-weight:600;">' + (d.pointsFidelite || 0) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; color:#14B8A6; font-weight:600;">' + (d.ca || 0).toFixed(2) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; color:#14B8A6;">' + (d.profit || 0).toFixed(2) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; color:#14B8A6; font-weight:600;">' + (d.pointsFidelite || 0) + '</td>' +
             '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.allergies ? d.allergies.join(', ') : '-') + '</small></td>' +
             '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.aime ? d.aime.join(', ') : '-') + '</small></td>' +
             '<td style="padding:14px 10px; font-size:20px;"><small>' + (d.deteste ? d.deteste.join(', ') : '-') + '</small></td>' +
@@ -501,7 +572,15 @@ function saveClient() {
     if (!n || !p) { alert('Nom et Prénom obligatoires'); return; }
     var d = { nom: n, prenom: p, username: document.getElementById('cliUsername').value, genre: document.getElementById('cliGenre').value, adresse: document.getElementById('cliAdresse').value, email: document.getElementById('cliEmail').value, telephone: document.getElementById('cliTel').value, whatsapp: document.getElementById('cliWhatsapp').value, facebook: document.getElementById('cliFacebook').value, instagram: document.getElementById('cliInstagram').value, ca: parseFloat(document.getElementById('cliCA').value) || 0, profit: parseFloat(document.getElementById('cliProfit').value) || 0, pointsFidelite: parseInt(document.getElementById('cliPoints').value) || 0, allergies: document.getElementById('cliAllergies').value.split(',').map(function(s) { return s.trim(); }).filter(Boolean), aime: document.getElementById('cliAime').value.split(',').map(function(s) { return s.trim(); }).filter(Boolean), deteste: document.getElementById('cliDeteste').value.split(',').map(function(s) { return s.trim(); }).filter(Boolean), description: document.getElementById('cliDesc').value };
     if (!editingId) d.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-    saveDocument('clients', d, function() { closeModal(); loadClients(); });
+    saveDocument('clients', d, function() { 
+        closeModal(); 
+        loadClients(); 
+        
+        // ✅ AJOUT : Sauvegarde du cache
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('clients');
+        }
+    });
 }
 
 function editClient(id) { db.collection('clients').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'clients'; openClientForm(doc.data()); } }); }
@@ -520,10 +599,23 @@ function loadFournisseursPage(c) {
     loadFournisseurs();
 }
 
+// ✅ CORRECTION : SUPPRESSION DU VERROU ANTI-DOUBLONS
 async function loadFournisseurs() {
-    try { const cached = await CacheDB.getAll('fournisseurs'); if (cached.length) allFournisseursData = cached; const snapshot = await db.collection('fournisseurs').get(); allFournisseursData = []; snapshot.forEach(d => { let dd = d.data(); dd.id = d.id; allFournisseursData.push(dd); }); for (let doc of allFournisseursData) await CacheDB.set('fournisseurs', doc.id, doc); }
-    catch (e) { console.error(e); }
-    currentPages.fournisseurs = 1; renderFournisseursTable();
+    // ✅ 1. Charger depuis le cache (RAPIDE)
+    const cached = await CacheDB.getAll('fournisseurs');
+    if (cached.length) {
+        allFournisseursData = cached;
+        renderFournisseursTable();
+    }
+    
+    // ✅ 2. Mettre à jour depuis Firestore
+    try {
+        const snapshot = await db.collection('fournisseurs').get();
+        allFournisseursData = [];
+        snapshot.forEach(d => { let dd = d.data(); dd.id = d.id; allFournisseursData.push(dd); });
+        for (let doc of allFournisseursData) await CacheDB.set('fournisseurs', doc.id, doc);
+        renderFournisseursTable();
+    } catch (e) { console.error(e); }
 }
 
 function renderFournisseursTable() {
@@ -592,13 +684,21 @@ function saveFournisseur() {
         factureSchema: factureSchema
     };
     if (!editingId) d.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-    saveDocument('fournisseurs', d, function() { closeModal(); loadFournisseurs(); });
+    saveDocument('fournisseurs', d, function() { 
+        closeModal(); 
+        loadFournisseurs(); 
+        
+        // ✅ AJOUT : Sauvegarde du cache
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('fournisseurs');
+        }
+    });
 }
 
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
-// ==================== MODULE ACHATS FOURNISSEURS (VERSION PRO) ====================
+// ==================== MODULE ACHATS FOURNISSEURS ====================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
 var achatLignes = [];
@@ -644,7 +744,7 @@ function openAchatModalForm() {
                 </div>
                 <div style="display:flex; gap:12px; margin-top:15px; justify-content:flex-end;">
                     <button class="btn-cancel" onclick="fermerAchatModal()" style="font-size:22px; padding:14px 28px;">Annuler</button>
-                    <button class="btn-save" onclick="validerAchats()" style="font-size:22px; padding:14px 28px; background:#16a34a;">✅ Valider les achats</button>
+                    <button class="btn-save" onclick="validerAchats()" style="font-size:22px; padding:14px 28px; background:#14B8A6;">✅ Valider les achats</button>
                 </div>
             </div>
         </div>
@@ -837,6 +937,12 @@ async function validerAchats() {
         fermerAchatModal();
         if (typeof loadProducts === 'function') loadProducts();
         else if (typeof renderProductsTable === 'function') renderProductsTable();
+        
+        // ✅ AJOUT : Sauvegarde du cache après achat
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('products');
+            CacheDB.saveCollection('fournisseurs');
+        }
     } catch(e) {
         alert('❌ Erreur : ' + e.message);
     }
@@ -870,7 +976,6 @@ async function reconnaitreFactureGemini(imgData) {
             return;
         }
 
-        // Récupérer les noms des produits du fournisseur pour le prompt
         var productNames = produitsAchatList.map(p => p.nom);
         var productListStr = productNames.map(n => '"' + n + '"').join(', ');
 
@@ -936,7 +1041,6 @@ async function reconnaitreFactureGemini(imgData) {
             return;
         }
 
-        // Pré-remplir
         remplirDepuisOCR(produitsReconnus);
         alert(`✅ ${produitsReconnus.length} produit(s) reconnus et pré-remplis.`);
 
@@ -946,7 +1050,6 @@ async function reconnaitreFactureGemini(imgData) {
     }
 }
 
-// Exporter les fonctions
 window.openAchatModal = openAchatModal;
 window.fermerAchatModal = fermerAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
@@ -954,4 +1057,10 @@ window.validerAchats = validerAchats;
 window.calculerTotalLigne = calculerTotalLigne;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-console.log('🛒 Admin CRUD - Module achats pro avec Gemini');
+// ✅ AJOUT : Exposer les fonctions de rendu globalement
+window.renderCategoriesTable = renderCategoriesTable;
+window.renderProductsTable = renderProductsTable;
+window.renderClientsTable = renderClientsTable;
+window.renderFournisseursTable = renderFournisseursTable;
+
+console.log('🚀 E-SOLUTION - Admin CRUD - Module achats pro avec Gemini');
