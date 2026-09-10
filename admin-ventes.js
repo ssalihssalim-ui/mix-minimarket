@@ -1,15 +1,21 @@
 // ==================== ADMIN-VENTES.JS - E-SOLUTION ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
-// ✅ BOUTONS AVEC ICÔNES CORRIGÉS - Font Awesome fonctionnel
+// ✅ BOUTONS AVEC TEXTE - COMME ADMIN CREDITS
 // ✅ SÉLECTION EN MASSE
 // ✅ DÉTAILS FACTURE MODAL AVEC X POUR FERMER - FONT SIZE AGRANDI
 // ✅ PAGINATION CORRIGÉE - SANS ICÔNES
+// ✅ STATISTIQUES EN HAUT DE PAGE AVEC FILTRES DE DATE
+// ✅ SYNCHRONISATION AVEC ADMIN CREDITS : Quand un crédit est payé, la vente devient "Payé"
+// ✅ NOUVEAU CHAMP "RESTANT" DANS LES VENTES
+// ✅ ARTICLES ET OPTIONS VISIBLES POUR TOUT LE MONDE (ADMIN ET CAISSIER)
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
 window.commandesPeriod = window.commandesPeriod || 'all';
 window.ventesSearch = window.ventesSearch || '';
 window.ventesPeriod = window.ventesPeriod || 'all';
+window.ventesDateDebut = window.ventesDateDebut || '';
+window.ventesDateFin = window.ventesDateFin || '';
 window.allVentesData = window.allVentesData || [];
 window.allCommandesData = window.allCommandesData || [];
 window.filteredVentes = window.filteredVentes || null;
@@ -18,8 +24,15 @@ window.venteSelectionMode = window.venteSelectionMode || false;
 window.venteSelectedIndex = window.venteSelectedIndex || -1;
 window.clientsDataForSearch = window.clientsDataForSearch || [];
 
+// ✅ INITIALISATION DE currentPages
+window.currentPages = window.currentPages || {};
+window.currentPages.ventes = window.currentPages.ventes || 1;
+window.currentPages.commandes = window.currentPages.commandes || 1;
+window.currentPages.credits = window.currentPages.credits || 1;
+
 // ========== SELECTION EN MASSE ==========
 var ventesSelectionnees = new Set();
+var selectAllVentesBtnState = false;
 
 function toggleVenteSelection(id) {
 if (ventesSelectionnees.has(id)) {
@@ -70,6 +83,80 @@ selectAllBtn.textContent = allChecked ? '❌ Désélectionner tout' : '✅ Tout 
 }
 }
 
+// ✅ FONCTION POUR ACTIVER/DÉSACTIVER LE MODE SÉLECTION (COMME DANS LES CRÉDITS)
+function toggleVenteSelectionMode() {
+    window.venteSelectionMode = !window.venteSelectionMode;
+    window.venteSelectedIds = [];
+    var selectAllBtn = document.getElementById('selectAllVentesBtn');
+    if (selectAllBtn) {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+        selectAllBtn.style.background = '#4f46e5';
+    }
+    selectAllVentesBtnState = false;
+
+    var selectBtn = document.getElementById('toggleVenteSelectionBtn');
+    var deleteBtn = document.getElementById('deleteSelectedVentesBtn');
+    if (selectBtn) {
+        if (window.venteSelectionMode) {
+            selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
+        } else {
+            selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+        }
+    }
+    if (selectAllBtn) {
+        selectAllBtn.style.display = window.venteSelectionMode ? 'inline-block' : 'none';
+    }
+    if (deleteBtn) {
+        deleteBtn.style.display = 'none';
+    }
+    renderVentesTablePro();
+}
+
+// ✅ FONCTION POUR TOUT SÉLECTIONNER LES VENTES VISIBLES
+function selectAllVisibleVentes() {
+    var data = window.filteredVentes || window.allVentesData;
+    var pageData = getPageData('ventes', data);
+    window.venteSelectedIds = pageData.map(function(d) { return d.id; });
+    // Ajouter aux ventesSelectionnees
+    window.venteSelectedIds.forEach(function(id) {
+        ventesSelectionnees.add(id);
+    });
+    updateVenteSelectionUI();
+    renderVentesTablePro();
+}
+
+// ✅ FONCTION POUR TOUT DÉSÉLECTIONNER
+function deselectAllVisibleVentes() {
+    window.venteSelectedIds = [];
+    // Supprimer les IDs de la sélection
+    var ids = Array.from(ventesSelectionnees);
+    ids.forEach(function(id) {
+        ventesSelectionnees.delete(id);
+    });
+    updateVenteSelectionUI();
+    renderVentesTablePro();
+}
+
+// ✅ FONCTION POUR BASCULER TOUT SÉLECTIONNER/DÉSÉLECTIONNER
+function toggleSelectAllVisibleVentes() {
+    if (selectAllVentesBtnState) {
+        deselectAllVisibleVentes();
+    } else {
+        selectAllVisibleVentes();
+    }
+    selectAllVentesBtnState = !selectAllVentesBtnState;
+    var btn = document.getElementById('selectAllVentesBtn');
+    if (btn) {
+        if (selectAllVentesBtnState) {
+            btn.innerHTML = '<i class="fas fa-times"></i> Tout décocher';
+            btn.style.background = '#ef4444';
+        } else {
+            btn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+            btn.style.background = '#4f46e5';
+        }
+    }
+}
+
 async function deleteSelectedVentes() {
 if (ventesSelectionnees.size === 0) {
 alert('Aucune vente sélectionnée.');
@@ -105,6 +192,11 @@ await batch.commit();
 ventesSelectionnees.clear();
 alert(`✅ ${totalDeleted} vente(s) supprimée(s) !`);
 loadVentes();
+
+// ✅ AJOUT : Sauvegarde du cache après suppression en masse
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('ventes');
+}
 
 } catch(e) {
 console.error('❌ Erreur :', e);
@@ -453,6 +545,13 @@ color: var(--black) !important;
 letter-spacing: -0.3px;
 }
 
+.amount-remaining {
+font-weight: 800 !important;
+font-size: 24px !important;
+color: var(--danger) !important;
+letter-spacing: -0.3px;
+}
+
 .search-bar-pro {
 display: flex;
 align-items: center;
@@ -528,120 +627,164 @@ display: none !important;
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
-gap: 6px !important;
+gap: 4px !important;
 flex-wrap: nowrap !important;
-min-width: 180px !important;
+min-width: 160px !important;
 }
 
+/* ✅ BOUTONS AVEC TEXTE - COMME ADMIN CREDITS */
+#ventesPage .action-buttons .btn-print,
+#ventesPage .action-buttons .btn-whatsapp,
+#ventesPage .action-buttons .btn-payer,
 #ventesPage .action-buttons .btn-edit,
 #ventesPage .action-buttons .btn-delete,
-#ventesPage .action-buttons .btn-add,
+#commandesPage .action-buttons .btn-print,
+#commandesPage .action-buttons .btn-whatsapp,
+#commandesPage .action-buttons .btn-payer,
 #commandesPage .action-buttons .btn-edit,
-#commandesPage .action-buttons .btn-delete,
-#commandesPage .action-buttons .btn-add {
-width: 44px !important;
-height: 44px !important;
-min-width: 44px !important;
-min-height: 44px !important;
-border-radius: 10px !important;
-display: inline-flex !important;
-align-items: center !important;
-justify-content: center !important;
-padding: 0 !important;
-font-size: 18px !important;
-transition: all 0.2s ease !important;
-border: none !important;
-background: var(--gray-50) !important;
-color: var(--text-secondary) !important;
-cursor: pointer !important;
-flex-shrink: 0 !important;
-box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+#commandesPage .action-buttons .btn-delete {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 4px !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    white-space: nowrap !important;
+    text-transform: capitalize !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    line-height: 1.2 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+    min-height: 22px !important;
+    width: auto !important;
 }
 
-#ventesPage .action-buttons .btn-edit i,
-#ventesPage .action-buttons .btn-delete i,
-#ventesPage .action-buttons .btn-add i,
-#commandesPage .action-buttons .btn-edit i,
-#commandesPage .action-buttons .btn-delete i,
-#commandesPage .action-buttons .btn-add i {
-font-size: 20px !important;
-pointer-events: none !important;
-line-height: 1 !important;
+/* Imprimer - Indigo */
+#ventesPage .action-buttons .btn-print,
+#commandesPage .action-buttons .btn-print {
+    background: #6366f1 !important;
+    color: #fff !important;
+}
+#ventesPage .action-buttons .btn-print:hover,
+#commandesPage .action-buttons .btn-print:hover {
+    background: #4f46e5 !important;
 }
 
+/* WhatsApp - Vert */
+#ventesPage .action-buttons .btn-whatsapp,
+#commandesPage .action-buttons .btn-whatsapp {
+    background: #25D366 !important;
+    color: #fff !important;
+}
+#ventesPage .action-buttons .btn-whatsapp:hover,
+#commandesPage .action-buttons .btn-whatsapp:hover {
+    background: #128C7E !important;
+}
+
+/* Payer - Émeraude */
+#ventesPage .action-buttons .btn-payer,
+#commandesPage .action-buttons .btn-payer {
+    background: #10B981 !important;
+    color: #fff !important;
+}
+#ventesPage .action-buttons .btn-payer:hover,
+#commandesPage .action-buttons .btn-payer:hover {
+    background: #059669 !important;
+}
+
+/* Modifier - Orange */
+#ventesPage .action-buttons .btn-edit,
+#commandesPage .action-buttons .btn-edit {
+    background: #f59e0b !important;
+    color: #fff !important;
+}
 #ventesPage .action-buttons .btn-edit:hover,
 #commandesPage .action-buttons .btn-edit:hover {
-background: var(--gray-200) !important;
-color: var(--black) !important;
-transform: translateY(-2px) !important;
-box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    background: #d97706 !important;
 }
 
+/* Supprimer - Rouge */
 #ventesPage .action-buttons .btn-delete,
 #commandesPage .action-buttons .btn-delete {
-color: #ef4444 !important;
-background: rgba(239, 68, 68, 0.08) !important;
+    background: #ef4444 !important;
+    color: #fff !important;
 }
-
 #ventesPage .action-buttons .btn-delete:hover,
 #commandesPage .action-buttons .btn-delete:hover {
-background: rgba(239, 68, 68, 0.15) !important;
-transform: translateY(-2px) !important;
-box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15) !important;
+    background: #dc2626 !important;
 }
 
-#ventesPage .action-buttons .btn-add,
-#commandesPage .action-buttons .btn-add {
-background: var(--black) !important;
-color: var(--white) !important;
+/* Valider commande - Bleu */
+#commandesPage .action-buttons .btn-add.validate-btn {
+    background: #2563eb !important;
+    color: #fff !important;
+}
+#commandesPage .action-buttons .btn-add.validate-btn:hover {
+    background: #1d4ed8 !important;
 }
 
-#ventesPage .action-buttons .btn-add:hover,
-#commandesPage .action-buttons .btn-add:hover {
-background: var(--primary-hover) !important;
-transform: translateY(-2px) !important;
-box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+/* Annuler commande - Rouge */
+#commandesPage .action-buttons .btn-delete.cancel-btn {
+    background: #ef4444 !important;
+    color: #fff !important;
+}
+#commandesPage .action-buttons .btn-delete.cancel-btn:hover {
+    background: #dc2626 !important;
 }
 
-#ventesPage .action-buttons .btn-edit.whatsapp-btn,
-#commandesPage .action-buttons .btn-edit.whatsapp-btn {
-color: #25D366 !important;
-background: rgba(37, 211, 102, 0.08) !important;
+@media(max-width:1024px) {
+    #ventesPage .action-buttons .btn-print,
+    #ventesPage .action-buttons .btn-whatsapp,
+    #ventesPage .action-buttons .btn-payer,
+    #ventesPage .action-buttons .btn-edit,
+    #ventesPage .action-buttons .btn-delete,
+    #commandesPage .action-buttons .btn-print,
+    #commandesPage .action-buttons .btn-whatsapp,
+    #commandesPage .action-buttons .btn-payer,
+    #commandesPage .action-buttons .btn-edit,
+    #commandesPage .action-buttons .btn-delete {
+        padding: 2px 5px !important;
+        font-size: 9px !important;
+        min-height: 20px !important;
+    }
 }
 
-#ventesPage .action-buttons .btn-edit.whatsapp-btn:hover,
-#commandesPage .action-buttons .btn-edit.whatsapp-btn:hover {
-background: rgba(37, 211, 102, 0.15) !important;
-transform: translateY(-2px) !important;
-box-shadow: 0 4px 12px rgba(37, 211, 102, 0.15) !important;
+@media(max-width:768px) {
+    #ventesPage .action-buttons .btn-print,
+    #ventesPage .action-buttons .btn-whatsapp,
+    #ventesPage .action-buttons .btn-payer,
+    #ventesPage .action-buttons .btn-edit,
+    #ventesPage .action-buttons .btn-delete,
+    #commandesPage .action-buttons .btn-print,
+    #commandesPage .action-buttons .btn-whatsapp,
+    #commandesPage .action-buttons .btn-payer,
+    #commandesPage .action-buttons .btn-edit,
+    #commandesPage .action-buttons .btn-delete {
+        padding: 1px 4px !important;
+        font-size: 8px !important;
+        min-height: 18px !important;
+    }
 }
 
-#ventesPage .action-buttons .btn-edit.whatsapp-btn i,
-#commandesPage .action-buttons .btn-edit.whatsapp-btn i {
-font-size: 22px !important;
-}
-
-#ventesPage .action-buttons .btn-add.payer-btn,
-#commandesPage .action-buttons .btn-add.payer-btn {
-background: #10B981 !important;
-color: #fff !important;
-font-size: 14px !important;
-padding: 0 12px !important;
-width: auto !important;
-min-width: 60px !important;
-border-radius: 8px !important;
-gap: 4px !important;
-}
-
-#ventesPage .action-buttons .btn-add.payer-btn:hover,
-#commandesPage .action-buttons .btn-add.payer-btn:hover {
-background: #059669 !important;
-transform: translateY(-2px) !important;
-}
-
-#ventesPage .action-buttons .btn-add.payer-btn i,
-#commandesPage .action-buttons .btn-add.payer-btn i {
-font-size: 14px !important;
+@media(max-width:500px) {
+    #ventesPage .action-buttons .btn-print,
+    #ventesPage .action-buttons .btn-whatsapp,
+    #ventesPage .action-buttons .btn-payer,
+    #ventesPage .action-buttons .btn-edit,
+    #ventesPage .action-buttons .btn-delete,
+    #commandesPage .action-buttons .btn-print,
+    #commandesPage .action-buttons .btn-whatsapp,
+    #commandesPage .action-buttons .btn-payer,
+    #commandesPage .action-buttons .btn-edit,
+    #commandesPage .action-buttons .btn-delete {
+        padding: 1px 3px !important;
+        font-size: 7px !important;
+        min-height: 16px !important;
+    }
 }
 
 #ventesPage .filter-group,
@@ -738,16 +881,17 @@ border-radius: 20px;
 #selectAllVentesBtn {
 font-size: 16px;
 padding: 8px 16px;
-background: #2563eb;
+background: #4f46e5;
 color: #fff;
 border: none;
 border-radius: 8px;
 cursor: pointer;
+display: none;
 transition: all 0.2s;
 }
 
 #selectAllVentesBtn:hover {
-background: #1d4ed8;
+background: #4338ca;
 transform: scale(1.02);
 }
 
@@ -768,198 +912,155 @@ background: #dc2626;
 transform: scale(1.02);
 }
 
-@media(max-width:1024px) {
-#ventesPage .action-buttons,
-#commandesPage .action-buttons {
-min-width: 140px !important;
-gap: 4px !important;
+/* ✅ STATS EN HAUT DE PAGE */
+.ventes-stats-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+gap: 16px;
+margin-bottom: 20px;
+padding: 16px 20px;
+background: var(--bg-card);
+border-radius: var(--radius-xl);
+border: 1px solid var(--border);
 }
 
-#ventesPage .action-buttons .btn-edit,
-#ventesPage .action-buttons .btn-delete,
-#ventesPage .action-buttons .btn-add,
-#commandesPage .action-buttons .btn-edit,
-#commandesPage .action-buttons .btn-delete,
-#commandesPage .action-buttons .btn-add {
-width: 38px !important;
-height: 38px !important;
-min-width: 38px !important;
-min-height: 38px !important;
-font-size: 16px !important;
+.ventes-stat-card {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+padding: 12px 16px;
+background: var(--bg-page);
+border-radius: var(--radius);
+text-align: center;
 }
 
-#ventesPage .action-buttons .btn-add.payer-btn,
-#commandesPage .action-buttons .btn-add.payer-btn {
-min-width: 50px !important;
-font-size: 12px !important;
-padding: 0 10px !important;
+.ventes-stat-card .stat-value {
+font-size: 28px !important;
+font-weight: 900 !important;
+color: var(--black);
+letter-spacing: -0.3px;
 }
+
+.ventes-stat-card .stat-value.green {
+color: #14B8A6;
+}
+.ventes-stat-card .stat-value.blue {
+color: #2563eb;
+}
+.ventes-stat-card .stat-value.orange {
+color: #f59e0b;
+}
+.ventes-stat-card .stat-value.red {
+color: #ef4444;
+}
+
+.ventes-stat-card .stat-label {
+font-size: 14px !important;
+font-weight: 600;
+color: var(--text-secondary);
+text-transform: uppercase;
+letter-spacing: 0.5px;
+margin-top: 4px;
+}
+
+.date-filter-group {
+display: flex;
+align-items: center;
+gap: 8px;
+flex-wrap: wrap;
+}
+
+.date-filter-group input[type="date"] {
+padding: 10px 14px;
+border: 2px solid var(--border);
+border-radius: 10px;
+font-size: 18px !important;
+font-family: 'Inter', sans-serif;
+background: var(--white);
+color: var(--text-primary);
+min-width: 140px;
+}
+
+.date-filter-group input[type="date"]:focus {
+border-color: var(--black);
+outline: none;
+box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+}
+
+.date-filter-group .btn-filter {
+padding: 10px 20px;
+background: #2563eb;
+color: #fff;
+border: none;
+border-radius: 10px;
+font-size: 18px !important;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.2s;
+}
+
+.date-filter-group .btn-filter:hover {
+background: #1d4ed8;
+transform: translateY(-2px);
+}
+
+.date-filter-group .btn-clear-filter {
+padding: 10px 20px;
+background: #ef4444;
+color: #fff;
+border: none;
+border-radius: 10px;
+font-size: 18px !important;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.2s;
+}
+
+.date-filter-group .btn-clear-filter:hover {
+background: #dc2626;
+transform: translateY(-2px);
 }
 
 @media(max-width:768px) {
-#ventesPage .data-table tbody td,
-#commandesPage .data-table tbody td {
-font-size: 18px !important;
-padding: 10px 12px !important;
+.ventes-stats-grid {
+grid-template-columns: repeat(2, 1fr);
+gap: 10px;
+padding: 12px;
 }
-
-.facture-cell {
-font-size: 18px !important;
-padding: 2px 8px !important;
+.ventes-stat-card .stat-value {
+font-size: 22px !important;
 }
-
-.facture-cell .facture-number {
-font-size: 18px !important;
-}
-
-.date-cell .date-line,
-.date-cell .time-line {
+.date-filter-group input[type="date"] {
+min-width: 100px;
 font-size: 16px !important;
+padding: 8px 10px;
 }
-
-.client-cell {
-font-size: 18px !important;
-padding: 2px 8px !important;
-}
-
-.search-bar-pro input {
-font-size: 18px !important;
-}
-
-.search-clear-btn {
-width: 32px !important;
-height: 32px !important;
-min-width: 32px !important;
-font-size: 16px !important;
-}
-
-.voice-display-field {
-font-size: 18px !important;
-width: 140px !important;
-}
-
-#ventesPage .action-buttons,
-#commandesPage .action-buttons {
-min-width: 120px !important;
-gap: 4px !important;
-}
-
-#ventesPage .action-buttons .btn-edit,
-#ventesPage .action-buttons .btn-delete,
-#ventesPage .action-buttons .btn-add,
-#commandesPage .action-buttons .btn-edit,
-#commandesPage .action-buttons .btn-delete,
-#commandesPage .action-buttons .btn-add {
-width: 34px !important;
-height: 34px !important;
-min-width: 34px !important;
-min-height: 34px !important;
-font-size: 14px !important;
-border-radius: 8px !important;
-}
-
-#ventesPage .action-buttons .btn-edit i,
-#ventesPage .action-buttons .btn-delete i,
-#ventesPage .action-buttons .btn-add i,
-#commandesPage .action-buttons .btn-edit i,
-#commandesPage .action-buttons .btn-delete i,
-#commandesPage .action-buttons .btn-add i {
+.date-filter-group .btn-filter,
+.date-filter-group .btn-clear-filter {
+padding: 8px 14px;
 font-size: 16px !important;
 }
 }
 
 @media(max-width:500px) {
-#ventesPage .data-table tbody td,
-#commandesPage .data-table tbody td {
-font-size: 15px !important;
-padding: 8px 10px !important;
+.ventes-stats-grid {
+grid-template-columns: 1fr 1fr;
+gap: 8px;
+padding: 8px;
 }
-
-.facture-cell {
-font-size: 15px !important;
-padding: 2px 6px !important;
+.ventes-stat-card .stat-value {
+font-size: 18px !important;
 }
-
-.facture-cell .facture-number {
-font-size: 15px !important;
-}
-
-.date-cell .date-line,
-.date-cell .time-line {
-font-size: 13px !important;
-gap: 4px !important;
-}
-
-.date-cell .date-line i,
-.date-cell .time-line i {
-font-size: 12px !important;
-width: 14px !important;
-}
-
-.client-cell {
-font-size: 15px !important;
-padding: 2px 6px !important;
-}
-
-.search-bar-pro input {
-font-size: 15px !important;
-padding: 10px 6px !important;
-}
-
-.search-clear-btn {
-width: 28px !important;
-height: 28px !important;
-min-width: 28px !important;
+.date-filter-group input[type="date"] {
+min-width: 80px;
 font-size: 14px !important;
+padding: 6px 8px;
 }
-
-#ventesPage .filter-group select,
-#commandesPage .filter-group select {
-font-size: 16px !important;
-padding: 8px 12px !important;
-}
-
-.voice-display-field {
-font-size: 15px !important;
-width: 100px !important;
-padding: 6px 8px !important;
-}
-
-#ventesPage .action-buttons,
-#commandesPage .action-buttons {
-min-width: 90px !important;
-gap: 2px !important;
-}
-
-#ventesPage .action-buttons .btn-edit,
-#ventesPage .action-buttons .btn-delete,
-#ventesPage .action-buttons .btn-add,
-#commandesPage .action-buttons .btn-edit,
-#commandesPage .action-buttons .btn-delete,
-#commandesPage .action-buttons .btn-add {
-width: 28px !important;
-height: 28px !important;
-min-width: 28px !important;
-min-height: 28px !important;
-font-size: 12px !important;
-border-radius: 6px !important;
-}
-
-#ventesPage .action-buttons .btn-add.payer-btn,
-#commandesPage .action-buttons .btn-add.payer-btn {
-min-width: 40px !important;
-font-size: 10px !important;
-padding: 0 6px !important;
-height: 28px !important;
-}
-
-#ventesPage .action-buttons .btn-edit i,
-#ventesPage .action-buttons .btn-delete i,
-#ventesPage .action-buttons .btn-add i,
-#commandesPage .action-buttons .btn-edit i,
-#commandesPage .action-buttons .btn-delete i,
-#commandesPage .action-buttons .btn-add i {
-font-size: 12px !important;
+.date-filter-group .btn-filter,
+.date-filter-group .btn-clear-filter {
+padding: 6px 10px;
+font-size: 14px !important;
 }
 }
 </style>
@@ -1051,7 +1152,11 @@ data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 } else {
 data = applySort('commandes', data, 'createdAt');
 }
-var pageData = getPageData('commandes', data);
+var itemsPerPage = window.itemsPerPage || 15;
+var currentPage = window.currentPages.commandes || 1;
+var start = (currentPage - 1) * itemsPerPage;
+var pageData = data.slice(start, start + itemsPerPage);
+
 if (pageData.length === 0) {
 cont.innerHTML = `
 <div style="text-align:center;padding:60px 20px;">
@@ -1118,27 +1223,20 @@ var statutMap = {
 };
 var st = statutMap[d.statut] || { class: 'status-warning', label: d.statut || 'Inconnu', icon: 'fa-question-circle' };
 
+// ✅ BOUTONS AVEC TEXTE POUR COMMANDES
 var act = '';
 if (d.statut === 'en_attente') {
 act = `
 <div class="action-buttons">
-<button class="btn-add" onclick="validateCommande('${d.id}')" title="Valider">
-<i class="fas fa-check"></i>
-</button>
-<button class="btn-edit" onclick="payCommande('${d.id}')" title="Payer" style="background:#10B981;color:#fff;">
-<i class="fas fa-money-bill-wave"></i>
-</button>
-<button class="btn-delete" onclick="cancelCommande('${d.id}')" title="Annuler">
-<i class="fas fa-times"></i>
-</button>
+<button class="btn-add validate-btn" onclick="validateCommande('${d.id}')" title="Valider">Valider</button>
+<button class="btn-payer" onclick="payCommande('${d.id}')" title="Payer">Payer</button>
+<button class="btn-delete cancel-btn" onclick="cancelCommande('${d.id}')" title="Annuler">Annuler</button>
 </div>
 `;
 } else if (d.statut === 'valide') {
 act = `
 <div class="action-buttons">
-<button class="btn-edit" onclick="payCommande('${d.id}')" title="Payer" style="background:#10B981;color:#fff;">
-<i class="fas fa-money-bill-wave"></i>
-</button>
+<button class="btn-payer" onclick="payCommande('${d.id}')" title="Payer">Payer</button>
 </div>
 `;
 } else if (d.statut === 'payé') {
@@ -1186,6 +1284,11 @@ validatedBy: window.currentUserData ? window.currentUserData.userData.prenom + '
 alert('✅ Validée !');
 loadCommandes();
 CacheDB.sync();
+
+// ✅ AJOUT : Sauvegarde du cache
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('commandes');
+}
 }
 
 async function payCommande(cid) {
@@ -1210,6 +1313,11 @@ CacheDB.write('commandes', cid, { statut: 'annule' }, 'update').then(function() 
 alert('❌ Annulée');
 loadCommandes();
 CacheDB.sync();
+
+// ✅ AJOUT : Sauvegarde du cache
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('commandes');
+}
 });
 }
 }
@@ -1222,10 +1330,15 @@ loadClientsForSearch();
 
 window.ventesPeriod = 'all';
 window.ventesSearch = '';
+window.ventesDateDebut = '';
+window.ventesDateFin = '';
 window.venteSelectionMode = false;
 window.venteSelectedIndex = -1;
 if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
 if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
+
+// Obtenir la date d'aujourd'hui pour les inputs
+var today = new Date().toISOString().split('T')[0];
 
 c.innerHTML = `
 <div class="content-card" id="ventesPage">
@@ -1245,8 +1358,22 @@ onkeyup="handleVentesSearch(this.value);">
 <div class="filter-group">
 <label><i class="far fa-calendar-alt"></i> Période</label>
 <select id="ventesPeriodSelect" onchange="window.ventesPeriod = this.value; window.currentPages.ventes=1; applyVentesFilters();">
-${getPeriodOptions('all')}
+<option value="all">Toutes les dates</option>
+<option value="today">Aujourd'hui</option>
+<option value="3">3 jours</option>
+<option value="7">7 jours</option>
+<option value="15">15 jours</option>
+<option value="30">30 jours</option>
+<option value="90">3 mois</option>
+<option value="365">1 an</option>
 </select>
+</div>
+<div class="date-filter-group">
+<input type="date" id="ventesDateDebut" value="" placeholder="Date début" onchange="window.ventesDateDebut = this.value; applyVentesFilters();">
+<span style="font-weight:600; color:var(--text-secondary);">à</span>
+<input type="date" id="ventesDateFin" value="" placeholder="Date fin" onchange="window.ventesDateFin = this.value; applyVentesFilters();">
+<button class="btn-filter" onclick="appliquerFiltreDatePersonnalise()"><i class="fas fa-filter"></i> Filtrer</button>
+<button class="btn-clear-filter" onclick="reinitialiserFiltres()"><i class="fas fa-undo"></i> Réinitialiser</button>
 </div>
 <div class="filter-group">
 <label><i class="fas fa-filter"></i> Statut</label>
@@ -1261,6 +1388,34 @@ ${getPeriodOptions('all')}
 <button class="btn-add" onclick="loadVentes()" style="font-size:20px !important;padding:10px 20px !important;">
 <i class="fas fa-sync-alt"></i> Actualiser
 </button>
+<button id="toggleVenteSelectionBtn" class="btn-add" onclick="toggleVenteSelectionMode()" style="font-size:18px !important;padding:10px 16px !important;background:#14B8A6;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+<i class="fas fa-check-square"></i> Sélectionner
+</button>
+<button id="selectAllVentesBtn" class="btn-add" onclick="toggleSelectAllVisibleVentes()" style="display:none; background:#4f46e5; font-size:18px !important;padding:10px 16px !important;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+<i class="fas fa-check-double"></i> Tout sélectionner
+</button>
+<button id="deleteSelectedVentesBtn" class="btn-delete" onclick="deleteSelectedVentes()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;border:none;border-radius:8px;cursor:pointer;">
+<i class="fas fa-trash"></i> Supprimer
+</button>
+</div>
+</div>
+<!-- ✅ STATISTIQUES EN HAUT DE PAGE -->
+<div class="ventes-stats-grid" id="ventesStatsGrid">
+<div class="ventes-stat-card">
+<span class="stat-value blue" id="ventesStatsTotal">0.00</span>
+<span class="stat-label">💰 Total Ventes</span>
+</div>
+<div class="ventes-stat-card">
+<span class="stat-value green" id="ventesStatsProfit">0.00</span>
+<span class="stat-label">📈 Profit</span>
+</div>
+<div class="ventes-stat-card">
+<span class="stat-value orange" id="ventesStatsCount">0</span>
+<span class="stat-label">📊 Nombre de ventes</span>
+</div>
+<div class="ventes-stat-card">
+<span class="stat-value" id="ventesStatsAchat" style="color:#6b7280;">0.00</span>
+<span class="stat-label">📦 Total Achat</span>
 </div>
 </div>
 <div id="ventesTableContainer"></div>
@@ -1268,44 +1423,36 @@ ${getPeriodOptions('all')}
 </div>
 `;
 
-ajouterBoutonsSelectionVentes();
 loadVentes();
 }
 
-function ajouterBoutonsSelectionVentes() {
-var header = document.querySelector('#ventesPage .card-header');
-if (!header) {
-setTimeout(ajouterBoutonsSelectionVentes, 500);
-return;
+// ✅ Fonction pour appliquer le filtre de date personnalisé
+function appliquerFiltreDatePersonnalise() {
+var debut = document.getElementById('ventesDateDebut').value;
+var fin = document.getElementById('ventesDateFin').value;
+window.ventesDateDebut = debut;
+window.ventesDateFin = fin;
+// Réinitialiser le select de période
+document.getElementById('ventesPeriodSelect').value = 'all';
+window.ventesPeriod = 'all';
+applyVentesFilters();
 }
 
-if (document.getElementById('selectAllVentesBtn')) return;
-
-var btnContainer = document.createElement('div');
-btnContainer.className = 'ventes-select-buttons';
-btnContainer.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;';
-
-var countSpan = document.createElement('span');
-countSpan.id = 'selectedVentesCount';
-countSpan.textContent = '0 sélectionnée(s)';
-
-var selectAllBtn = document.createElement('button');
-selectAllBtn.id = 'selectAllVentesBtn';
-selectAllBtn.textContent = '✅ Tout sélectionner';
-selectAllBtn.onclick = toggleAllVentesSelection;
-
-var deleteBtn = document.createElement('button');
-deleteBtn.id = 'deleteSelectedVentesBtn';
-deleteBtn.textContent = '🗑️ Supprimer les sélectionnés';
-deleteBtn.style.display = 'none';
-deleteBtn.onclick = deleteSelectedVentes;
-
-btnContainer.appendChild(selectAllBtn);
-btnContainer.appendChild(deleteBtn);
-btnContainer.appendChild(countSpan);
-
-header.appendChild(btnContainer);
+// ✅ Fonction pour réinitialiser tous les filtres
+function reinitialiserFiltres() {
+document.getElementById('ventesDateDebut').value = '';
+document.getElementById('ventesDateFin').value = '';
+window.ventesDateDebut = '';
+window.ventesDateFin = '';
+document.getElementById('ventesPeriodSelect').value = 'all';
+window.ventesPeriod = 'all';
+document.getElementById('ventesSearchInput').value = '';
+window.ventesSearch = '';
+document.getElementById('ventesStatusFilter').value = 'all';
+applyVentesFilters();
 }
+window.appliquerFiltreDatePersonnalise = appliquerFiltreDatePersonnalise;
+window.reinitialiserFiltres = reinitialiserFiltres;
 
 function handleVentesSearch(value) {
 window.ventesSearch = value;
@@ -1405,7 +1552,20 @@ applyVentesFilters();
 }
 
 function applyVentesFilters() {
-var filtered = filterByPeriod(window.allVentesData, window.ventesPeriod);
+var filtered = filterByPeriodWithDates(window.allVentesData, window.ventesPeriod);
+
+// ✅ Filtre par date personnalisée
+if (window.ventesDateDebut && window.ventesDateFin) {
+var debut = new Date(window.ventesDateDebut);
+debut.setHours(0, 0, 0, 0);
+var fin = new Date(window.ventesDateFin);
+fin.setHours(23, 59, 59, 999);
+filtered = filtered.filter(function(d) {
+if (!d.createdAt) return false;
+var date = new Date(d.createdAt.seconds * 1000);
+return date >= debut && date <= fin;
+});
+}
 
 if (window.ventesSearch && window.ventesSearch.trim() !== '') {
 filtered = filterVentesBySearchWithDescription(filtered, window.ventesSearch);
@@ -1432,8 +1592,153 @@ return db - da;
 filtered = applySort('ventes', filtered, 'createdAt');
 }
 window.filteredVentes = filtered;
+
+// ✅ Mettre à jour les statistiques
+updateVentesStats(filtered);
+
 renderVentesTablePro();
 }
+
+// ✅ Filtre par période avec les nouvelles options (3 jours, 15 jours)
+function filterByPeriodWithDates(data, period) {
+if (!period || period === 'all') return data;
+var now = new Date(), cutoff;
+if (period === 'today') {
+cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+} else {
+var days = parseInt(period);
+if (isNaN(days)) return data;
+cutoff = new Date(now.getTime() - days * 86400000);
+}
+return data.filter(function(d) {
+var date = d.createdAt ? new Date(d.createdAt.seconds * 1000) : null;
+return date && date >= cutoff;
+});
+}
+
+// ✅ Mettre à jour les statistiques en haut de page
+function updateVentesStats(data) {
+var total = 0, profit = 0, achat = 0;
+data.forEach(function(d) {
+total += d.total || 0;
+profit += d.profit || 0;
+achat += d.achat || 0;
+});
+
+document.getElementById('ventesStatsTotal').textContent = total.toFixed(2);
+document.getElementById('ventesStatsProfit').textContent = profit.toFixed(2);
+document.getElementById('ventesStatsCount').textContent = data.length;
+document.getElementById('ventesStatsAchat').textContent = achat.toFixed(2);
+}
+
+// ✅ FONCTION POUR SYNCHRONISER UNE VENTE DEPUIS UN CRÉDIT
+// Appelée depuis admin-credits.js quand un crédit est payé
+async function synchroVenteDepuisCredit(creditData) {
+    try {
+        // Chercher la vente correspondante par factureNum
+        var factureNum = creditData.factureNum;
+        if (!factureNum) return;
+
+        // Chercher dans allVentesData
+        var vente = window.allVentesData.find(function(v) {
+            return v.factureNum === factureNum || v.id === creditData.id;
+        });
+
+        if (!vente) {
+            // Essayer de charger depuis Firestore
+            var snapshot = await db.collection('ventes')
+                .where('factureNum', '==', factureNum)
+                .limit(1)
+                .get();
+            
+            if (snapshot.empty) {
+                console.log('⚠️ Aucune vente trouvée pour la facture:', factureNum);
+                return;
+            }
+            
+            snapshot.forEach(function(doc) {
+                vente = doc.data();
+                vente.id = doc.id;
+            });
+        }
+
+        if (vente) {
+            var totalVente = vente.total || 0;
+            var montantPaye = creditData.amountGiven || 0;
+            var restantCredit = creditData.remainingAmount || 0;
+            var estPaye = creditData.paid || (restantCredit <= 0.01);
+            
+            // ✅ Déterminer le statut correct
+            var statutPaiement = 'crédit';
+            if (estPaye) {
+                statutPaiement = 'payé';
+            } else if (montantPaye > 0 && restantCredit > 0) {
+                statutPaiement = 'partiel';
+            }
+
+            // ✅ Mettre à jour la vente
+            var updateData = {
+                paid: estPaye,
+                statutPaiement: statutPaiement,
+                amountGiven: montantPaye, // ✅ Montant total payé (augmente)
+                remainingAmount: restantCredit, // ✅ Reste à payer (diminue)
+                change: Math.max(0, montantPaye - totalVente),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            if (estPaye) {
+                updateData.paidAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+
+            await db.collection('ventes').doc(vente.id).update(updateData);
+            
+            // ✅ Mettre à jour le cache
+            var updatedVente = {
+                ...vente,
+                ...updateData,
+                paid: estPaye,
+                statutPaiement: statutPaiement,
+                amountGiven: montantPaye,
+                remainingAmount: restantCredit
+            };
+            await CacheDB.set('ventes', vente.id, updatedVente);
+            
+            // ✅ Mettre à jour dans allVentesData
+            var index = window.allVentesData.findIndex(function(v) {
+                return v.id === vente.id;
+            });
+            if (index !== -1) {
+                window.allVentesData[index] = updatedVente;
+            }
+            
+            // ✅ Mettre à jour dans filteredVentes
+            var fIndex = (window.filteredVentes || []).findIndex(function(v) {
+                return v.id === vente.id;
+            });
+            if (fIndex !== -1) {
+                window.filteredVentes[fIndex] = updatedVente;
+            }
+            
+            var statusLabel = statutPaiement === 'payé' ? 'Payé ✅' : 
+                             statutPaiement === 'partiel' ? 'Partiel ⏳' : 'Crédit 💳';
+            console.log('✅ Vente synchronisée depuis crédit:', factureNum, '→ statut:', statusLabel, '| Donné:', montantPaye.toFixed(2), '| Restant:', restantCredit.toFixed(2));
+            
+            // ✅ Rafraîchir l'affichage
+            updateVentesStats(window.filteredVentes || window.allVentesData);
+            renderVentesTablePro();
+            
+            // ✅ Sauvegarde du cache
+            if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+                CacheDB.saveCollection('ventes');
+            }
+        }
+    } catch(e) {
+        console.error('❌ Erreur synchronisation vente depuis crédit:', e);
+    }
+}
+
+// ✅ Exposer la fonction pour admin-credits.js
+window.synchroVenteDepuisCredit = synchroVenteDepuisCredit;
 
 function renderVentesTablePro() {
 var cont = document.getElementById('ventesTableContainer');
@@ -1451,7 +1756,11 @@ return db - da;
 });
 }
 
-var pageData = getPageData('ventes', data);
+var itemsPerPage = window.itemsPerPage || 15;
+var currentPage = window.currentPages.ventes || 1;
+var start = (currentPage - 1) * itemsPerPage;
+var pageData = data.slice(start, start + itemsPerPage);
+
 if (pageData.length === 0) {
 cont.innerHTML = `
 <div style="text-align:center;padding:60px 20px;">
@@ -1465,22 +1774,25 @@ return;
 
 var tv = 0, tProfit = 0, tAchat = 0;
 
+// ✅ AJOUT DE LA COLONNE "RESTANT" - ARTICLES VISIBLES POUR TOUS
 var h = `
 <div class="table-container">
 <table class="data-table">
 <thead>
 <tr>
 <th style="width:40px; text-align:center;">
-<input type="checkbox" id="ventesSelectAllCheckbox" onchange="toggleAllVentesSelection()" title="Tout sélectionner">
+${window.venteSelectionMode ? '<input type="checkbox" id="ventesSelectAllCheckbox" onchange="toggleAllVentesSelection()" title="Tout sélectionner">' : ''}
 </th>
 <th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
 <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
 <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
-${isAdmin ? `<th><i class="fas fa-box"></i> Articles</th><th><i class="fas fa-cog"></i> Options</th>` : ''}
+<th><i class="fas fa-box"></i> Articles</th>
+<th><i class="fas fa-cog"></i> Options</th>
 ${isAdmin ? `<th><i class="fas fa-coins"></i> Achat</th><th><i class="fas fa-chart-line"></i> Profit</th>` : ''}
 <th><i class="fas fa-tag"></i> Total</th>
 <th><i class="fas fa-percent"></i> Remise</th>
 <th><i class="fas fa-hand-holding-usd"></i> Donné</th>
+<th><i class="fas fa-hourglass-half"></i> Restant</th>
 <th><i class="fas fa-undo-alt"></i> Rendu</th>
 ${isAdmin ? `<th><i class="fas fa-user-tie"></i> Vendeur</th>` : ''}
 <th><i class="fas fa-credit-card"></i> Paiement</th>
@@ -1520,58 +1832,69 @@ tv += d.total || 0;
 tProfit += d.profit || 0;
 tAchat += d.achat || 0;
 
+// ✅ Statut : si le crédit est payé via admin-credits, statut = payé
+var statutPaiement = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
+// ✅ Si le crédit est payé mais que le statut n'est pas "payé", on le corrige
+if (d.paid && statutPaiement !== 'payé') {
+    statutPaiement = 'payé';
+}
+// ✅ Si montant donné > 0 et restant > 0, c'est partiel
+if (d.amountGiven > 0 && d.remainingAmount > 0 && statutPaiement !== 'partiel') {
+    statutPaiement = 'partiel';
+}
+
 var statutMap = {
 'payé': { class: 'status-success', label: 'Payé', icon: 'fa-check-circle' },
 'crédit': { class: 'status-warning', label: 'Crédit', icon: 'fa-hand-holding-usd' },
 'partiel': { class: 'status-warning', label: 'Partiel', icon: 'fa-clock' },
-'en_attente': { class: 'status-danger', label: 'En attente', icon: 'fa-hourglass-half' }
+'en_attente': { class: 'status-danger', label: 'En attente', icon: 'fa-hourglass-half' },
+'impayé': { class: 'status-danger', label: 'Impayé', icon: 'fa-times-circle' }
 };
-var st = statutMap[d.statutPaiement] || { class: 'status-warning', label: d.statutPaiement || 'Inconnu', icon: 'fa-question-circle' };
+var st = statutMap[statutPaiement] || { class: 'status-warning', label: statutPaiement || 'Inconnu', icon: 'fa-question-circle' };
 
+// ✅ Mode de paiement : garder le mode original (crédit, espèces, etc.)
+var paymentMethod = d.paymentMethod || 'crédit';
+
+// ✅ BOUTONS AVEC TEXTE - COMME ADMIN CREDITS
 var actions = `
-<div class="action-buttons">
-<button class="btn-edit" onclick="printFacture('${d.id}')" title="Imprimer / PDF">
-<i class="fas fa-print"></i>
-</button>
-<button class="btn-edit whatsapp-btn" onclick="sendWhatsApp('${d.id}')" title="Envoyer WhatsApp">
-<i class="fab fa-whatsapp"></i>
-</button>
-`;
+<div class="action-buttons" style="display:flex; gap:4px; align-items:center; justify-content:center; flex-wrap:nowrap;">
+    <button class="btn-print" onclick="printFacture('${d.id}')" title="Imprimer / PDF">Imprimer</button>
+    <button class="btn-whatsapp" onclick="sendWhatsApp('${d.id}')" title="Envoyer WhatsApp">WhatsApp</button>
+    `;
 if (!d.paid) {
-actions += `<button class="btn-add payer-btn" onclick="payerVente('${d.id}')" title="Payer">
-<i class="fas fa-check"></i> Payer
-</button>`;
+    actions += `<button class="btn-payer" onclick="payerVente('${d.id}')" title="Payer">Payer</button>`;
 }
 if (isAdmin) {
-actions += `
-<button class="btn-edit" onclick="editVente('${d.id}')" title="Modifier">
-<i class="fas fa-edit"></i>
-</button>
-<button class="btn-delete" onclick="deleteVente('${d.id}')" title="Supprimer">
-<i class="fas fa-trash-alt"></i>
-</button>
-`;
+    actions += `
+    <button class="btn-edit" onclick="editVente('${d.id}')" title="Modifier">Modifier</button>
+    <button class="btn-delete" onclick="deleteVente('${d.id}')" title="Supprimer">Supprimer</button>
+    `;
 }
 actions += `</div>`;
+
+// ✅ Affichage du restant avec couleur
+var restantColor = (d.remainingAmount || 0) > 0 ? '#ef4444' : '#14B8A6';
 
 h += `
 <tr>
 <td style="text-align:center; vertical-align:middle;">
-<input type="checkbox" class="vente-checkbox" data-id="${d.id}" ${isChecked} onchange="toggleVenteSelection('${d.id}')">
+${window.venteSelectionMode ? '<input type="checkbox" class="vente-checkbox" data-id="' + d.id + '" ' + isChecked + ' onchange="toggleVenteSelection(\'' + d.id + '\')" style="transform:scale(1.3);width:20px;height:20px;">' : ''}
 </td>
 <td onclick="openFactureDetails('${d.id}', '${escapeHtml(factureNum)}')" style="cursor:pointer;">
 ${factureHtml}
 </td>
 <td>${dateHtml}</td>
 <td>${clientHtml}</td>
-${isAdmin ? `<td>${arts}</td><td>${opts}</td>` : ''}
+<td>${arts}</td>
+<td>${opts}</td>
 ${isAdmin ? `<td>${(d.achat || 0).toFixed(2)}</td><td style="color:#14B8A6;font-weight:700;">${(d.profit || 0).toFixed(2)}</td>` : ''}
 <td><span class="amount-total">${(d.total || 0).toFixed(2)} MAD</span></td>
 <td>${(d.discountMAD || 0).toFixed(2)}</td>
-<td>${(d.amountGiven || 0).toFixed(2)}</td>
+<td><span style="font-weight:700;color:#2563eb;">${(d.amountGiven || 0).toFixed(2)}</span></td>
+<td><span style="font-weight:700;color:${restantColor};">${(d.remainingAmount || 0).toFixed(2)} MAD</span></td>
 <td>${(d.change || 0).toFixed(2)}</td>
 ${isAdmin ? `<td>${escapeHtml(d.vendeur || '-')}</td>` : ''}
-<td>${escapeHtml(d.paymentMethod || '-')}</td>
+<td>${escapeHtml(paymentMethod)}</td>
 <td><span class="${st.class}"><i class="fas ${st.icon}"></i> ${st.label}</span></td>
 <td>${actions}</td>
 </tr>
@@ -1581,24 +1904,6 @@ ${isAdmin ? `<td>${escapeHtml(d.vendeur || '-')}</td>` : ''}
 h += `
 </tbody>
 </table>
-</div>
-<div class="total-row-pro">
-<div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:flex-end;width:100%;">
-<div>
-<span class="total-label">Total Ventes</span>
-<span class="total-amount"><i class="fas fa-dollar-sign"></i> ${tv.toFixed(2)} MAD</span>
-</div>
-${isAdmin ? `
-<div>
-<span class="total-label">Total Achat</span>
-<span class="total-amount" style="color:#6b7280;"><i class="fas fa-coins"></i> ${tAchat.toFixed(2)} MAD</span>
-</div>
-<div>
-<span class="total-label">Profit Total</span>
-<span class="total-amount" style="color:#14B8A6;"><i class="fas fa-chart-line"></i> ${tProfit.toFixed(2)} MAD</span>
-</div>
-` : ''}
-</div>
 </div>
 `;
 cont.innerHTML = h;
@@ -1660,7 +1965,15 @@ remainingAmount: paid ? 0 : remaining,
 paid: paid,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 };
-saveDocument('ventes', data, function() { closeModal(); loadVentes(); });
+saveDocument('ventes', data, function() { 
+closeModal(); 
+loadVentes(); 
+
+// ✅ AJOUT : Sauvegarde du cache
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('ventes');
+}
+});
 }
 
 function deleteVente(did) {
@@ -1669,6 +1982,11 @@ CacheDB.write('ventes', did, null, 'delete').then(function() {
 alert('✅ Supprimé');
 loadVentes();
 CacheDB.sync();
+
+// ✅ AJOUT : Sauvegarde du cache
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('ventes');
+}
 });
 }
 }
@@ -1989,8 +2307,14 @@ function renderFactureDetails(data) {
     var dateStr = date.toLocaleDateString('fr-FR');
     var timeStr = date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
     
-    var statusBg = data.statutPaiement === 'payé' ? '#ECFDF5' : data.statutPaiement === 'crédit' ? '#FEF3C7' : '#FEE2E2';
-    var statusColor = data.statutPaiement === 'payé' ? '#065F46' : data.statutPaiement === 'crédit' ? '#92400E' : '#991B1B';
+    // ✅ Statut : si le crédit est payé via admin-credits, statut = payé
+    var statutPaiement = data.statutPaiement || (data.paid ? 'payé' : 'crédit');
+    if (data.paid && statutPaiement !== 'payé') {
+        statutPaiement = 'payé';
+    }
+    
+    var statusBg = statutPaiement === 'payé' ? '#ECFDF5' : statutPaiement === 'crédit' ? '#FEF3C7' : '#FEE2E2';
+    var statusColor = statutPaiement === 'payé' ? '#065F46' : statutPaiement === 'crédit' ? '#92400E' : '#991B1B';
     
     var html = `
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--border);">
@@ -2001,7 +2325,7 @@ function renderFactureDetails(data) {
                 </p>
             </div>
             <span style="display:inline-block;padding:6px 18px;border-radius:20px;font-size:1rem;font-weight:600;text-transform:uppercase;background:${statusBg};color:${statusColor};">
-                ${data.statutPaiement || 'N/A'}
+                ${statutPaiement || 'N/A'}
             </span>
         </div>
         
@@ -2110,76 +2434,52 @@ function printFactureDetails() {
     }
 }
 
-// ==================== PAGINATION (SANS ICÔNES) ====================
+// ==================== PAGINATION ====================
 
 // Fonction de pagination générique
 function getPaginationHTML(pageType, totalItems) {
-    var itemsPerPage = 20;
-    var totalPages = Math.ceil(totalItems / itemsPerPage);
-    var currentPage = window.currentPages ? window.currentPages[pageType] || 1 : 1;
-    
-    if (totalPages <= 1) {
-        return '';
-    }
-    
-    var html = `
-        <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap;">
-            <button onclick="changePage('${pageType}', 1)" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">
-                <<
-            </button>
-            <button onclick="changePage('${pageType}', ${currentPage - 1})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">
-                <
-            </button>
-            <span style="font-size:0.85rem;color:var(--text-secondary);font-weight:600;">Page ${currentPage} / ${totalPages}</span>
-            <button onclick="changePage('${pageType}', ${currentPage + 1})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">
-                >
-            </button>
-            <button onclick="changePage('${pageType}', ${totalPages})" class="btn-add" style="padding:6px 12px;font-size:0.75rem;background:var(--black);color:var(--white);border:none;border-radius:8px;cursor:pointer;${currentPage === totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">
-                >>
-            </button>
-        </div>
-    `;
+    var perPage = window.itemsPerPage || 15;
+    var totalPages = Math.ceil(totalItems / perPage);
+    var cp = window.currentPages[pageType] || 1;
+    if (totalPages <= 1) return '';
+    var html = '<div style="display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap;">';
+    html += '<button onclick="changePage(\'' + pageType + '\', 1)" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏮</button>';
+    html += '<button onclick="changePage(\'' + pageType + '\', ' + Math.max(1, cp - 1) + ')" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">◀</button>';
+    html += '<span style="padding:6px 12px;">' + cp + ' / ' + totalPages + '</span>';
+    html += '<button onclick="changePage(\'' + pageType + '\', ' + Math.min(totalPages, cp + 1) + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">▶</button>';
+    html += '<button onclick="changePage(\'' + pageType + '\', ' + totalPages + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏭</button>';
+    html += '</div>';
     return html;
 }
 
 // Fonction pour changer de page
 function changePage(pageType, page) {
-    if (!window.currentPages) window.currentPages = {};
+    console.log('🔄 changePage appelé:', pageType, page);
     
-    var itemsPerPage = 20;
     var totalItems = 0;
-    
     if (pageType === 'ventes') {
-        totalItems = window.filteredVentes ? window.filteredVentes.length : 0;
+        totalItems = window.filteredVentes ? window.filteredVentes.length : (window.allVentesData || []).length;
     } else if (pageType === 'credits') {
-        totalItems = window.filteredCredits ? window.filteredCredits.length : 0;
+        totalItems = window.filteredCredits ? window.filteredCredits.length : (window.allCreditsData || []).length;
     } else if (pageType === 'commandes') {
-        totalItems = window.filteredCommandes ? window.filteredCommandes.length : 0;
+        totalItems = window.filteredCommandes ? window.filteredCommandes.length : (window.allCommandesData || []).length;
     }
     
-    var totalPages = Math.ceil(totalItems / itemsPerPage);
+    var perPage = window.itemsPerPage || 15;
+    var totalPages = Math.ceil(totalItems / perPage);
     if (page < 1 || page > totalPages) return;
     
     window.currentPages[pageType] = page;
+    console.log('📄 Page courante:', page);
     
     // Re-rendre la page correspondante
-    if (pageType === 'ventes' && typeof renderVentesTablePro === 'function') {
-        renderVentesTablePro();
-    } else if (pageType === 'credits' && typeof renderCreditsTablePro === 'function') {
-        renderCreditsTablePro();
-    } else if (pageType === 'commandes' && typeof renderCommandesTablePro === 'function') {
-        renderCommandesTablePro();
+    if (pageType === 'ventes' && typeof window.renderVentesTablePro === 'function') {
+        window.renderVentesTablePro();
+    } else if (pageType === 'credits' && typeof window.renderCreditsTablePro === 'function') {
+        window.renderCreditsTablePro();
+    } else if (pageType === 'commandes' && typeof window.renderCommandesTablePro === 'function') {
+        window.renderCommandesTablePro();
     }
-}
-
-// Fonction pour obtenir les données de la page courante
-function getPageData(pageType, data) {
-    if (!window.currentPages) window.currentPages = {};
-    var currentPage = window.currentPages[pageType] || 1;
-    var itemsPerPage = 20;
-    var start = (currentPage - 1) * itemsPerPage;
-    var end = start + itemsPerPage;
-    return data.slice(start, end);
 }
 
 // ==================== EXPOSITION DES FONCTIONS GLOBALES ====================
@@ -2215,7 +2515,13 @@ window.toggleVenteSelection = toggleVenteSelection;
 window.toggleAllVentesSelection = toggleAllVentesSelection;
 window.deleteSelectedVentes = deleteSelectedVentes;
 window.updateVenteSelectionUI = updateVenteSelectionUI;
-window.ajouterBoutonsSelectionVentes = ajouterBoutonsSelectionVentes;
+window.filterByPeriodWithDates = filterByPeriodWithDates;
+window.updateVentesStats = updateVentesStats;
+window.appliquerFiltreDatePersonnalise = appliquerFiltreDatePersonnalise;
+window.reinitialiserFiltres = reinitialiserFiltres;
+
+// ✅ AJOUT DE LA FONCTION DE SYNCHRONISATION
+window.synchroVenteDepuisCredit = synchroVenteDepuisCredit;
 
 // ✅ AJOUT DES FONCTIONS MODAL FACTURE
 window.openFactureDetails = openFactureDetails;
@@ -2225,10 +2531,29 @@ window.renderFactureDetails = renderFactureDetails;
 window.printFactureDetails = printFactureDetails;
 
 // ✅ AJOUT DES FONCTIONS PAGINATION
-window.getPaginationHTML = getPaginationHTML;
-window.changePage = changePage;
-window.getPageData = getPageData;
+window.getPaginationHTML = window.getPaginationHTML || getPaginationHTML;
+window.changePage = window.changePage || changePage;
+
+// ✅ ALIAS POUR COMPATIBILITÉ AVEC admin.js
+window.renderVentesTable = window.renderVentesTablePro;
+window.renderCommandesTable = window.renderCommandesTablePro;
+window.renderCreditsTable = window.renderCreditsTablePro;
+
+// ✅ AJOUT DES FONCTIONS SÉLECTION (COMME DANS LES CRÉDITS)
+window.toggleVenteSelectionMode = toggleVenteSelectionMode;
+window.selectAllVisibleVentes = selectAllVisibleVentes;
+window.deselectAllVisibleVentes = deselectAllVisibleVentes;
+window.toggleSelectAllVisibleVentes = toggleSelectAllVisibleVentes;
+window.selectAllVentesBtnState = selectAllVentesBtnState;
 
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ Détails facture modal ajouté - Font size agrandi');
-console.log('✅ Pagination corrigée - Sans icônes');
+console.log('✅ Pagination corrigée - Utilise window.itemsPerPage');
+console.log('✅ Statistiques en haut de page avec filtres de date');
+console.log('✅ Filtres rapides : Aujourd\'hui, 3j, 7j, 15j, 30j, 90j, 365j');
+console.log('✅ Boutons avec texte - Comme admin credits');
+console.log('✅ Synchronisation avec admin credits : Quand un crédit est payé, la vente devient "Payé"');
+console.log('✅ Nouveau champ "Restant" dans les ventes - Diminue avec le paiement');
+console.log('✅ Champ "Donné" augmente avec le paiement');
+console.log('✅ Sélection en masse comme admin credits - Bouton "Sélectionner" pour activer/désactiver');
+console.log('✅ Articles et Options visibles pour tout le monde (admin ET caissier)');
