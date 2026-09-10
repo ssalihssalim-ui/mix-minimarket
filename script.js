@@ -1,4 +1,4 @@
-// ==================== SCRIPT.JS - MIXMAX MINIMARKET (COMPLET FINAL) ====================
+// ==================== SCRIPT.JS - MIXMAX MINIMARKET (COMPLET FINAL CORRIGÉ) ====================
 // Script principal - Navigation instantanée optimisée
 
 // ========== VARIABLES GLOBALES ==========
@@ -36,6 +36,31 @@ window.commandesPeriod = 'all';
 window.usersSearchQuery = window.usersSearchQuery || '';
 window.editCategoryData = window.editCategoryData || null;
 window.pendingUsersData = window.pendingUsersData || [];
+
+// ========== OPTIMISATION : PRÉCHARGEMENT EN PARALLÈLE ==========
+async function preloadAllData() {
+    if (typeof CacheDB === 'undefined') return;
+    
+    try {
+        const results = await Promise.allSettled([
+            CacheDB.getAll('categories'),
+            CacheDB.getAll('products'),
+            CacheDB.getAll('clients'),
+            CacheDB.getAll('fournisseurs'),
+            CacheDB.getAll('ventes'),
+            CacheDB.getAll('credits'),
+            CacheDB.getAll('stock'),
+            CacheDB.getAll('depenses')
+        ]);
+        
+        console.log('⚡ Données préchargées en parallèle:', results.length, 'collections');
+    } catch(e) {
+        console.warn('Erreur préchargement:', e);
+    }
+}
+
+// Lancer le préchargement immédiatement
+preloadAllData();
 
 // ========== FONCTIONS UTILITAIRES GLOBALES ==========
 window.escapeHtml = window.escapeHtml || function(str) {
@@ -126,35 +151,80 @@ var start = (page - 1) * perPage;
 return data.slice(start, start + perPage);
 };
 
+// ✅ CORRECTION PAGINATION - Version améliorée
 window.getPaginationHTML = window.getPaginationHTML || function(collection, totalItems) {
 var perPage = window.itemsPerPage || 15;
 var totalPages = Math.ceil(totalItems / perPage);
 var cp = window.currentPages[collection] || 1;
 if (totalPages <= 1) return '';
 var html = '<div style="display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap;">';
-html += '<button onclick="window.currentPages.' + collection + '=1;' + getRefreshFn(collection) + '" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏮</button>';
-html += '<button onclick="window.currentPages.' + collection + '=' + Math.max(1, cp - 1) + ';' + getRefreshFn(collection) + '" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">◀</button>';
+html += '<button onclick="changePage(\'' + collection + '\', 1)" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏮</button>';
+html += '<button onclick="changePage(\'' + collection + '\', ' + Math.max(1, cp - 1) + ')" ' + (cp <= 1 ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">◀</button>';
 html += '<span style="padding:6px 12px;">' + cp + ' / ' + totalPages + '</span>';
-html += '<button onclick="window.currentPages.' + collection + '=' + Math.min(totalPages, cp + 1) + ';' + getRefreshFn(collection) + '" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">▶</button>';
-html += '<button onclick="window.currentPages.' + collection + '=' + totalPages + ';' + getRefreshFn(collection) + '" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏭</button>';
+html += '<button onclick="changePage(\'' + collection + '\', ' + Math.min(totalPages, cp + 1) + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">▶</button>';
+html += '<button onclick="changePage(\'' + collection + '\', ' + totalPages + ')" ' + (cp >= totalPages ? 'disabled' : '') + ' style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;">⏭</button>';
 html += '</div>';
 return html;
 };
 
-function getRefreshFn(c) {
-var m = {
-categories: 'renderCategoriesTable()',
-products: 'renderProductsTable()',
-clients: 'renderClientsTable()',
-fournisseurs: 'renderFournisseursTable()',
-ventes: 'renderVentesTable()',
-credits: 'renderCreditsTable()',
-depenses: 'renderDepensesTable()',
-commandes: 'renderCommandesTable()',
-users: 'renderUsersTable()'
+// ✅ CORRECTION FINALE changePage - Ne recharge PAS les données
+window.changePage = window.changePage || function(collection, newPage) {
+    console.log('🔄 changePage appelé:', collection, newPage);
+    
+    var dataArrays = {
+        categories: window.allCategoriesData || [],
+        products: window.allProductsData || [],
+        clients: window.allClientsData || [],
+        fournisseurs: window.allFournisseursData || [],
+        ventes: window.filteredVentes || window.allVentesData || [],
+        credits: window.filteredCredits || window.allCreditsData || [],
+        depenses: window.filteredDepenses || window.allDepensesData || [],
+        commandes: window.filteredCommandes || window.allCommandesData || [],
+        users: window.allUsersData || []
+    };
+
+    var totalItems = (dataArrays[collection] || []).length;
+    var totalPages = Math.ceil(totalItems / (window.itemsPerPage || 15));
+    if (newPage < 1 || newPage > totalPages) {
+        console.log('⚠️ Page invalide:', newPage);
+        return;
+    }
+
+    window.currentPages[collection] = newPage;
+    console.log('📄 Nouvelle page:', newPage);
+
+    // ✅ Appel DIRECT des fonctions de rendu SANS recharger les données
+    if (collection === 'products' && typeof window.renderProductsTable === 'function') {
+        window.renderProductsTable();
+    }
+    else if (collection === 'categories' && typeof window.renderCategoriesTable === 'function') {
+        window.renderCategoriesTable();
+    }
+    else if (collection === 'clients' && typeof window.renderClientsTable === 'function') {
+        window.renderClientsTable();
+    }
+    else if (collection === 'fournisseurs' && typeof window.renderFournisseursTable === 'function') {
+        window.renderFournisseursTable();
+    }
+    // ✅ CORRECTION : utiliser les bons noms de fonctions
+    else if (collection === 'ventes' && typeof window.renderVentesTablePro === 'function') {
+        window.renderVentesTablePro();
+    }
+    else if (collection === 'credits' && typeof window.renderCreditsTablePro === 'function') {
+        window.renderCreditsTablePro();
+    }
+    else if (collection === 'commandes' && typeof window.renderCommandesTablePro === 'function') {
+        window.renderCommandesTablePro();
+    }
+    else if (collection === 'depenses' && typeof window.renderDepensesTable === 'function') {
+        window.renderDepensesTable();
+    }
+    else if (collection === 'users' && typeof window.renderUsersTable === 'function') {
+        window.renderUsersTable();
+    } else {
+        console.log('⚠️ Aucune fonction de rendu trouvée pour:', collection);
+    }
 };
-return m[c] || '';
-}
 
 window.refreshCurrentPage = function() {
 var ct = document.getElementById('pageTitle')?.textContent || '';
@@ -321,19 +391,14 @@ showAuthPage();
 auth.onAuthStateChanged(async function(u) {
 if (u) {
 try {
-// 🔥 ALLER CHERCHER DIRECTEMENT DANS FIRESTORE
 const doc = await db.collection('users').doc(u.uid).get();
-
 if (!doc.exists) {
 console.warn('⚠️ Utilisateur non trouvé dans Firestore');
 auth.signOut();
 showAuthPage();
 return;
 }
-
 const userData = doc.data();
-
-// Vérifier le statut authorized
 if (userData.authorized !== 'yes') {
 console.warn('⛔ Utilisateur non autorisé');
 auth.signOut();
@@ -341,19 +406,12 @@ showAuthPage();
 alert('⛔ Votre compte est en attente de validation par l\'administrateur.');
 return;
 }
-
-// Mettre à jour le cache
 const ud = { uid: u.uid, userData: userData };
 window.currentUserData = ud;
 await CacheDB.set('users', u.uid, ud);
 await CacheDB.set('users', 'current', ud);
-
-if (userData.role === 'client') {
-showClientPage();
-} else {
-showDashboard();
-}
-
+if (userData.role === 'client') showClientPage();
+else showDashboard();
 } catch (e) {
 console.error('❌ Erreur vérification utilisateur:', e);
 auth.signOut();
@@ -366,6 +424,17 @@ showAuthPage();
 });
 }
 showLogin();
+
+// ✅ OPTIMISATION : Sauvegarde UNE SEULE FOIS après 3 secondes
+setTimeout(function() {
+    if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+        console.log('💾 Sauvegarde initiale des données...');
+        CacheDB.saveAll();
+        if (typeof CacheDB.setupRealtime === 'function') {
+            CacheDB.setupRealtime();
+        }
+    }
+}, 3000);
 }
 
 // ========== GESTION DU MENU MOBILE ==========
@@ -385,11 +454,8 @@ if (o) o.classList.remove('active');
 
 function toggleSidebar() {
 var s = document.getElementById('sidebar');
-if (s && s.classList.contains('open')) {
-closeSidebar();
-} else {
-openSidebar();
-}
+if (s && s.classList.contains('open')) closeSidebar();
+else openSidebar();
 }
 
 function openClientSidebar() {
@@ -408,11 +474,8 @@ if (o) o.classList.remove('active');
 
 function toggleClientSidebar() {
 var s = document.getElementById('clientSidebar');
-if (s && s.classList.contains('open')) {
-closeClientSidebar();
-} else {
-openClientSidebar();
-}
+if (s && s.classList.contains('open')) closeClientSidebar();
+else openClientSidebar();
 }
 
 document.addEventListener('keydown', function(e) {
@@ -464,7 +527,6 @@ items = [
 { p: 'commandes', i: 'fa-shopping-basket', l: 'Commandes en ligne' },
 { p: 'ventes', i: 'fa-shopping-cart', l: 'Ventes' },
 { p: 'credits', i: 'fa-credit-card', l: 'Crédits' },
-{ p: 'stock', i: 'fa-boxes', l: 'Stock' },
 { p: 'depenses', i: 'fa-money-bill-wave', l: 'Dépenses' }
 ];
 var rs = document.getElementById('sidebarRole'); if (rs) rs.textContent = 'Caissier';
@@ -484,17 +546,32 @@ if (!window.currentUserData || window.currentUserData.userData.authorized !== 'y
 showAuthPage(); return; }
 var items = document.querySelectorAll('#navMenu .nav-item');
 items.forEach(function(item) { item.classList.remove('active'); });
-var pages = ['dashboard', 'pos', 'commandes', 'categories', 'products', 'clients', 'fournisseurs', 'ventes', 'credits', 'depenses', 'stock', 'statistiques', 'options'];
+var pages = ['dashboard', 'pos', 'commandes', 'categories', 'products', 'clients', 'fournisseurs', 'ventes', 'credits', 'depenses', 'statistiques', 'options'];
 var index = pages.indexOf(page); if (index >= 0 && items[index]) items[index].classList.add('active');
-var titles = { dashboard: 'Dashboard', pos: 'POS', commandes: 'Commandes en ligne', categories: 'Catégories', products: 'Produits', clients: 'Clients', fournisseurs: 'Fournisseurs', ventes: 'Ventes', credits: 'Crédits', depenses: 'Dépenses', stock: 'Stock', statistiques: 'Statistiques', options: 'Options' };
-var icons = { dashboard: 'fa-chart-line', pos: 'fa-cash-register', commandes: 'fa-shopping-basket', categories: 'fa-layer-group', products: 'fa-coffee', clients: 'fa-users', fournisseurs: 'fa-truck', ventes: 'fa-shopping-cart', credits: 'fa-credit-card', depenses: 'fa-money-bill-wave', stock: 'fa-boxes', statistiques: 'fa-chart-bar', options: 'fa-cog' };
+var titles = { dashboard: 'Dashboard', pos: 'POS', commandes: 'Commandes en ligne', categories: 'Catégories', products: 'Produits', clients: 'Clients', fournisseurs: 'Fournisseurs', ventes: 'Ventes', credits: 'Crédits', depenses: 'Dépenses', statistiques: 'Statistiques', options: 'Options' };
+var icons = { dashboard: 'fa-chart-line', pos: 'fa-cash-register', commandes: 'fa-shopping-basket', categories: 'fa-layer-group', products: 'fa-coffee', clients: 'fa-users', fournisseurs: 'fa-truck', ventes: 'fa-shopping-cart', credits: 'fa-credit-card', depenses: 'fa-money-bill-wave', statistiques: 'fa-chart-bar', options: 'fa-cog' };
 document.getElementById('pageTitle').textContent = titles[page] || page;
 var hi = document.querySelector('.header-title i'); if (hi && icons[page]) hi.className = 'fas ' + icons[page];
 var content = document.getElementById('dynamicContent'); if (!content) return;
 
 content.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:#2E7D32;"></i></div>';
 
-var pageFunctions = { pos: 'loadPosPage', commandes: 'loadCommandesPage', categories: 'loadCategoriesPage', products: 'loadProductsPage', clients: 'loadClientsPage', fournisseurs: 'loadFournisseursPage', ventes: 'loadVentesPage', credits: 'loadCreditsPage', depenses: 'loadDepensesPage', stock: 'loadCaissierStock', statistiques: 'loadStatistiquesPage', options: 'loadOptionsPage', dashboard: 'loadDashboardPage' };
+// 🔥 CAS PARTICULIER POUR LE CAISSIER : PAGE DÉPENSES
+if (page === 'depenses' && window.currentUserData.userData.role === 'caissier') {
+    content.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:#2E7D32;"></i></div>';
+    if (typeof window.loadDepensesPage === 'function') {
+        window.loadDepensesPage(content);
+    } else if (typeof loadDepensesPage === 'function') {
+        loadDepensesPage(content);
+    } else {
+        content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Dépenses non disponible</p></div>';
+    }
+    closeSidebar();
+    return;
+}
+
+// Navigation standard pour toutes les autres pages
+var pageFunctions = { pos: 'loadPosPage', commandes: 'loadCommandesPage', categories: 'loadCategoriesPage', products: 'loadProductsPage', clients: 'loadClientsPage', fournisseurs: 'loadFournisseursPage', ventes: 'loadVentesPage', credits: 'loadCreditsPage', depenses: 'loadDepensesPage', statistiques: 'loadStatistiquesPage', options: 'loadOptionsPage', dashboard: 'loadDashboardPage' };
 var fnName = pageFunctions[page];
 if (fnName && typeof window[fnName] === 'function') {
 try { window[fnName](content); } catch (e) { console.error(e);
@@ -575,4 +652,4 @@ document.addEventListener('click', function(e) { var o = document.getElementById
 window.addEventListener('online', function() { console.log('✅ En ligne'); if (typeof CacheDB !== 'undefined' && CacheDB.sync) CacheDB.sync().catch(function(e) { console.warn(e); }); });
 window.addEventListener('offline', function() { console.warn('⚠️ Mode hors ligne'); });
 
-console.log('☕ Mixmax Minimarket - Script principal OK (navigation instantanée + menu amélioré + fallback crédits)');
+console.log('☕ Mixmax Minimarket - Script principal OK (navigation instantanée + menu amélioré + fallback crédits + dépenses caissier)');
