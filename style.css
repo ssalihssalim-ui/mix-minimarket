@@ -2158,7 +2158,7 @@ opacity: 1 !important;
 }
 
 /* ============================================================
-✅ COMPTE CLIENT - AFFICHAGE IDENTIQUE ADMIN/CAISSIER
+✅ CORRECTION COMPTE CLIENT - AFFICHAGE IDENTIQUE ADMIN/CAISSIER
 ============================================================ */
 
 /* ✅ PAGE CLIENT - STRUCTURE GENERALE */
@@ -2674,91 +2674,14 @@ grid-template-columns: repeat(3, 1fr) !important;
 }
 }
 
-/* ============================================================
-✅ CORRECTION BOUTON MENU - CACHÉ SUR LOGIN UNIQUEMENT
-============================================================ */
-
-/* ✅ Le bouton menu est caché par défaut */
-.mobile-menu-btn {
-    display: none !important;
-}
-
-/* ✅ Le bouton est affiché uniquement si dashboard est actif (admin/caissier) */
-#dashboardPage:not(.hidden) ~ .mobile-menu-btn,
-#dashboardPage:not(.hidden) .mobile-menu-btn,
-body:has(#dashboardPage:not(.hidden)) .mobile-menu-btn {
-    display: flex !important;
-}
-
-/* ✅ Le bouton est affiché si clientPage est active */
-#clientPage:not(.hidden) ~ .mobile-menu-btn,
-#clientPage:not(.hidden) .mobile-menu-btn,
-body:has(#clientPage:not(.hidden)) .mobile-menu-btn {
-    display: flex !important;
-}
-
-/* ✅ Le bouton est affiché si menuTactilePage est active */
-#menuTactilePage:not(.hidden) ~ .mobile-menu-btn,
-#menuTactilePage:not(.hidden) .mobile-menu-btn,
-body:has(#menuTactilePage:not(.hidden)) .mobile-menu-btn {
-    display: flex !important;
-}
-
-/* ✅ Le bouton est CACHÉ si authPage est active (login/inscription) */
-#authPage:not(.hidden) ~ .mobile-menu-btn,
-#authPage:not(.hidden) .mobile-menu-btn,
-body:has(#authPage:not(.hidden)) .mobile-menu-btn {
-    display: none !important;
-}
-
-/* ============================================================
-✅ CORRECTION SIDEBAR - UN SEUL SIDEBAR VISIBLE PAR RÔLE
-============================================================ */
-
-/* ✅ S'assurer que le SIDEBAR ADMIN peut s'afficher sur dashboard */
-#sidebar {
-    display: flex !important;
-}
-
-/* ✅ S'assurer que le SIDEBAR CLIENT peut s'afficher sur clientPage */
-#clientSidebar {
-    display: flex !important;
-}
-
-/* ✅ Cacher le SIDEBAR ADMIN quand clientPage est active */
-body:has(#clientPage:not(.hidden)) #sidebar,
-#clientPage:not(.hidden) ~ #sidebar,
-#clientPage:not(.hidden) #sidebar {
-    display: none !important;
-}
-
-/* ✅ Cacher le SIDEBAR CLIENT quand dashboard est actif */
-body:has(#dashboardPage:not(.hidden)) #clientSidebar,
-#dashboardPage:not(.hidden) ~ #clientSidebar,
-#dashboardPage:not(.hidden) #clientSidebar {
-    display: none !important;
-}
-
-/* ✅ Cacher les deux sidebars quand login est actif */
-body:has(#authPage:not(.hidden)) #sidebar,
-body:has(#authPage:not(.hidden)) #clientSidebar,
-#authPage:not(.hidden) ~ #sidebar,
-#authPage:not(.hidden) ~ #clientSidebar {
-    display: none !important;
-}
-
-/* ============================================================
-✅ MODE SOMBRE - CLIENT
-============================================================ */
+/* ✅ CLIENT - MODE SOMBRE */
 [data-theme="dark"] #clientPage {
 background: #0D1117 !important;
 }
-
 [data-theme="dark"] #clientDynamicContent .pos-product-card {
 background: #0D1117 !important;
 border: none !important;
 }
-
 [data-theme="dark"] #clientDynamicContent .pos-products-panel,
 [data-theme="dark"] #clientDynamicContent .pos-cart-panel,
 [data-theme="dark"] #clientDynamicContent .content-card {
