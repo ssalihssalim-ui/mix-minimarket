@@ -2689,3 +2689,36 @@ line-height: 1 !important;
 visibility: visible !important;
 opacity: 1 !important;
 }
+
+/* ============================================================
+✅ CORRECTION : BOUTON MENU CACHÉ SUR PAGE LOGIN/INSCRIPTION
+============================================================ */
+
+/* Le bouton menu est CACHÉ par défaut */
+.mobile-menu-btn {
+    display: none !important;
+}
+
+/* ✅ Le bouton menu est AFFICHÉ uniquement si on est dans une page connectée */
+#dashboardPage:not(.hidden) ~ .mobile-menu-btn,
+#dashboardPage:not(.hidden) .mobile-menu-btn,
+#clientPage:not(.hidden) ~ .mobile-menu-btn,
+#clientPage:not(.hidden) .mobile-menu-btn,
+#menuTactilePage:not(.hidden) ~ .mobile-menu-btn,
+#menuTactilePage:not(.hidden) .mobile-menu-btn {
+    display: flex !important;
+}
+
+/* ✅ Méthode :has() pour les navigateurs modernes */
+body:has(#dashboardPage:not(.hidden)) .mobile-menu-btn,
+body:has(#clientPage:not(.hidden)) .mobile-menu-btn,
+body:has(#menuTactilePage:not(.hidden)) .mobile-menu-btn {
+    display: flex !important;
+}
+
+/* ✅ Le bouton menu est CACHÉ quand le login est visible */
+body:has(#authPage:not(.hidden)) .mobile-menu-btn,
+#authPage:not(.hidden) ~ .mobile-menu-btn,
+#authPage:not(.hidden) .mobile-menu-btn {
+    display: none !important;
+}
