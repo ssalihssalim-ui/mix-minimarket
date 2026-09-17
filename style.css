@@ -1178,7 +1178,7 @@ max-height: 210px !important;
 padding: 5px 4px !important;
 }
 .pos-product-img {
-height: 120px !important;
+height: 150px !important;
 width: 90% !important;
 }
 .pos-product-name {
@@ -1193,18 +1193,18 @@ font-size: 16px !important;
 
 /* ✅ CATÉGORIES PC - IMAGES AGRANDIES */
 .pos-category-card {
-min-height: 180px !important;
-max-height: 210px !important;
+min-height: 210px !important;
+max-height: 250px !important;
 padding: 14px 10px !important;
 border: none !important;
 box-shadow: var(--shadow-xs) !important;
 }
 .pos-category-card .category-image {
-width: 160px !important;
-height: 160px !important;
+width: 190px !important;
+height: 190px !important;
 }
 .pos-category-card .fas.fa-folder {
-font-size: 70px !important;
+font-size: 85px !important;
 }
 .pos-category-card .category-name {
 font-size: 20px !important;
@@ -1240,15 +1240,15 @@ max-height: 34px !important;
 
 /* ✅ BARRE D'ÉTAPES - FONT SIZE AUGMENTÉ SUR PC */
 .pos-steps-nav .pos-step {
-font-size: 16px !important;
+font-size: 20px !important;
 }
 .pos-steps-nav .pos-step span:last-child {
-font-size: 16px !important;
+font-size: 20px !important;
 }
 .pos-steps-nav .step-number {
 width: 22px !important;
 height: 22px !important;
-font-size: 12px !important;
+font-size: 20px !important;
 }
 
 /* ✅ BARRE MULTI-PANIERS - FONT SIZE AUGMENTÉ SUR PC */
@@ -1257,18 +1257,18 @@ padding: 6px 12px !important;
 gap: 8px !important;
 }
 .pos-multi-carts-bar button {
-font-size: 14px !important;
+font-size: 18px !important;
 padding: 5px 14px !important;
 }
 .pos-multi-carts-bar div button {
-font-size: 14px !important;
+font-size: 18px !important;
 padding: 3px 8px !important;
 }
 .pos-multi-carts-bar span {
 font-size: 11px !important;
 }
 .pos-multi-carts-bar > button {
-font-size: 13px !important;
+font-size: 18px !important;
 padding: 5px 14px !important;
 }
 
