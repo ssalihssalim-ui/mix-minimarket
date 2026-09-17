@@ -1178,8 +1178,8 @@ max-height: 210px !important;
 padding: 5px 4px !important;
 }
 .pos-product-img {
-height: 100px !important;
-width: 85% !important;
+height: 120px !important;
+width: 90% !important;
 }
 .pos-product-name {
 font-size: 14px !important;
@@ -1193,18 +1193,18 @@ font-size: 16px !important;
 
 /* ✅ CATÉGORIES PC - IMAGES AGRANDIES */
 .pos-category-card {
-min-height: 210px !important;
-max-height: 250px !important;
+min-height: 180px !important;
+max-height: 210px !important;
 padding: 14px 10px !important;
 border: none !important;
 box-shadow: var(--shadow-xs) !important;
 }
 .pos-category-card .category-image {
-width: 200px !important;
-height: 200px !important;
+width: 160px !important;
+height: 160px !important;
 }
 .pos-category-card .fas.fa-folder {
-font-size: 85px !important;
+font-size: 70px !important;
 }
 .pos-category-card .category-name {
 font-size: 20px !important;
@@ -1229,13 +1229,47 @@ position: sticky !important;
 top: 0 !important;
 z-index: 100 !important;
 background: var(--bg-page) !important;
-padding: 2px 10px !important;
+padding: 4px 12px !important;
 border-radius: var(--radius) !important;
 flex-shrink: 0 !important;
 margin-bottom: 4px !important;
 border-bottom: 1px solid var(--border) !important;
-min-height: 22px !important;
-max-height: 28px !important;
+min-height: 28px !important;
+max-height: 34px !important;
+}
+
+/* ✅ BARRE D'ÉTAPES - FONT SIZE AUGMENTÉ SUR PC */
+.pos-steps-nav .pos-step {
+font-size: 16px !important;
+}
+.pos-steps-nav .pos-step span:last-child {
+font-size: 16px !important;
+}
+.pos-steps-nav .step-number {
+width: 22px !important;
+height: 22px !important;
+font-size: 12px !important;
+}
+
+/* ✅ BARRE MULTI-PANIERS - FONT SIZE AUGMENTÉ SUR PC */
+.pos-multi-carts-bar {
+padding: 6px 12px !important;
+gap: 8px !important;
+}
+.pos-multi-carts-bar button {
+font-size: 14px !important;
+padding: 5px 14px !important;
+}
+.pos-multi-carts-bar div button {
+font-size: 14px !important;
+padding: 3px 8px !important;
+}
+.pos-multi-carts-bar span {
+font-size: 11px !important;
+}
+.pos-multi-carts-bar > button {
+font-size: 13px !important;
+padding: 5px 14px !important;
 }
 
 /* ✅ PRODUITS PANEL - HAUTEUR AUGMENTÉE SUR PC */
