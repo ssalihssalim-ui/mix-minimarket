@@ -2156,3 +2156,534 @@ line-height: 1 !important;
 visibility: visible !important;
 opacity: 1 !important;
 }
+
+/* ============================================================
+✅ COMPTE CLIENT - AFFICHAGE IDENTIQUE ADMIN/CAISSIER
+============================================================ */
+
+/* ✅ PAGE CLIENT - STRUCTURE GENERALE */
+#clientPage {
+display: flex !important;
+height: 100vh !important;
+height: 100dvh !important;
+background: var(--bg-page) !important;
+overflow: hidden !important;
+position: relative !important;
+}
+
+/* ✅ SIDEBAR CLIENT - IDENTIQUE AU SIDEBAR ADMIN */
+#clientSidebar {
+width: 300px !important;
+background: var(--bg-dark) !important;
+display: flex !important;
+flex-direction: column !important;
+position: fixed !important;
+height: 100vh !important;
+height: 100dvh !important;
+left: 0 !important;
+top: 0 !important;
+z-index: 150 !important;
+overflow-y: auto !important;
+transition: transform 0.3s ease !important;
+box-shadow: var(--shadow-md) !important;
+transform: translateX(-100%) !important;
+}
+
+#clientSidebar.open {
+transform: translateX(0) !important;
+}
+
+/* ✅ CONTENU PRINCIPAL CLIENT */
+#clientPage .main-content {
+flex: 1 !important;
+margin-left: 0 !important;
+padding: 22px !important;
+padding-top: calc(70px + env(safe-area-inset-top, 0px)) !important;
+background: var(--bg-page) !important;
+height: 100vh !important;
+height: 100dvh !important;
+overflow-y: auto !important;
+overflow-x: hidden !important;
+}
+
+/* ✅ DYNAMIC CONTENT CLIENT */
+#clientDynamicContent {
+overflow-y: auto !important;
+overflow-x: hidden !important;
+height: 100vh !important;
+max-height: 100vh !important;
+padding-bottom: 40px !important;
+position: relative !important;
+}
+
+/* ✅ PAGE HEADER CLIENT */
+#clientPage .page-header {
+display: flex !important;
+justify-content: flex-start !important;
+align-items: center !important;
+margin-top: 0px !important;
+margin-bottom: 2px !important;
+padding: 0px 6px !important;
+min-height: 20px !important;
+gap: 4px !important;
+flex-wrap: wrap !important;
+}
+
+#clientPage .page-header .header-title {
+margin-left: 50px !important;
+display: flex !important;
+align-items: center !important;
+gap: 4px !important;
+}
+
+#clientPage .header-title i {
+font-size: 0.9rem !important;
+color: var(--white) !important;
+background: var(--black) !important;
+padding: 4px !important;
+border-radius: var(--radius) !important;
+}
+
+#clientPage .header-title h2 {
+font-size: 1rem !important;
+color: var(--text-primary) !important;
+font-weight: 700 !important;
+margin: 0 !important;
+}
+
+/* ✅ BOUTON MENU CLIENT */
+#clientPage .mobile-menu-btn {
+display: flex !important;
+background: var(--black) !important;
+border: none !important;
+color: var(--white) !important;
+font-size: 1.8rem !important;
+width: 56px !important;
+height: 56px !important;
+border-radius: var(--radius) !important;
+cursor: pointer !important;
+position: fixed !important;
+top: calc(24px + env(safe-area-inset-top, 0px)) !important;
+left: calc(14px + env(safe-area-inset-left, 0px)) !important;
+z-index: 200 !important;
+box-shadow: var(--shadow) !important;
+align-items: center !important;
+justify-content: center !important;
+padding: 0 !important;
+transition: var(--transition) !important;
+}
+
+/* ✅ CONTENEUR POS CLIENT - IDENTIQUE AU POS ADMIN */
+#clientDynamicContent .pos-container {
+display: flex !important;
+flex-direction: column !important;
+gap: 0px !important;
+height: auto !important;
+min-height: 120vh !important;
+max-height: none !important;
+width: 100% !important;
+padding: 0 4px 40px 4px !important;
+padding-top: 0px !important;
+position: relative !important;
+overflow-y: visible !important;
+overflow-x: hidden !important;
+}
+
+/* ✅ PANEL PRODUITS CLIENT */
+#clientDynamicContent .pos-products-panel {
+width: 100% !important;
+min-width: 0 !important;
+max-width: 100% !important;
+background: var(--bg-card) !important;
+border-radius: var(--radius-lg) !important;
+padding: 8px !important;
+box-shadow: var(--shadow-xs) !important;
+border: 1px solid var(--border) !important;
+display: flex !important;
+flex-direction: column !important;
+height: 75vh !important;
+min-height: 400px !important;
+max-height: 80vh !important;
+flex: none !important;
+}
+
+/* ✅ PANIER CLIENT */
+#clientDynamicContent .pos-cart-panel {
+position: static !important;
+width: 100% !important;
+min-width: 100% !important;
+max-width: 100% !important;
+height: auto !important;
+background: var(--bg-card) !important;
+border-radius: var(--radius-lg) !important;
+padding: 8px !important;
+box-shadow: var(--shadow-xs) !important;
+border: 1px solid var(--border) !important;
+display: flex !important;
+flex-direction: column !important;
+overflow: hidden !important;
+margin-top: 4px !important;
+max-height: 75vh !important;
+min-height: 400px !important;
+}
+
+/* ✅ GRILLE PRODUITS CLIENT - 5 COLONNES */
+#clientDynamicContent .pos-products-grid {
+display: grid !important;
+grid-template-columns: repeat(5, 1fr) !important;
+gap: 6px !important;
+padding: 4px !important;
+justify-content: center !important;
+align-content: start !important;
+overflow-x: hidden !important;
+overflow-y: auto !important;
+flex: 1 !important;
+}
+
+/* ✅ CARTES PRODUITS CLIENT */
+#clientDynamicContent .pos-product-card {
+min-height: 150px !important;
+max-height: 180px !important;
+padding: 3px 2px !important;
+border-radius: 8px !important;
+border: none !important;
+display: flex !important;
+flex-direction: column !important;
+align-items: center !important;
+justify-content: center !important;
+width: 100% !important;
+background: var(--bg-card) !important;
+cursor: pointer !important;
+transition: var(--transition) !important;
+gap: 1px !important;
+box-shadow: var(--shadow-xs) !important;
+}
+
+#clientDynamicContent .pos-product-card:hover {
+border: none !important;
+transform: translateY(-2px) !important;
+box-shadow: var(--shadow-md) !important;
+}
+
+#clientDynamicContent .pos-product-img {
+height: 85px !important;
+width: 85% !important;
+margin-bottom: 1px !important;
+border-radius: 8px !important;
+overflow: hidden !important;
+background: var(--gray-100) !important;
+flex-shrink: 0 !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+border: 2px solid var(--gray-200) !important;
+}
+
+#clientDynamicContent .pos-product-img img {
+width: 100% !important;
+height: 100% !important;
+object-fit: cover !important;
+}
+
+#clientDynamicContent .pos-product-name {
+font-size: 11px !important;
+font-weight: 700 !important;
+text-align: center !important;
+overflow: hidden !important;
+text-overflow: ellipsis !important;
+white-space: nowrap !important;
+max-width: 100% !important;
+display: block !important;
+color: var(--text-primary) !important;
+padding: 0 2px !important;
+line-height: 1.1 !important;
+margin-top: 1px !important;
+}
+
+#clientDynamicContent .pos-product-price {
+font-size: 13px !important;
+font-weight: 700 !important;
+display: block !important;
+text-align: center !important;
+margin-top: 0px !important;
+color: var(--text-primary) !important;
+}
+
+/* ✅ GRILLE CATÉGORIES CLIENT - 5 COLONNES */
+#clientDynamicContent .pos-categories-grid {
+display: grid !important;
+grid-template-columns: repeat(5, 1fr) !important;
+gap: 6px !important;
+padding: 4px !important;
+justify-content: center !important;
+align-content: start !important;
+overflow-x: hidden !important;
+overflow-y: auto !important;
+flex: 1 !important;
+}
+
+/* ✅ CARTES CATÉGORIES CLIENT */
+#clientDynamicContent .pos-category-card {
+min-height: 210px !important;
+max-height: 250px !important;
+padding: 8px 4px !important;
+border-radius: 10px !important;
+border: none !important;
+display: flex !important;
+flex-direction: column !important;
+align-items: center !important;
+justify-content: center !important;
+width: 100% !important;
+background: var(--bg-card) !important;
+cursor: pointer !important;
+transition: var(--transition) !important;
+gap: 4px !important;
+box-shadow: var(--shadow-xs) !important;
+}
+
+#clientDynamicContent .pos-category-card:hover {
+border: none !important;
+transform: translateY(-2px) !important;
+box-shadow: var(--shadow-md) !important;
+}
+
+#clientDynamicContent .pos-category-card .category-image {
+width: 200px !important;
+height: 200px !important;
+border-radius: 50% !important;
+overflow: hidden !important;
+flex-shrink: 0 !important;
+background: var(--gray-100) !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+margin-bottom: 4px !important;
+border: 3px solid var(--gray-200) !important;
+}
+
+#clientDynamicContent .pos-category-card .category-image img {
+width: 100% !important;
+height: 100% !important;
+object-fit: cover !important;
+}
+
+/* ✅ BARRE CATÉGORIES CLIENT */
+#clientDynamicContent .pos-categories-bar {
+display: flex !important;
+gap: 4px !important;
+margin-bottom: 6px !important;
+overflow-x: auto !important;
+padding-bottom: 3px !important;
+flex-shrink: 0 !important;
+}
+
+/* ✅ BOUTONS CATÉGORIES CLIENT */
+#clientDynamicContent .pos-cat-btn {
+display: flex !important;
+align-items: center !important;
+gap: 4px !important;
+padding: 4px 10px !important;
+border: 2px solid var(--border) !important;
+border-radius: var(--radius-full) !important;
+background: var(--bg-card) !important;
+color: var(--text-primary) !important;
+font-weight: 700 !important;
+font-size: 0.7rem !important;
+cursor: pointer !important;
+white-space: nowrap !important;
+transition: var(--transition) !important;
+}
+
+#clientDynamicContent .pos-cat-btn.active {
+background: var(--black) !important;
+color: var(--white) !important;
+border-color: var(--black) !important;
+}
+
+/* ✅ HEADER PANIER CLIENT */
+#clientDynamicContent .pos-cart-header {
+display: flex !important;
+justify-content: space-between !important;
+align-items: center !important;
+padding: 6px 10px !important;
+border-bottom: 1px solid var(--border) !important;
+flex-shrink: 0 !important;
+}
+
+/* ✅ ITEMS DU PANIER CLIENT */
+#clientDynamicContent .pos-cart-items {
+flex: 1 !important;
+overflow-y: auto !important;
+padding: 4px 6px !important;
+min-height: 60px !important;
+max-height: 350px !important;
+}
+
+/* ✅ FOOTER PANIER CLIENT */
+#clientDynamicContent .pos-cart-footer {
+padding: 2px 0 !important;
+flex-shrink: 0 !important;
+}
+
+/* ✅ LIGNE TOTAL CLIENT */
+#clientDynamicContent .pos-cart-total-row {
+display: flex !important;
+justify-content: space-between !important;
+font-size: 20px !important;
+font-weight: 700 !important;
+padding: 3px 0 !important;
+border-top: 2px solid var(--border) !important;
+}
+
+/* ✅ BOUTON VALIDER CLIENT */
+#clientDynamicContent .pos-validate-btn {
+width: 100% !important;
+padding: 10px !important;
+background: #14B8A6 !important;
+color: #fff !important;
+border: none !important;
+border-radius: 8px !important;
+font-size: 18px !important;
+font-weight: 700 !important;
+height: 40px !important;
+cursor: pointer !important;
+transition: all 0.2s !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 4px !important;
+margin-bottom: 12px !important;
+}
+
+/* ✅ TABLEAU HISTORIQUE CLIENT - IDENTIQUE ADMIN */
+#clientDynamicContent .table-container {
+overflow-x: auto !important;
+border-radius: var(--radius) !important;
+border: 1px solid var(--border) !important;
+}
+
+#clientDynamicContent .data-table {
+width: 100% !important;
+border-collapse: collapse !important;
+min-width: 600px !important;
+}
+
+#clientDynamicContent .data-table th,
+#clientDynamicContent .data-table td {
+padding: 10px 14px !important;
+text-align: left !important;
+border-bottom: 1px solid var(--border) !important;
+font-size: 0.8rem !important;
+white-space: nowrap !important;
+}
+
+#clientDynamicContent .data-table th {
+background: var(--bg-page) !important;
+font-weight: 700 !important;
+color: var(--text-secondary) !important;
+position: sticky !important;
+top: 0 !important;
+z-index: 1 !important;
+text-transform: uppercase !important;
+font-size: 0.7rem !important;
+letter-spacing: 0.5px !important;
+}
+
+#clientDynamicContent .data-table tbody tr:hover td {
+background: var(--gray-50) !important;
+}
+
+/* ✅ CONTENT CARD CLIENT */
+#clientDynamicContent .content-card {
+background: var(--bg-card) !important;
+border-radius: var(--radius-xl) !important;
+padding: 20px !important;
+box-shadow: var(--shadow-xs) !important;
+margin-bottom: 18px !important;
+border: 1px solid var(--border) !important;
+}
+
+#clientDynamicContent .card-header {
+display: flex !important;
+justify-content: space-between !important;
+align-items: center !important;
+margin-bottom: 16px !important;
+padding-bottom: 12px !important;
+border-bottom: 1px solid var(--border) !important;
+flex-wrap: wrap !important;
+gap: 10px !important;
+}
+
+#clientDynamicContent .card-header h3 {
+font-size: 1.05rem !important;
+font-weight: 600 !important;
+display: flex !important;
+align-items: center !important;
+gap: 10px !important;
+}
+
+/* ✅ MOBILE CLIENT */
+@media(max-width: 700px) {
+#clientPage .main-content {
+padding: 12px 8px !important;
+padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+}
+#clientPage .page-header {
+padding: 0px 4px !important;
+min-height: 16px !important;
+gap: 2px !important;
+}
+#clientPage .page-header .header-title {
+margin-left: 48px !important;
+gap: 3px !important;
+}
+#clientDynamicContent .pos-products-grid {
+gap: 4px !important;
+padding: 3px !important;
+grid-template-columns: repeat(4, 1fr) !important;
+}
+#clientDynamicContent .pos-categories-grid {
+gap: 6px !important;
+padding: 4px !important;
+grid-template-columns: repeat(3, 1fr) !important;
+}
+#clientDynamicContent .pos-product-img {
+height: 60px !important;
+width: 80% !important;
+}
+#clientDynamicContent .pos-product-name {
+font-size: 10px !important;
+}
+#clientDynamicContent .pos-product-price {
+font-size: 12px !important;
+}
+#clientDynamicContent .pos-category-card .category-image {
+width: 110px !important;
+height: 110px !important;
+}
+}
+
+/* ✅ TABLETTE CLIENT */
+@media(min-width: 700px) and (max-width: 1024px) {
+#clientDynamicContent .pos-products-grid {
+grid-template-columns: repeat(4, 1fr) !important;
+}
+#clientDynamicContent .pos-categories-grid {
+grid-template-columns: repeat(3, 1fr) !important;
+}
+}
+
+/* ✅ CLIENT - MODE SOMBRE */
+[data-theme="dark"] #clientPage {
+background: #0D1117 !important;
+}
+[data-theme="dark"] #clientDynamicContent .pos-product-card {
+background: #0D1117 !important;
+border: none !important;
+}
+[data-theme="dark"] #clientDynamicContent .pos-products-panel,
+[data-theme="dark"] #clientDynamicContent .pos-cart-panel,
+[data-theme="dark"] #clientDynamicContent .content-card {
+background: #161B22 !important;
+border-color: #30363D !important;
+}
