@@ -1179,7 +1179,7 @@ padding: 5px 4px !important;
 }
 .pos-product-img {
 height: 150px !important;
-width: 90% !important;
+width: 70% !important;
 }
 .pos-product-name {
 font-size: 14px !important;
@@ -1193,8 +1193,8 @@ font-size: 16px !important;
 
 /* ✅ CATÉGORIES PC - IMAGES AGRANDIES */
 .pos-category-card {
-min-height: 210px !important;
-max-height: 250px !important;
+min-height: 225px !important;
+max-height: 265px !important;
 padding: 14px 10px !important;
 border: none !important;
 box-shadow: var(--shadow-xs) !important;
