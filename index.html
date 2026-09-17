@@ -154,11 +154,11 @@ Contenu du modal
 <script src="db-cache.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js"></script>
-<script src="admin-crud.js"></script>   <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="admin-ventes.js"></script>  <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="admin-credits.js"></script>  <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="admin.js"></script>  <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="script.js"></script>  <!-- ✅ script.js APRÈS les autres -->
+<script src="admin-crud.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="admin-ventes.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="admin-credits.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="admin.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
+<script src="script.js"></script> <!-- ✅ script.js APRÈS les autres -->
 <script src="pos.js"></script>
 <script src="client.js"></script>
 <script src="menutactile.js"></script>
@@ -174,15 +174,15 @@ navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)
 
 // ✅ AJOUT : Sauvegarde automatique au chargement de l'application
 window.addEventListener('load', function() {
-    setTimeout(function() {
-        if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
-            console.log('💾 Sauvegarde initiale des données...');
-            CacheDB.saveAll();
-            if (typeof CacheDB.setupRealtime === 'function') {
-                CacheDB.setupRealtime();
-            }
-        }
-    }, 2000);
+setTimeout(function() {
+if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+console.log('💾 Sauvegarde initiale des données...');
+CacheDB.saveAll();
+if (typeof CacheDB.setupRealtime === 'function') {
+CacheDB.setupRealtime();
+}
+}
+}, 2000);
 });
 </script>
 
