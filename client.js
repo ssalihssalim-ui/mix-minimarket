@@ -396,7 +396,8 @@ window.updateCartOnly = function() {
 };
 
 // ==================== SURCHARGER posToggleTools POUR LE CLIENT ====================
-// Le client veut : bouton "Afficher tout" → affiche UNIQUEMENT la barre de recherche
+// ✅ Le client veut : bouton "Afficher tout" → affiche UNIQUEMENT la barre de recherche + le micro
+// ✅ Masque : barre des catégories slide, btn Tables, btn En ligne
 window.posToggleToolsOriginal = window.posToggleTools;
 window.posToggleTools = function() {
     if (window.posIsClientMode) {
@@ -435,21 +436,23 @@ window.posToggleTools = function() {
             }
         }
 
-        // ✅ Masquer le micro (le client n'en a pas besoin)
+        // ✅ Afficher le micro
         var micBtn = document.getElementById('posMicBtn');
-        if (micBtn) micBtn.style.display = 'none';
+        if (micBtn) {
+            micBtn.style.display = posToolsVisible ? 'flex' : 'none';
+        }
 
-        // ✅ Masquer les boutons tables/en ligne
+        // ✅ MASQUER les boutons Tables et En ligne
         var tablesBtn = document.getElementById('posTablesBtn');
         if (tablesBtn) tablesBtn.style.display = 'none';
         var enligneBtn = document.getElementById('posEnLigneBtn');
         if (enligneBtn) enligneBtn.style.display = 'none';
 
-        // ✅ Masquer la barre des catégories dans le tools (le client utilise les cartes catégories)
+        // ✅ MASQUER la barre des catégories (slide)
         var categoriesBar = document.querySelector('#clientDynamicContent .pos-categories-bar');
         if (categoriesBar) categoriesBar.style.display = 'none';
 
-        // ✅ Si on masque, revenir aux catégories
+        // ✅ Si on masque, revenir aux catégories (cartes)
         if (!posToolsVisible) {
             posViewMode = 'categories';
             posSelectedCategoryForView = null;
@@ -649,8 +652,8 @@ window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
 
 console.log('🚀 E-SOLUTION - Client JS chargé (POS identique à l\'admin)');
 console.log('✅ Réutilise buildFullPOS de pos.js');
-console.log('✅ Barre de recherche via bouton "Afficher tout"');
+console.log('✅ Barre de recherche via bouton "Afficher tout" + micro uniquement');
+console.log('✅ Sans catégories slide, sans Tables, sans En ligne');
 console.log('✅ Étape de paiement identique');
 console.log('✅ Sans multi-paniers');
-console.log('✅ Sans boutons Tables / En ligne');
 console.log('✅ Mêmes dimensions / même responsive');
