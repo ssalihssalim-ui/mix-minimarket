@@ -1813,6 +1813,351 @@ border: none !important;
 }
 
 /* ============================================================
+✅ MODE SOMBRE
+============================================================ */
+[data-theme="dark"] {
+--bg-page: #0D1117;
+--bg-card: #161B22;
+--text-primary: #F0F6FC;
+--text-secondary: #8B949E;
+--text-muted: #6B7280;
+--border: #30363D;
+--gray-50: #161B22;
+--gray-100: #1C2333;
+--gray-200: #30363D;
+--gray-300: #4A5568;
+--gray-400: #6B7280;
+--gray-500: #8B949E;
+--gray-600: #B0B8C4;
+--black: #0D1117;
+--shadow-xs: 0 1px 2px rgba(0,0,0,0.3);
+--shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+--shadow: 0 4px 6px rgba(0,0,0,0.3);
+--shadow-md: 0 10px 25px rgba(0,0,0,0.4);
+--shadow-lg: 0 20px 40px rgba(0,0,0,0.5);
+--shadow-xl: 0 25px 50px rgba(0,0,0,0.6);
+}
+
+[data-theme="dark"] .pos-product-card {
+background: #0D1117 !important;
+border: none !important;
+box-shadow: var(--shadow-xs) !important;
+}
+[data-theme="dark"] .pos-product-name {
+color: #F0F6FC !important;
+}
+[data-theme="dark"] .pos-product-price {
+color: #F0F6FC !important;
+}
+[data-theme="dark"] .pos-old-price {
+color: #8B949E !important;
+}
+[data-theme="dark"] .pos-promo-price {
+color: #F87171 !important;
+}
+[data-theme="dark"] .pos-product-img {
+background: #1C2333 !important;
+}
+[data-theme="dark"] .pos-products-panel {
+background: #161B22 !important;
+border-color: #30363D !important;
+}
+[data-theme="dark"] .pos-products-grid {
+background: #161B22 !important;
+}
+[data-theme="dark"] .pos-categories-grid {
+background: #161B22 !important;
+}
+[data-theme="dark"] .pos-cart-panel {
+background: #161B22 !important;
+border-color: #30363D !important;
+}
+[data-theme="dark"] .pos-categories-bar {
+background: #161B22 !important;
+}
+[data-theme="dark"] .pos-cat-btn {
+background: #0D1117 !important;
+border-color: #30363D !important;
+color: #F0F6FC !important;
+}
+[data-theme="dark"] .pos-cat-btn.active {
+background: #14B8A6 !important;
+color: #FFFFFF !important;
+border-color: #14B8A6 !important;
+}
+[data-theme="dark"] .pos-steps-nav {
+background: #161B22 !important;
+border-bottom-color: #30363D !important;
+}
+
+[data-theme="dark"] .pos-category-card {
+background: #0D1117 !important;
+border: none !important;
+}
+[data-theme="dark"] .pos-category-card:hover {
+background: #161B22 !important;
+border: none !important;
+box-shadow: var(--shadow-md) !important;
+}
+[data-theme="dark"] .pos-category-card.active {
+border: none !important;
+background: #161B22 !important;
+box-shadow: 0 2px 16px rgba(20,184,166,0.25) !important;
+}
+
+/* ============================================================
+✅ SAFE AREA POUR IPHONE - CORRECTION ESPACE MOBILE
+============================================================ */
+#dashboardPage,
+#clientPage,
+#menuTactilePage,
+.dashboard,
+.main-content,
+.sidebar,
+.login-wrapper {
+padding-top: env(safe-area-inset-top, 0px) !important;
+padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+padding-left: env(safe-area-inset-left, 0px) !important;
+padding-right: env(safe-area-inset-right, 0px) !important;
+}
+
+/* ✅ CORRECTION SPECIFIQUE POS - SUPPRESSION DU PADDING SUPÉRIEUR */
+.pos-container {
+padding-top: 0px !important;
+}
+
+/* ✅ MAIN CONTENT - PADDING TOP RÉDUIT SUR MOBILE */
+.main-content {
+padding-top: calc(22px + env(safe-area-inset-top, 0px)) !important;
+}
+
+/* ✅ CORRECTION SPÉCIFIQUE POUR iOS */
+@supports (-webkit-touch-callout: none) {
+.pos-container {
+padding-top: 0px !important;
+}
+.pos-steps-nav {
+padding-top: 0px !important;
+margin-top: 0px !important;
+}
+.page-header {
+margin-top: 0px !important;
+padding-top: 0px !important;
+}
+.main-content {
+padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+}
+}
+
+/* ✅ CORRECTION POUR ANDROID CHROME */
+@supports (padding: max(0px)) {
+.pos-container {
+padding-top: 0px !important;
+}
+}
+
+/* ============================================================
+✅ CORRECTION BOUTONS - ÉVITE LE DÉCALAGE SUR CLICK
+============================================================ */
+
+/* ✅ CORRECTION POUR TOUS LES BOUTONS D'ACTION */
+.action-buttons .btn-print,
+.action-buttons .btn-whatsapp,
+.action-buttons .btn-payer,
+.action-buttons .btn-edit,
+.action-buttons .btn-delete {
+width: 50px !important;
+height: 50px !important;
+min-width: 50px !important;
+min-height: 50px !important;
+border-radius: 10px !important;
+display: inline-flex !important;
+align-items: center !important;
+justify-content: center !important;
+padding: 0 !important;
+font-size: 22px !important;
+transition: all 0.2s ease !important;
+border: none !important;
+cursor: pointer !important;
+flex-shrink: 0 !important;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+visibility: visible !important;
+opacity: 1 !important;
+touch-action: manipulation !important;
+transform: translateZ(0) !important;
+-webkit-transform: translateZ(0) !important;
+will-change: transform !important;
+}
+.action-buttons .btn-print:active,
+.action-buttons .btn-whatsapp:active,
+.action-buttons .btn-payer:active,
+.action-buttons .btn-edit:active,
+.action-buttons .btn-delete:active {
+transform: scale(0.92) !important;
+}
+
+/* Bouton Imprimer - Indigo */
+.action-buttons .btn-print {
+background: #6366f1 !important;
+color: #fff !important;
+}
+.action-buttons .btn-print:hover {
+background: #4f46e5 !important;
+}
+
+/* Bouton WhatsApp - Vert */
+.action-buttons .btn-whatsapp {
+background: #25D366 !important;
+color: #fff !important;
+}
+.action-buttons .btn-whatsapp:hover {
+background: #128C7E !important;
+}
+
+/* Bouton Payer - Émeraude */
+.action-buttons .btn-payer {
+background: #10B981 !important;
+color: #fff !important;
+}
+.action-buttons .btn-payer:hover {
+background: #059669 !important;
+}
+
+/* Bouton Modifier - Orange */
+.action-buttons .btn-edit {
+background: #f59e0b !important;
+color: #fff !important;
+}
+.action-buttons .btn-edit:hover {
+background: #d97706 !important;
+}
+
+/* Bouton Supprimer - Rouge */
+.action-buttons .btn-delete {
+background: #ef4444 !important;
+color: #fff !important;
+}
+.action-buttons .btn-delete:hover {
+background: #dc2626 !important;
+}
+
+@media(max-width: 768px) {
+.action-buttons .btn-print,
+.action-buttons .btn-whatsapp,
+.action-buttons .btn-payer,
+.action-buttons .btn-edit,
+.action-buttons .btn-delete {
+width: 40px !important;
+height: 40px !important;
+min-width: 40px !important;
+min-height: 40px !important;
+touch-action: manipulation !important;
+}
+.action-buttons .btn-print:active,
+.action-buttons .btn-whatsapp:active,
+.action-buttons .btn-payer:active,
+.action-buttons .btn-edit:active,
+.action-buttons .btn-delete:active {
+transform: scale(0.90) !important;
+}
+.action-buttons .btn-print i,
+.action-buttons .btn-whatsapp i,
+.action-buttons .btn-payer i,
+.action-buttons .btn-edit i,
+.action-buttons .btn-delete i {
+font-size: 18px !important;
+}
+}
+
+@media(max-width: 500px) {
+.action-buttons .btn-print,
+.action-buttons .btn-whatsapp,
+.action-buttons .btn-payer,
+.action-buttons .btn-edit,
+.action-buttons .btn-delete {
+width: 35px !important;
+height: 35px !important;
+min-width: 35px !important;
+min-height: 35px !important;
+touch-action: manipulation !important;
+}
+.action-buttons .btn-print:active,
+.action-buttons .btn-whatsapp:active,
+.action-buttons .btn-payer:active,
+.action-buttons .btn-edit:active,
+.action-buttons .btn-delete:active {
+transform: scale(0.88) !important;
+}
+.action-buttons .btn-print i,
+.action-buttons .btn-whatsapp i,
+.action-buttons .btn-payer i,
+.action-buttons .btn-edit i,
+.action-buttons .btn-delete i {
+font-size: 16px !important;
+}
+}
+
+/* ============================================================
+✅ ICÔNES FONT AWESOME - PROTÉGÉES
+============================================================ */
+.fas, .far, .fab, .fa, .fa-solid, .fa-regular, .fa-brands {
+font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free', 'Font Awesome 5 Brands', 'Font Awesome 6 Brands' !important;
+font-weight: 900 !important;
+font-style: normal !important;
+line-height: 1 !important;
+display: inline-block !important;
+-webkit-font-smoothing: antialiased !important;
+-moz-osx-font-smoothing: grayscale !important;
+vertical-align: middle !important;
+text-rendering: auto !important;
+}
+
+/* ============================================================
+✅ CORRECTION ICÔNES DANS LES BOUTONS
+============================================================ */
+button .fas,
+button .far,
+button .fab,
+button .fa,
+button .fa-solid,
+button .fa-regular,
+button .fa-brands {
+font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free', 'Font Awesome 5 Brands', 'Font Awesome 6 Brands' !important;
+font-weight: 900 !important;
+font-style: normal !important;
+line-height: 1 !important;
+display: inline-block !important;
+-webkit-font-smoothing: antialiased !important;
+-moz-osx-font-smoothing: grayscale !important;
+vertical-align: middle !important;
+text-rendering: auto !important;
+font-size: inherit !important;
+width: auto !important;
+height: auto !important;
+margin: 0 !important;
+padding: 0 !important;
+visibility: visible !important;
+opacity: 1 !important;
+}
+
+/* ✅ TAILLE CORRECTE DES ICÔNES DANS LES BOUTONS */
+.action-buttons .btn-print i,
+.action-buttons .btn-whatsapp i,
+.action-buttons .btn-payer i,
+.action-buttons .btn-edit i,
+.action-buttons .btn-delete i {
+font-size: 22px !important;
+width: auto !important;
+height: auto !important;
+margin: 0 !important;
+padding: 0 !important;
+display: inline-block !important;
+line-height: 1 !important;
+visibility: visible !important;
+opacity: 1 !important;
+}
+
+/* ============================================================
 ✅ COMPTE CLIENT - AFFICHAGE IDENTIQUE ADMIN/CAISSIER
 ============================================================ */
 
@@ -2330,438 +2675,71 @@ grid-template-columns: repeat(3, 1fr) !important;
 }
 
 /* ============================================================
-✅ MODE SOMBRE
-============================================================ */
-[data-theme="dark"] {
---bg-page: #0D1117;
---bg-card: #161B22;
---text-primary: #F0F6FC;
---text-secondary: #8B949E;
---text-muted: #6B7280;
---border: #30363D;
---gray-50: #161B22;
---gray-100: #1C2333;
---gray-200: #30363D;
---gray-300: #4A5568;
---gray-400: #6B7280;
---gray-500: #8B949E;
---gray-600: #B0B8C4;
---black: #0D1117;
---shadow-xs: 0 1px 2px rgba(0,0,0,0.3);
---shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
---shadow: 0 4px 6px rgba(0,0,0,0.3);
---shadow-md: 0 10px 25px rgba(0,0,0,0.4);
---shadow-lg: 0 20px 40px rgba(0,0,0,0.5);
---shadow-xl: 0 25px 50px rgba(0,0,0,0.6);
-}
-
-[data-theme="dark"] .pos-product-card {
-background: #0D1117 !important;
-border: none !important;
-box-shadow: var(--shadow-xs) !important;
-}
-[data-theme="dark"] .pos-product-name {
-color: #F0F6FC !important;
-}
-[data-theme="dark"] .pos-product-price {
-color: #F0F6FC !important;
-}
-[data-theme="dark"] .pos-old-price {
-color: #8B949E !important;
-}
-[data-theme="dark"] .pos-promo-price {
-color: #F87171 !important;
-}
-[data-theme="dark"] .pos-product-img {
-background: #1C2333 !important;
-}
-[data-theme="dark"] .pos-products-panel {
-background: #161B22 !important;
-border-color: #30363D !important;
-}
-[data-theme="dark"] .pos-products-grid {
-background: #161B22 !important;
-}
-[data-theme="dark"] .pos-categories-grid {
-background: #161B22 !important;
-}
-[data-theme="dark"] .pos-cart-panel {
-background: #161B22 !important;
-border-color: #30363D !important;
-}
-[data-theme="dark"] .pos-categories-bar {
-background: #161B22 !important;
-}
-[data-theme="dark"] .pos-cat-btn {
-background: #0D1117 !important;
-border-color: #30363D !important;
-color: #F0F6FC !important;
-}
-[data-theme="dark"] .pos-cat-btn.active {
-background: #14B8A6 !important;
-color: #FFFFFF !important;
-border-color: #14B8A6 !important;
-}
-[data-theme="dark"] .pos-steps-nav {
-background: #161B22 !important;
-border-bottom-color: #30363D !important;
-}
-
-[data-theme="dark"] .pos-category-card {
-background: #0D1117 !important;
-border: none !important;
-}
-[data-theme="dark"] .pos-category-card:hover {
-background: #161B22 !important;
-border: none !important;
-box-shadow: var(--shadow-md) !important;
-}
-[data-theme="dark"] .pos-category-card.active {
-border: none !important;
-background: #161B22 !important;
-box-shadow: 0 2px 16px rgba(20,184,166,0.25) !important;
-}
-
-/* ✅ CLIENT - MODE SOMBRE */
-[data-theme="dark"] #clientPage {
-background: #0D1117 !important;
-}
-[data-theme="dark"] #clientDynamicContent .pos-product-card {
-background: #0D1117 !important;
-border: none !important;
-}
-[data-theme="dark"] #clientDynamicContent .pos-products-panel,
-[data-theme="dark"] #clientDynamicContent .pos-cart-panel,
-[data-theme="dark"] #clientDynamicContent .content-card {
-background: #161B22 !important;
-border-color: #30363D !important;
-}
-
-/* ============================================================
-✅ SAFE AREA POUR IPHONE - CORRECTION ESPACE MOBILE
-============================================================ */
-#dashboardPage,
-#clientPage,
-#menuTactilePage,
-.dashboard,
-.main-content,
-.sidebar,
-#clientSidebar,
-.login-wrapper {
-padding-top: env(safe-area-inset-top, 0px) !important;
-padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-padding-left: env(safe-area-inset-left, 0px) !important;
-padding-right: env(safe-area-inset-right, 0px) !important;
-}
-
-/* ✅ CORRECTION SPECIFIQUE POS - SUPPRESSION DU PADDING SUPÉRIEUR */
-.pos-container {
-padding-top: 0px !important;
-}
-
-/* ✅ MAIN CONTENT - PADDING TOP RÉDUIT SUR MOBILE */
-.main-content {
-padding-top: calc(22px + env(safe-area-inset-top, 0px)) !important;
-}
-
-/* ✅ CORRECTION SPÉCIFIQUE POUR iOS */
-@supports (-webkit-touch-callout: none) {
-    .pos-container {
-        padding-top: 0px !important;
-    }
-    .pos-steps-nav {
-        padding-top: 0px !important;
-        margin-top: 0px !important;
-    }
-    .page-header {
-        margin-top: 0px !important;
-        padding-top: 0px !important;
-    }
-    .main-content {
-        padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
-    }
-}
-
-/* ✅ CORRECTION POUR ANDROID CHROME */
-@supports (padding: max(0px)) {
-    .pos-container {
-        padding-top: 0px !important;
-    }
-}
-
-/* ============================================================
-✅ CORRECTION BOUTONS - ÉVITE LE DÉCALAGE SUR CLICK
+✅ CORRECTION BOUTON MENU - CACHÉ SUR LOGIN UNIQUEMENT
 ============================================================ */
 
-/* ✅ CORRECTION POUR TOUS LES BOUTONS D'ACTION */
-.action-buttons .btn-print,
-.action-buttons .btn-whatsapp,
-.action-buttons .btn-payer,
-.action-buttons .btn-edit,
-.action-buttons .btn-delete {
-width: 50px !important;
-height: 50px !important;
-min-width: 50px !important;
-min-height: 50px !important;
-border-radius: 10px !important;
-display: inline-flex !important;
-align-items: center !important;
-justify-content: center !important;
-padding: 0 !important;
-font-size: 22px !important;
-transition: all 0.2s ease !important;
-border: none !important;
-cursor: pointer !important;
-flex-shrink: 0 !important;
-box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-visibility: visible !important;
-opacity: 1 !important;
-touch-action: manipulation !important;
-transform: translateZ(0) !important;
--webkit-transform: translateZ(0) !important;
-will-change: transform !important;
-}
-.action-buttons .btn-print:active,
-.action-buttons .btn-whatsapp:active,
-.action-buttons .btn-payer:active,
-.action-buttons .btn-edit:active,
-.action-buttons .btn-delete:active {
-transform: scale(0.92) !important;
-}
-
-/* Bouton Imprimer - Indigo */
-.action-buttons .btn-print {
-background: #6366f1 !important;
-color: #fff !important;
-}
-.action-buttons .btn-print:hover {
-background: #4f46e5 !important;
-}
-
-/* Bouton WhatsApp - Vert */
-.action-buttons .btn-whatsapp {
-background: #25D366 !important;
-color: #fff !important;
-}
-.action-buttons .btn-whatsapp:hover {
-background: #128C7E !important;
-}
-
-/* Bouton Payer - Émeraude */
-.action-buttons .btn-payer {
-background: #10B981 !important;
-color: #fff !important;
-}
-.action-buttons .btn-payer:hover {
-background: #059669 !important;
-}
-
-/* Bouton Modifier - Orange */
-.action-buttons .btn-edit {
-background: #f59e0b !important;
-color: #fff !important;
-}
-.action-buttons .btn-edit:hover {
-background: #d97706 !important;
-}
-
-/* Bouton Supprimer - Rouge */
-.action-buttons .btn-delete {
-background: #ef4444 !important;
-color: #fff !important;
-}
-.action-buttons .btn-delete:hover {
-background: #dc2626 !important;
-}
-
-@media(max-width: 768px) {
-.action-buttons .btn-print,
-.action-buttons .btn-whatsapp,
-.action-buttons .btn-payer,
-.action-buttons .btn-edit,
-.action-buttons .btn-delete {
-width: 40px !important;
-height: 40px !important;
-min-width: 40px !important;
-min-height: 40px !important;
-touch-action: manipulation !important;
-}
-.action-buttons .btn-print:active,
-.action-buttons .btn-whatsapp:active,
-.action-buttons .btn-payer:active,
-.action-buttons .btn-edit:active,
-.action-buttons .btn-delete:active {
-transform: scale(0.90) !important;
-}
-.action-buttons .btn-print i,
-.action-buttons .btn-whatsapp i,
-.action-buttons .btn-payer i,
-.action-buttons .btn-edit i,
-.action-buttons .btn-delete i {
-font-size: 18px !important;
-}
-}
-
-@media(max-width: 500px) {
-.action-buttons .btn-print,
-.action-buttons .btn-whatsapp,
-.action-buttons .btn-payer,
-.action-buttons .btn-edit,
-.action-buttons .btn-delete {
-width: 35px !important;
-height: 35px !important;
-min-width: 35px !important;
-min-height: 35px !important;
-touch-action: manipulation !important;
-}
-.action-buttons .btn-print:active,
-.action-buttons .btn-whatsapp:active,
-.action-buttons .btn-payer:active,
-.action-buttons .btn-edit:active,
-.action-buttons .btn-delete:active {
-transform: scale(0.88) !important;
-}
-.action-buttons .btn-print i,
-.action-buttons .btn-whatsapp i,
-.action-buttons .btn-payer i,
-.action-buttons .btn-edit i,
-.action-buttons .btn-delete i {
-font-size: 16px !important;
-}
-}
-
-/* ============================================================
-✅ ICÔNES FONT AWESOME - PROTÉGÉES
-============================================================ */
-.fas, .far, .fab, .fa, .fa-solid, .fa-regular, .fa-brands {
-font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free', 'Font Awesome 5 Brands', 'Font Awesome 6 Brands' !important;
-font-weight: 900 !important;
-font-style: normal !important;
-line-height: 1 !important;
-display: inline-block !important;
--webkit-font-smoothing: antialiased !important;
--moz-osx-font-smoothing: grayscale !important;
-vertical-align: middle !important;
-text-rendering: auto !important;
-}
-
-/* ============================================================
-✅ CORRECTION ICÔNES DANS LES BOUTONS
-============================================================ */
-button .fas,
-button .far,
-button .fab,
-button .fa,
-button .fa-solid,
-button .fa-regular,
-button .fa-brands {
-font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free', 'Font Awesome 5 Brands', 'Font Awesome 6 Brands' !important;
-font-weight: 900 !important;
-font-style: normal !important;
-line-height: 1 !important;
-display: inline-block !important;
--webkit-font-smoothing: antialiased !important;
--moz-osx-font-smoothing: grayscale !important;
-vertical-align: middle !important;
-text-rendering: auto !important;
-font-size: inherit !important;
-width: auto !important;
-height: auto !important;
-margin: 0 !important;
-padding: 0 !important;
-visibility: visible !important;
-opacity: 1 !important;
-}
-
-/* ✅ TAILLE CORRECTE DES ICÔNES DANS LES BOUTONS */
-.action-buttons .btn-print i,
-.action-buttons .btn-whatsapp i,
-.action-buttons .btn-payer i,
-.action-buttons .btn-edit i,
-.action-buttons .btn-delete i {
-font-size: 22px !important;
-width: auto !important;
-height: auto !important;
-margin: 0 !important;
-padding: 0 !important;
-display: inline-block !important;
-line-height: 1 !important;
-visibility: visible !important;
-opacity: 1 !important;
-}
-
-/* ============================================================
-✅ CORRECTION : BOUTON MENU CACHÉ SUR PAGE LOGIN/INSCRIPTION
-============================================================ */
-
-/* Le bouton menu est CACHÉ par défaut */
+/* ✅ Le bouton menu est caché par défaut */
 .mobile-menu-btn {
     display: none !important;
 }
 
-/* ✅ Le bouton menu est AFFICHÉ uniquement si on est dans une page connectée */
+/* ✅ Le bouton est affiché uniquement si dashboard est actif (admin/caissier) */
 #dashboardPage:not(.hidden) ~ .mobile-menu-btn,
 #dashboardPage:not(.hidden) .mobile-menu-btn,
-#clientPage:not(.hidden) ~ .mobile-menu-btn,
-#clientPage:not(.hidden) .mobile-menu-btn,
-#menuTactilePage:not(.hidden) ~ .mobile-menu-btn,
-#menuTactilePage:not(.hidden) .mobile-menu-btn {
+body:has(#dashboardPage:not(.hidden)) .mobile-menu-btn {
     display: flex !important;
 }
 
-/* ✅ Méthode :has() pour les navigateurs modernes */
-body:has(#dashboardPage:not(.hidden)) .mobile-menu-btn,
-body:has(#clientPage:not(.hidden)) .mobile-menu-btn,
+/* ✅ Le bouton est affiché si clientPage est active */
+#clientPage:not(.hidden) ~ .mobile-menu-btn,
+#clientPage:not(.hidden) .mobile-menu-btn,
+body:has(#clientPage:not(.hidden)) .mobile-menu-btn {
+    display: flex !important;
+}
+
+/* ✅ Le bouton est affiché si menuTactilePage est active */
+#menuTactilePage:not(.hidden) ~ .mobile-menu-btn,
+#menuTactilePage:not(.hidden) .mobile-menu-btn,
 body:has(#menuTactilePage:not(.hidden)) .mobile-menu-btn {
     display: flex !important;
 }
 
-/* ✅ Le bouton menu est CACHÉ quand le login est visible */
-body:has(#authPage:not(.hidden)) .mobile-menu-btn,
+/* ✅ Le bouton est CACHÉ si authPage est active (login/inscription) */
 #authPage:not(.hidden) ~ .mobile-menu-btn,
-#authPage:not(.hidden) .mobile-menu-btn {
+#authPage:not(.hidden) .mobile-menu-btn,
+body:has(#authPage:not(.hidden)) .mobile-menu-btn {
     display: none !important;
 }
 
 /* ============================================================
-✅ CORRECTION : UN SEUL SIDEBAR VISIBLE SELON LE RÔLE
+✅ CORRECTION SIDEBAR - UN SEUL SIDEBAR VISIBLE PAR RÔLE
 ============================================================ */
 
-/* ✅ Par défaut : cacher les deux sidebars */
-#sidebar,
+/* ✅ S'assurer que le SIDEBAR ADMIN peut s'afficher sur dashboard */
+#sidebar {
+    display: flex !important;
+}
+
+/* ✅ S'assurer que le SIDEBAR CLIENT peut s'afficher sur clientPage */
 #clientSidebar {
-    display: none !important;
-}
-
-/* ✅ Afficher le sidebar ADMIN/CAISSIER si dashboard est actif */
-body:has(#dashboardPage:not(.hidden)) #sidebar,
-#dashboardPage:not(.hidden) ~ #sidebar,
-#dashboardPage:not(.hidden) #sidebar {
     display: flex !important;
 }
 
-/* ✅ Cacher le sidebar CLIENT si dashboard est actif */
-body:has(#dashboardPage:not(.hidden)) #clientSidebar,
-#dashboardPage:not(.hidden) ~ #clientSidebar,
-#dashboardPage:not(.hidden) #clientSidebar {
-    display: none !important;
-}
-
-/* ✅ Afficher le sidebar CLIENT si clientPage est actif */
-body:has(#clientPage:not(.hidden)) #clientSidebar,
-#clientPage:not(.hidden) ~ #clientSidebar,
-#clientPage:not(.hidden) #clientSidebar {
-    display: flex !important;
-}
-
-/* ✅ Cacher le sidebar ADMIN/CAISSIER si clientPage est actif */
+/* ✅ Cacher le SIDEBAR ADMIN quand clientPage est active */
 body:has(#clientPage:not(.hidden)) #sidebar,
 #clientPage:not(.hidden) ~ #sidebar,
 #clientPage:not(.hidden) #sidebar {
     display: none !important;
 }
 
-/* ✅ Cacher les deux sidebars quand login/inscription est visible */
+/* ✅ Cacher le SIDEBAR CLIENT quand dashboard est actif */
+body:has(#dashboardPage:not(.hidden)) #clientSidebar,
+#dashboardPage:not(.hidden) ~ #clientSidebar,
+#dashboardPage:not(.hidden) #clientSidebar {
+    display: none !important;
+}
+
+/* ✅ Cacher les deux sidebars quand login est actif */
 body:has(#authPage:not(.hidden)) #sidebar,
 body:has(#authPage:not(.hidden)) #clientSidebar,
 #authPage:not(.hidden) ~ #sidebar,
@@ -2769,8 +2747,21 @@ body:has(#authPage:not(.hidden)) #clientSidebar,
     display: none !important;
 }
 
-/* ✅ Cacher les deux sidebars quand menuTactilePage est visible */
-body:has(#menuTactilePage:not(.hidden)) #sidebar,
-body:has(#menuTactilePage:not(.hidden)) #clientSidebar {
-    display: none !important;
+/* ============================================================
+✅ MODE SOMBRE - CLIENT
+============================================================ */
+[data-theme="dark"] #clientPage {
+background: #0D1117 !important;
+}
+
+[data-theme="dark"] #clientDynamicContent .pos-product-card {
+background: #0D1117 !important;
+border: none !important;
+}
+
+[data-theme="dark"] #clientDynamicContent .pos-products-panel,
+[data-theme="dark"] #clientDynamicContent .pos-cart-panel,
+[data-theme="dark"] #clientDynamicContent .content-card {
+background: #161B22 !important;
+border-color: #30363D !important;
 }
