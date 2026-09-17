@@ -2722,3 +2722,55 @@ body:has(#authPage:not(.hidden)) .mobile-menu-btn,
 #authPage:not(.hidden) .mobile-menu-btn {
     display: none !important;
 }
+
+/* ============================================================
+✅ CORRECTION : UN SEUL SIDEBAR VISIBLE SELON LE RÔLE
+============================================================ */
+
+/* ✅ Par défaut : cacher les deux sidebars */
+#sidebar,
+#clientSidebar {
+    display: none !important;
+}
+
+/* ✅ Afficher le sidebar ADMIN/CAISSIER si dashboard est actif */
+body:has(#dashboardPage:not(.hidden)) #sidebar,
+#dashboardPage:not(.hidden) ~ #sidebar,
+#dashboardPage:not(.hidden) #sidebar {
+    display: flex !important;
+}
+
+/* ✅ Cacher le sidebar CLIENT si dashboard est actif */
+body:has(#dashboardPage:not(.hidden)) #clientSidebar,
+#dashboardPage:not(.hidden) ~ #clientSidebar,
+#dashboardPage:not(.hidden) #clientSidebar {
+    display: none !important;
+}
+
+/* ✅ Afficher le sidebar CLIENT si clientPage est actif */
+body:has(#clientPage:not(.hidden)) #clientSidebar,
+#clientPage:not(.hidden) ~ #clientSidebar,
+#clientPage:not(.hidden) #clientSidebar {
+    display: flex !important;
+}
+
+/* ✅ Cacher le sidebar ADMIN/CAISSIER si clientPage est actif */
+body:has(#clientPage:not(.hidden)) #sidebar,
+#clientPage:not(.hidden) ~ #sidebar,
+#clientPage:not(.hidden) #sidebar {
+    display: none !important;
+}
+
+/* ✅ Cacher les deux sidebars quand login/inscription est visible */
+body:has(#authPage:not(.hidden)) #sidebar,
+body:has(#authPage:not(.hidden)) #clientSidebar,
+#authPage:not(.hidden) ~ #sidebar,
+#authPage:not(.hidden) ~ #clientSidebar {
+    display: none !important;
+}
+
+/* ✅ Cacher les deux sidebars quand menuTactilePage est visible */
+body:has(#menuTactilePage:not(.hidden)) #sidebar,
+body:has(#menuTactilePage:not(.hidden)) #clientSidebar {
+    display: none !important;
+}
