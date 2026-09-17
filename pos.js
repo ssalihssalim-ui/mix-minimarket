@@ -17,6 +17,7 @@
 // ✅ AFFICHAGE CORRECT DES PRODUITS ET NAVIGATION FLUIDE ENTRE PANIERS
 // ✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET
 // ✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À 5)
+// ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE DÉFINITIVEMENT
 
 var posCart = [];
 var posStep = 1;
@@ -651,24 +652,12 @@ function posToggleTools() {
         enligneBtn.style.display = posToolsVisible ? 'inline-flex' : 'none';
     }
 
-    var categoriesBar = document.querySelector('.pos-categories-bar');
-    if (categoriesBar) {
-        categoriesBar.style.display = posToolsVisible ? 'flex' : 'none';
-    }
-
     if (!posToolsVisible) {
         posViewMode = 'categories';
         posSelectedCategoryForView = null;
         posSelectedCategory = 'all';
         posSearchQuery = '';
         posProductOffset = 0;
-        
-        var catBtns = document.querySelectorAll('.pos-cat-btn');
-        catBtns.forEach(function(btn) {
-            btn.classList.remove('active');
-        });
-        var allBtn = document.querySelector('.pos-cat-btn[onclick*="all"]');
-        if (allBtn) allBtn.classList.add('active');
         
         var searchInput2 = document.getElementById('posSearchInput');
         if (searchInput2) {
@@ -1246,14 +1235,6 @@ posSearchQuery = '';
 
 posSelectedCategory = catName;
 
-var catBtns = document.querySelectorAll('.pos-cat-btn');
-catBtns.forEach(function(btn) {
-btn.classList.remove('active');
-if (btn.textContent.trim() === catName) {
-btn.classList.add('active');
-}
-});
-
 var searchInput = document.getElementById('posSearchInput');
 if (searchInput) {
 searchInput.value = '';
@@ -1280,13 +1261,6 @@ posSelectedCategoryForView = null;
 posSelectedCategory = 'all';
 posSearchQuery = '';
 posProductOffset = 0;
-
-var catBtns = document.querySelectorAll('.pos-cat-btn');
-catBtns.forEach(function(btn) {
-btn.classList.remove('active');
-});
-var allBtn = document.querySelector('.pos-cat-btn[onclick*="all"]');
-if (allBtn) allBtn.classList.add('active');
 
 var searchInput = document.getElementById('posSearchInput');
 if (searchInput) {
@@ -1805,22 +1779,7 @@ multiCartBar +
 '<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;transition:var(--transition);">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesEnLigneCount+'</span></button>' +
 '</div>' +
 '</div>' +
-
-'<div class="pos-categories-bar" style="display:flex;flex-wrap:wrap;gap:6px;padding-top:6px;border-top:1px solid var(--border);margin-top:4px;">' +
-'<button class="pos-cat-btn '+(posSelectedCategory==='all'?'active':'')+'" onclick="posFilterCategory(\'all\')" style="padding:5px 14px;font-size:12px;gap:4px;border-radius:40px;border:2px solid '+(posSelectedCategory==='all'?'#14B8A6':'var(--border)')+';background:'+(posSelectedCategory==='all'?'#f0fdf4':'var(--bg-card)')+';cursor:pointer;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;">📋 Tous</button>';
-var sortedCategories = posCategoriesList.slice().sort(function(a, b) {
-var ordreA = (a.ordre !== undefined && a.ordre !== null) ? parseInt(a.ordre) : 9999;
-var ordreB = (b.ordre !== undefined && b.ordre !== null) ? parseInt(b.ordre) : 9999;
-if (ordreA !== ordreB) return ordreA - ordreB;
-return (a.nom || '').localeCompare(b.nom || '');
-});
-for(var i=0;i<sortedCategories.length;i++){
-var ca = sortedCategories[i];
-var ac = posSelectedCategory===ca.nom?'active':'';
-var ih = ca.imageBase64?'<img src="'+escapeHtml(ca.imageBase64)+'" loading="lazy" style="max-width:20px;max-height:20px;border-radius:4px;object-fit:contain;">':'<i class="fas fa-folder" style="font-size:'+(isMobile?'11px':'13px')+';"></i>';
-h+='<button class="pos-cat-btn '+ac+'" onclick="posFilterCategory(\''+escapeHtml(ca.nom).replace(/'/g,"\\'")+'\')" style="padding:5px 14px;font-size:12px;gap:4px;border-radius:40px;border:2px solid '+(posSelectedCategory===ca.nom?'#14B8A6':'var(--border)')+';background:'+(posSelectedCategory===ca.nom?'#f0fdf4':'var(--bg-card)')+';cursor:pointer;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;">'+ih+' '+escapeHtml(ca.nom)+'</button>';
-}
-h+='</div>' +
+'' +
 '</div>' +
 '</div>' +
 
