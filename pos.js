@@ -18,6 +18,7 @@
 // ✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET
 // ✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À 5)
 // ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE DÉFINITIVEMENT
+// ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
 
 var posCart = [];
 var posStep = 1;
@@ -1775,8 +1776,10 @@ multiCartBar +
 '<button id="posMicBtn" title="Recherche vocale" style="background:var(--bg-page);border:2px solid var(--border);border-radius:50%;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:var(--text-primary);transition:var(--transition);" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
 
 '<div style="display:flex;gap:6px;margin-left:auto;">' +
+(window.posIsClientMode ? '' :
 '<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;transition:var(--transition);">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
-'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;transition:var(--transition);">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesEnLigneCount+'</span></button>' +
+'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;transition:var(--transition);">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
+) +
 '</div>' +
 '</div>' +
 '' +
