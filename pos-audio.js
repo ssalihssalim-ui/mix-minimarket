@@ -236,9 +236,12 @@ function parseVoiceCommand(transcript) {
             setVoiceMode('search', '🎤 Recherche vocale active', null);
             // On continue le parsing normal pour chercher ce nouveau produit
         } else if (cleaned.length > 0 && !cleaned.includes('annule') && !cleaned.includes('cancel')) {
-            // Pas un nombre, pas un produit → demander un nombre
-            showVoiceResult('🔢 Dites un nombre (ex: 2, 3, 5...)');
-            return { type: 'ignore' };
+            // Pas un nombre, pas un produit → abandonner la quantité et chercher un produit
+            console.log('🔄 [PRIORITÉ] Pas un nombre ni un produit connu, on abandonne la quantité');
+            waitingForQuantity = false;
+            pendingProductForQuantity = null;
+            setVoiceMode('search', '🎤 Recherche vocale active', null);
+            // On continue le parsing normal pour chercher ce texte comme produit
         }
     }
 
@@ -804,20 +807,13 @@ function posStartVoiceRecording() {
                 return;
             }
             
-            // Si le texte final ne contient pas de nombre, on vérifie si c'est un nouveau produit
+            // Si le texte final ne contient pas de nombre → abandonner la quantité et chercher un produit
             if (final && final.trim().length > 0) {
-                var newProducts = fastFindProduct(final);
-                if (newProducts.length > 0) {
-                    console.log('🔄 [QUANTITÉ] Nouveau produit détecté, on abandonne la quantité');
-                    waitingForQuantity = false;
-                    pendingProductForQuantity = null;
-                    setVoiceMode('search', '🎤 Recherche vocale active', null);
-                    // Continuer vers la recherche produit normale ci-dessous
-                } else {
-                    // Ni nombre ni produit → redemander
-                    showVoiceResult('🔢 Dites un nombre (ex: 2, 3, 5...)');
-                    return;
-                }
+                console.log('🔄 [QUANTITÉ] Pas un nombre, on abandonne la quantité et on cherche un produit');
+                waitingForQuantity = false;
+                pendingProductForQuantity = null;
+                setVoiceMode('search', '🎤 Recherche vocale active', null);
+                // On NE return PAS → le flux continue vers la recherche produit normale ci-dessous
             } else {
                 // Pas de final, juste interim → on attend
                 return;
