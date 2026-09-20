@@ -1370,7 +1370,33 @@ s.value = posCurrentClient.name;
 function updatePaymentButtons(){ setTimeout(function(){ var cb=document.getElementById('posCreditBtn'),pb=document.getElementById('posPartielBtn'),cc=posCurrentClient&&posCurrentClient.id; if(cb){ cb.disabled=!cc; cb.style.opacity=cc?'1':'0.4'; } if(pb){ pb.disabled=!cc; pb.style.opacity=cc?'1':'0.4'; } },300); }
 function posSetTable(v){ posCurrentTable=v.trim(); if(posCurrentTable){ posCurrentClient=null; posPaymentMethod='espece'; var s=document.getElementById('posClientSearchInput'); if(s) s.value=''; document.getElementById('clientCreditDisplay').style.display='none'; var clearBtn=document.getElementById('posClientClearBtn'); if(clearBtn) clearBtn.style.display='none'; } }
 
-function posAddToCartOrOpenOptions(pid){ var p=posProductsList.find(function(x){ return x.id===pid; }); if(!p) return; if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } var cat=posCategoriesList.find(function(c){ return c.nom===p.categorie; }),isRecette=cat&&cat.recette===true; if(isRecette){ posCurrentProductId=pid; posOpenOptionsModal(pid); }else{ var ex=posCart.find(function(x){ return x.id===pid; }); if(ex){ if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); return; } ex.quantite+=1; }else{ var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:[],epice:'Normal',sel:'Normal'}); } if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); updateCartOnly(); } posMultiCarts[posCurrentCartId] = posCart.slice(); posSauvegarderDonneesPanier(posCurrentCartId); posSaveMultiCarts(); }
+function posAddToCartOrOpenOptions(pid){ 
+    var p=posProductsList.find(function(x){ return x.id===pid; }); 
+    if(!p) return; 
+    if(p.stock!==undefined&&p.stock<=0){ alert('Rupture'); return; } 
+    var cat=posCategoriesList.find(function(c){ return c.nom===p.categorie; }),isRecette=cat&&cat.recette===true; 
+    if(isRecette){ 
+        posCurrentProductId=pid; 
+        posOpenOptionsModal(pid); 
+    } else { 
+        var ex=posCart.find(function(x){ return x.id===pid; }); 
+        if(ex){ 
+            if(p.stock!==undefined&&ex.quantite>=p.stock){ alert('Stock insuffisant'); return; } 
+            ex.quantite+=1; 
+        } else { 
+            var pr=p.prixPromo&&p.prixPromo>0?p.prixPromo:p.prixVente; 
+            posCart.push({id:p.id,nom:p.nom,prixUnitaire:pr,prixAchat:p.prixAchat||0,prixPromo:p.prixPromo||0,prixVente:p.prixVente||0,quantite:1,categorie:p.categorie||'',imageBase64:p.imageBase64||'',sauces:[],interdits:[],epice:'Normal',sel:'Normal'}); 
+        } 
+        // ✅ SYNCHRONISER posCart avec window.posCart
+        window.posCart = posCart;
+        // ✅ Appeler onProductAdded APRÈS l'ajout
+        if(typeof window.onProductAdded==='function') window.onProductAdded(p.id); 
+        updateCartOnly(); 
+    } 
+    posMultiCarts[posCurrentCartId] = posCart.slice(); 
+    posSauvegarderDonneesPanier(posCurrentCartId); 
+    posSaveMultiCarts(); 
+}
 
 async function posOpenOptionsModal(pid) {
 var p = posProductsList.find(function(x) { return x.id === pid; });
