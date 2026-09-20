@@ -786,8 +786,45 @@ function posStartVoiceRecording() {
         }
         
         console.log('🎤 Résultat vocal - Interim:', interim, 'Final:', final);
+        console.log('🔢 Mode quantité actif ?', waitingForQuantity, 'Produit en attente:', pendingProductForQuantity);
 
-        // 🔥 VÉRIFIER LA NAVIGATION EN PREMIER
+        // 🔥🔥🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ, ON NE CHERCHE PAS DE PRODUIT
+        if (waitingForQuantity && pendingProductForQuantity) {
+            // On regarde UNIQUEMENT si un nombre est détecté (interim OU final)
+            var textToCheck = final || interim;
+            var num = extractNumberFromTranscript(textToCheck);
+            
+            if (num !== null && num > 0) {
+                console.log('✅ [QUANTITÉ] Nombre détecté:', num);
+                handleVoiceCommand({ 
+                    type: 'quantity', 
+                    value: num, 
+                    productId: pendingProductForQuantity 
+                });
+                return;
+            }
+            
+            // Si le texte final ne contient pas de nombre, on vérifie si c'est un nouveau produit
+            if (final && final.trim().length > 0) {
+                var newProducts = fastFindProduct(final);
+                if (newProducts.length > 0) {
+                    console.log('🔄 [QUANTITÉ] Nouveau produit détecté, on abandonne la quantité');
+                    waitingForQuantity = false;
+                    pendingProductForQuantity = null;
+                    setVoiceMode('search', '🎤 Recherche vocale active', null);
+                    // Continuer vers la recherche produit normale ci-dessous
+                } else {
+                    // Ni nombre ni produit → redemander
+                    showVoiceResult('🔢 Dites un nombre (ex: 2, 3, 5...)');
+                    return;
+                }
+            } else {
+                // Pas de final, juste interim → on attend
+                return;
+            }
+        }
+
+        // 🔥 VÉRIFIER LA NAVIGATION EN PREMIER (uniquement si PAS en mode quantité)
         if (final && final.trim().length > 0 && final !== lastFinal) {
             lastFinal = final;
             var navCheck = parseVoiceCommand(final);
@@ -892,6 +929,11 @@ function posStartVoiceRecording() {
             }, 200);
             
         } else if (interim && interim !== lastInterim) {
+            // 🔥 NE PAS afficher la recherche produit si on attend une quantité
+            if (waitingForQuantity && pendingProductForQuantity) {
+                return;
+            }
+            
             console.log('✍️ Interim:', interim);
             var si = document.getElementById('posSearchInput');
             if (si) {
