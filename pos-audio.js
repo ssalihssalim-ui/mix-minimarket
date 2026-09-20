@@ -1,10 +1,11 @@
-// ==================== POS-AUDIO.JS v26 – RECHERCHE AUTO SUR INTERIM ====================
+// ==================== POS-AUDIO.JS v27 – QUANTITÉ PRIORITAIRE ====================
 // ✅ Le texte s'écrit dans la barre SANS icône ✍️
 // ✅ Recherche lancée automatiquement à chaque mot dicté (interim)
 // ✅ Produit dicté → affiché dans la barre ET recherche lancée
+// ✅ Après sélection d'un produit → écoute la quantité EN PRIORITÉ
+// ✅ Si ce n'est pas un nombre → cherche un nouveau produit
 // ✅ En étape 2, client détecté et sélectionné automatiquement
 // ✅ Navigation "POS" fonctionne depuis TOUTES les pages
-// ✅ Mode quantité activé APRÈS le clic sur le produit
 // ✅ Le micro affiche la barre de recherche avant de démarrer
 
 var voiceRecognition = null;
@@ -208,9 +209,41 @@ function parseVoiceCommand(transcript) {
     console.log('🔍 Parsing commande:', cleaned);
     console.log('📄 Page actuelle:', currentPage);
     console.log('📌 PosStep:', posStep);
+    console.log('🔢 En attente de quantité:', waitingForQuantity, 'Produit:', pendingProductForQuantity);
 
     // ============================================================
-    // 🔥 PRIORITÉ 1 : NAVIGATION (TOUTES LES PAGES)
+    // 🔥 PRIORITÉ ABSOLUE : MODE QUANTITÉ
+    // Si on attend une quantité pour un produit, c'est LA PRIORITÉ
+    // ============================================================
+    
+    if (waitingForQuantity && pendingProductForQuantity) {
+        var num = extractNumberFromTranscript(cleaned);
+        if (num !== null && num > 0) {
+            console.log('✅ [PRIORITÉ] Quantité détectée:', num, 'pour produit:', pendingProductForQuantity);
+            return { 
+                type: 'quantity', 
+                value: num, 
+                productId: pendingProductForQuantity 
+            };
+        }
+        
+        // Pas un nombre ? Vérifier si c'est un nouveau produit
+        var newProducts = fastFindProduct(cleaned);
+        if (newProducts.length > 0 && newProducts[0].id !== pendingProductForQuantity) {
+            console.log('🔄 [PRIORITÉ] Nouveau produit détecté, on abandonne la quantité en cours');
+            waitingForQuantity = false;
+            pendingProductForQuantity = null;
+            setVoiceMode('search', '🎤 Recherche vocale active', null);
+            // On continue le parsing normal pour chercher ce nouveau produit
+        } else if (cleaned.length > 0 && !cleaned.includes('annule') && !cleaned.includes('cancel')) {
+            // Pas un nombre, pas un produit → demander un nombre
+            showVoiceResult('🔢 Dites un nombre (ex: 2, 3, 5...)');
+            return { type: 'ignore' };
+        }
+    }
+
+    // ============================================================
+    // PRIORITÉ 1 : NAVIGATION (TOUTES LES PAGES)
     // ============================================================
     
     var navWords = {
@@ -251,34 +284,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // PRIORITÉ 3 : MODE QUANTITÉ
-    // ============================================================
-    
-    if (waitingForQuantity && pendingProductForQuantity) {
-        var num = extractNumberFromTranscript(cleaned);
-        if (num !== null && num > 0) {
-            console.log('✅ Quantité détectée:', num, 'pour produit:', pendingProductForQuantity);
-            return { 
-                type: 'quantity', 
-                value: num, 
-                productId: pendingProductForQuantity 
-            };
-        }
-        
-        var products = fastFindProduct(cleaned);
-        if (products.length > 0 && products[0].id !== pendingProductForQuantity) {
-            console.log('🔄 Nouveau produit détecté, on ignore la quantité en cours');
-            waitingForQuantity = false;
-            pendingProductForQuantity = null;
-            setVoiceMode('search', '🎤 Recherche vocale active', null);
-        } else if (cleaned.length > 0 && !cleaned.includes('annule') && !cleaned.includes('cancel')) {
-            showVoiceResult('🔢 Dites un nombre (ex: 2, 3, 5...) ou un autre produit');
-            return { type: 'ignore' };
-        }
-    }
-
-    // ============================================================
-    // PRIORITÉ 4 : PAGE CRÉDITS - RECHERCHE
+    // PRIORITÉ 3 : PAGE CRÉDITS - RECHERCHE
     // ============================================================
     
     if (currentPage === 'Crédits') {
@@ -289,7 +295,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // PRIORITÉ 5 : RECHERCHE DE PRODUITS (étape 1)
+    // PRIORITÉ 4 : RECHERCHE DE PRODUITS (étape 1)
     // ============================================================
     
     if (posStep === 1 && (currentPage === 'POS' || currentPage === 'Dashboard' || currentPage === '')) {
@@ -333,12 +339,11 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 🔥 PRIORITÉ 6 : PAIEMENT (étape 2) - RECHERCHE CLIENT AUTOMATIQUE
+    // 🔥 PRIORITÉ 5 : PAIEMENT (étape 2) - RECHERCHE CLIENT AUTOMATIQUE
     // ============================================================
     
     if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
         
-        // 🔥 Recherche de client par nom, prénom OU description
         var clients = fastFindClient(cleaned);
         
         if (clients.length >= 1) {
@@ -351,20 +356,17 @@ function parseVoiceCommand(transcript) {
             };
         }
         
-        // Détection du mode de paiement
         var pm = detectPaymentMode(cleaned);
         if (pm) {
             console.log('✅ Mode paiement détecté:', pm);
             return { type: 'payment_mode', mode: pm };
         }
         
-        // Finalisation
         if (cleaned.includes('valide') || cleaned.includes('finaliser') || 
             cleaned.includes('terminer') || cleaned.includes('payer')) {
             return { type: 'validate' };
         }
         
-        // Détection d'un montant
         var amount = extractNumberFromTranscript(cleaned);
         if (amount !== null && amount > 0) {
             console.log('✅ Montant détecté:', amount);
@@ -393,7 +395,6 @@ function handleVoiceCommand(cmd) {
     switch (cmd.type) {
         case 'search_product':
         case 'search_text':
-            // 🔥 ÉCRIRE LE TEXTE DICTÉ (pas le nom du produit) ET LANCER LA RECHERCHE
             var dictedText = cmd.text || (cmd.product ? cmd.product.nom : '');
             console.log('🔍 Texte dicté:', dictedText);
             
@@ -403,11 +404,9 @@ function handleVoiceCommand(cmd) {
             }
             
             if (searchInput && dictedText) {
-                // 🔥 1. ÉCRIRE LE TEXTE DICTÉ
                 searchInput.value = dictedText;
                 window.posSearchQuery = dictedText.toLowerCase().trim();
                 
-                // 🔥 2. DÉCLENCHER L'ÉVÉNEMENT INPUT
                 try {
                     var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
                     searchInput.dispatchEvent(inputEvent);
@@ -416,7 +415,6 @@ function handleVoiceCommand(cmd) {
                     searchInput.dispatchEvent(event);
                 }
                 
-                // 🔥 3. LANCER LA RECHERCHE AUTOMATIQUEMENT
                 if (typeof window.posSearchProducts === 'function') {
                     console.log('✅ Lancement recherche pour:', dictedText);
                     window.posSearchProducts(dictedText);
@@ -424,7 +422,6 @@ function handleVoiceCommand(cmd) {
                     window.filterProductGrid();
                 }
                 
-                // 🔥 4. METTRE À JOUR LE BOUTON CLEAR
                 if (typeof window.updateClearButtonVisibility === 'function') {
                     window.updateClearButtonVisibility();
                 }
@@ -492,13 +489,11 @@ function handleVoiceCommand(cmd) {
         case 'client':
             console.log('👤 Sélection client:', cmd.client);
             
-            // 🔥 Sélectionner le client
             window.posCurrentClient = { 
                 id: cmd.client.id, 
                 name: (cmd.client.nom || '') + ' ' + (cmd.client.prenom || '')
             };
             
-            // 🔥 Afficher le client dans le champ de recherche
             var ci = document.getElementById('posClientSearchInput');
             if (ci) {
                 ci.value = window.posCurrentClient.name;
@@ -508,21 +503,17 @@ function handleVoiceCommand(cmd) {
                 } catch(e) {}
             }
             
-            // 🔥 Cacher le dropdown
             var dropdown = document.getElementById('posClientDropdown');
             if (dropdown) dropdown.style.display = 'none';
             
-            // 🔥 Afficher le crédit du client
             if (typeof window.updateClientCreditDisplay === 'function') {
                 window.updateClientCreditDisplay(cmd.client.id);
             }
             
-            // 🔥 Mettre à jour les boutons de paiement
             if (typeof window.updatePaymentButtons === 'function') {
                 window.updatePaymentButtons();
             }
             
-            // 🔥 Forcer le rendu du POS
             if (typeof window.renderPOS === 'function') {
                 window.renderPOS();
             }
@@ -696,7 +687,6 @@ function posToggleVoiceSearch() {
     if (!navigator.onLine) { alert('⚠️ Connexion internet requise.'); return; }
     if (isRecording) { posStopVoiceSearch(); return; }
 
-    // 🔥 AFFICHER LA BARRE DE RECHERCHE AVANT DE DÉMARRER LE MICRO
     var toolsContainer = document.getElementById('posToolsContainer');
     var searchInput = document.getElementById('posSearchInput');
     var toggleBtn = document.getElementById('posToggleToolsBtn');
@@ -874,17 +864,14 @@ function posStartVoiceRecording() {
             }, 200);
             
         } else if (interim && interim !== lastInterim) {
-            // 🔥 ÉCRIRE LE TEXTE INTERIM SANS ICÔNE + LANCER LA RECHERCHE AUTOMATIQUEMENT
             console.log('✍️ Interim:', interim);
             var si = document.getElementById('posSearchInput');
             if (si) {
                 si.value = interim;
                 lastInterim = interim;
                 
-                // 🔥 LANCER LA RECHERCHE AUTOMATIQUEMENT SUR LE TEXTE INTERIM
                 window.posSearchQuery = interim.toLowerCase().trim();
                 
-                // Déclencher l'événement input
                 try {
                     var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
                     si.dispatchEvent(inputEvent);
@@ -893,14 +880,12 @@ function posStartVoiceRecording() {
                     si.dispatchEvent(event);
                 }
                 
-                // Lancer la recherche
                 if (typeof window.posSearchProducts === 'function') {
                     window.posSearchProducts(interim);
                 } else if (typeof window.filterProductGrid === 'function') {
                     window.filterProductGrid();
                 }
                 
-                // Mettre à jour le bouton clear
                 if (typeof window.updateClearButtonVisibility === 'function') {
                     window.updateClearButtonVisibility();
                 }
@@ -974,6 +959,7 @@ window.onProductAdded = function(pid) {
     pendingProductForQuantity = pid;
     waitingForQuantity = true;
     setVoiceMode('quantity', '🔢 Dites la quantité', pid);
+    showVoiceResult('🔢 Dites la quantité');
 };
 window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
@@ -991,10 +977,10 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v26 – RECHERCHE AUTO SUR INTERIM');
+console.log('🎤 Module vocal v27 – QUANTITÉ PRIORITAIRE');
 console.log('✅ Le texte s\'écrit dans la barre SANS icône ✍️');
 console.log('✅ Recherche lancée automatiquement à chaque mot dicté (interim)');
-console.log('✅ Le texte dicté est écrit tel quel (pas remplacé par le nom du produit)');
+console.log('✅ Après sélection d\'un produit → écoute la quantité EN PRIORITÉ');
+console.log('✅ Si ce n\'est pas un nombre → cherche un nouveau produit');
 console.log('✅ En étape 2, client détecté et sélectionné automatiquement');
 console.log('✅ Navigation "POS" fonctionne depuis TOUTES les pages');
-console.log('✅ Mode quantité activé APRÈS le clic sur le produit');
