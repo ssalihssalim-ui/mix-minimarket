@@ -276,6 +276,7 @@ function posLoadMultiCarts() {
             
             // ✅ Restaurer le panier actuel
             posCart = posMultiCarts[posCurrentCartId] || [];
+            window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
             // ✅ Restaurer les données du panier actif
             posRestaurerDonneesPanier(posCurrentCartId);
             return true;
@@ -287,6 +288,7 @@ function posLoadMultiCarts() {
     posCurrentCartId = 'panier1';
     posMultiCartCounter = 1;
     posCart = [];
+    window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
     posMultiPaniersData = {
         'panier1': {
             client: null,
@@ -401,6 +403,7 @@ function posCreateNewCart() {
     };
     posCurrentCartId = newCartId;
     posCart = [];
+    window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
     posCurrentClient = null;
     posCurrentTable = '';
     posPaymentMethod = 'espece';
@@ -428,6 +431,7 @@ function posSwitchToCart(cartId) {
     // ✅ Changer de panier
     posCurrentCartId = cartId;
     posCart = posMultiCarts[cartId] || [];
+    window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
     posRestaurerDonneesPanier(cartId);
     
     posSaveMultiCarts();
@@ -503,6 +507,7 @@ function posDeleteCart(cartId) {
         var keys = Object.keys(posMultiCarts);
         posCurrentCartId = keys.length > 0 ? keys[0] : 'panier1';
         posCart = posMultiCarts[posCurrentCartId] || [];
+        window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
         posRestaurerDonneesPanier(posCurrentCartId);
         console.log('🔄 Basculé vers:', posCurrentCartId);
     }
@@ -555,6 +560,7 @@ function posResetAllCarts() {
     posCurrentCartId = 'panier1';
     posMultiCartCounter = 1;
     posCart = [];
+    window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
     posCurrentClient = null;
     posCurrentTable = '';
     posPaymentMethod = 'espece';
@@ -795,6 +801,7 @@ posResetCart();
 posStep = 1;
 } else {
 posCart = restoredState.cart || [];
+window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
 posStep = restoredState.step || 1;
 posCurrentClient = restoredState.client || null;
 posCurrentTable = restoredState.table || '';
@@ -862,13 +869,14 @@ if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
 await posChargerCommandesTables(); await posChargerCommandesEnLigneCount();
 var cmdData=localStorage.getItem('posCommandeData'),payData=localStorage.getItem('posPayerVente');
 var creditData = localStorage.getItem('posPayerCredit');
-if(cmdData){ var cmd=JSON.parse(cmdData); localStorage.removeItem('posCommandeData'); posCart=[]; if(cmd.items){ posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||item.prixUnitaire||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(cmd.clientId&&cmd.clientName) posCurrentClient={id:cmd.clientId,name:cmd.clientName}; posCurrentTable=cmd.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posCommandeId=cmd.commandeId; if(isOnPOSPage()) renderPOS(); return; }
-if(payData){ var v=JSON.parse(payData); localStorage.removeItem('posPayerVente'); posCart=[]; if(v.items){ posEnrichirItemsAvecPrixAchat(v.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||0,quantite:item.quantite||1,categorie:'',imageBase64:'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } if(v.clientId&&v.clientName) posCurrentClient={id:v.clientId,name:v.clientName}; posCurrentTable=v.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posVenteId=v.venteId; if(isOnPOSPage()) renderPOS(); return; }
+if(cmdData){ var cmd=JSON.parse(cmdData); localStorage.removeItem('posCommandeData'); posCart=[]; if(cmd.items){ posEnrichirItemsAvecPrixAchat(cmd.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||item.prixUnitaire||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||item.prixUnitaire||0,quantite:item.quantite||1,categorie:item.categorie||'',imageBase64:item.imageBase64||'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } window.posCart = posCart; if(cmd.clientId&&cmd.clientName) posCurrentClient={id:cmd.clientId,name:cmd.clientName}; posCurrentTable=cmd.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posCommandeId=cmd.commandeId; if(isOnPOSPage()) renderPOS(); return; }
+if(payData){ var v=JSON.parse(payData); localStorage.removeItem('posPayerVente'); posCart=[]; if(v.items){ posEnrichirItemsAvecPrixAchat(v.items).forEach(function(item){ posCart.push({id:item.id,nom:item.nom,prixUnitaire:item.prixVente||0,prixAchat:item.prixAchat||0,prixPromo:item.prixPromo||0,prixVente:item.prixVente||0,quantite:item.quantite||1,categorie:'',imageBase64:'',sauces:item.sauces||[],interdits:item.interdits||[],epice:item.epice||'Normal',sel:item.sel||'Normal'}); }); } window.posCart = posCart; if(v.clientId&&v.clientName) posCurrentClient={id:v.clientId,name:v.clientName}; posCurrentTable=v.table||''; posStep=2; posDiscountMAD=0; posPaymentMethod='espece'; window.posVenteId=v.venteId; if(isOnPOSPage()) renderPOS(); return; }
 if(creditData){
 try {
 var data = JSON.parse(creditData);
 localStorage.removeItem('posPayerCredit');
 posCart = [];
+window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
 if (data.clientName) { posCurrentClient = { id: data.clientId, name: data.clientName }; }
 if (data.items && data.items.length > 0) {
 data.items.forEach(function(item) {
@@ -1970,6 +1978,7 @@ delete window.posCommandeId;
 delete window.posVenteId;
 setStaticBackButtonVisibility(false);
 posCart = posMultiCarts[posCurrentCartId] || [];
+window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
 if (typeof window.setVoiceMode === 'function') {
 window.setVoiceMode('search', '🎤 Recherche vocale active', null);
 }
@@ -2136,6 +2145,7 @@ finally { isFinalizing=false; if(fb){ fb.disabled=false; fb.innerHTML='<i class=
 
 function posResetCart() {
 posCart = [];
+window.posCart = posCart; // 🔥 RESYNCHRONISER window.posCart
 posMultiCarts[posCurrentCartId] = [];
 posDiscountMAD = 0;
 posAmountGiven = 0;
