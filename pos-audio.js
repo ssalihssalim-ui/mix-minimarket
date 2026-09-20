@@ -175,11 +175,33 @@ function fastFindProduct(query) {
 }
 
 // ========== COMMANDES ==========
+// 🔥 CORRECTION 1 : tri par longueur décroissante + match exact de mot
 function extractNumberFromTranscript(transcript) {
-    const cleaned = transcript.toLowerCase().trim();
+    const cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    // 1. Chiffres en premier (ex: "2", "15")
     const digits = cleaned.match(/\b\d+\b/);
     if (digits) return parseInt(digits[0]);
-    for (const word in numberMap) { if (cleaned.includes(word)) return numberMap[word]; }
+    // 2. Mots-nombres : chercher par longueur DÉCROISSANTE pour éviter "cinq" dans "cinquante"
+    const sortedKeys = Object.keys(numberMap).sort(function(a, b) { return b.length - a.length; });
+    // 3. Découper en mots et chercher un match EXACT de mot
+    const words = cleaned.split(/[\s,;.!?]+/).filter(function(w) { return w.length > 0; });
+    // D'abord match exact mot par mot
+    for (let w = 0; w < words.length; w++) {
+        const mot = words[w];
+        for (let i = 0; i < sortedKeys.length; i++) {
+            if (mot === sortedKeys[i]) {
+                return numberMap[sortedKeys[i]];
+            }
+        }
+    }
+    // 4. Fallback : chercher par sous-chaîne (mais en longueur décroissante)
+    for (let i = 0; i < sortedKeys.length; i++) {
+        const word = sortedKeys[i];
+        const regex = new RegExp('(^|[\\s,;.!?])' + word + '($|[\\s,;.!?])', 'i');
+        if (regex.test(cleaned)) {
+            return numberMap[word];
+        }
+    }
     return null;
 }
 
@@ -247,31 +269,36 @@ function parseVoiceCommand(transcript) {
 
     // ============================================================
     // PRIORITÉ 1 : NAVIGATION (TOUTES LES PAGES)
+    // 🔥 CORRECTION 2 : NE PAS activer la navigation si on est en étape 2 (paiement)
+    //    → sinon "crédit" déclencherait une redirection vers la page Crédits
+    //    au lieu d'être détecté comme mode de paiement
     // ============================================================
     
-    var navWords = {
-        'pos': ['pos', 'caisse', 'point de vente', 'vente directe', 'retour pos', 'aller pos', 'ouvrir pos', 'lancer pos', 'caissier'],
-        'credits': ['credits', 'credit', 'crédit', 'impayes', 'impaye', 'dettes', 'dette', 'creance', 'creances', 'liste credits', 'liste crédits', 'voir credits'],
-        'ventes': ['ventes', 'vente', 'recettes', 'recette', 'chiffre', 'liste ventes', 'voir ventes'],
-        'dashboard': ['dashboard', 'accueil', 'tableau de bord', 'tableau', 'bord', 'home', 'acceuil'],
-        'clients': ['clients', 'client', 'cliente', 'clientel', 'liste clients', 'voir clients'],
-        'commandes': ['commandes', 'commande', 'en ligne', 'online', 'liste commandes', 'voir commandes'],
-        'depenses': ['dépenses', 'depenses', 'dépense', 'charges', 'charge', 'liste depenses', 'voir depenses'],
-        'statistiques': ['statistiques', 'stat', 'stats', 'analyses', 'analyse', 'voir statistiques'],
-        'produits': ['produits', 'produit', 'catalogue', 'stock', 'marchandise', 'liste produits', 'voir produits'],
-        'fournisseurs': ['fournisseurs', 'fournisseur', 'fournitures', 'liste fournisseurs', 'voir fournisseurs'],
-        'categories': ['categories', 'categorie', 'categoriel', 'cat', 'liste categories', 'voir categories']
-    };
+    if (posStep !== 2) {
+        var navWords = {
+            'pos': ['pos', 'caisse', 'point de vente', 'vente directe', 'retour pos', 'aller pos', 'ouvrir pos', 'lancer pos', 'caissier'],
+            'credits': ['credits', 'credit', 'crédit', 'impayes', 'impaye', 'dettes', 'dette', 'creance', 'creances', 'liste credits', 'liste crédits', 'voir credits'],
+            'ventes': ['ventes', 'vente', 'recettes', 'recette', 'chiffre', 'liste ventes', 'voir ventes'],
+            'dashboard': ['dashboard', 'accueil', 'tableau de bord', 'tableau', 'bord', 'home', 'acceuil'],
+            'clients': ['clients', 'client', 'cliente', 'clientel', 'liste clients', 'voir clients'],
+            'commandes': ['commandes', 'commande', 'en ligne', 'online', 'liste commandes', 'voir commandes'],
+            'depenses': ['dépenses', 'depenses', 'dépense', 'charges', 'charge', 'liste depenses', 'voir depenses'],
+            'statistiques': ['statistiques', 'stat', 'stats', 'analyses', 'analyse', 'voir statistiques'],
+            'produits': ['produits', 'produit', 'catalogue', 'stock', 'marchandise', 'liste produits', 'voir produits'],
+            'fournisseurs': ['fournisseurs', 'fournisseur', 'fournitures', 'liste fournisseurs', 'voir fournisseurs'],
+            'categories': ['categories', 'categorie', 'categoriel', 'cat', 'liste categories', 'voir categories']
+        };
 
-    for (var page in navWords) {
-        var keywords = navWords[page];
-        for (var i = 0; i < keywords.length; i++) {
-            if (cleaned.includes(keywords[i])) {
-                console.log('✅ Navigation détectée vers:', page);
-                waitingForQuantity = false;
-                pendingProductForQuantity = null;
-                setVoiceMode('search', '🎤 Recherche vocale active', null);
-                return { type: 'navigate', page: page };
+        for (var page in navWords) {
+            var keywords = navWords[page];
+            for (var i = 0; i < keywords.length; i++) {
+                if (cleaned.includes(keywords[i])) {
+                    console.log('✅ Navigation détectée vers:', page);
+                    waitingForQuantity = false;
+                    pendingProductForQuantity = null;
+                    setVoiceMode('search', '🎤 Recherche vocale active', null);
+                    return { type: 'navigate', page: page };
+                }
             }
         }
     }
