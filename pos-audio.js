@@ -342,51 +342,51 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 🔥 PRIORITÉ 5 : PAIEMENT (étape 2) - RECHERCHE CLIENT AUTOMATIQUE
+    // 🔥 PRIORITÉ 5 : PAIEMENT (étape 2) - LOGIQUE STRICTE
+    // 1. CLIENT en priorité absolue
+    // 2. MODE PAIEMENT
+    // 3. MONTANT
     // ============================================================
     
     if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
         
-        // 🔥 PRIORITÉ 1 : Détecter un client en PREMIER
-        // Vérifier si un client est déjà sélectionné
         var clientAlreadySelected = window.posCurrentClient && window.posCurrentClient.id;
         
+        // ============ ÉTAPE A : CLIENT EN PRIORITÉ ABSOLUE ============
         if (!clientAlreadySelected) {
-            // Aucun client sélectionné → on cherche un client EN PRIORITÉ ABSOLUE
             var clients = fastFindClient(cleaned);
             if (clients.length >= 1) {
                 var client = clients[0];
-                console.log('✅ Client trouvé:', client.nom, client.prenom, 'description:', client.description);
+                console.log('✅ [PAIEMENT] Client trouvé:', client.nom, client.prenom, 'description:', client.description);
                 return { 
                     type: 'client', 
                     client: client,
                     searchText: cleaned
                 };
             }
-            // Si aucun client trouvé et qu'il y a du texte, on ignore (on attend un client)
-            if (cleaned.length > 1) {
-                console.log('⚠️ Aucun client trouvé pour:', cleaned);
-                // On continue quand même pour permettre mode paiement / montant
-            }
+            // 🔥 Aucun client trouvé ET aucun client sélectionné → on ne fait rien d'autre
+            // On attend qu'un client soit sélectionné avant de traiter le reste
+            console.log('⚠️ [PAIEMENT] Aucun client trouvé, on attend un nom de client');
+            return { type: 'ignore' };
         }
         
-        // 🔥 PRIORITÉ 2 : Mode de paiement (espèces / crédit / partiel)
+        // ============ ÉTAPE B : MODE PAIEMENT ============
         var pm = detectPaymentMode(cleaned);
         if (pm) {
-            console.log('✅ Mode paiement détecté:', pm);
+            console.log('✅ [PAIEMENT] Mode paiement détecté:', pm);
             return { type: 'payment_mode', mode: pm };
         }
         
-        // 🔥 PRIORITÉ 3 : Validation / finalisation
+        // ============ ÉTAPE C : VALIDATION ============
         if (cleaned.includes('valide') || cleaned.includes('finaliser') || 
             cleaned.includes('terminer') || cleaned.includes('payer')) {
             return { type: 'validate' };
         }
         
-        // 🔥 PRIORITÉ 4 : Montant donné (nombre)
+        // ============ ÉTAPE D : MONTANT DONNÉ ============
         var amount = extractNumberFromTranscript(cleaned);
         if (amount !== null && amount > 0) {
-            console.log('✅ Montant détecté:', amount);
+            console.log('✅ [PAIEMENT] Montant détecté:', amount);
             return { type: 'number', value: amount };
         }
     }
@@ -814,7 +814,7 @@ function posStartVoiceRecording() {
         console.log('🎤 Résultat vocal - Interim:', interim, 'Final:', final);
         console.log('🔢 Mode quantité actif ?', waitingForQuantity, 'Produit en attente:', pendingProductForQuantity);
 
-        // 🔥🔥🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ, ON NE CHERCHE PAS DE PRODUIT
+        // 🔥🔥🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ
         if (waitingForQuantity && pendingProductForQuantity) {
             // On regarde UNIQUEMENT si un nombre est détecté (interim OU final)
             var textToCheck = final || interim;
@@ -830,13 +830,36 @@ function posStartVoiceRecording() {
                 return;
             }
             
-            // Si le texte final ne contient pas de nombre → abandonner la quantité et chercher un produit
+            // Pas un nombre → abandonner la quantité et FORCER la recherche produit
             if (final && final.trim().length > 0) {
-                console.log('🔄 [QUANTITÉ] Pas un nombre, on abandonne la quantité et on cherche un produit');
+                console.log('🔄 [QUANTITÉ] Pas un nombre, on abandonne la quantité et on cherche un produit:', final);
                 waitingForQuantity = false;
                 pendingProductForQuantity = null;
                 setVoiceMode('search', '🎤 Recherche vocale active', null);
-                // On NE return PAS → le flux continue vers la recherche produit normale ci-dessous
+                
+                // 🔥 FORCER la recherche produit avec le texte dicté (même si rien trouvé)
+                var searchInputForce = document.getElementById('posSearchInput');
+                if (searchInputForce) {
+                    searchInputForce.value = final;
+                    window.posSearchQuery = final.toLowerCase().trim();
+                    try {
+                        var inputEventForce = new InputEvent('input', { bubbles: true, cancelable: true });
+                        searchInputForce.dispatchEvent(inputEventForce);
+                    } catch(e) {
+                        var eventForce = new Event('input', { bubbles: true });
+                        searchInputForce.dispatchEvent(eventForce);
+                    }
+                    if (typeof window.posSearchProducts === 'function') {
+                        window.posSearchProducts(final);
+                    } else if (typeof window.filterProductGrid === 'function') {
+                        window.filterProductGrid();
+                    }
+                    if (typeof window.updateClearButtonVisibility === 'function') {
+                        window.updateClearButtonVisibility();
+                    }
+                }
+                showVoiceResult('🔍 ' + final);
+                return;
             } else {
                 // Pas de final, juste interim → on attend
                 return;
