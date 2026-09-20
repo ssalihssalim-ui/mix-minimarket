@@ -435,16 +435,31 @@ function handleVoiceCommand(cmd) {
             var productId = cmd.productId;
             var quantity = cmd.value;
             
+            console.log('🔢 Application quantité:', quantity, 'pour produit:', productId);
+            console.log('📦 posCart actuel:', window.posCart);
+            
             if (productId && quantity > 0) {
-                var cartItem = window.posCart?.find(function(x) { return x.id === productId; });
+                // 🔥 Chercher dans window.posCart (synchronisé)
+                var cartItem = null;
+                if (window.posCart && Array.isArray(window.posCart)) {
+                    cartItem = window.posCart.find(function(x) { return x.id === productId; });
+                }
+                
                 if (cartItem) {
                     var product = window.posProductsList?.find(function(p) { return p.id === productId; });
                     if (product && product.stock !== undefined && quantity > product.stock) {
-                        showVoiceResult('⚠️ Stock insuffisant');
+                        showVoiceResult('⚠️ Stock insuffisant (max: ' + product.stock + ')');
+                        waitingForQuantity = false;
+                        pendingProductForQuantity = null;
+                        setVoiceMode('search', '🎤 Recherche vocale active', null);
                         return;
                     }
-                    cartItem.quantite = quantity;
                     
+                    // 🔥 Appliquer la quantité
+                    cartItem.quantite = quantity;
+                    console.log('✅ Quantité appliquée:', cartItem.quantite);
+                    
+                    // 🔥 Forcer la mise à jour du panier
                     if (typeof window.updateCartOnly === 'function') {
                         window.updateCartOnly();
                     }
@@ -452,13 +467,26 @@ function handleVoiceCommand(cmd) {
                         window.renderPOS();
                     }
                     
+                    // 🔥 Sauvegarder dans localStorage si possible
+                    if (typeof window.posSauvegarderDonneesPanier === 'function') {
+                        window.posSauvegarderDonneesPanier(window.posCurrentCartId || 'panier1');
+                    }
+                    if (typeof window.posSaveMultiCarts === 'function') {
+                        window.posSaveMultiCarts();
+                    }
+                    
                     showVoiceResult('✅ Quantité mise à jour: ' + quantity);
+                } else {
+                    console.warn('⚠️ Produit introuvable dans le panier:', productId);
+                    showVoiceResult('⚠️ Produit non trouvé dans le panier');
                 }
                 
+                // 🔥 Réinitialiser le mode quantité
                 waitingForQuantity = false;
                 pendingProductForQuantity = null;
                 setVoiceMode('search', '🎤 Recherche vocale active', null);
                 
+                // 🔥 Vider la barre de recherche
                 var searchInput = document.getElementById('posSearchInput');
                 if (searchInput) {
                     searchInput.value = '';
