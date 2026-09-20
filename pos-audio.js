@@ -1,4 +1,4 @@
-// ==================== POS-AUDIO.JS v27 – QUANTITÉ PRIORITAIRE ====================
+// ==================== POS-AUDIO.JS v27 – QUANTITÉ PRIORITAIRE + OPTIMISATIONS ====================
 // ✅ Le texte s'écrit dans la barre SANS icône ✍️
 // ✅ Recherche lancée automatiquement à chaque mot dicté (interim)
 // ✅ Produit dicté → affiché dans la barre ET recherche lancée
@@ -7,6 +7,7 @@
 // ✅ En étape 2, client détecté et sélectionné automatiquement
 // ✅ Navigation "POS" fonctionne depuis TOUTES les pages
 // ✅ Le micro affiche la barre de recherche avant de démarrer
+// ⚡ OPTIMISATIONS : cache recherche client + throttle interim + recherche sur final uniquement
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -24,6 +25,18 @@ var clientIndexBuilt = false;
 // ========== INDEX PRODUIT ==========
 var productNameIndex = {};
 var productIndexBuilt = false;
+
+// ⚡ CACHE DE RECHERCHE PRODUIT (exposé sur window pour pos.js)
+if (typeof window.posSearchCache === 'undefined') {
+    window.posSearchCache = {};
+}
+var posSearchCache = window.posSearchCache;
+
+// ⚡ CACHE DE RECHERCHE CLIENT (local, exposé aussi)
+if (typeof window.clientSearchCache === 'undefined') {
+    window.clientSearchCache = {};
+}
+var clientSearchCache = window.clientSearchCache;
 
 // ========== PAYMENT STATE MACHINE ==========
 window.voicePaymentState = 0;
@@ -120,12 +133,22 @@ function buildClientIndex() {
         });
     });
     clientIndexBuilt = true;
+    // ⚡ Vider le cache client quand l'index est reconstruit
+    clientSearchCache = {};
+    window.clientSearchCache = clientSearchCache;
     console.log('📇 Index client construit avec ' + window.posAllClients.length + ' clients');
 }
 
+// ⚡ fastFindClient optimisé avec cache
 function fastFindClient(query) {
-    buildClientIndex();
     const q = (query || '').toLowerCase().trim();
+    
+    // ⚡ CACHE : si on a déjà cherché cette requête, on retourne direct
+    if (clientSearchCache[q]) {
+        return clientSearchCache[q];
+    }
+    
+    buildClientIndex();
     if (!q) return window.posAllClients?.slice() || [];
     const normalized = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const mots = normalized.split(/[\s,;.]+/);
@@ -135,10 +158,24 @@ function fastFindClient(query) {
         if (!mot) return;
         (clientSearchIndex[mot] || []).forEach(c => { if (!seen[c.id]) { seen[c.id] = true; results.push(c); } });
     });
+    
+    // ⚡ Mettre en cache (limiter à 50 entrées pour éviter la fuite mémoire)
+    var keys = Object.keys(clientSearchCache);
+    if (keys.length > 50) {
+        clientSearchCache = {};
+        window.clientSearchCache = clientSearchCache;
+    }
+    clientSearchCache[q] = results;
+    
     return results;
 }
 
-function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
+function invalidateClientIndex() { 
+    clientIndexBuilt = false; 
+    clientSearchIndex = {}; 
+    clientSearchCache = {};
+    window.clientSearchCache = clientSearchCache;
+}
 
 // ========== INDEX PRODUIT ==========
 function buildProductIndex() {
@@ -155,6 +192,9 @@ function buildProductIndex() {
         });
     });
     productIndexBuilt = true;
+    // ⚡ Vider le cache produit quand l'index est reconstruit
+    posSearchCache = {};
+    window.posSearchCache = posSearchCache;
 }
 
 function fastFindProduct(query) {
@@ -836,6 +876,8 @@ function posStartVoiceRecording() {
     var lastInterim = '';
     var lastFinal = '';
     var lastCommandTime = 0;
+    // ⚡ OPTIMISATION : throttle interim
+    var lastInterimTime = 0;
 
     voiceRecognition.onresult = function(e) {
         var interim = '', final = '';
@@ -848,11 +890,11 @@ function posStartVoiceRecording() {
         console.log('🎤 Résultat vocal - Interim:', interim, 'Final:', final);
         console.log('🔢 Mode quantité actif ?', waitingForQuantity, 'Produit en attente:', pendingProductForQuantity);
 
-        // 🔥🔥🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ
+        // ============================================================
+        // 🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ
         // 🔥 CORRECTION 3 : on n'utilise QUE le FINAL (pas l'interim)
-        //    car l'interim est toujours incomplet ("deu" au lieu de "deux")
+        // ============================================================
         if (waitingForQuantity && pendingProductForQuantity) {
-            // 🔥 On n'utilise QUE le FINAL
             if (final && final.trim().length > 0) {
                 var num = extractNumberFromTranscript(final);
                 
@@ -866,13 +908,11 @@ function posStartVoiceRecording() {
                     return;
                 }
                 
-                // Pas un nombre → abandonner la quantité et chercher un produit
                 console.log('🔄 [QUANTITÉ] Pas un nombre, on abandonne la quantité et on cherche un produit:', final);
                 waitingForQuantity = false;
                 pendingProductForQuantity = null;
                 setVoiceMode('search', '🎤 Recherche vocale active', null);
                 
-                // 🔥 FORCER la recherche produit avec le texte dicté (même si rien trouvé)
                 var searchInputForce = document.getElementById('posSearchInput');
                 if (searchInputForce) {
                     searchInputForce.value = final;
@@ -896,13 +936,14 @@ function posStartVoiceRecording() {
                 showVoiceResult('🔍 ' + final);
                 return;
             } else {
-                // Pas de final → on attend. On ignore complètement l'interim en mode quantité.
                 console.log('⏳ [QUANTITÉ] Interim ignoré, en attente du final. Interim:', interim);
                 return;
             }
         }
 
-        // 🔥 VÉRIFIER LA NAVIGATION EN PREMIER (uniquement si PAS en mode quantité)
+        // ============================================================
+        // 🔥 VÉRIFIER LA NAVIGATION ET COMMANDES PAIEMENT
+        // ============================================================
         if (final && final.trim().length > 0 && final !== lastFinal) {
             lastFinal = final;
             var navCheck = parseVoiceCommand(final);
@@ -912,7 +953,6 @@ function posStartVoiceRecording() {
                 handleVoiceCommand(navCheck);
                 return;
             }
-            // 🔥 CORRECTION : traiter AUSSI les commandes client / payment_mode / number / validate ici
             if (navCheck && (navCheck.type === 'client' || navCheck.type === 'payment_mode' || navCheck.type === 'number' || navCheck.type === 'validate')) {
                 console.log('🎯 Commande paiement détectée dans navCheck:', navCheck.type);
                 handleVoiceCommand(navCheck);
@@ -920,7 +960,9 @@ function posStartVoiceRecording() {
             }
         }
 
-        // Page Crédits - Recherche
+        // ============================================================
+        // PAGE CRÉDITS
+        // ============================================================
         var cp = document.getElementById('pageTitle')?.textContent || '';
         if (cp === 'Crédits') {
             if (final && final.trim().length > 0 && final !== lastFinal) {
@@ -965,7 +1007,9 @@ function posStartVoiceRecording() {
             return;
         }
 
+        // ============================================================
         // ✅ PAGE POS
+        // ============================================================
         if (final && final.trim().length > 0 && final !== lastFinal) {
             lastFinal = final;
             console.log('✅ TEXTE FINAL DÉTECTÉ:', final);
@@ -973,7 +1017,6 @@ function posStartVoiceRecording() {
             var cmd = parseVoiceCommand(final);
             if (cmd && cmd.type !== 'ignore') {
                 var now = Date.now();
-                // 🔥 CORRECTION : ajouter payment_mode, number, validate dans les types prioritaires
                 if (now - lastCommandTime > 1500 || 
                     cmd.type === 'search_product' || 
                     cmd.type === 'search_text' ||
@@ -1018,36 +1061,22 @@ function posStartVoiceRecording() {
             }, 200);
             
         } else if (interim && interim !== lastInterim) {
-            // 🔥 NE PAS afficher la recherche produit si on attend une quantité
+            // ⚡ OPTIMISATION : throttle interim (toutes les 100ms max)
+            var nowMs = Date.now();
+            if (nowMs - lastInterimTime < 100 && interim.length < 10) {
+                return;
+            }
+            lastInterimTime = nowMs;
+            
             if (waitingForQuantity && pendingProductForQuantity) {
                 return;
             }
             
-            console.log('✍️ Interim:', interim);
+            // ⚡ OPTIMISATION : on écrit juste le texte dans la barre, SANS lancer la recherche
+            lastInterim = interim;
             var si = document.getElementById('posSearchInput');
             if (si) {
                 si.value = interim;
-                lastInterim = interim;
-                
-                window.posSearchQuery = interim.toLowerCase().trim();
-                
-                try {
-                    var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
-                    si.dispatchEvent(inputEvent);
-                } catch(e) {
-                    var event = new Event('input', { bubbles: true });
-                    si.dispatchEvent(event);
-                }
-                
-                if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(interim);
-                } else if (typeof window.filterProductGrid === 'function') {
-                    window.filterProductGrid();
-                }
-                
-                if (typeof window.updateClearButtonVisibility === 'function') {
-                    window.updateClearButtonVisibility();
-                }
             }
         }
     };
@@ -1123,7 +1152,12 @@ window.onProductAdded = function(pid) {
 window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
 window.fastFindProduct = fastFindProduct;
+window.fastFindClient = fastFindClient;   // ⚡ exposé pour pos.js si besoin
 window.posStopVoiceSearch = posStopVoiceSearch;
+
+// ⚡ EXPOSER LES CACHES sur window pour que pos.js puisse les utiliser
+window.posSearchCache = posSearchCache;
+window.clientSearchCache = clientSearchCache;
 
 // 🔥 CORRECTION : Fonction pour réinitialiser le mode quantité depuis pos.js
 window.resetVoiceQuantityMode = function() {
@@ -1145,9 +1179,11 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v27 – QUANTITÉ PRIORITAIRE');
+console.log('🎤 Module vocal v27 – QUANTITÉ PRIORITAIRE + OPTIMISATIONS');
 console.log('✅ Le texte s\'écrit dans la barre SANS icône ✍️');
-console.log('✅ Recherche lancée automatiquement à chaque mot dicté (interim)');
+console.log('✅ Recherche lancée UNIQUEMENT sur le final (pas interim)');
+console.log('✅ Throttle interim (100ms) pour fluidité');
+console.log('✅ Cache de recherche client activé');
 console.log('✅ Après sélection d\'un produit → écoute la quantité EN PRIORITÉ');
 console.log('✅ Si ce n\'est pas un nombre → cherche un nouveau produit');
 console.log('✅ En étape 2, client détecté et sélectionné automatiquement');
