@@ -849,23 +849,24 @@ function posStartVoiceRecording() {
         console.log('🔢 Mode quantité actif ?', waitingForQuantity, 'Produit en attente:', pendingProductForQuantity);
 
         // 🔥🔥🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ
+        // 🔥 CORRECTION 3 : on n'utilise QUE le FINAL (pas l'interim)
+        //    car l'interim est toujours incomplet ("deu" au lieu de "deux")
         if (waitingForQuantity && pendingProductForQuantity) {
-            // On regarde UNIQUEMENT si un nombre est détecté (interim OU final)
-            var textToCheck = final || interim;
-            var num = extractNumberFromTranscript(textToCheck);
-            
-            if (num !== null && num > 0) {
-                console.log('✅ [QUANTITÉ] Nombre détecté:', num);
-                handleVoiceCommand({ 
-                    type: 'quantity', 
-                    value: num, 
-                    productId: pendingProductForQuantity 
-                });
-                return;
-            }
-            
-            // Pas un nombre → abandonner la quantité et FORCER la recherche produit
+            // 🔥 On n'utilise QUE le FINAL
             if (final && final.trim().length > 0) {
+                var num = extractNumberFromTranscript(final);
+                
+                if (num !== null && num > 0) {
+                    console.log('✅ [QUANTITÉ] Nombre détecté:', num, 'dans:', final);
+                    handleVoiceCommand({ 
+                        type: 'quantity', 
+                        value: num, 
+                        productId: pendingProductForQuantity 
+                    });
+                    return;
+                }
+                
+                // Pas un nombre → abandonner la quantité et chercher un produit
                 console.log('🔄 [QUANTITÉ] Pas un nombre, on abandonne la quantité et on cherche un produit:', final);
                 waitingForQuantity = false;
                 pendingProductForQuantity = null;
@@ -895,7 +896,8 @@ function posStartVoiceRecording() {
                 showVoiceResult('🔍 ' + final);
                 return;
             } else {
-                // Pas de final, juste interim → on attend
+                // Pas de final → on attend. On ignore complètement l'interim en mode quantité.
+                console.log('⏳ [QUANTITÉ] Interim ignoré, en attente du final. Interim:', interim);
                 return;
             }
         }
