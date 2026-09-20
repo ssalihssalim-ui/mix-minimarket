@@ -1,6 +1,6 @@
-// ==================== POS-AUDIO.JS v25 – CORRECTION DICTÉE ====================
+// ==================== POS-AUDIO.JS v26 – RECHERCHE AUTO SUR INTERIM ====================
 // ✅ Le texte s'écrit dans la barre SANS icône ✍️
-// ✅ Recherche lancée automatiquement à la fin de la dictée
+// ✅ Recherche lancée automatiquement à chaque mot dicté (interim)
 // ✅ Produit dicté → affiché dans la barre ET recherche lancée
 // ✅ En étape 2, client détecté et sélectionné automatiquement
 // ✅ Navigation "POS" fonctionne depuis TOUTES les pages
@@ -874,12 +874,36 @@ function posStartVoiceRecording() {
             }, 200);
             
         } else if (interim && interim !== lastInterim) {
-            // 🔥 ÉCRIRE LE TEXTE INTERIM SANS ICÔNE
+            // 🔥 ÉCRIRE LE TEXTE INTERIM SANS ICÔNE + LANCER LA RECHERCHE AUTOMATIQUEMENT
             console.log('✍️ Interim:', interim);
             var si = document.getElementById('posSearchInput');
             if (si) {
                 si.value = interim;
                 lastInterim = interim;
+                
+                // 🔥 LANCER LA RECHERCHE AUTOMATIQUEMENT SUR LE TEXTE INTERIM
+                window.posSearchQuery = interim.toLowerCase().trim();
+                
+                // Déclencher l'événement input
+                try {
+                    var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
+                    si.dispatchEvent(inputEvent);
+                } catch(e) {
+                    var event = new Event('input', { bubbles: true });
+                    si.dispatchEvent(event);
+                }
+                
+                // Lancer la recherche
+                if (typeof window.posSearchProducts === 'function') {
+                    window.posSearchProducts(interim);
+                } else if (typeof window.filterProductGrid === 'function') {
+                    window.filterProductGrid();
+                }
+                
+                // Mettre à jour le bouton clear
+                if (typeof window.updateClearButtonVisibility === 'function') {
+                    window.updateClearButtonVisibility();
+                }
             }
         }
     };
@@ -967,9 +991,9 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v25 – DICTÉE CORRIGÉE');
+console.log('🎤 Module vocal v26 – RECHERCHE AUTO SUR INTERIM');
 console.log('✅ Le texte s\'écrit dans la barre SANS icône ✍️');
-console.log('✅ Recherche lancée automatiquement après la dictée');
+console.log('✅ Recherche lancée automatiquement à chaque mot dicté (interim)');
 console.log('✅ Le texte dicté est écrit tel quel (pas remplacé par le nom du produit)');
 console.log('✅ En étape 2, client détecté et sélectionné automatiquement');
 console.log('✅ Navigation "POS" fonctionne depuis TOUTES les pages');
