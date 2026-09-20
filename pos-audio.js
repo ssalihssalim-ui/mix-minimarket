@@ -347,29 +347,43 @@ function parseVoiceCommand(transcript) {
     
     if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
         
-        var clients = fastFindClient(cleaned);
+        // 🔥 PRIORITÉ 1 : Détecter un client en PREMIER
+        // Vérifier si un client est déjà sélectionné
+        var clientAlreadySelected = window.posCurrentClient && window.posCurrentClient.id;
         
-        if (clients.length >= 1) {
-            var client = clients[0];
-            console.log('✅ Client trouvé:', client.nom, client.prenom, 'description:', client.description);
-            return { 
-                type: 'client', 
-                client: client,
-                searchText: cleaned
-            };
+        if (!clientAlreadySelected) {
+            // Aucun client sélectionné → on cherche un client EN PRIORITÉ ABSOLUE
+            var clients = fastFindClient(cleaned);
+            if (clients.length >= 1) {
+                var client = clients[0];
+                console.log('✅ Client trouvé:', client.nom, client.prenom, 'description:', client.description);
+                return { 
+                    type: 'client', 
+                    client: client,
+                    searchText: cleaned
+                };
+            }
+            // Si aucun client trouvé et qu'il y a du texte, on ignore (on attend un client)
+            if (cleaned.length > 1) {
+                console.log('⚠️ Aucun client trouvé pour:', cleaned);
+                // On continue quand même pour permettre mode paiement / montant
+            }
         }
         
+        // 🔥 PRIORITÉ 2 : Mode de paiement (espèces / crédit / partiel)
         var pm = detectPaymentMode(cleaned);
         if (pm) {
             console.log('✅ Mode paiement détecté:', pm);
             return { type: 'payment_mode', mode: pm };
         }
         
+        // 🔥 PRIORITÉ 3 : Validation / finalisation
         if (cleaned.includes('valide') || cleaned.includes('finaliser') || 
             cleaned.includes('terminer') || cleaned.includes('payer')) {
             return { type: 'validate' };
         }
         
+        // 🔥 PRIORITÉ 4 : Montant donné (nombre)
         var amount = extractNumberFromTranscript(cleaned);
         if (amount !== null && amount > 0) {
             console.log('✅ Montant détecté:', amount);
@@ -489,7 +503,7 @@ function handleVoiceCommand(cmd) {
                 pendingProductForQuantity = null;
                 setVoiceMode('search', '🎤 Recherche vocale active', null);
                 
-                // 🔥 Vider la barre de recherche
+                // 🔥 Vider la barre de recherche ET revenir aux catégories
                 var searchInput = document.getElementById('posSearchInput');
                 if (searchInput) {
                     searchInput.value = '';
@@ -497,9 +511,18 @@ function handleVoiceCommand(cmd) {
                     if (typeof window.updateClearButtonVisibility === 'function') {
                         window.updateClearButtonVisibility();
                     }
-                    if (typeof window.filterProductGrid === 'function') {
-                        window.filterProductGrid();
-                    }
+                }
+                // 🔥 Retourner aux catégories après application de la quantité
+                if (typeof window.posViewMode !== 'undefined') {
+                    window.posViewMode = 'categories';
+                }
+                if (typeof window.posSelectedCategoryForView !== 'undefined') {
+                    window.posSelectedCategoryForView = null;
+                }
+                if (typeof window.retournerCategories === 'function') {
+                    window.retournerCategories();
+                } else if (typeof window.filterProductGrid === 'function') {
+                    window.filterProductGrid();
                 }
             }
             break;
