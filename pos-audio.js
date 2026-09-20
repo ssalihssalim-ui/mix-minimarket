@@ -1,9 +1,11 @@
-// ==================== POS-AUDIO.JS v24 – CORRECTION FINALE ====================
-// ✅ CORRECTION : Produit dit → s'écrit ET la recherche se lance automatiquement (comme Entrée)
-// ✅ CORRECTION : En étape 2, client détecté et sélectionné automatiquement
-// ✅ CORRECTION : Navigation "POS" fonctionne depuis TOUTES les pages
-// ✅ CORRECTION : Mode quantité activé APRÈS le clic sur le produit
-// ✅ CORRECTION : Le micro affiche la barre de recherche avant de démarrer
+// ==================== POS-AUDIO.JS v25 – CORRECTION DICTÉE ====================
+// ✅ Le texte s'écrit dans la barre SANS icône ✍️
+// ✅ Recherche lancée automatiquement à la fin de la dictée
+// ✅ Produit dicté → affiché dans la barre ET recherche lancée
+// ✅ En étape 2, client détecté et sélectionné automatiquement
+// ✅ Navigation "POS" fonctionne depuis TOUTES les pages
+// ✅ Mode quantité activé APRÈS le clic sur le produit
+// ✅ Le micro affiche la barre de recherche avant de démarrer
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -390,19 +392,20 @@ function handleVoiceCommand(cmd) {
 
     switch (cmd.type) {
         case 'search_product':
-            // 🔥 AFFICHER LE PRODUIT ET LANCER LA RECHERCHE AUTOMATIQUEMENT
-            var product = cmd.product;
-            console.log('🔍 Produit trouvé:', product.nom);
+        case 'search_text':
+            // 🔥 ÉCRIRE LE TEXTE DICTÉ (pas le nom du produit) ET LANCER LA RECHERCHE
+            var dictedText = cmd.text || (cmd.product ? cmd.product.nom : '');
+            console.log('🔍 Texte dicté:', dictedText);
             
             var searchInput = document.getElementById('posSearchInput');
             if (!searchInput) {
                 searchInput = document.querySelector('#posSearchInput, input[type="text"][placeholder*="Rechercher"], input[placeholder*="Rechercher"]');
             }
             
-            if (searchInput) {
-                // 🔥 1. ÉCRIRE LE PRODUIT
-                searchInput.value = product.nom;
-                window.posSearchQuery = product.nom.toLowerCase().trim();
+            if (searchInput && dictedText) {
+                // 🔥 1. ÉCRIRE LE TEXTE DICTÉ
+                searchInput.value = dictedText;
+                window.posSearchQuery = dictedText.toLowerCase().trim();
                 
                 // 🔥 2. DÉCLENCHER L'ÉVÉNEMENT INPUT
                 try {
@@ -413,10 +416,10 @@ function handleVoiceCommand(cmd) {
                     searchInput.dispatchEvent(event);
                 }
                 
-                // 🔥 3. LANCER LA RECHERCHE (comme si on avait appuyé sur Entrée)
+                // 🔥 3. LANCER LA RECHERCHE AUTOMATIQUEMENT
                 if (typeof window.posSearchProducts === 'function') {
-                    console.log('✅ Lancement recherche pour:', product.nom);
-                    window.posSearchProducts(product.nom);
+                    console.log('✅ Lancement recherche pour:', dictedText);
+                    window.posSearchProducts(dictedText);
                 } else if (typeof window.filterProductGrid === 'function') {
                     window.filterProductGrid();
                 }
@@ -426,7 +429,7 @@ function handleVoiceCommand(cmd) {
                     window.updateClearButtonVisibility();
                 }
                 
-                showVoiceResult('🔍 ' + product.nom + ' - Cliquez sur le produit pour l\'ajouter');
+                showVoiceResult('🔍 ' + dictedText);
                 showVoiceFlowIndicator('product');
             }
             break;
@@ -486,34 +489,6 @@ function handleVoiceCommand(cmd) {
             }
             break;
             
-        case 'search_text':
-            var searchText = cmd.text || '';
-            var searchInput = document.getElementById('posSearchInput');
-            if (!searchInput) {
-                searchInput = document.querySelector('#posSearchInput, input[type="text"][placeholder*="Rechercher"], input[placeholder*="Rechercher"]');
-            }
-            if (searchInput) {
-                window.posSearchQuery = searchText.toLowerCase().trim();
-                searchInput.value = searchText;
-                try {
-                    var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
-                    searchInput.dispatchEvent(inputEvent);
-                } catch(e) {
-                    var event = new Event('input', { bubbles: true });
-                    searchInput.dispatchEvent(event);
-                }
-                if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(searchText);
-                } else if (typeof window.filterProductGrid === 'function') {
-                    window.filterProductGrid();
-                }
-                if (typeof window.updateClearButtonVisibility === 'function') {
-                    window.updateClearButtonVisibility();
-                }
-                showVoiceResult('🔍 ' + searchText);
-            }
-            break;
-            
         case 'client':
             console.log('👤 Sélection client:', cmd.client);
             
@@ -527,7 +502,6 @@ function handleVoiceCommand(cmd) {
             var ci = document.getElementById('posClientSearchInput');
             if (ci) {
                 ci.value = window.posCurrentClient.name;
-                // Déclencher l'événement pour fermer le dropdown
                 try {
                     var ev = new Event('input', { bubbles: true });
                     ci.dispatchEvent(ev);
@@ -559,7 +533,6 @@ function handleVoiceCommand(cmd) {
             }
             showVoiceResult('👤 ' + displayName);
             
-            // Si on est en étape 1, passer à l'étape 2
             if (window.posStep === 1 && typeof window.posGoToStep2 === 'function') {
                 setTimeout(function() {
                     window.posGoToStep2();
@@ -754,7 +727,6 @@ function posToggleVoiceSearch() {
         toggleBtn.style.background = '#ef4444';
     }
     
-    // Synchroniser la variable globale
     if (typeof window.posToolsVisible !== 'undefined') {
         window.posToolsVisible = true;
     }
@@ -846,9 +818,9 @@ function posStartVoiceRecording() {
                 }
             } else if (interim) {
                 var si = document.getElementById('creditsSearchInput');
-                if (si) si.value = interim + ' ✍️';
+                if (si) si.value = interim;
                 var vd = document.getElementById('creditsVoiceDisplay');
-                if (vd) vd.value = interim + ' ✍️';
+                if (vd) vd.value = interim;
             }
             return;
         }
@@ -873,7 +845,7 @@ function posStartVoiceRecording() {
                 return;
             }
 
-            // Fallback: recherche simple
+            // Fallback: recherche simple avec le texte dicté
             setTimeout(function() {
                 var si = document.getElementById('posSearchInput');
                 if (!si) {
@@ -902,10 +874,11 @@ function posStartVoiceRecording() {
             }, 200);
             
         } else if (interim && interim !== lastInterim) {
+            // 🔥 ÉCRIRE LE TEXTE INTERIM SANS ICÔNE
             console.log('✍️ Interim:', interim);
             var si = document.getElementById('posSearchInput');
             if (si) {
-                si.value = interim + ' ✍️';
+                si.value = interim;
                 lastInterim = interim;
             }
         }
@@ -994,9 +967,10 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v24 – CORRECTION FINALE');
-console.log('✅ Produit dit → s\'écrit ET la recherche se lance automatiquement');
+console.log('🎤 Module vocal v25 – DICTÉE CORRIGÉE');
+console.log('✅ Le texte s\'écrit dans la barre SANS icône ✍️');
+console.log('✅ Recherche lancée automatiquement après la dictée');
+console.log('✅ Le texte dicté est écrit tel quel (pas remplacé par le nom du produit)');
 console.log('✅ En étape 2, client détecté et sélectionné automatiquement');
 console.log('✅ Navigation "POS" fonctionne depuis TOUTES les pages');
 console.log('✅ Mode quantité activé APRÈS le clic sur le produit');
-console.log('✅ Le micro affiche la barre de recherche avant de démarrer');
