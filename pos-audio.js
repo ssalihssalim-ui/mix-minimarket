@@ -877,8 +877,15 @@ function posStartVoiceRecording() {
         if (final && final.trim().length > 0 && final !== lastFinal) {
             lastFinal = final;
             var navCheck = parseVoiceCommand(final);
+            console.log('🚦 navCheck résultat:', navCheck ? navCheck.type : 'null', navCheck);
             if (navCheck && navCheck.type === 'navigate') {
                 console.log('🚀 Navigation détectée:', navCheck);
+                handleVoiceCommand(navCheck);
+                return;
+            }
+            // 🔥 CORRECTION : traiter AUSSI les commandes client / payment_mode / number / validate ici
+            if (navCheck && (navCheck.type === 'client' || navCheck.type === 'payment_mode' || navCheck.type === 'number' || navCheck.type === 'validate')) {
+                console.log('🎯 Commande paiement détectée dans navCheck:', navCheck.type);
                 handleVoiceCommand(navCheck);
                 return;
             }
