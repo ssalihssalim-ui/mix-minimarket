@@ -728,7 +728,14 @@ function setVoiceMode(mode, msg, productId) {
             waitingForQuantity = true;
         }
     }
-    if (mode === 'payment') window.voicePaymentState = 0;
+    // 🔥 CORRECTION : en mode paiement, réinitialiser le mode quantité
+    if (mode === 'payment') {
+        window.voicePaymentState = 0;
+        waitingForQuantity = false;
+        pendingProductForQuantity = null;
+        window.waitingForQuantity = false;
+        window.pendingProductForQuantity = null;
+    }
     showVoiceModeIndicator();
     console.log('🎤 Mode vocal changé:', mode, msg);
 }
@@ -930,11 +937,15 @@ function posStartVoiceRecording() {
             var cmd = parseVoiceCommand(final);
             if (cmd && cmd.type !== 'ignore') {
                 var now = Date.now();
+                // 🔥 CORRECTION : ajouter payment_mode, number, validate dans les types prioritaires
                 if (now - lastCommandTime > 1500 || 
                     cmd.type === 'search_product' || 
                     cmd.type === 'search_text' ||
                     cmd.type === 'quantity' ||
                     cmd.type === 'client' ||
+                    cmd.type === 'payment_mode' ||
+                    cmd.type === 'number' ||
+                    cmd.type === 'validate' ||
                     cmd.type === 'navigate') {
                     lastCommandTime = now;
                     handleVoiceCommand(cmd);
@@ -1077,6 +1088,15 @@ window.buildClientIndex = buildClientIndex;
 window.buildProductIndex = buildProductIndex;
 window.fastFindProduct = fastFindProduct;
 window.posStopVoiceSearch = posStopVoiceSearch;
+
+// 🔥 CORRECTION : Fonction pour réinitialiser le mode quantité depuis pos.js
+window.resetVoiceQuantityMode = function() {
+    waitingForQuantity = false;
+    pendingProductForQuantity = null;
+    window.waitingForQuantity = false;
+    window.pendingProductForQuantity = null;
+    console.log('🔄 Mode quantité réinitialisé');
+};
 
 // ✅ GARANTIR que closeCreditSelection existe
 if (typeof window.closeCreditSelection !== 'function') {
