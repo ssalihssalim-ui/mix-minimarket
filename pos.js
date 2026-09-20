@@ -1951,6 +1951,10 @@ setStaticBackButtonVisibility(true);
 if (posCurrentClient && posCurrentClient.id) {
 updateClientCreditDisplay(posCurrentClient.id);
 }
+// 🔥 CORRECTION : réinitialiser le mode quantité AVANT de passer en mode paiement
+if (typeof window.resetVoiceQuantityMode === 'function') {
+    window.resetVoiceQuantityMode();
+}
 if (typeof window.setVoiceMode === 'function') {
 if (typeof window.lastAddedProductId !== 'undefined') { window.lastAddedProductId = null; }
 window.setVoiceMode('payment', '🎤 Mode paiement', null);
