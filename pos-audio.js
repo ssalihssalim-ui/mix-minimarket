@@ -3,6 +3,7 @@
 // ✅ CORRECTION : En étape 2, client détecté et sélectionné automatiquement
 // ✅ CORRECTION : Navigation "POS" fonctionne depuis TOUTES les pages
 // ✅ CORRECTION : Mode quantité activé APRÈS le clic sur le produit
+// ✅ CORRECTION : Le micro affiche la barre de recherche avant de démarrer
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -721,6 +722,43 @@ function posToggleVoiceSearch() {
     if (!s.supported) { alert('⚠️ ' + s.reason); return; }
     if (!navigator.onLine) { alert('⚠️ Connexion internet requise.'); return; }
     if (isRecording) { posStopVoiceSearch(); return; }
+
+    // 🔥 AFFICHER LA BARRE DE RECHERCHE AVANT DE DÉMARRER LE MICRO
+    var toolsContainer = document.getElementById('posToolsContainer');
+    var searchInput = document.getElementById('posSearchInput');
+    var toggleBtn = document.getElementById('posToggleToolsBtn');
+    
+    if (toolsContainer && toolsContainer.style.display === 'none') {
+        toolsContainer.style.display = 'flex';
+        toolsContainer.style.flexDirection = 'column';
+        toolsContainer.style.gap = '10px';
+        toolsContainer.style.marginBottom = '10px';
+        toolsContainer.style.padding = '12px 16px';
+        toolsContainer.style.background = 'var(--bg-card)';
+        toolsContainer.style.borderRadius = '12px';
+        toolsContainer.style.border = '1px solid var(--border)';
+        toolsContainer.classList.add('visible');
+    }
+    
+    if (searchInput) {
+        searchInput.style.display = 'flex';
+    }
+    
+    var micBtn = document.getElementById('posMicBtn');
+    if (micBtn) {
+        micBtn.style.display = 'flex';
+    }
+    
+    if (toggleBtn) {
+        toggleBtn.innerHTML = '✕ Masquer tout';
+        toggleBtn.style.background = '#ef4444';
+    }
+    
+    // Synchroniser la variable globale
+    if (typeof window.posToolsVisible !== 'undefined') {
+        window.posToolsVisible = true;
+    }
+
     requestMicrophonePermission().then(function(p) {
         if (!p) { alert('❌ Micro refusé.'); return; }
         posStartVoiceRecording();
@@ -961,3 +999,4 @@ console.log('✅ Produit dit → s\'écrit ET la recherche se lance automatiquem
 console.log('✅ En étape 2, client détecté et sélectionné automatiquement');
 console.log('✅ Navigation "POS" fonctionne depuis TOUTES les pages');
 console.log('✅ Mode quantité activé APRÈS le clic sur le produit');
+console.log('✅ Le micro affiche la barre de recherche avant de démarrer');
