@@ -8,6 +8,7 @@
 // ✅ Navigation "POS" fonctionne depuis TOUTES les pages
 // ✅ Le micro affiche la barre de recherche avant de démarrer
 // 🔥 CORRECTION : Navigation utilise les noms ANGLAIS (products, categories...) pour matcher admin.js
+// 🔥 AJOUT : Recherche vocale sur pages Produits, Ventes, Crédits
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -210,14 +211,27 @@ function detectPeriodFilter(transcript) {
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var periodKeywords = {
         'today': ['aujourdhui', 'aujourd hui', 'today', 'ajourdhui', 'aujourd', 'ce jour', 'jour'],
-        'week': ['semaine', '7 jours', 'sept jours', 'cette semaine', 'ces jours'],
-        'month': ['mois', 'ce mois', '30 jours', 'trente jours', 'mensuel'],
-        'year': ['année', 'an', '365 jours', 'ce an', 'cette année', 'annee', 'cette annee'],
+        '7': ['semaine', '7 jours', 'sept jours', 'cette semaine', 'ces jours'],
+        '30': ['mois', 'ce mois', '30 jours', 'trente jours', 'mensuel'],
+        '365': ['année', 'an', '365 jours', 'ce an', 'cette année', 'annee', 'cette annee'],
         'all': ['tout', 'toutes', 'all', 'tous', 'total', 'général', 'general']
     };
     for (var period in periodKeywords) {
         if (periodKeywords[period].some(function(kw) { return cleaned.includes(kw); })) {
             return period;
+        }
+    }
+    return null;
+}
+
+// 🔥 NOUVEAU : Détection de filtre de catégorie (pour page Produits)
+function detectCategoryFilter(transcript) {
+    if (!window.allCategoriesData || !Array.isArray(window.allCategoriesData)) return null;
+    var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    for (var i = 0; i < window.allCategoriesData.length; i++) {
+        var catName = (window.allCategoriesData[i].nom || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (catName && cleaned.includes(catName)) {
+            return window.allCategoriesData[i].nom;
         }
     }
     return null;
@@ -236,7 +250,6 @@ function parseVoiceCommand(transcript) {
 
     // ============================================================
     // 🔥 PRIORITÉ ABSOLUE : MODE QUANTITÉ
-    // Si on attend une quantité pour un produit, c'est LA PRIORITÉ
     // ============================================================
     
     if (waitingForQuantity && pendingProductForQuantity) {
@@ -250,30 +263,71 @@ function parseVoiceCommand(transcript) {
             };
         }
         
-        // Pas un nombre ? Vérifier si c'est un nouveau produit
         var newProducts = fastFindProduct(cleaned);
         if (newProducts.length > 0 && newProducts[0].id !== pendingProductForQuantity) {
             console.log('🔄 [PRIORITÉ] Nouveau produit détecté, on abandonne la quantité en cours');
             waitingForQuantity = false;
             pendingProductForQuantity = null;
             setVoiceMode('search', '🎤 Recherche vocale active', null);
-            // On continue le parsing normal pour chercher ce nouveau produit
         } else if (cleaned.length > 0 && !cleaned.includes('annule') && !cleaned.includes('cancel')) {
-            // Pas un nombre, pas un produit → abandonner la quantité et chercher un produit
             console.log('🔄 [PRIORITÉ] Pas un nombre ni un produit connu, on abandonne la quantité');
             waitingForQuantity = false;
             pendingProductForQuantity = null;
             setVoiceMode('search', '🎤 Recherche vocale active', null);
-            // On continue le parsing normal pour chercher ce texte comme produit
         }
     }
 
     // ============================================================
+    // 🔥 NOUVEAU : PAGE PRODUITS - recherche produit ou filtre catégorie
+    // ============================================================
+    if (currentPage === 'Produits') {
+        // Chercher d'abord si c'est une catégorie
+        var catFilter = detectCategoryFilter(cleaned);
+        if (catFilter) {
+            console.log('✅ [PRODUITS] Catégorie détectée:', catFilter);
+            return { type: 'filter_products_category', category: catFilter };
+        }
+        // Sinon recherche produit
+        if (cleaned.length > 1) {
+            return { type: 'search_products_page', text: cleaned };
+        }
+        return { type: 'ignore' };
+    }
+
+    // ============================================================
+    // 🔥 NOUVEAU : PAGE VENTES - recherche client ou filtre période
+    // ============================================================
+    if (currentPage === 'Ventes') {
+        var periodV = detectPeriodFilter(cleaned);
+        if (periodV !== null) {
+            console.log('✅ [VENTES] Période détectée:', periodV);
+            return { type: 'period_filter_ventes', period: periodV };
+        }
+        if (cleaned.length > 1) {
+            return { type: 'search_ventes', text: cleaned };
+        }
+        return { type: 'ignore' };
+    }
+
+    // ============================================================
+    // 🔥 PAGE CRÉDITS - recherche client ou filtre période
+    // ============================================================
+    if (currentPage === 'Crédits') {
+        var periodC = detectPeriodFilter(cleaned);
+        if (periodC !== null) {
+            console.log('✅ [CRÉDITS] Période détectée:', periodC);
+            return { type: 'period_filter_credits', period: periodC };
+        }
+        if (cleaned.length > 1) {
+            return { type: 'search_credits', text: cleaned };
+        }
+        return { type: 'ignore' };
+    }
+
+    // ============================================================
     // PRIORITÉ 1 : NAVIGATION (TOUTES LES PAGES)
-    // 🔥 CORRECTION 2 : NE PAS activer la navigation si on est en étape 2 (paiement)
-    //    → sinon "crédit" déclencherait une redirection vers la page Crédits
-    //    au lieu d'être détecté comme mode de paiement
-    // 🔥 CORRECTION 4 : Retourner les noms ANGLAIS pour matcher admin.js
+    // 🔥 Ne pas activer en étape 2 (paiement)
+    // 🔥 Retourner les noms ANGLAIS pour matcher admin.js
     // ============================================================
     
     if (posStep !== 2) {
@@ -306,7 +360,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // PRIORITÉ 2 : DÉTECTION DES PÉRIODES
+    // PRIORITÉ 2 : DÉTECTION DES PÉRIODES (fallback général)
     // ============================================================
     
     var period = detectPeriodFilter(cleaned);
@@ -316,18 +370,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // PRIORITÉ 3 : PAGE CRÉDITS - RECHERCHE
-    // ============================================================
-    
-    if (currentPage === 'Crédits') {
-        if (cleaned.length > 1) {
-            return { type: 'search_credits', text: cleaned };
-        }
-        return { type: 'ignore' };
-    }
-
-    // ============================================================
-    // PRIORITÉ 4 : RECHERCHE DE PRODUITS (étape 1)
+    // PRIORITÉ 4 : RECHERCHE DE PRODUITS (étape 1 POS)
     // ============================================================
     
     if (posStep === 1 && (currentPage === 'POS' || currentPage === 'Dashboard' || currentPage === '')) {
@@ -371,48 +414,35 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 🔥 PRIORITÉ 5 : PAIEMENT (étape 2) - LOGIQUE STRICTE
-    // 1. CLIENT en priorité absolue
-    // 2. MODE PAIEMENT
-    // 3. MONTANT
+    // 🔥 PRIORITÉ 5 : PAIEMENT (étape 2)
     // ============================================================
     
     if ((currentPage === 'POS' || currentPage === 'Dashboard') && posStep === 2) {
         
         var clientAlreadySelected = window.posCurrentClient && window.posCurrentClient.id;
         
-        // ============ ÉTAPE A : CLIENT EN PRIORITÉ ABSOLUE ============
         if (!clientAlreadySelected) {
             var clients = fastFindClient(cleaned);
             if (clients.length >= 1) {
                 var client = clients[0];
-                console.log('✅ [PAIEMENT] Client trouvé:', client.nom, client.prenom, 'description:', client.description);
-                return { 
-                    type: 'client', 
-                    client: client,
-                    searchText: cleaned
-                };
+                console.log('✅ [PAIEMENT] Client trouvé:', client.nom, client.prenom);
+                return { type: 'client', client: client, searchText: cleaned };
             }
-            // 🔥 Aucun client trouvé ET aucun client sélectionné → on ne fait rien d'autre
-            // On attend qu'un client soit sélectionné avant de traiter le reste
             console.log('⚠️ [PAIEMENT] Aucun client trouvé, on attend un nom de client');
             return { type: 'ignore' };
         }
         
-        // ============ ÉTAPE B : MODE PAIEMENT ============
         var pm = detectPaymentMode(cleaned);
         if (pm) {
             console.log('✅ [PAIEMENT] Mode paiement détecté:', pm);
             return { type: 'payment_mode', mode: pm };
         }
         
-        // ============ ÉTAPE C : VALIDATION ============
         if (cleaned.includes('valide') || cleaned.includes('finaliser') || 
             cleaned.includes('terminer') || cleaned.includes('payer')) {
             return { type: 'validate' };
         }
         
-        // ============ ÉTAPE D : MONTANT DONNÉ ============
         var amount = extractNumberFromTranscript(cleaned);
         if (amount !== null && amount > 0) {
             console.log('✅ [PAIEMENT] Montant détecté:', amount);
@@ -485,7 +515,6 @@ function handleVoiceCommand(cmd) {
             console.log('📦 posCart actuel:', window.posCart);
             
             if (productId && quantity > 0) {
-                // 🔥 Chercher dans window.posCart (synchronisé)
                 var cartItem = null;
                 if (window.posCart && Array.isArray(window.posCart)) {
                     cartItem = window.posCart.find(function(x) { return x.id === productId; });
@@ -501,19 +530,15 @@ function handleVoiceCommand(cmd) {
                         return;
                     }
                     
-                    // 🔥 Appliquer la quantité
                     cartItem.quantite = quantity;
                     console.log('✅ Quantité appliquée:', cartItem.quantite);
                     
-                    // 🔥 Forcer la mise à jour du panier
                     if (typeof window.updateCartOnly === 'function') {
                         window.updateCartOnly();
                     }
                     if (typeof window.renderPOS === 'function') {
                         window.renderPOS();
                     }
-                    
-                    // 🔥 Sauvegarder dans localStorage si possible
                     if (typeof window.posSauvegarderDonneesPanier === 'function') {
                         window.posSauvegarderDonneesPanier(window.posCurrentCartId || 'panier1');
                     }
@@ -527,12 +552,10 @@ function handleVoiceCommand(cmd) {
                     showVoiceResult('⚠️ Produit non trouvé dans le panier');
                 }
                 
-                // 🔥 Réinitialiser le mode quantité
                 waitingForQuantity = false;
                 pendingProductForQuantity = null;
                 setVoiceMode('search', '🎤 Recherche vocale active', null);
                 
-                // 🔥 Vider la barre de recherche ET revenir aux catégories
                 var searchInput = document.getElementById('posSearchInput');
                 if (searchInput) {
                     searchInput.value = '';
@@ -541,7 +564,6 @@ function handleVoiceCommand(cmd) {
                         window.updateClearButtonVisibility();
                     }
                 }
-                // 🔥 Retourner aux catégories après application de la quantité
                 if (typeof window.posViewMode !== 'undefined') {
                     window.posViewMode = 'categories';
                 }
@@ -553,6 +575,124 @@ function handleVoiceCommand(cmd) {
                 } else if (typeof window.filterProductGrid === 'function') {
                     window.filterProductGrid();
                 }
+            }
+            break;
+            
+        // 🔥 NOUVEAU : Recherche sur page Produits
+        case 'search_products_page':
+            var searchTextP = cmd.text || '';
+            console.log('🔍 [PRODUITS] Recherche:', searchTextP);
+            var prodInput = document.getElementById('productSearchInput');
+            if (prodInput) {
+                prodInput.value = searchTextP;
+                if (typeof window.renderProductsTable === 'function') {
+                    window.productSearchQuery = searchTextP.toLowerCase().trim();
+                    window.currentPages = window.currentPages || {};
+                    window.currentPages.products = 1;
+                    window.renderProductsTable();
+                }
+                showVoiceResult('🔍 ' + searchTextP);
+            } else {
+                showVoiceResult('⚠️ Barre de recherche produits non trouvée');
+            }
+            break;
+            
+        // 🔥 NOUVEAU : Filtre catégorie sur page Produits
+        case 'filter_products_category':
+            var catName = cmd.category || '';
+            console.log('📂 [PRODUITS] Filtre catégorie:', catName);
+            var catSelect = document.getElementById('categoryFilter');
+            if (catSelect) {
+                catSelect.value = catName;
+                if (typeof window.filterProducts === 'function') {
+                    window.filterProducts();
+                }
+                showVoiceResult('📂 ' + catName);
+            } else {
+                showVoiceResult('⚠️ Sélecteur de catégorie non trouvé');
+            }
+            break;
+            
+        // 🔥 NOUVEAU : Recherche sur page Ventes
+        case 'search_ventes':
+            var searchTextV = cmd.text || '';
+            console.log('🔍 [VENTES] Recherche:', searchTextV);
+            var ventesInput = document.getElementById('ventesSearchInput');
+            if (ventesInput) {
+                ventesInput.value = searchTextV;
+                if (typeof window.renderVentesTable === 'function') {
+                    window.ventesSearch = searchTextV;
+                    window.currentPages = window.currentPages || {};
+                    window.currentPages.ventes = 1;
+                    window.renderVentesTable();
+                }
+                showVoiceResult('🔍 ' + searchTextV);
+            } else {
+                showVoiceResult('⚠️ Barre de recherche ventes non trouvée');
+            }
+            break;
+            
+        // 🔥 NOUVEAU : Filtre période sur page Ventes
+        case 'period_filter_ventes':
+            var periodV = cmd.period || 'all';
+            console.log('📅 [VENTES] Filtre période:', periodV);
+            var periodSelectV = document.getElementById('ventesPeriodSelect');
+            if (periodSelectV) {
+                periodSelectV.value = periodV;
+                try {
+                    var evV = new Event('change', { bubbles: true });
+                    periodSelectV.dispatchEvent(evV);
+                } catch(e) {
+                    if (typeof periodSelectV.onchange === 'function') {
+                        periodSelectV.onchange();
+                    }
+                }
+                if (typeof window.renderVentesTable === 'function') {
+                    window.ventesPeriod = periodV;
+                    window.renderVentesTable();
+                }
+                var labelsV = {
+                    'today': "📅 Aujourd'hui",
+                    '7': '📅 7 jours',
+                    '30': '📅 30 jours',
+                    '365': '📅 1 an',
+                    'all': '📅 Toutes les dates'
+                };
+                showVoiceResult(labelsV[periodV] || '📅 Filtre appliqué');
+            } else {
+                showVoiceResult('⚠️ Sélecteur période ventes non trouvé');
+            }
+            break;
+            
+        // 🔥 NOUVEAU : Filtre période sur page Crédits
+        case 'period_filter_credits':
+            var periodC = cmd.period || 'all';
+            console.log('📅 [CRÉDITS] Filtre période:', periodC);
+            var periodSelectC = document.getElementById('creditsPeriodSelect');
+            if (periodSelectC) {
+                periodSelectC.value = periodC;
+                try {
+                    var evC = new Event('change', { bubbles: true });
+                    periodSelectC.dispatchEvent(evC);
+                } catch(e) {
+                    if (typeof periodSelectC.onchange === 'function') {
+                        periodSelectC.onchange();
+                    }
+                }
+                if (typeof window.applyCreditsFilters === 'function') {
+                    window.creditsPeriod = periodC;
+                    window.applyCreditsFilters();
+                }
+                var labelsC = {
+                    'today': "📅 Aujourd'hui",
+                    '7': '📅 7 jours',
+                    '30': '📅 30 jours',
+                    '365': '📅 1 an',
+                    'all': '📅 Toutes les dates'
+                };
+                showVoiceResult(labelsC[periodC] || '📅 Filtre appliqué');
+            } else {
+                showVoiceResult('⚠️ Sélecteur période crédits non trouvé');
             }
             break;
             
@@ -592,11 +732,9 @@ function handleVoiceCommand(cmd) {
             if (typeof window.updateClientCreditDisplay === 'function') {
                 window.updateClientCreditDisplay(cmd.client.id);
             }
-            
             if (typeof window.updatePaymentButtons === 'function') {
                 window.updatePaymentButtons();
             }
-            
             if (typeof window.renderPOS === 'function') {
                 window.renderPOS();
             }
@@ -728,10 +866,10 @@ function handleVoiceCommand(cmd) {
                 }
                 var labels = {
                     'today': "📅 Aujourd'hui",
-                    'week': '📅 Cette semaine',
-                    'month': '📅 Ce mois',
-                    'year': '📅 Cette année',
-                    'all': '📅 Toutes les périodes'
+                    '7': '📅 7 jours',
+                    '30': '📅 30 jours',
+                    '365': '📅 1 an',
+                    'all': '📅 Toutes les dates'
                 };
                 showVoiceResult(labels[cmd.period] || '📅 Filtre appliqué');
             } else {
@@ -757,7 +895,6 @@ function setVoiceMode(mode, msg, productId) {
             waitingForQuantity = true;
         }
     }
-    // 🔥 CORRECTION : en mode paiement, réinitialiser le mode quantité
     if (mode === 'payment') {
         window.voicePaymentState = 0;
         waitingForQuantity = false;
@@ -850,11 +987,8 @@ function posStartVoiceRecording() {
         console.log('🎤 Résultat vocal - Interim:', interim, 'Final:', final);
         console.log('🔢 Mode quantité actif ?', waitingForQuantity, 'Produit en attente:', pendingProductForQuantity);
 
-        // 🔥🔥🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ
-        // 🔥 CORRECTION 3 : on n'utilise QUE le FINAL (pas l'interim)
-        //    car l'interim est toujours incomplet ("deu" au lieu de "deux")
+        // 🔥 PRIORITÉ ABSOLUE : SI ON ATTEND UNE QUANTITÉ (uniquement sur POS)
         if (waitingForQuantity && pendingProductForQuantity) {
-            // 🔥 On n'utilise QUE le FINAL
             if (final && final.trim().length > 0) {
                 var num = extractNumberFromTranscript(final);
                 
@@ -868,13 +1002,11 @@ function posStartVoiceRecording() {
                     return;
                 }
                 
-                // Pas un nombre → abandonner la quantité et chercher un produit
                 console.log('🔄 [QUANTITÉ] Pas un nombre, on abandonne la quantité et on cherche un produit:', final);
                 waitingForQuantity = false;
                 pendingProductForQuantity = null;
                 setVoiceMode('search', '🎤 Recherche vocale active', null);
                 
-                // 🔥 FORCER la recherche produit avec le texte dicté (même si rien trouvé)
                 var searchInputForce = document.getElementById('posSearchInput');
                 if (searchInputForce) {
                     searchInputForce.value = final;
@@ -898,76 +1030,73 @@ function posStartVoiceRecording() {
                 showVoiceResult('🔍 ' + final);
                 return;
             } else {
-                // Pas de final → on attend. On ignore complètement l'interim en mode quantité.
                 console.log('⏳ [QUANTITÉ] Interim ignoré, en attente du final. Interim:', interim);
                 return;
             }
         }
 
-        // 🔥 VÉRIFIER LA NAVIGATION EN PREMIER (uniquement si PAS en mode quantité)
+        // 🔥 VÉRIFIER LA NAVIGATION ET COMMANDES SPÉCIALES
         if (final && final.trim().length > 0 && final !== lastFinal) {
             lastFinal = final;
             var navCheck = parseVoiceCommand(final);
             console.log('🚦 navCheck résultat:', navCheck ? navCheck.type : 'null', navCheck);
-            if (navCheck && navCheck.type === 'navigate') {
-                console.log('🚀 Navigation détectée:', navCheck);
-                handleVoiceCommand(navCheck);
-                return;
-            }
-            // 🔥 CORRECTION : traiter AUSSI les commandes client / payment_mode / number / validate ici
-            if (navCheck && (navCheck.type === 'client' || navCheck.type === 'payment_mode' || navCheck.type === 'number' || navCheck.type === 'validate')) {
-                console.log('🎯 Commande paiement détectée dans navCheck:', navCheck.type);
+            if (navCheck && navCheck.type !== 'ignore' && navCheck.type !== 'search_text') {
+                console.log('🎯 Commande détectée dans navCheck:', navCheck.type);
                 handleVoiceCommand(navCheck);
                 return;
             }
         }
 
-        // Page Crédits - Recherche
+        // ============================================================
+        // 🔥 NOUVELLE LOGIQUE : gérer les pages spéciales AVANT le reste
+        // ============================================================
         var cp = document.getElementById('pageTitle')?.textContent || '';
-        if (cp === 'Crédits') {
+
+        // ----- PAGE PRODUITS -----
+        if (cp === 'Produits') {
             if (final && final.trim().length > 0 && final !== lastFinal) {
-                var searchInput = document.getElementById('creditsSearchInput');
-                var voiceDisplay = document.getElementById('creditsVoiceDisplay');
-                if (searchInput) {
-                    var period = detectPeriodFilter(final);
-                    if (period) {
-                        var periodSelect = document.getElementById('creditsPeriodSelect');
-                        if (periodSelect) {
-                            periodSelect.value = period;
-                            try {
-                                var changeEvent = new Event('change', { bubbles: true });
-                                periodSelect.dispatchEvent(changeEvent);
-                            } catch(e) {}
-                            var labels = {
-                                'today': "📅 Aujourd'hui",
-                                'week': '📅 Cette semaine',
-                                'month': '📅 Ce mois',
-                                'year': '📅 Cette année',
-                                'all': '📅 Toutes les périodes'
-                            };
-                            showVoiceResult(labels[period] || '📅 Filtre appliqué');
-                            if (voiceDisplay) voiceDisplay.value = labels[period] || '📅 Filtre appliqué';
-                            return;
-                        }
-                    }
-                    searchInput.value = final;
-                    window.creditsSearch = final;
-                    if (typeof window.applyCreditsFilters === 'function') {
-                        window.applyCreditsFilters();
-                    }
-                    if (voiceDisplay) voiceDisplay.value = final;
-                    showVoiceResult('🔍 ' + final);
+                lastFinal = final;
+                var cmdP = parseVoiceCommand(final);
+                console.log('📄 [PRODUITS] Commande:', cmdP.type);
+                if (cmdP && cmdP.type !== 'ignore') {
+                    handleVoiceCommand(cmdP);
                 }
-            } else if (interim) {
-                var si = document.getElementById('creditsSearchInput');
-                if (si) si.value = interim;
-                var vd = document.getElementById('creditsVoiceDisplay');
-                if (vd) vd.value = interim;
             }
             return;
         }
 
-        // ✅ PAGE POS
+        // ----- PAGE VENTES -----
+        if (cp === 'Ventes') {
+            if (final && final.trim().length > 0 && final !== lastFinal) {
+                lastFinal = final;
+                var cmdV = parseVoiceCommand(final);
+                console.log('💰 [VENTES] Commande:', cmdV.type);
+                if (cmdV && cmdV.type !== 'ignore') {
+                    handleVoiceCommand(cmdV);
+                }
+            }
+            return;
+        }
+
+        // ----- PAGE CRÉDITS -----
+        if (cp === 'Crédits') {
+            if (final && final.trim().length > 0 && final !== lastFinal) {
+                lastFinal = final;
+                var cmdC = parseVoiceCommand(final);
+                console.log('💳 [CRÉDITS] Commande:', cmdC.type);
+                if (cmdC && cmdC.type !== 'ignore') {
+                    handleVoiceCommand(cmdC);
+                }
+            } else if (interim) {
+                var siC = document.getElementById('creditsSearchInput');
+                if (siC) siC.value = interim;
+                var vdC = document.getElementById('creditsVoiceDisplay');
+                if (vdC) vdC.value = interim;
+            }
+            return;
+        }
+
+        // ✅ PAGE POS / DASHBOARD (par défaut)
         if (final && final.trim().length > 0 && final !== lastFinal) {
             lastFinal = final;
             console.log('✅ TEXTE FINAL DÉTECTÉ:', final);
@@ -975,7 +1104,6 @@ function posStartVoiceRecording() {
             var cmd = parseVoiceCommand(final);
             if (cmd && cmd.type !== 'ignore') {
                 var now = Date.now();
-                // 🔥 CORRECTION : ajouter payment_mode, number, validate dans les types prioritaires
                 if (now - lastCommandTime > 1500 || 
                     cmd.type === 'search_product' || 
                     cmd.type === 'search_text' ||
@@ -1020,7 +1148,6 @@ function posStartVoiceRecording() {
             }, 200);
             
         } else if (interim && interim !== lastInterim) {
-            // 🔥 NE PAS afficher la recherche produit si on attend une quantité
             if (waitingForQuantity && pendingProductForQuantity) {
                 return;
             }
@@ -1147,11 +1274,9 @@ if (typeof window.closeCreditSelection !== 'function') {
     };
 }
 
-console.log('🎤 Module vocal v27 – QUANTITÉ PRIORITAIRE');
-console.log('✅ Le texte s\'écrit dans la barre SANS icône ✍️');
-console.log('✅ Recherche lancée automatiquement à chaque mot dicté (interim)');
-console.log('✅ Après sélection d\'un produit → écoute la quantité EN PRIORITÉ');
-console.log('✅ Si ce n\'est pas un nombre → cherche un nouveau produit');
-console.log('✅ En étape 2, client détecté et sélectionné automatiquement');
-console.log('✅ Navigation "POS" fonctionne depuis TOUTES les pages');
-console.log('🔥 Navigation utilise les noms ANGLAIS (products, categories...) pour matcher admin.js');
+console.log('🎤 Module vocal v27 – QUANTITÉ PRIORITAIRE + RECHERCHE MULTI-PAGES');
+console.log('✅ Recherche vocale sur POS (produits + quantité)');
+console.log('✅ Recherche vocale sur page Produits (nom + catégorie)');
+console.log('✅ Recherche vocale sur page Ventes (client + période)');
+console.log('✅ Recherche vocale sur page Crédits (client + période)');
+console.log('✅ Navigation utilise les noms ANGLAIS pour matcher admin.js');
