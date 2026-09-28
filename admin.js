@@ -328,14 +328,37 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
 }
 }
 
+// 🔥 CORRECTION 3 : Statistiques en TEMPS RÉEL
 function loadDashboardStats() {
-db.collection('products').get().then(function(s) { var e = document.getElementById('productsCount'); if (e) e.textContent = s.size; });
-db.collection('clients').get().then(function(s) { var e = document.getElementById('clientsCount'); if (e) e.textContent = s.size; });
-db.collection('categories').get().then(function(s) { var e = document.getElementById('categoriesCount'); if (e) e.textContent = s.size; });
-db.collection('ventes').get().then(function(s) { var e = document.getElementById('ventesCount'); if (e) e.textContent = s.size; });
+    // Nettoyer les anciens listeners
+    if (window._dashStatsUnsub) {
+        window._dashStatsUnsub.forEach(function(u) { if (typeof u === 'function') u(); });
+    }
+    window._dashStatsUnsub = [];
+
+    window._dashStatsUnsub.push(db.collection('products').onSnapshot(function(s) {
+        var e = document.getElementById('productsCount');
+        if (e) e.textContent = s.size;
+    }));
+
+    window._dashStatsUnsub.push(db.collection('clients').onSnapshot(function(s) {
+        var e = document.getElementById('clientsCount');
+        if (e) e.textContent = s.size;
+    }));
+
+    window._dashStatsUnsub.push(db.collection('categories').onSnapshot(function(s) {
+        var e = document.getElementById('categoriesCount');
+        if (e) e.textContent = s.size;
+    }));
+
+    window._dashStatsUnsub.push(db.collection('ventes').onSnapshot(function(s) {
+        var e = document.getElementById('ventesCount');
+        if (e) e.textContent = s.size;
+    }));
 }
 
-// ==================== INSCRIPTIONS EN ATTENTE (CORRIGÉ) ====================
+// ==================== INSCRIPTIONS EN ATTENTE (TEMPS RÉEL) ====================
+// 🔥 CORRECTION 1 : Utiliser onSnapshot au lieu de get() pour temps réel
 function loadPendingRegistrations() {
 var d = document.getElementById('pendingRegistrations');
 if (!d) return;
@@ -357,39 +380,39 @@ d.innerHTML = `
 </div>
 `;
 
-// 🔥 CORRECTION : Suppression de la requête avec index (filtrage en mémoire)
-db.collection('users')
-.get()
-.then(function(snapshot) {
-window.pendingUsersData = [];
-snapshot.forEach(function(dc) {
-var u = dc.data();
-// Filtrer en mémoire les utilisateurs non autorisés
-if (u.authorized === 'no') {
-window.pendingUsersData.push({
-id: dc.id,
-prenom: (u.prenom || '') + ' ' + (u.nom || ''),
-email: u.email || '',
-role: u.role || 'client',
-createdAt: u.createdAt,
-data: u
-});
+// 🔥 Nettoyer l'ancien listener
+if (window._pendingUsersUnsubscribe) {
+    window._pendingUsersUnsubscribe();
 }
-});
 
-// Trier par date de création (la plus récente en premier)
-window.pendingUsersData.sort(function(a, b) {
-var dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000).getTime() : 0;
-var dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000).getTime() : 0;
-return dateB - dateA;
-});
+// 🔥 Écouter en TEMPS RÉEL
+window._pendingUsersUnsubscribe = db.collection('users').onSnapshot(function(snapshot) {
+    window.pendingUsersData = [];
+    snapshot.forEach(function(dc) {
+        var u = dc.data();
+        if (u.authorized === 'no') {
+            window.pendingUsersData.push({
+                id: dc.id,
+                prenom: (u.prenom || '') + ' ' + (u.nom || ''),
+                email: u.email || '',
+                role: u.role || 'client',
+                createdAt: u.createdAt,
+                data: u
+            });
+        }
+    });
 
-renderPendingTable();
-})
-.catch(function(err) {
-console.error('❌ Erreur chargement pending:', err);
-window.pendingUsersData = [];
-renderPendingTable();
+    window.pendingUsersData.sort(function(a, b) {
+        var dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000).getTime() : 0;
+        var dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000).getTime() : 0;
+        return dateB - dateA;
+    });
+
+    renderPendingTable();
+}, function(err) {
+    console.error('❌ Erreur listener pending users:', err);
+    window.pendingUsersData = [];
+    renderPendingTable();
 });
 }
 
@@ -501,13 +524,7 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
 
 alert('✅ Utilisateur accepté avec succès !');
 
-// 7. Rafraîchir les listes
-if (typeof loadPendingRegistrations === 'function') {
-loadPendingRegistrations();
-}
-if (typeof loadUsersList === 'function') {
-loadUsersList();
-}
+// 7. Rafraîchir les listes (le listener temps réel les mettra à jour automatiquement)
 if (typeof loadClients === 'function') {
 loadClients();
 }
@@ -548,12 +565,6 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
 alert('✅ Utilisateur supprimé');
 
 // 5. Rafraîchir
-if (typeof loadPendingRegistrations === 'function') {
-loadPendingRegistrations();
-}
-if (typeof loadUsersList === 'function') {
-loadUsersList();
-}
 if (typeof loadClients === 'function') {
 loadClients();
 }
@@ -589,17 +600,36 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
 }
 }
 
+// 🔥 CORRECTION 2 : Liste des utilisateurs en TEMPS RÉEL
 function loadUsersList() {
-db.collection('users').get().then(function(sn) {
-window.allUsersData = [];
-sn.forEach(function(dc) { var d = dc.data(); d.id = dc.id; d.fullName = (d.prenom + ' ' + d.nom).toLowerCase(); window.allUsersData.push(d); });
-var p = window.allUsersData.filter(function(u) { return u.authorized === 'no'; }).length;
-var a = window.allUsersData.filter(function(u) { return u.authorized === 'yes'; }).length;
-document.getElementById('pendingCount').textContent = p;
-document.getElementById('authorizedCount').textContent = a;
-document.getElementById('totalUsers').textContent = window.allUsersData.length;
-renderUsersTable();
-});
+    // Nettoyer l'ancien listener
+    if (window._usersListUnsubscribe) {
+        window._usersListUnsubscribe();
+    }
+
+    window._usersListUnsubscribe = db.collection('users').onSnapshot(function(sn) {
+        window.allUsersData = [];
+        sn.forEach(function(dc) {
+            var d = dc.data();
+            d.id = dc.id;
+            d.fullName = (d.prenom + ' ' + d.nom).toLowerCase();
+            window.allUsersData.push(d);
+        });
+
+        var p = window.allUsersData.filter(function(u) { return u.authorized === 'no'; }).length;
+        var a = window.allUsersData.filter(function(u) { return u.authorized === 'yes'; }).length;
+
+        var pendingEl = document.getElementById('pendingCount');
+        if (pendingEl) pendingEl.textContent = p;
+        var authEl = document.getElementById('authorizedCount');
+        if (authEl) authEl.textContent = a;
+        var totalEl = document.getElementById('totalUsers');
+        if (totalEl) totalEl.textContent = window.allUsersData.length;
+
+        renderUsersTable();
+    }, function(err) {
+        console.error('❌ Erreur listener users list:', err);
+    });
 }
 
 function renderUsersTable() {
@@ -618,8 +648,8 @@ tb.innerHTML += '<tr><td><strong>@' + escapeHtml(u.username || '') + '</strong><
 });
 }
 
-function blockUser(uid) { if (confirm('Bloquer ?')) { CacheDB.write('users', uid, { authorized: 'no' }, 'update').then(function() { loadUsersList(); loadPendingRegistrations(); CacheDB.sync(); }); } }
-function deleteUserPermanently(uid) { if (confirm('Supprimer ?')) { CacheDB.write('users', uid, null, 'delete').then(function() { loadUsersList(); loadPendingRegistrations(); CacheDB.sync(); }); } }
+function blockUser(uid) { if (confirm('Bloquer ?')) { CacheDB.write('users', uid, { authorized: 'no' }, 'update').then(function() { CacheDB.sync(); }); } }
+function deleteUserPermanently(uid) { if (confirm('Supprimer ?')) { CacheDB.write('users', uid, null, 'delete').then(function() { CacheDB.sync(); }); } }
 
 function toggleChangePasswordForm() { document.getElementById('changePasswordForm').classList.toggle('hidden'); }
 
@@ -815,4 +845,4 @@ window.navigateTo = navigateTo;
 // (Les fonctions loadCreditsPage, loadCreditsData et applyCreditsFilters
 //  sont définies dans admin-credits.js pour éviter les conflits)
 
-console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
+console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window. + temps réel)');
