@@ -2,15 +2,13 @@
 // Contient : Catégories, Produits, Clients, Fournisseurs
 // ✅ Police 24px sur toutes les pages d'administration
 // ✅ Module Achats fournisseur avec modal 90% (écran)
-// ✅ Reconnaissance par Gemini (IA)
+// ✅ Reconnaissance par Gemini via Cloudflare Worker (sécurisé)
 // ✅ Gestion du stock, prix boîte, date d'expiration
 
 // ====================================================
-//  🔑  CONFIGURATION GEMINI
+//  🔑  CONFIGURATION GEMINI (via Cloudflare Worker)
 // ====================================================
-const GEMINI_API_KEY = 'VOTRE_CLE_GEMINI';
-const GEMINI_MODEL = 'gemini-1.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
 // ========== INITIALISATION DE LA RECHERCHE PRODUIT ==========
 window.productSearchQuery = window.productSearchQuery || '';
@@ -59,16 +57,13 @@ function loadCategoriesPage(c) {
     loadCategories();
 }
 
-// ✅ CORRECTION : Toujours recharger les données à chaque visite
 async function loadCategories() {
-    // ✅ 1. Toujours recharger depuis le cache (rapide)
     const cached = await CacheDB.getAll('categories');
     if (cached.length) {
         allCategoriesData = cached;
         renderCategoriesTable();
     }
     
-    // ✅ 2. Mettre à jour depuis Firestore si nécessaire (données manquantes ou rafraîchissement)
     if (allCategoriesData.length === 0) {
         try {
             const snapshot = await db.collection('categories').get();
@@ -80,7 +75,6 @@ async function loadCategories() {
     }
 }
 
-// ✅ CORRECTION MAJEURE : SUPPRESSION DES REQUÊTES FIRESTORE EN BOUCLE
 async function renderCategoriesTable() {
     var tb = document.querySelector('#categoriesTable tbody');
     if (!tb) return;
@@ -92,15 +86,12 @@ async function renderCategoriesTable() {
         document.getElementById('categoriesPagination').innerHTML = ''; return;
     }
     
-    // ✅ CORRECTION : Créer un dictionnaire pour compter les produits en mémoire
     var counts = {};
     (window.allProductsData || []).forEach(function(p) {
-        // On compte pour toutes les catégories
         if (p.categorie) {
             if (!counts[p.categorie]) counts[p.categorie] = 0;
             counts[p.categorie]++;
         }
-        // On compte aussi pour les catégories multiples (si utilisées)
         if (p.categories) {
             p.categories.forEach(function(cat) {
                 if (!counts[cat]) counts[cat] = 0;
@@ -109,10 +100,8 @@ async function renderCategoriesTable() {
         }
     });
 
-    // ✅ CORRECTION : Utiliser le dictionnaire au lieu d'une requête Firestore
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
-        // On récupère le nombre depuis le dictionnaire
         var pc = counts[d.nom] || 0; 
 
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">' : '<i class="fas fa-folder fa-3x" style="color:#14B8A6;"></i>';
@@ -155,7 +144,6 @@ function saveCategory() {
             closeModal(); 
             refreshCurrentPage(); 
             
-            // ✅ AJOUT : Sauvegarde du cache
             if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
                 CacheDB.saveCollection('categories');
             }
@@ -239,16 +227,13 @@ async function loadCategoriesInFilter() {
 
 function filterProducts() { selectedCategoryFilter = document.getElementById('categoryFilter').value; currentPages.products = 1; renderProductsTable(); }
 
-// ✅ CORRECTION : SUPPRESSION DU VERROU ANTI-DOUBLONS
 async function loadProducts() {
-    // ✅ 1. Charger depuis le cache (RAPIDE)
     const cached = await CacheDB.getAll('products');
     if (cached.length) {
         window.allProductsData = cached;
         renderProductsTable();
     }
     
-    // ✅ 2. Mettre à jour depuis Firestore
     try {
         const snapshot = await db.collection('products').get();
         window.allProductsData = [];
@@ -453,7 +438,6 @@ function saveProduct() {
                 if (idx !== -1) window.allProductsData[idx] = Object.assign({}, window.allProductsData[idx], d, { id: editingId }); 
                 closeModal(); renderProductsTable(); CacheDB.sync(); 
                 
-                // ✅ AJOUT : Sauvegarde du cache
                 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
                     CacheDB.saveCollection('products');
                 }
@@ -465,7 +449,6 @@ function saveProduct() {
                 window.allProductsData.push(d); 
                 closeModal(); renderProductsTable(); CacheDB.sync(); 
                 
-                // ✅ AJOUT : Sauvegarde du cache
                 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
                     CacheDB.saveCollection('products');
                 }
@@ -496,16 +479,13 @@ function loadClientsPage(c) {
 
 function clientSearch(query) { clientSearchQuery = query.toLowerCase().trim(); currentPages.clients = 1; renderClientsTable(); }
 
-// ✅ CORRECTION : SUPPRESSION DU VERROU ANTI-DOUBLONS
 async function loadClients() {
-    // ✅ 1. Charger depuis le cache (RAPIDE)
     const cached = await CacheDB.getAll('clients');
     if (cached.length) {
         allClientsData = cached;
         renderClientsTable();
     }
     
-    // ✅ 2. Mettre à jour depuis Firestore
     try {
         const snapshot = await db.collection('clients').get();
         allClientsData = [];
@@ -576,7 +556,6 @@ function saveClient() {
         closeModal(); 
         loadClients(); 
         
-        // ✅ AJOUT : Sauvegarde du cache
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('clients');
         }
@@ -599,16 +578,13 @@ function loadFournisseursPage(c) {
     loadFournisseurs();
 }
 
-// ✅ CORRECTION : SUPPRESSION DU VERROU ANTI-DOUBLONS
 async function loadFournisseurs() {
-    // ✅ 1. Charger depuis le cache (RAPIDE)
     const cached = await CacheDB.getAll('fournisseurs');
     if (cached.length) {
         allFournisseursData = cached;
         renderFournisseursTable();
     }
     
-    // ✅ 2. Mettre à jour depuis Firestore
     try {
         const snapshot = await db.collection('fournisseurs').get();
         allFournisseursData = [];
@@ -688,7 +664,6 @@ function saveFournisseur() {
         closeModal(); 
         loadFournisseurs(); 
         
-        // ✅ AJOUT : Sauvegarde du cache
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('fournisseurs');
         }
@@ -938,7 +913,6 @@ async function validerAchats() {
         if (typeof loadProducts === 'function') loadProducts();
         else if (typeof renderProductsTable === 'function') renderProductsTable();
         
-        // ✅ AJOUT : Sauvegarde du cache après achat
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('products');
             CacheDB.saveCollection('fournisseurs');
@@ -948,7 +922,7 @@ async function validerAchats() {
     }
 }
 
-// ==================== RECONNAISSANCE AVEC GEMINI ====================
+// ==================== RECONNAISSANCE AVEC GEMINI (via Cloudflare Worker) ====================
 function ouvrirCameraFacture() {
     var input = document.createElement('input');
     input.type = 'file';
@@ -969,13 +943,7 @@ function ouvrirCameraFacture() {
 }
 
 async function reconnaitreFactureGemini(imgData) {
-    var container = document.getElementById('produitsAchatContainer');
     try {
-        if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 10) {
-            alert('❌ Clé API Gemini manquante.');
-            return;
-        }
-
         var productNames = produitsAchatList.map(p => p.nom);
         var productListStr = productNames.map(n => '"' + n + '"').join(', ');
 
@@ -993,32 +961,22 @@ async function reconnaitreFactureGemini(imgData) {
             Si aucun produit n'est identifié, retourne un tableau vide.
         `;
 
-        var requestBody = {
-            contents: [{
-                parts: [
-                    { text: prompt },
-                    {
-                        inline_data: {
-                            mime_type: "image/jpeg",
-                            data: imgData.split(',')[1]
-                        }
-                    }
-                ]
-            }]
-        };
-
-        var response = await fetch(GEMINI_URL, {
+        // ✅ Appel au Cloudflare Worker (la clé API reste côté serveur)
+        var response = await fetch(GEMINI_WORKER_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify({
+                prompt: prompt,
+                imageBase64: imgData
+            })
         });
 
-        if (!response.ok) {
-            var errorData = await response.json();
-            throw new Error(`Erreur ${response.status} - ${errorData.error?.message || response.statusText}`);
+        var data = await response.json();
+
+        if (data.error) {
+            throw new Error('Erreur Worker : ' + (data.error.message || JSON.stringify(data.error)));
         }
 
-        var data = await response.json();
         console.log('Réponse Gemini :', data);
 
         var rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -1057,10 +1015,9 @@ window.validerAchats = validerAchats;
 window.calculerTotalLigne = calculerTotalLigne;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 
-// ✅ AJOUT : Exposer les fonctions de rendu globalement
 window.renderCategoriesTable = renderCategoriesTable;
 window.renderProductsTable = renderProductsTable;
 window.renderClientsTable = renderClientsTable;
 window.renderFournisseursTable = renderFournisseursTable;
 
-console.log('🚀 E-SOLUTION - Admin CRUD - Module achats pro avec Gemini');
+console.log('🚀 E-SOLUTION - Admin CRUD - Module achats pro avec Gemini via Cloudflare Worker');
