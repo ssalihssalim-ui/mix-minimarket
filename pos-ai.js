@@ -1,11 +1,11 @@
-// ==================== POS-AI.JS - E-SOLUTION (VERSION INTELLIGENTE v2.3 FR) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v5.0 FRANÇAIS + MICRO 1.5s) ====================
 // Module IA séparé pour le POS - Commande vocale par Gemini
-// ✅ Comprend la DARIJA marocaine (lettres latines)
+// ✅ 100% FRANÇAIS (aucune référence à l'arabe/darija)
 // ✅ Détecte automatiquement le CLIENT dans la phrase
 // ✅ Recherche CLIENT par SCORE pondéré : nom(50) + prenom(50) + username(40) + description(40) + tel(30) + adresse(10) + email(10)
 // ✅ Extraction du nom par mots-clés si Gemini échoue
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
-// ✅ Micro qui s'arrête après 3 SECONDES DE SILENCE
+// ✅ ⚡ Micro qui s'arrête après 1.5 SECONDE de silence
 // ✅ 🔊 Synthèse vocale FRANÇAISE (voix NORMALE)
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
@@ -15,7 +15,8 @@
 const POS_GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 const POS_GEMINI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-const POS_GEMINI_SILENCE_DURATION = 3000;
+// ⚡ Silence réduit à 1.5 seconde (au lieu de 3s)
+const POS_GEMINI_SILENCE_DURATION = 1500;
 const POS_GEMINI_CACHE_KEY = 'posGeminiCache';
 const POS_GEMINI_CACHE_MAX_AGE = 7 * 24 * 3600000;
 
@@ -56,7 +57,7 @@ function posGeminiParler(texte) {
 
     var utterance = new SpeechSynthesisUtterance(texte);
     utterance.lang = POS_GEMINI_TTS_LANG;
-    utterance.rate = 1.0;    // 🐢 Vitesse NORMALE
+    utterance.rate = 1.0;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
@@ -170,10 +171,10 @@ function posOuvrirCommandeVocaleGemini() {
 
             <div style="padding:16px;background:linear-gradient(135deg,#F3E8FF,#EDE9FE);border-radius:12px;border:2px solid #8B5CF6;margin-bottom:16px;">
                 <p style="margin:0;color:#5B21B6;font-size:1rem;font-weight:600;">💡 Exemples de phrases :</p>
-                <p style="margin:8px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Zid 3 Merindina w 2 Coca Cola »</p>
-                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Client Ahmed, 5 croissants w 1 café »</p>
-                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« L Fatima, 2 boisson gazeuse »</p>
-                <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 3 secondes de silence</p>
+                <p style="margin:8px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Ajouter 3 Merindina et 2 Coca Cola »</p>
+                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Client Ahmed, 5 croissants et 1 café »</p>
+                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Deux pizzas et un jus d'orange »</p>
+                <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 1.5 seconde de silence</p>
                 <p style="margin:4px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">🔊 Gemini vous répond à voix haute</p>
             </div>
 
@@ -201,7 +202,7 @@ function posOuvrirCommandeVocaleGemini() {
     openModal('🎤 Commande vocale', html);
 }
 
-// ==================== DÉMARRAGE ÉCOUTE (silence 3s) ====================
+// ==================== DÉMARRAGE ÉCOUTE (silence 1.5s) ====================
 function posDemarrerEcouteGemini() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -239,7 +240,7 @@ function posDemarrerEcouteGemini() {
     }
     if (micIcon) micIcon.className = 'fas fa-stop';
     if (status) {
-        status.textContent = '🎙️ Je vous écoute... (parlez, puis attendez 3 secondes)';
+        status.textContent = '🎙️ Je vous écoute... (parlez, puis attendez 1.5s)';
         status.style.color = '#8B5CF6';
         status.style.fontWeight = '700';
     }
@@ -259,19 +260,19 @@ function posDemarrerEcouteGemini() {
 
     function demarrerTimerSilence() {
         if (posGeminiSilenceTimer) clearTimeout(posGeminiSilenceTimer);
-        var compteur = 3;
         var statusEl = document.getElementById('posGeminiStatus');
+        var fin = Date.now() + POS_GEMINI_SILENCE_DURATION;
         var intervalCompteur = setInterval(function() {
-            compteur--;
-            if (compteur >= 0 && statusEl && posGeminiRecognition) {
-                statusEl.textContent = '⏳ Arrêt dans ' + compteur + 's...';
+            var reste = Math.ceil((fin - Date.now()) / 1000);
+            if (reste > 0 && statusEl && posGeminiRecognition) {
+                statusEl.textContent = '⏳ Arrêt dans ' + reste + 's...';
             }
-            if (compteur < 0) clearInterval(intervalCompteur);
-        }, 1000);
+            if (reste <= 0) clearInterval(intervalCompteur);
+        }, 100);
 
         posGeminiSilenceTimer = setTimeout(function() {
             clearInterval(intervalCompteur);
-            console.log('⏱️ 3 secondes de silence → arrêt auto');
+            console.log('⏱️ 1.5s de silence → arrêt auto');
             if (posGeminiRecognition) {
                 try { posGeminiRecognition.stop(); } catch(e) {}
             }
@@ -369,7 +370,7 @@ function posResetGeminiMicUI() {
     if (micIcon) micIcon.className = 'fas fa-microphone';
 }
 
-// ==================== ENVOI À GEMINI ====================
+// ==================== ENVOI À GEMINI (100% FRANÇAIS) ====================
 async function posEnvoyerTexteAGemini(texte) {
     if (posGeminiEnCours) return;
     posGeminiEnCours = true;
@@ -411,104 +412,79 @@ async function posEnvoyerTexteAGemini(texte) {
                 return '"' + n.replace(/"/g, '\\"') + '"';
             }).join(', ');
 
-            // ✅ PROMPT "TURBO DARIJA"
-            var prompt = `You are an expert in Moroccan Darija (الدارجة المغربية) and French. You help a POS system.
+            // ✅ PROMPT 100% FRANÇAIS
+            var prompt = `Tu es un assistant de point de vente. Analyse la commande dictée en FRANÇAIS.
 
-USER SAID (in Darija or French, written with latin letters):
+PHRASE DITE :
 "${texte}"
 
-PRODUCT CATALOG:
+CATALOGUE DE PRODUITS DISPONIBLES :
 [${productListStr}]
 
-⚠️ CRITICAL: The user speaks DARIJA. Understand Darija words.
-
 ═══════════════════════════════════════════════════════
-📚 DARIJA VOCABULARY:
+🎯 MISSION :
 ═══════════════════════════════════════════════════════
 
-🔢 NUMBERS:
-- wahed / wahd / wa7ed / un / 1 → 1
-- jouj / juj / zouj / deux / 2 → 2
-- tlata / tlatha / tleta / trois / 3 → 3
-- rbaa / rba / arba / quatre / 4 → 4
-- khamsa / khams / cinq / 5 → 5
-- setta / sett / six / 6 → 6
-- sebaa / seba / sept / 7 → 7
-- tmania / tmen / huit / 8 → 8
-- tseoud / tse3 / neuf / 9 → 9
-- aachra / achra / 3achra / dix / 10 → 10
+1. Identifie TOUS les produits mentionnés qui correspondent au catalogue.
+2. Extrait la quantité pour chaque produit. Reconnais :
+   - Chiffres : "1", "2", "3", "10"...
+   - Mots français : "un"=1, "deux"=2, "trois"=3, "quatre"=4, "cinq"=5, "six"=6, "sept"=7, "huit"=8, "neuf"=9, "dix"=10
+   Si aucune quantité n'est précisée, mets 1.
+3. Détecte le CLIENT si mentionné :
+   - "client X" / "pour X" / "pour le client X" → client = "X"
+   - "au nom de X" / "à X" → client = "X"
+   - Nom propre en début de phrase → client = "Nom"
 
-🛒 COMMAND WORDS (to IGNORE):
-- zid / zid liya / zid lia = add
-- bghit / kanbghi = I want
-- 3tini / 3tina / atini = give me
-- dir / dir liya = do
-- 3afak / afak = please
-- safi / sf / sefi = that's it
-- chokran / choukran = thanks
-- ana = me/I
-- liya / lia = for me
-- w / o / ou / wa = and
-- fin / wach = question words
-- bzzaf = a lot
-
-👤 CLIENT INDICATORS (return EXACT name as spoken):
-- "client X" / "l-client X" → client = "X"
-- "pour X" / "pour l X" → client = "X"
-- "li X" / "l X" / "lli X" → client = "X"
-- "si X" / "lalla X" → client = "X"
-- "m3a X" / "m3a client X" → client = "X"
-- Name alone at start/end → client = "Name"
+MOTS À IGNORER : "ajouter", "au panier", "et", "puis", "avec", "s'il te plaît", "svp", "merci", "je veux", "donne-moi", "donne moi".
 
 ═══════════════════════════════════════════════════════
-📝 EXAMPLES:
+📝 EXEMPLES :
 ═══════════════════════════════════════════════════════
 
-Ex 1: "Zid 3 Merindina w 2 Coca Cola"
+Ex 1 : "Ajouter 3 Merindina et 2 Coca Cola"
 → { "client": null, "produits": [{"nom": "Merindina", "quantite": 3}, {"nom": "Coca Cola", "quantite": 2}] }
 
-Ex 2: "Client Ahmed, zid 3 Merindina"
-→ { "client": "Ahmed", "produits": [{"nom": "Merindina", "quantite": 3}] }
+Ex 2 : "Client Ahmed, 5 croissants et 1 café"
+→ { "client": "Ahmed", "produits": [{"nom": "Croissant", "quantite": 5}, {"nom": "Café", "quantite": 1}] }
 
-Ex 3: "Bghit tlata pizza w wahed jus"
-→ { "client": null, "produits": [{"nom": "Pizza", "quantite": 3}, {"nom": "Jus", "quantite": 1}] }
+Ex 3 : "Deux pizzas et un jus d'orange"
+→ { "client": null, "produits": [{"nom": "Pizza", "quantite": 2}, {"nom": "Jus d'orange", "quantite": 1}] }
 
-Ex 4: "L Fatima, jouj croissant w khamsa atay"
-→ { "client": "Fatima", "produits": [{"nom": "Croissant", "quantite": 2}, {"nom": "Atay", "quantite": 5}] }
+Ex 4 : "Pour Fatima, trois thés et quatre msemen"
+→ { "client": "Fatima", "produits": [{"nom": "Thé", "quantite": 3}, {"nom": "Msemen", "quantite": 4}] }
 
-Ex 5: "3tini setta msemen, client Youssef"
-→ { "client": "Youssef", "produits": [{"nom": "Msemen", "quantite": 6}] }
+Ex 5 : "Ajouter 2 Coca pour le client footballeur"
+→ { "client": "footballeur", "produits": [{"nom": "Coca Cola", "quantite": 2}] }
 
-Ex 6: "Ahmed, zid 3 Merindina"
-→ { "client": "Ahmed", "produits": [{"nom": "Merindina", "quantite": 3}] }
+Ex 6 : "Un croissant et deux cafés au nom de Youssef"
+→ { "client": "Youssef", "produits": [{"nom": "Croissant", "quantite": 1}, {"nom": "Café", "quantite": 2}] }
 
-Ex 7: "Zid 2 Coca pour Fatima"
-→ { "client": "Fatima", "produits": [{"nom": "Coca Cola", "quantite": 2}] }
-
-Ex 8: "Pour le client footballeur, zid 3 Merindina"
-→ { "client": "footballeur", "produits": [{"nom": "Merindina", "quantite": 3}] }
+Ex 7 : "Six msemen"
+→ { "client": null, "produits": [{"nom": "Msemen", "quantite": 6}] }
 
 ═══════════════════════════════════════════════════════
-🎯 MISSION:
+📤 FORMAT DE SORTIE (JSON UNIQUEMENT) :
 ═══════════════════════════════════════════════════════
-
-Return ONLY a JSON object (no text before/after):
 
 {
-  "client": "Name or description word" or null,
+  "client": "Nom du client si mentionné, sinon null",
   "produits": [
-    { "nom": "EXACT name from catalog", "quantite": 3 }
+    { "nom": "Nom EXACT du produit du catalogue", "quantite": 3 }
   ]
 }
 
-RULES:
-- "nom" = exact match from catalog.
-- Ignore products not in catalog.
-- For "client": if the user says a NAME or DESCRIPTION WORD, return it EXACTLY as spoken (e.g., "footballeur", "Ahmed", "Fatima"). The app will search in nom, prenom, username, description.
-- If no client, "client": null.
-- No text around JSON.`.trim();
+═══════════════════════════════════════════════════════
+⚠️ RÈGLES STRICTES :
+═══════════════════════════════════════════════════════
 
-            console.log('📤 Envoi au Worker...');
+- Le "nom" doit correspondre EXACTEMENT à un nom du catalogue (copie-colle).
+- Ignore les produits non trouvés dans le catalogue.
+- Si aucun produit trouvé, "produits": [].
+- "client" = null si aucun client mentionné.
+- Ne mets JAMAIS de texte avant ou après le JSON.
+- Pas de \`\`\`json autour du JSON.`.trim();
+
+            console.log('📤 Envoi au Worker (prompt français)...');
 
             if (posGeminiAbortController) {
                 try { posGeminiAbortController.abort(); } catch(e) {}
@@ -583,7 +559,7 @@ RULES:
             if (resultBox) {
                 resultBox.innerHTML = `<div style="padding:14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;color:#92400E;font-size:0.95rem;text-align:left;">
                     ⚠️ <strong>Aucun produit reconnu.</strong><br>
-                    <em>Essayez : « Zid 3 Merindina w 2 Coca Cola »</em>
+                    <em>Essayez : « Ajouter 3 Merindina et 2 Coca Cola »</em>
                 </div>`;
             }
             posGeminiParler('Aucun produit reconnu. Réessayez.');
@@ -883,7 +859,6 @@ function posAfficherResultatGeminiVoice(produits, container, clientDetecte, prod
         </div>
     `;
 
-    // 🔊 Annonce vocale en FRANÇAIS
     var resume = '';
     if (clientDetecte) resume += 'Client ' + clientDetecte + '. ';
     resume += produits.length + ' produit' + (produits.length > 1 ? 's' : '') + ' reconnu' + (produits.length > 1 ? 's' : '') + '. ';
@@ -920,7 +895,7 @@ function posGeminiChoisirSuggestion(nomProduit) {
     posGeminiParler(nomProduit + ' ajouté.');
 }
 
-// ==================== CONFIRMATION AJOUT AU PANIER (v2.3 - SCORE PONDÉRÉ) ====================
+// ==================== CONFIRMATION AJOUT AU PANIER (FR) ====================
 function posConfirmerAjoutGeminiVoice() {
     var produits = posGeminiProduitsEnAttente;
     if (!produits || produits.length === 0) {
@@ -941,7 +916,6 @@ function posConfirmerAjoutGeminiVoice() {
         console.log('📝 Phrase complète :', phraseComplete);
         console.log('📋 Clients disponibles :', clients.length);
 
-        // 🔧 Construire la liste des mots-clés à chercher
         var motsAChercher = [];
 
         if (nomClient) {
@@ -952,10 +926,10 @@ function posConfirmerAjoutGeminiVoice() {
             });
         }
 
-        // ✅ Extraction manuelle si Gemini n'a rien trouvé
+        // Extraction manuelle si Gemini n'a rien trouvé
         if (!nomClient && phraseComplete) {
             var phraseNorm = posGeminiNormaliser(phraseComplete);
-            var declencheurs = ['client', 'pour', 'li', 'si', 'lalla', 'm3a'];
+            var declencheurs = ['client', 'pour', 'au nom de', 'nommé', 'nommée'];
             var motsPhrase = phraseNorm.split(/\s+/);
 
             for (var i = 0; i < motsPhrase.length; i++) {
@@ -970,8 +944,7 @@ function posConfirmerAjoutGeminiVoice() {
                 }
             }
 
-            // Ajouter tous les mots significatifs en fallback
-            var stopWords = ['pour', 'client', 'avec', 'puis', 'zid', 'bghit', '3tini', 'merindina', 'coca', 'cola', 'pizza', 'cafe', 'café', 'croissant', 'atay', 'jus', 'et', 'les', 'des', 'une', 'un'];
+            var stopWords = ['pour', 'client', 'avec', 'puis', 'ajouter', 'donne', 'moi', 'merci', 'svp', 'veux', 'et', 'les', 'des', 'une', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix'];
             motsPhrase.forEach(function(m) {
                 if (m.length >= 4 && !stopWords.includes(m)) {
                     motsAChercher.push(m);
@@ -979,16 +952,12 @@ function posConfirmerAjoutGeminiVoice() {
             });
         }
 
-        // Dédupliquer
         motsAChercher = motsAChercher.filter(function(m, idx, arr) {
             return arr.indexOf(m) === idx && m.length >= 3;
         });
 
         console.log('🔍 Mots-clés à chercher :', motsAChercher);
 
-        // ============================================================
-        // 🎯 SCORE pour chaque client
-        // ============================================================
         var scores = clients.map(function(c) {
             var nom = posGeminiNormaliser(c.nom);
             var prenom = posGeminiNormaliser(c.prenom);
@@ -1002,7 +971,6 @@ function posConfirmerAjoutGeminiVoice() {
             var score = 0;
             var details = [];
 
-            // 📌 Match nom complet exact
             var nomCompletGemini = posGeminiNormaliser(nomClient || '');
             var full1 = posGeminiNormaliser((c.nom || '') + ' ' + (c.prenom || ''));
             var full2 = posGeminiNormaliser((c.prenom || '') + ' ' + (c.nom || ''));
@@ -1014,23 +982,18 @@ function posConfirmerAjoutGeminiVoice() {
             motsAChercher.forEach(function(mot) {
                 if (!mot) return;
 
-                // NOM : +50 exact / +30 partiel
                 if (nom === mot) { score += 50; details.push('nom=' + mot + ' +50'); }
                 else if (nom && mot && (nom.includes(mot) || mot.includes(nom))) { score += 30; details.push('nom~' + mot); }
 
-                // PRENOM : +50 exact / +30 partiel
                 if (prenom === mot) { score += 50; details.push('prenom=' + mot + ' +50'); }
                 else if (prenom && mot && (prenom.includes(mot) || mot.includes(prenom))) { score += 30; details.push('prenom~' + mot); }
 
-                // USERNAME : +40 exact / +20 partiel
                 if (username === mot) { score += 40; details.push('username=' + mot); }
                 else if (username && mot && username.includes(mot)) { score += 20; details.push('username~' + mot); }
 
-                // ⭐ DESCRIPTION : +40 exact / +25 partiel
                 if (description === mot) { score += 40; details.push('desc=' + mot); }
                 else if (description && description.includes(mot)) { score += 25; details.push('desc~' + mot); }
 
-                // TELEPHONE / WHATSAPP
                 var chiffresMot = mot.replace(/\D/g, '');
                 if (chiffresMot.length >= 6) {
                     if ((tel && tel.includes(chiffresMot)) || (whatsapp && whatsapp.includes(chiffresMot))) {
@@ -1039,10 +1002,7 @@ function posConfirmerAjoutGeminiVoice() {
                     }
                 }
 
-                // ADRESSE : +10
                 if (adresse && adresse.includes(mot)) { score += 10; details.push('adresse'); }
-
-                // EMAIL : +10
                 if (email && email.includes(mot)) { score += 10; details.push('email'); }
             });
 
@@ -1056,13 +1016,6 @@ function posConfirmerAjoutGeminiVoice() {
             clientTrouve = scores[0].client;
             console.log('🏆 MEILLEUR CLIENT (score ' + scores[0].score + '):', clientTrouve.nom, clientTrouve.prenom);
             console.log('   Détails :', scores[0].details.join(', '));
-
-            if (scores.length > 1) {
-                console.log('   Autres candidats :');
-                scores.slice(1, 4).forEach(function(s) {
-                    console.log('   - ' + s.client.nom + ' ' + (s.client.prenom || '') + ' (score ' + s.score + ')');
-                });
-            }
         } else {
             console.warn('⚠️ Aucun client trouvé. Mots :', motsAChercher);
         }
@@ -1187,13 +1140,12 @@ window.posAfficherResultatGeminiVoice = posAfficherResultatGeminiVoice;
 window.posGeminiChoisirSuggestion = posGeminiChoisirSuggestion;
 window.posGeminiParler = posGeminiParler;
 
-console.log('🤖 POS-AI.js v2.3 FR chargé - Module Gemini Voice INTELLIGENT');
-console.log('   ✅ Darija marocaine supportée');
-console.log('   ✅ Recherche CLIENT par SCORE pondéré (nom 50 + prenom 50 + username 40 + desc 40 + tel 30 + adresse 10 + email 10)');
-console.log('   ✅ Extraction du nom par mots-clés si Gemini échoue');
-console.log('   ✅ Recherche PRODUIT : nom + description + categorie + brand + categories[]');
-console.log('   ✅ Silence de 3s avant arrêt du micro');
-console.log('   🔊 Synthèse vocale FRANÇAISE (voix NORMALE)');
+console.log('🤖 POS-AI.js v5.0 chargé - 100% FRANÇAIS + Micro 1.5s');
+console.log('   ✅ Aucune référence à l\'arabe/darija');
+console.log('   ✅ Détection CLIENT (nom + prenom + username + description + tel + adresse + email)');
+console.log('   ✅ Détection PRODUIT (nom + description + categorie + brand + categories[])');
+console.log('   ⚡ Silence de 1.5s avant arrêt du micro (rapide)');
+console.log('   🔊 Synthèse vocale FRANÇAISE');
 console.log('   🎯 Suggestions intelligentes si produit non trouvé');
 console.log('   🎨 Alertes stock bas automatiques');
-console.log('   💾 Cache des commandes récentes (réponse instantanée)');
+console.log('   💾 Cache des commandes récentes');
