@@ -23,6 +23,9 @@
 // ==================== 🔑 CONFIGURATION GEMINI (Cloudflare Worker) ====================
 const POS_GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
+// ✅ Image transparente 1x1 pixel - pour satisfaire le Worker qui exige une image
+const POS_GEMINI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
 var posCart = [];
 var posStep = 1;
 var posCategoriesList = [];
@@ -680,6 +683,8 @@ posAllClients = cl.map(x => ({ id: x.id, nom: x.nom, prenom: x.prenom, telephone
 posFilteredClients = [...posAllClients];
 }
 
+console.log('📦 Produits chargés depuis le cache :', posProductsList.length);
+
 if (isOnPOSPage()) renderPOS();
 if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
 if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
@@ -696,6 +701,7 @@ db.collection('clients').limit(500).get()
 posCategoriesList=[]; cs.forEach(d=>{ let cat={id:d.id,nom:d.data().nom,imageBase64:d.data().imageBase64,recette:d.data().recette||false,ordre:d.data().ordre||0}; posCategoriesList.push(cat); CacheDB.set('categories',d.id,cat); });
 posProductsList=[]; ps.forEach(d=>{ let dd=d.data(); if(dd.disponible!==false){ let prod={id:d.id,nom:dd.nom||'',description:dd.description||'',prixVente:dd.prixVente||0,prixPromo:dd.prixPromo||0,prixAchat:dd.prixAchat||0,stock:dd.stock,categorie:dd.categorie||'',categories:dd.categories||[],imageBase64:dd.imageBase64||'',favori:dd.favori||false}; posProductsList.push(prod); CacheDB.set('products',d.id,prod); } }); productIndexBuilt=false;
 posAllClients=[]; cl.forEach(d=>{ let data=d.data(),cli={id:d.id,nom:data.nom,prenom:data.prenom,telephone:data.telephone,description:data.description||''}; posAllClients.push(cli); CacheDB.set('clients',d.id,cli); }); posFilteredClients=[...posAllClients];
+console.log('📦 Produits chargés depuis Firestore :', posProductsList.length);
 if(isOnPOSPage()) renderPOS();
 if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
 if (typeof window.buildProductIndex === 'function') window.buildProductIndex();
@@ -1899,10 +1905,9 @@ window.addEventListener('resize', corrigerDispositionMobile);
 // 🎤 MODULE GEMINI VOIX - COMMANDE PAR LA VOIX
 // ============================================================
 
-/**
- * Ouvre le modal de commande vocale Gemini
- */
 function posOuvrirCommandeVocaleGemini() {
+    console.log('📦 Catalogue actuel :', posProductsList.length, 'produits');
+    
     if (posGeminiEnCours) {
         alert('⏳ Une reconnaissance est déjà en cours...');
         return;
@@ -1954,9 +1959,6 @@ function posOuvrirCommandeVocaleGemini() {
     openModal('🎤 Commande vocale', html);
 }
 
-/**
- * Démarre l'écoute vocale
- */
 function posDemarrerEcouteGemini() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -1967,7 +1969,6 @@ function posDemarrerEcouteGemini() {
     var transcriptBox = document.getElementById('posGeminiTranscript');
     var transcriptText = document.getElementById('posGeminiTranscriptText');
     
-    // Si déjà en écoute, on arrête
     if (posGeminiRecognition) {
         try { posGeminiRecognition.stop(); } catch(e) {}
         posGeminiRecognition = null;
@@ -1997,7 +1998,6 @@ function posDemarrerEcouteGemini() {
     if (transcriptBox) transcriptBox.style.display = 'block';
     if (transcriptText) transcriptText.textContent = '...';
     
-    // Ajouter animation pulse
     if (!document.getElementById('posGeminiPulseStyle')) {
         var style = document.createElement('style');
         style.id = 'posGeminiPulseStyle';
@@ -2048,7 +2048,6 @@ function posDemarrerEcouteGemini() {
             }
             return;
         }
-        // Envoyer à Gemini
         posEnvoyerTexteAGemini(finalText);
     };
     
@@ -2070,15 +2069,19 @@ function posResetGeminiMicUI() {
     if (micIcon) micIcon.className = 'fas fa-microphone';
 }
 
-/**
- * Envoie le texte transcrit à Gemini pour extraire les produits + quantités
- */
+// ============================================================
+// 🎤 ENVOI VERS GEMINI - VERSION CORRIGÉE AVEC FAUSSE IMAGE
+// ============================================================
 async function posEnvoyerTexteAGemini(texte) {
     if (posGeminiEnCours) return;
     posGeminiEnCours = true;
     
     var status = document.getElementById('posGeminiStatus');
     var resultBox = document.getElementById('posGeminiResult');
+    
+    console.log('🎤 ====== GEMINI VOICE DEBUG ======');
+    console.log('🎤 Texte entendu :', texte);
+    console.log('📦 Nombre de produits dans le catalogue :', posProductsList.length);
     
     if (status) {
         status.textContent = '🤖 Gemini analyse votre commande...';
@@ -2091,8 +2094,17 @@ async function posEnvoyerTexteAGemini(texte) {
     }
     
     try {
+        // ✅ VÉRIFIER LE CATALOGUE
+        if (!posProductsList || posProductsList.length === 0) {
+            throw new Error('Catalogue vide. Rechargez la page POS.');
+        }
+        
         var productNames = posProductsList.map(function(p) { return p.nom; }).filter(Boolean);
-        if (productNames.length === 0) throw new Error('Catalogue vide');
+        console.log('📋 Exemples de produits :', productNames.slice(0, 10));
+        
+        if (productNames.length === 0) {
+            throw new Error('Aucun produit valide dans le catalogue');
+        }
         
         var productListStr = productNames.slice(0, 300).map(function(n) {
             return '"' + n.replace(/"/g, '\\"') + '"';
@@ -2108,7 +2120,7 @@ Catalogue de produits disponibles :
 
 Ta mission :
 1. Identifie TOUS les produits mentionnés dans la phrase qui correspondent au catalogue.
-2. Pour chaque produit, extrait la quantité (nombre en chiffres ou en mots : "un", "deux", "trois"...). Si aucune quantité n'est précisée, mets 1.
+2. Pour chaque produit, extrait la quantité (chiffres ou mots : "un", "deux", "trois"...). Si aucune quantité, mets 1.
 3. Retourne UNIQUEMENT un tableau JSON valide, sans texte autour, sans \`\`\`json.
 
 Format attendu :
@@ -2118,30 +2130,55 @@ Format attendu :
 ]
 
 Règles :
-- Le "nom" doit correspondre EXACTEMENT à un nom du catalogue (copie-colle).
-- Ignore les mots comme "ajouter", "au panier", "et", "puis", "s'il te plaît".
+- Le "nom" doit correspondre EXACTEMENT à un nom du catalogue.
+- Ignore "ajouter", "au panier", "et", "puis", "s'il te plaît".
 - Si aucun produit n'est identifié, retourne [].
 - Ne mets JAMAIS de texte avant ou après le JSON.`.trim();
         
+        console.log('📤 Envoi au Worker (avec fausse image 1x1)...');
+        console.log('🔗 URL :', POS_GEMINI_WORKER_URL);
+        
+        // ✅ CORRECTION : envoyer une fausse image 1x1 pixel pour satisfaire le Worker
         var response = await fetch(POS_GEMINI_WORKER_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt })
+            body: JSON.stringify({ 
+                prompt: prompt,
+                imageBase64: POS_GEMINI_FAKE_IMAGE
+            })
         });
         
-        if (!response.ok) throw new Error('Erreur réseau : ' + response.status);
-        var data = await response.json();
-        if (data.error) throw new Error('Erreur Worker : ' + (data.error.message || JSON.stringify(data.error)));
+        console.log('📥 Status HTTP :', response.status);
         
-        console.log('🤖 Réponse Gemini voix :', data);
+        if (!response.ok) {
+            var errText = await response.text();
+            console.error('❌ Réponse erreur :', errText);
+            throw new Error('HTTP ' + response.status + ' : ' + errText.substring(0, 200));
+        }
+        
+        var data = await response.json();
+        console.log('✅ Réponse Gemini brute :', data);
+        
+        if (data.error) {
+            throw new Error('Gemini : ' + (data.error.message || JSON.stringify(data.error)));
+        }
         
         var rawText = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+        console.log('📝 Texte extrait :', rawText);
+        
+        if (!rawText) {
+            console.error('❌ Réponse vide. Structure :', JSON.stringify(data, null, 2));
+            throw new Error('Gemini n\'a rien répondu. Vérifiez le Worker.');
+        }
+        
         var cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        console.log('🧹 Texte nettoyé :', cleaned);
         
         var produitsReconnus = [];
         try {
             produitsReconnus = JSON.parse(cleaned);
             if (!Array.isArray(produitsReconnus)) throw new Error('Pas un tableau');
+            console.log('✅ JSON parsé :', produitsReconnus);
         } catch(e) {
             console.warn('⚠️ Parsing JSON échoué, tentative regex...');
             var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
@@ -2154,8 +2191,9 @@ Règles :
         if (produitsReconnus.length === 0) {
             if (resultBox) {
                 resultBox.innerHTML = `<div style="padding:14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;color:#92400E;font-size:0.95rem;text-align:left;">
-                    ⚠️ <strong>Aucun produit reconnu.</strong><br>
-                    Essayez : « Ajouter 3 Merindina et 2 Coca Cola »
+                    ⚠️ <strong>Aucun produit reconnu.</strong><br><br>
+                    <strong>Entendu :</strong> "${escapeHtml(texte)}"<br>
+                    <strong>Réponse Gemini :</strong> "${escapeHtml(rawText.substring(0, 150))}"
                 </div>`;
             }
             posGeminiEnCours = false;
@@ -2198,7 +2236,8 @@ Règles :
         if (produitsValides.length === 0) {
             if (resultBox) {
                 resultBox.innerHTML = `<div style="padding:14px;background:#FEE2E2;border:2px solid #EF4444;border-radius:10px;color:#991B1B;font-size:0.95rem;text-align:left;">
-                    ❌ <strong>Aucun produit ne correspond au catalogue.</strong>
+                    ❌ <strong>Aucun produit ne correspond au catalogue.</strong><br><br>
+                    Gemini a trouvé : ${produitsReconnus.map(p => '"' + escapeHtml(p.nom) + '"').join(', ')}
                 </div>`;
             }
             posGeminiEnCours = false;
@@ -2219,9 +2258,6 @@ Règles :
     }
 }
 
-/**
- * Affiche la liste des produits reconnus + bouton "Ajouter au panier"
- */
 function posAfficherResultatGeminiVoice(produits, container) {
     if (!container) container = document.getElementById('posGeminiResult');
     if (!container) return;
@@ -2250,7 +2286,6 @@ function posAfficherResultatGeminiVoice(produits, container) {
         `;
     }).join('');
     
-    // Sauvegarder les produits dans une variable globale pour le bouton
     window._posGeminiProduitsEnAttente = produits;
     
     container.innerHTML = `
@@ -2287,9 +2322,6 @@ function posAfficherResultatGeminiVoice(produits, container) {
     `;
 }
 
-/**
- * Ajoute les produits reconnus au panier POS
- */
 function posConfirmerAjoutGeminiVoice() {
     var produits = window._posGeminiProduitsEnAttente;
     if (!produits || produits.length === 0) {
@@ -2304,7 +2336,6 @@ function posConfirmerAjoutGeminiVoice() {
         var p = item.produit;
         var qte = item.quantite;
         
-        // Vérifier le stock
         if (p.stock !== undefined && p.stock <= 0) {
             stockAlertes.push(p.nom + ' (rupture)');
             return;
@@ -2340,26 +2371,22 @@ function posConfirmerAjoutGeminiVoice() {
         ajoutCount += qte;
     });
     
-    // Sauvegarder le panier
     window.posCart = posCart;
     posMultiCarts[posCurrentCartId] = posCart.slice();
     posSauvegarderDonneesPanier(posCurrentCartId);
     posSaveMultiCarts();
     
-    // Fermer le modal et rafraîchir le panier
     closeModal();
     window._posGeminiProduitsEnAttente = null;
     
     if (isOnPOSPage()) {
         updateCartOnly();
-        // Scroll vers le panier
         setTimeout(function() {
             var cartPanel = document.querySelector('.pos-cart-panel');
             if (cartPanel) cartPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 200);
     }
     
-    // Message de confirmation
     var msg = '✅ ' + ajoutCount + ' article(s) ajouté(s) au panier !';
     if (stockAlertes.length > 0) {
         msg += '\n\n⚠️ Attention stock :\n• ' + stockAlertes.join('\n• ');
@@ -2367,15 +2394,11 @@ function posConfirmerAjoutGeminiVoice() {
     alert(msg);
 }
 
-/**
- * Annule l'ajout depuis la voix Gemini
- */
 function posAnnulerGeminiVoice() {
     window._posGeminiProduitsEnAttente = null;
     closeModal();
 }
 
-// Exposer les fonctions Gemini
 window.posOuvrirCommandeVocaleGemini = posOuvrirCommandeVocaleGemini;
 window.posDemarrerEcouteGemini = posDemarrerEcouteGemini;
 window.posEnvoyerTexteAGemini = posEnvoyerTexteAGemini;
