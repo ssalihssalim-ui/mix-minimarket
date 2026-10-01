@@ -1985,6 +1985,8 @@ window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 // ✅ NOUVEAU : Exposition pour pos-ai.js
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 window.isOnPOSPage = isOnPOSPage;
+window.posSearchClient = posSearchClient;                       // ➕ AJOUTÉ : pour pos-ai.js
+window.posSelectClientFromDropdown = posSelectClientFromDropdown; // ➕ AJOUTÉ : pour pos-ai.js
 
 console.log('🚀 E-SOLUTION - POS chargé');
 console.log('✅ forceUpdateClient disponible');
