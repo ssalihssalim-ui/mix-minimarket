@@ -18,6 +18,7 @@
 // ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE
 // ✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER
 // ✅ NOUVEAU : 🎤 MODULE IA SÉPARÉ dans pos-ai.js
+// ✅ 🎤 MICRO AUTONOME : plus besoin de pos-audio.js
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -668,7 +669,17 @@ posProductsList = cp.filter(x => x.disponible !== false).map(x => ({ ...x, descr
 productIndexBuilt = false;
 }
 if (cl.length) {
-posAllClients = cl.map(x => ({ id: x.id, nom: x.nom, prenom: x.prenom, telephone: x.telephone, description: x.description || '' }));
+posAllClients = cl.map(x => ({ 
+    id: x.id, 
+    nom: x.nom || '', 
+    prenom: x.prenom || '', 
+    username: x.username || '',
+    telephone: x.telephone || '', 
+    whatsapp: x.whatsapp || '',
+    email: x.email || '',
+    adresse: x.adresse || '',
+    description: x.description || '' 
+}));
 posFilteredClients = [...posAllClients];
 }
 
@@ -689,7 +700,23 @@ db.collection('clients').limit(500).get()
 
 posCategoriesList=[]; cs.forEach(d=>{ let cat={id:d.id,nom:d.data().nom,imageBase64:d.data().imageBase64,recette:d.data().recette||false,ordre:d.data().ordre||0}; posCategoriesList.push(cat); CacheDB.set('categories',d.id,cat); });
 posProductsList=[]; ps.forEach(d=>{ let dd=d.data(); if(dd.disponible!==false){ let prod={id:d.id,nom:dd.nom||'',description:dd.description||'',prixVente:dd.prixVente||0,prixPromo:dd.prixPromo||0,prixAchat:dd.prixAchat||0,stock:dd.stock,categorie:dd.categorie||'',categories:dd.categories||[],imageBase64:dd.imageBase64||'',favori:dd.favori||false}; posProductsList.push(prod); CacheDB.set('products',d.id,prod); } }); productIndexBuilt=false;
-posAllClients=[]; cl.forEach(d=>{ let data=d.data(),cli={id:d.id,nom:data.nom,prenom:data.prenom,telephone:data.telephone,description:data.description||''}; posAllClients.push(cli); CacheDB.set('clients',d.id,cli); }); posFilteredClients=[...posAllClients];
+posAllClients=[]; cl.forEach(d=>{ 
+    let data=d.data(),
+    cli={
+        id: d.id,
+        nom: data.nom || '',
+        prenom: data.prenom || '',
+        username: data.username || '',
+        telephone: data.telephone || '',
+        whatsapp: data.whatsapp || '',
+        email: data.email || '',
+        adresse: data.adresse || '',
+        description: data.description || ''
+    }; 
+    posAllClients.push(cli); 
+    CacheDB.set('clients',d.id,cli); 
+}); 
+posFilteredClients=[...posAllClients];
 console.log('📦 Produits chargés depuis Firestore :', posProductsList.length);
 if(isOnPOSPage()) renderPOS();
 if (typeof window.buildClientIndex === 'function') window.buildClientIndex();
@@ -1727,9 +1754,103 @@ function posChargerCommandesTables() { posCommandesTablesCount = 0; }
 function posChargerCommandesEnLigneCount() { posCommandesEnLigneCount = 0; }
 function posAfficherCommandesTables() { alert('Fonction à implémenter selon votre logique'); }
 
+// ============================================================
+// 🎤 RECHERCHE VOCALE DE PRODUIT (autonome - plus besoin de pos-audio.js)
+// ============================================================
+var posProductMicRecognition = null;
+
 function posToggleVoiceSearch() {
-if (typeof window.toggleVoiceSearch === 'function') window.toggleVoiceSearch();
-else alert('Fonction de recherche vocale non disponible');
+    // Si une écoute est en cours → arrêter
+    if (posProductMicRecognition) {
+        try { posProductMicRecognition.stop(); } catch(e) {}
+        posProductMicRecognition = null;
+        var mb0 = document.getElementById('posMicBtn');
+        if (mb0) {
+            mb0.style.background = 'var(--bg-page)';
+            mb0.style.color = 'var(--text-primary)';
+            mb0.style.animation = 'none';
+            mb0.title = 'Recherche vocale';
+        }
+        return;
+    }
+
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert('❌ La reconnaissance vocale n\'est pas supportée par ce navigateur.\n\nUtilisez Chrome, Edge ou Safari.');
+        return;
+    }
+
+    posProductMicRecognition = new SpeechRecognition();
+    posProductMicRecognition.lang = 'fr-FR';
+    posProductMicRecognition.continuous = false;
+    posProductMicRecognition.interimResults = false;
+    posProductMicRecognition.maxAlternatives = 1;
+
+    // Feedback visuel
+    var micBtn = document.getElementById('posMicBtn');
+    if (micBtn) {
+        micBtn.style.background = 'linear-gradient(135deg,#EF4444,#DC2626)';
+        micBtn.style.color = '#fff';
+        micBtn.style.animation = 'posPulse 1.5s infinite';
+        micBtn.title = '🎙️ Écoute en cours...';
+    }
+
+    if (!document.getElementById('posMicPulseStyle')) {
+        var style = document.createElement('style');
+        style.id = 'posMicPulseStyle';
+        style.textContent = `@keyframes posPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
+            100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+        }`;
+        document.head.appendChild(style);
+    }
+
+    posProductMicRecognition.onresult = function(event) {
+        var text = event.results[0][0].transcript;
+        console.log('🎤 Recherche vocale produit :', text);
+
+        var searchInput = document.getElementById('posSearchInput');
+        if (searchInput) searchInput.value = text;
+
+        posSearchProducts(text);
+    };
+
+    posProductMicRecognition.onerror = function(event) {
+        console.error('❌ Erreur micro :', event.error);
+        if (event.error === 'not-allowed') {
+            alert('❌ Micro non autorisé. Activez-le dans le navigateur.');
+        } else if (event.error === 'no-speech') {
+            console.warn('Aucune parole détectée');
+        }
+        posProductMicRecognition = null;
+        var mb = document.getElementById('posMicBtn');
+        if (mb) {
+            mb.style.background = 'var(--bg-page)';
+            mb.style.color = 'var(--text-primary)';
+            mb.style.animation = 'none';
+            mb.title = 'Recherche vocale';
+        }
+    };
+
+    posProductMicRecognition.onend = function() {
+        posProductMicRecognition = null;
+        var mb = document.getElementById('posMicBtn');
+        if (mb) {
+            mb.style.background = 'var(--bg-page)';
+            mb.style.color = 'var(--text-primary)';
+            mb.style.animation = 'none';
+            mb.title = 'Recherche vocale';
+        }
+    };
+
+    try {
+        posProductMicRecognition.start();
+    } catch(e) {
+        console.error('Impossible de démarrer :', e);
+        alert('❌ Erreur micro : ' + e.message);
+        posProductMicRecognition = null;
+    }
 }
 
 function updateClearButtonVisibility() {
@@ -1982,15 +2103,18 @@ window.posChargerToutesDonneesPaniers = posChargerToutesDonneesPaniers;
 window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 
-// ✅ NOUVEAU : Exposition pour pos-ai.js
+// ✅ Exposition pour pos-ai.js
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 window.isOnPOSPage = isOnPOSPage;
-window.posSearchClient = posSearchClient;                       // ➕ AJOUTÉ : pour pos-ai.js
-window.posSelectClientFromDropdown = posSelectClientFromDropdown; // ➕ AJOUTÉ : pour pos-ai.js
+window.posSearchClient = posSearchClient;
+window.posSelectClientFromDropdown = posSelectClientFromDropdown;
+window.posToggleVoiceSearch = posToggleVoiceSearch;
 
 console.log('🚀 E-SOLUTION - POS chargé');
 console.log('✅ forceUpdateClient disponible');
 console.log('✅ Multi-paniers activé');
 console.log('✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER');
+console.log('✅ Tous les champs client chargés (username, whatsapp, email, adresse)');
+console.log('✅ 🎤 Micro AUTONOME (plus besoin de pos-audio.js)');
 console.log('🎤 Module IA disponible via pos-ai.js (bouton 🎤 Gemini)');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
