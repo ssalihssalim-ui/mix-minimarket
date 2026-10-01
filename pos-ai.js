@@ -2,6 +2,9 @@
 // Module IA séparé pour le POS - Commande vocale par Gemini
 // ✅ Chargé indépendamment de pos.js
 // ✅ Utilise la fausse image 1x1 pour satisfaire le Worker
+// ✅ Comprend la DARIJA marocaine (lettres latines)
+// ✅ Détecte automatiquement le CLIENT dans la phrase
+// ✅ Micro qui s'arrête après 3 SECONDES DE SILENCE
 // ✅ Expose : posOuvrirCommandeVocaleGemini, posConfirmerAjoutGeminiVoice, posAnnulerGeminiVoice
 
 // ==================== 🔑 CONFIGURATION GEMINI ====================
@@ -10,11 +13,17 @@ const POS_GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev
 // Image transparente 1x1 pixel - pour satisfaire le Worker qui exige une image
 const POS_GEMINI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
+// ⏱️ Durée de silence avant arrêt automatique (en millisecondes)
+const POS_GEMINI_SILENCE_DURATION = 3000; // 3 secondes
+
 // ==================== ÉTAT GEMINI ====================
 var posGeminiRecognition = null;
 var posGeminiEnCours = false;
 var posGeminiTranscriptFinal = '';
 var posGeminiProduitsEnAttente = [];
+var posGeminiClientEnAttente = null;
+var posGeminiSilenceTimer = null;
+var posGeminiManuallyStopped = false;
 
 // ==================== FONCTION PRINCIPALE - OUVERTURE DU MODAL ====================
 function posOuvrirCommandeVocaleGemini() {
@@ -45,8 +54,10 @@ function posOuvrirCommandeVocaleGemini() {
 
             <div style="padding:16px;background:linear-gradient(135deg,#F3E8FF,#EDE9FE);border-radius:12px;border:2px solid #8B5CF6;margin-bottom:16px;">
                 <p style="margin:0;color:#5B21B6;font-size:1rem;font-weight:600;">💡 Exemples de phrases :</p>
-                <p style="margin:8px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Ajouter 3 Merindina au panier et 2 Coca Cola »</p>
-                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« 5 croissants, 1 café noir »</p>
+                <p style="margin:8px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Zid 3 Merindina w 2 Coca Cola »</p>
+                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Client Ahmed, 5 croissants w 1 café »</p>
+                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« L Fatima, tlata Coca Cola »</p>
+                <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 3 secondes de silence</p>
             </div>
 
             <button id="posGeminiMicBtn" onclick="posDemarrerEcouteGemini()"
@@ -73,7 +84,7 @@ function posOuvrirCommandeVocaleGemini() {
     openModal('🎤 Commande vocale', html);
 }
 
-// ==================== DÉMARRAGE ÉCOUTE ====================
+// ==================== DÉMARRAGE ÉCOUTE (avec silence de 3 secondes) ====================
 function posDemarrerEcouteGemini() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -84,20 +95,26 @@ function posDemarrerEcouteGemini() {
     var transcriptBox = document.getElementById('posGeminiTranscript');
     var transcriptText = document.getElementById('posGeminiTranscriptText');
 
+    // Si déjà en écoute → arrêt manuel
     if (posGeminiRecognition) {
+        posGeminiManuallyStopped = true;
+        if (posGeminiSilenceTimer) {
+            clearTimeout(posGeminiSilenceTimer);
+            posGeminiSilenceTimer = null;
+        }
         try { posGeminiRecognition.stop(); } catch(e) {}
         posGeminiRecognition = null;
-        if (micBtn) micBtn.style.background = 'linear-gradient(135deg,#8B5CF6,#7C3AED)';
-        if (micIcon) micIcon.className = 'fas fa-microphone';
+        posResetGeminiMicUI();
         if (status) status.textContent = 'Écoute arrêtée';
         return;
     }
 
     posGeminiTranscriptFinal = '';
+    posGeminiManuallyStopped = false;
     posGeminiRecognition = new SpeechRecognition();
-    posGeminiRecognition.lang = 'fr-FR';
-    posGeminiRecognition.continuous = false;
-    posGeminiRecognition.interimResults = true;
+    posGeminiRecognition.lang = 'fr-FR'; // ✅ Accepte aussi la darija latine
+    posGeminiRecognition.continuous = true;       // ✅ Ne s'arrête PAS tout seul
+    posGeminiRecognition.interimResults = true;   // ✅ Résultats en temps réel
     posGeminiRecognition.maxAlternatives = 1;
 
     if (micBtn) {
@@ -106,7 +123,7 @@ function posDemarrerEcouteGemini() {
     }
     if (micIcon) micIcon.className = 'fas fa-stop';
     if (status) {
-        status.textContent = '🎙️ Je vous écoute...';
+        status.textContent = '🎙️ Je vous écoute... (parlez, puis attendez 3 secondes)';
         status.style.color = '#8B5CF6';
         status.style.fontWeight = '700';
     }
@@ -124,37 +141,106 @@ function posDemarrerEcouteGemini() {
         document.head.appendChild(style);
     }
 
+    // ⏱️ Fonction qui lance le timer de silence (3 secondes)
+    function demarrerTimerSilence() {
+        if (posGeminiSilenceTimer) {
+            clearTimeout(posGeminiSilenceTimer);
+        }
+        // Compte à rebours visuel
+        var compteur = 3;
+        var statusEl = document.getElementById('posGeminiStatus');
+        var intervalCompteur = setInterval(function() {
+            compteur--;
+            if (compteur >= 0 && statusEl && posGeminiRecognition) {
+                statusEl.textContent = '⏳ Arrêt dans ' + compteur + 's...';
+            }
+            if (compteur < 0) clearInterval(intervalCompteur);
+        }, 1000);
+
+        posGeminiSilenceTimer = setTimeout(function() {
+            clearInterval(intervalCompteur);
+            console.log('⏱️ 3 secondes de silence écoulées → arrêt automatique');
+            if (posGeminiRecognition) {
+                try { posGeminiRecognition.stop(); } catch(e) {}
+            }
+        }, POS_GEMINI_SILENCE_DURATION);
+    }
+
+    // ❌ SUPPRIMÉ : plus d'arrêt automatique sur no-speech (on gère avec le timer)
+    posGeminiRecognition.onstart = function() {
+        console.log('🎙️ Micro démarré');
+        // On ne lance PAS le timer immédiatement → on attend le premier résultat
+    };
+
     posGeminiRecognition.onresult = function(event) {
         var interim = '';
         var finalText = '';
+
         for (var i = event.resultIndex; i < event.results.length; i++) {
             var transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) finalText += transcript + ' ';
-            else interim += transcript;
+            if (event.results[i].isFinal) {
+                finalText += transcript + ' ';
+            } else {
+                interim += transcript;
+            }
         }
+
         if (finalText) posGeminiTranscriptFinal += finalText;
+
         var displayText = (posGeminiTranscriptFinal + interim).trim();
         if (transcriptText) transcriptText.textContent = displayText || '...';
+
+        // ✅ Relancer le timer de silence à chaque nouveau mot
+        if (displayText.length > 0) {
+            demarrerTimerSilence();
+        }
     };
 
     posGeminiRecognition.onerror = function(event) {
         console.error('❌ Erreur reconnaissance vocale :', event.error);
+
+        // ⚠️ Ignorer "no-speech" si on a déjà commencé à parler
+        if (event.error === 'no-speech' && posGeminiTranscriptFinal.trim().length > 0) {
+            console.log('ℹ️ no-speech ignoré, on continue');
+            return;
+        }
+
         var status = document.getElementById('posGeminiStatus');
         if (status) {
             if (event.error === 'no-speech') status.textContent = '❌ Aucune parole détectée. Réessayez.';
             else if (event.error === 'not-allowed') status.textContent = '❌ Micro non autorisé. Activez-le dans le navigateur.';
+            else if (event.error === 'aborted') status.textContent = '⏹️ Écoute arrêtée';
             else status.textContent = '❌ Erreur : ' + event.error;
             status.style.color = '#ef4444';
         }
+
+        if (posGeminiSilenceTimer) {
+            clearTimeout(posGeminiSilenceTimer);
+            posGeminiSilenceTimer = null;
+        }
+
         posResetGeminiMicUI();
         posGeminiRecognition = null;
     };
 
     posGeminiRecognition.onend = function() {
         var finalText = posGeminiTranscriptFinal.trim();
+
+        if (posGeminiSilenceTimer) {
+            clearTimeout(posGeminiSilenceTimer);
+            posGeminiSilenceTimer = null;
+        }
+
         posResetGeminiMicUI();
         posGeminiRecognition = null;
 
+        // Si arrêt manuel → ne rien faire
+        if (posGeminiManuallyStopped) {
+            posGeminiManuallyStopped = false;
+            return;
+        }
+
+        // Si rien entendu → message d'erreur
         if (finalText.length < 3) {
             var status = document.getElementById('posGeminiStatus');
             if (status) {
@@ -163,11 +249,19 @@ function posDemarrerEcouteGemini() {
             }
             return;
         }
+
+        // ✅ Envoi à Gemini
+        var status = document.getElementById('posGeminiStatus');
+        if (status) {
+            status.textContent = '✅ Commande captée !';
+            status.style.color = '#10B981';
+        }
         posEnvoyerTexteAGemini(finalText);
     };
 
-    try { posGeminiRecognition.start(); }
-    catch(e) {
+    try {
+        posGeminiRecognition.start();
+    } catch(e) {
         console.error('Impossible de démarrer la reconnaissance :', e);
         alert('❌ Erreur micro : ' + e.message);
         posResetGeminiMicUI();
@@ -184,7 +278,7 @@ function posResetGeminiMicUI() {
     if (micIcon) micIcon.className = 'fas fa-microphone';
 }
 
-// ==================== ENVOI À GEMINI ====================
+// ==================== ENVOI À GEMINI (avec DARIJA + CLIENT) ====================
 async function posEnvoyerTexteAGemini(texte) {
     if (posGeminiEnCours) return;
     posGeminiEnCours = true;
@@ -207,7 +301,7 @@ async function posEnvoyerTexteAGemini(texte) {
     }
 
     try {
-        // ⚠️ VÉRIFIER LE CATALOGUE (dans window.posProductsList géré par pos.js)
+        // ⚠️ VÉRIFIER LE CATALOGUE
         if (!window.posProductsList || window.posProductsList.length === 0) {
             throw new Error('Catalogue vide. Rechargez la page POS.');
         }
@@ -223,7 +317,8 @@ async function posEnvoyerTexteAGemini(texte) {
             return '"' + n.replace(/"/g, '\\"') + '"';
         }).join(', ');
 
-        var prompt = `Tu es un assistant de point de vente. L'utilisateur a dit une commande à voix haute.
+        // ✅ PROMPT OPTIMISÉ DARIJA + CLIENT + QUANTITÉS
+        var prompt = `Tu es un assistant de point de vente marocain. L'utilisateur a dit une commande à voix haute en FRANÇAIS ou en DARIJA marocaine (arabe marocain transcrit en lettres latines/françaises).
 
 Phrase entendue :
 "${texte}"
@@ -232,20 +327,45 @@ Catalogue de produits disponibles :
 [${productListStr}]
 
 Ta mission :
-1. Identifie TOUS les produits mentionnés dans la phrase qui correspondent au catalogue.
-2. Pour chaque produit, extrait la quantité (chiffres ou mots : "un", "deux", "trois"...). Si aucune quantité, mets 1.
-3. Retourne UNIQUEMENT un tableau JSON valide, sans texte autour, sans \`\`\`json.
+1. Identifie TOUS les produits mentionnés qui correspondent au catalogue.
+2. Extrait la quantité pour chaque produit. Reconnais les chiffres (1,2,3) ET les mots darija :
+   - wahed / wahd / واحد = 1
+   - jouj / juj / zouj / 2 = 2
+   - tlata / tlata / 3 = 3
+   - rbaa / rba / 4 = 4
+   - khamsa / khams / 5 = 5
+   - setta / sett / 6 = 6
+   - sebaa / seba / 7 = 7
+   - tmania / tmen / 8 = 8
+   - tseoud / tse3 / 9 = 9
+   - aachra / 3achra / 10 = 10
+   Si aucune quantité, mets 1.
+3. Détecte si un NOM DE CLIENT est mentionné. Mots déclencheurs :
+   - "client", "l-client", "pour", "li", "l", "si", "lalla", "m3a", "m3a client", "nommée", "nommé"
+   Le nom qui suit est le nom du client.
 
-Format attendu :
-[
-  { "nom": "Nom exact du produit", "quantite": 3 },
-  { "nom": "Autre produit", "quantite": 2 }
-]
+Mots darija à IGNORER (ce sont des verbes/connecteurs) :
+- zid, zid liya, bghit, 3tini, 3tina, dir, 3mel
+- w, o, ou, puis, et
+- au panier, f panier, f l-panier
+- 3afak, afak, chokran, sf, sefi, safi
+- ana, bghit
 
-Règles :
-- Le "nom" doit correspondre EXACTEMENT à un nom du catalogue.
-- Ignore "ajouter", "au panier", "et", "puis", "s'il te plaît".
-- Si aucun produit n'est identifié, retourne [].
+Retourne UNIQUEMENT un objet JSON valide, sans texte autour, sans \`\`\`json, au format EXACT :
+
+{
+  "client": "Nom du client si détecté, sinon null",
+  "produits": [
+    { "nom": "Nom exact du produit du catalogue", "quantite": 3 },
+    { "nom": "Autre produit", "quantite": 2 }
+  ]
+}
+
+Règles STRICTES :
+- Le "nom" du produit doit correspondre EXACTEMENT à un nom du catalogue (copie-colle).
+- Ignore les produits non trouvés dans le catalogue.
+- "client" = null si aucun client n'est mentionné.
+- Si aucun produit trouvé, "produits": [].
 - Ne mets JAMAIS de texte avant ou après le JSON.`.trim();
 
         console.log('📤 Envoi au Worker (avec fausse image 1x1)...');
@@ -286,19 +406,33 @@ Règles :
         var cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
         console.log('🧹 Texte nettoyé :', cleaned);
 
-        var produitsReconnus = [];
+        // ✅ PARSING : accepte les 2 formats (objet {client, produits} OU tableau simple)
+        var parsed = null;
         try {
-            produitsReconnus = JSON.parse(cleaned);
-            if (!Array.isArray(produitsReconnus)) throw new Error('Pas un tableau');
-            console.log('✅ JSON parsé :', produitsReconnus);
+            parsed = JSON.parse(cleaned);
         } catch(e) {
             console.warn('⚠️ Parsing JSON échoué, tentative regex...');
             var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
             var match;
+            var fallbackProduits = [];
             while ((match = regex.exec(cleaned)) !== null) {
-                produitsReconnus.push({ nom: match[1].trim(), quantite: parseInt(match[2], 10) || 1 });
+                fallbackProduits.push({ nom: match[1].trim(), quantite: parseInt(match[2], 10) || 1 });
             }
+            parsed = { client: null, produits: fallbackProduits };
         }
+
+        var clientDetecte = null;
+        var produitsReconnus = [];
+
+        if (Array.isArray(parsed)) {
+            produitsReconnus = parsed;
+        } else if (parsed && typeof parsed === 'object') {
+            clientDetecte = parsed.client || null;
+            produitsReconnus = Array.isArray(parsed.produits) ? parsed.produits : [];
+        }
+
+        console.log('👤 Client détecté :', clientDetecte);
+        console.log('🛒 Produits reconnus :', produitsReconnus);
 
         if (produitsReconnus.length === 0) {
             if (resultBox) {
@@ -356,7 +490,7 @@ Règles :
             return;
         }
 
-        posAfficherResultatGeminiVoice(produitsValides, resultBox);
+        posAfficherResultatGeminiVoice(produitsValides, resultBox, clientDetecte);
 
     } catch(e) {
         console.error('❌ Erreur Gemini Voice:', e);
@@ -370,8 +504,8 @@ Règles :
     }
 }
 
-// ==================== AFFICHAGE RÉSULTAT ====================
-function posAfficherResultatGeminiVoice(produits, container) {
+// ==================== AFFICHAGE RÉSULTAT (avec CLIENT) ====================
+function posAfficherResultatGeminiVoice(produits, container, clientDetecte) {
     if (!container) container = document.getElementById('posGeminiResult');
     if (!container) return;
 
@@ -399,10 +533,31 @@ function posAfficherResultatGeminiVoice(produits, container) {
         `;
     }).join('');
 
+    // Sauvegarder les données en attente
     posGeminiProduitsEnAttente = produits;
+    posGeminiClientEnAttente = clientDetecte;
+
+    // ✅ Bloc client (affiché uniquement si détecté)
+    var clientHtml = '';
+    if (clientDetecte && clientDetecte.trim().length > 0) {
+        clientHtml = `
+            <div style="padding:10px 14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-user-check" style="color:#D97706;font-size:1.5rem;"></i>
+                <div style="text-align:left;flex:1;">
+                    <p style="margin:0;color:#92400E;font-weight:700;font-size:1rem;">
+                        👤 Client détecté : <span style="color:#78350F;">${escapeHtml(clientDetecte)}</span>
+                    </p>
+                    <p style="margin:2px 0 0;color:#B45309;font-size:0.8rem;">
+                        Sera automatiquement sélectionné lors de l'ajout au panier
+                    </p>
+                </div>
+            </div>
+        `;
+    }
 
     container.innerHTML = `
         <div style="padding:14px;background:#F5F3FF;border:2px solid #8B5CF6;border-radius:12px;text-align:left;">
+            ${clientHtml}
             <p style="margin:0 0 10px;color:#7C3AED;font-weight:700;font-size:1rem;">
                 ✅ ${produits.length} produit(s) reconnu(s) :
             </p>
@@ -435,7 +590,7 @@ function posAfficherResultatGeminiVoice(produits, container) {
     `;
 }
 
-// ==================== CONFIRMATION AJOUT AU PANIER ====================
+// ==================== CONFIRMATION AJOUT AU PANIER (avec client) ====================
 function posConfirmerAjoutGeminiVoice() {
     var produits = posGeminiProduitsEnAttente;
     if (!produits || produits.length === 0) {
@@ -443,7 +598,26 @@ function posConfirmerAjoutGeminiVoice() {
         return;
     }
 
-    // ✅ Utilise la fonction addToCartFourni par pos.js (accessible sur window)
+    // ✅ 1. Sélectionner automatiquement le client si détecté
+    var clientSelectionne = null;
+    if (posGeminiClientEnAttente && posGeminiClientEnAttente.trim().length > 0) {
+        var nomClient = posGeminiClientEnAttente.trim();
+        console.log('👤 Recherche automatique du client :', nomClient);
+
+        if (typeof window.posSearchClient === 'function') {
+            var clientInput = document.getElementById('posClientSearchInput');
+            if (clientInput) {
+                clientInput.value = nomClient;
+            }
+            window.posSearchClient(nomClient);
+            clientSelectionne = nomClient;
+            console.log('✅ Client sélectionné automatiquement :', nomClient);
+        } else {
+            console.warn('⚠️ posSearchClient non disponible');
+        }
+    }
+
+    // ✅ 2. Ajouter les produits au panier
     if (typeof window.posAddMultipleProductsToCart !== 'function') {
         alert('❌ Erreur : fonction d\'ajout au panier non disponible.');
         return;
@@ -453,6 +627,7 @@ function posConfirmerAjoutGeminiVoice() {
 
     closeModal();
     posGeminiProduitsEnAttente = [];
+    posGeminiClientEnAttente = null;
 
     if (window.isOnPOSPage && window.isOnPOSPage()) {
         if (typeof window.updateCartOnly === 'function') window.updateCartOnly();
@@ -462,7 +637,11 @@ function posConfirmerAjoutGeminiVoice() {
         }, 200);
     }
 
+    // Message de confirmation
     var msg = '✅ ' + result.ajoutCount + ' article(s) ajouté(s) au panier !';
+    if (clientSelectionne) {
+        msg += '\n👤 Client : ' + clientSelectionne;
+    }
     if (result.stockAlertes && result.stockAlertes.length > 0) {
         msg += '\n\n⚠️ Attention stock :\n• ' + result.stockAlertes.join('\n• ');
     }
@@ -472,6 +651,19 @@ function posConfirmerAjoutGeminiVoice() {
 // ==================== ANNULATION ====================
 function posAnnulerGeminiVoice() {
     posGeminiProduitsEnAttente = [];
+    posGeminiClientEnAttente = null;
+
+    if (posGeminiSilenceTimer) {
+        clearTimeout(posGeminiSilenceTimer);
+        posGeminiSilenceTimer = null;
+    }
+
+    if (posGeminiRecognition) {
+        posGeminiManuallyStopped = true;
+        try { posGeminiRecognition.stop(); } catch(e) {}
+        posGeminiRecognition = null;
+    }
+
     closeModal();
 }
 
@@ -484,3 +676,6 @@ window.posAnnulerGeminiVoice = posAnnulerGeminiVoice;
 window.posAfficherResultatGeminiVoice = posAfficherResultatGeminiVoice;
 
 console.log('🤖 POS-AI.js chargé - Module Gemini Voice prêt');
+console.log('   ✅ Darija marocaine supportée');
+console.log('   ✅ Détection automatique du client');
+console.log('   ✅ Silence de 3s avant arrêt du micro');
