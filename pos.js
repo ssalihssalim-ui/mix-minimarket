@@ -1,5 +1,5 @@
-// ==================== POS.JS - E-SOLUTION (VERSION COMPLÈTE AVEC MODE CATÉGORIES) ====================
-// Point de vente complet avec mode catégories
+// ==================== POS.JS - E-SOLUTION (VERSION COMPLÈTE + VOIX GEMINI) ====================
+// Point de vente complet avec mode catégories + commande vocale par IA Gemini
 // ✅ Nom produit peut sauter à la ligne
 // ✅ Image taille fixe et conteneur agrandi
 // ✅ Pas de scroll horizontal
@@ -11,16 +11,17 @@
 // ✅ Retour automatique à l'étape 1 après finalisation
 // ✅ CA et Profit client mis à jour (FORCE UPDATE)
 // ✅ Bouton "Afficher tout" corrigé
-// ✅ Affichage crédit client cliquable - REDIRECTION VERS PAGE CRÉDITS AVEC SAUVEGARDE D'ÉTAT
-// ✅ MULTI-PANIERS : Chaque panier sauvegarde son propre client, table, paiement, remise, montant donné
+// ✅ Affichage crédit client cliquable - REDIRECTION VERS PAGE CRÉDITS
+// ✅ MULTI-PANIERS : Chaque panier sauvegarde son propre client, table, paiement, remise
 // ✅ LIMITE À 5 PANIERS MAXIMUM
-// ✅ AFFICHAGE CORRECT DES PRODUITS ET NAVIGATION FLUIDE ENTRE PANIERS
-// ✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET
 // ✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À 5)
-// ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE DÉFINITIVEMENT
-// ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
+// ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE
 // ✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER
+// ✅ NOUVEAU : 🎤 COMMANDE VOCALE PAR GEMINI AI
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
+
+// ==================== 🔑 CONFIGURATION GEMINI (Cloudflare Worker) ====================
+const POS_GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
 var posCart = [];
 var posStep = 1;
@@ -82,6 +83,14 @@ var posMultiPaniersData = {};
 
 var MAX_PANIERS = 5;
 
+// 🎤 Variables pour la commande vocale Gemini
+var posGeminiRecognition = null;
+var posGeminiEnCours = false;
+var posGeminiTranscriptFinal = '';
+
+// ======================================================
+// ✅ FONCTION DE FORCE POUR METTRE À JOUR LE CLIENT
+// ======================================================
 async function forceUpdateClient(clientId, total, profitTotal) {
 try {
 console.log('🔥 FORCE UPDATE CLIENT:', clientId);
@@ -224,12 +233,8 @@ function posChargerToutesDonneesPaniers() {
         } else {
             posMultiPaniersData = {
                 'panier1': {
-                    client: null,
-                    table: '',
-                    paymentMethod: 'espece',
-                    discountMAD: 0,
-                    amountGiven: 0,
-                    step: 1
+                    client: null, table: '', paymentMethod: 'espece',
+                    discountMAD: 0, amountGiven: 0, step: 1
                 }
             };
         }
@@ -237,12 +242,8 @@ function posChargerToutesDonneesPaniers() {
         console.warn('⚠️ Erreur chargement données paniers:', e);
         posMultiPaniersData = {
             'panier1': {
-                client: null,
-                table: '',
-                paymentMethod: 'espece',
-                discountMAD: 0,
-                amountGiven: 0,
-                step: 1
+                client: null, table: '', paymentMethod: 'espece',
+                discountMAD: 0, amountGiven: 0, step: 1
             }
         };
     }
@@ -279,12 +280,8 @@ function posLoadMultiCarts() {
     window.posCart = posCart;
     posMultiPaniersData = {
         'panier1': {
-            client: null,
-            table: '',
-            paymentMethod: 'espece',
-            discountMAD: 0,
-            amountGiven: 0,
-            step: 1
+            client: null, table: '', paymentMethod: 'espece',
+            discountMAD: 0, amountGiven: 0, step: 1
         }
     };
     return false;
@@ -314,30 +311,22 @@ function posReorganiserNumerosPaniers() {
         posSaveMultiCarts();
         return;
     }
-    
     cartKeys.sort(function(a, b) {
         var numA = parseInt(a.replace('panier', ''));
         var numB = parseInt(b.replace('panier', ''));
         return numA - numB;
     });
-    
     var newCarts = {};
     var newData = {};
     var targetIndex = 1;
-    
     for (var i = 0; i < cartKeys.length; i++) {
         var oldKey = cartKeys[i];
         var newKey = 'panier' + targetIndex;
         newCarts[newKey] = posMultiCarts[oldKey] || [];
-        if (posMultiPaniersData[oldKey]) {
-            newData[newKey] = posMultiPaniersData[oldKey];
-        }
-        if (posCurrentCartId === oldKey) {
-            posCurrentCartId = newKey;
-        }
+        if (posMultiPaniersData[oldKey]) newData[newKey] = posMultiPaniersData[oldKey];
+        if (posCurrentCartId === oldKey) posCurrentCartId = newKey;
         targetIndex++;
     }
-    
     posMultiCarts = newCarts;
     posMultiPaniersData = newData;
     posMultiCartCounter = targetIndex - 1;
@@ -360,11 +349,8 @@ function posCreateNewCart() {
         var num = parseInt(cartKeys[k].replace('panier', ''));
         if (!isNaN(num)) usedNumbers.push(num);
     }
-    
     var availableNumber = 1;
-    while (usedNumbers.includes(availableNumber) && availableNumber <= MAX_PANIERS) {
-        availableNumber++;
-    }
+    while (usedNumbers.includes(availableNumber) && availableNumber <= MAX_PANIERS) availableNumber++;
     
     if (availableNumber > MAX_PANIERS) {
         alert('⚠️ Tous les numéros de paniers (1 à ' + MAX_PANIERS + ') sont utilisés.');
@@ -373,14 +359,7 @@ function posCreateNewCart() {
     
     var newCartId = 'panier' + availableNumber;
     posMultiCarts[newCartId] = [];
-    posMultiPaniersData[newCartId] = {
-        client: null,
-        table: '',
-        paymentMethod: 'espece',
-        discountMAD: 0,
-        amountGiven: 0,
-        step: 1
-    };
+    posMultiPaniersData[newCartId] = { client: null, table: '', paymentMethod: 'espece', discountMAD: 0, amountGiven: 0, step: 1 };
     posCurrentCartId = newCartId;
     posCart = [];
     window.posCart = posCart;
@@ -397,10 +376,7 @@ function posCreateNewCart() {
 }
 
 function posSwitchToCart(cartId) {
-    if (!posMultiCarts[cartId]) { 
-        console.warn('⚠️ Panier inexistant:', cartId); 
-        return; 
-    }
+    if (!posMultiCarts[cartId]) { console.warn('⚠️ Panier inexistant:', cartId); return; }
     
     posMultiCarts[posCurrentCartId] = posCart.slice();
     posSauvegarderDonneesPanier(posCurrentCartId);
@@ -409,16 +385,12 @@ function posSwitchToCart(cartId) {
     posCart = posMultiCarts[cartId] || [];
     window.posCart = posCart;
     posRestaurerDonneesPanier(cartId);
-    
     posSaveMultiCarts();
     
     if (isOnPOSPage()) {
         var c = document.getElementById('dynamicContent');
-        if (c) {
-            buildFullPOS(c);
-        } else {
-            renderPOS();
-        }
+        if (c) buildFullPOS(c);
+        else renderPOS();
         
         setTimeout(function() {
             if (posCurrentClient && posCurrentClient.name) {
@@ -433,29 +405,20 @@ function posSwitchToCart(cartId) {
                 var ai = document.getElementById('posAmountGiven');
                 if (ai) ai.value = posAmountGiven.toFixed(2);
             }
-            if (posCurrentClient && posCurrentClient.id) {
-                updateClientCreditDisplay(posCurrentClient.id);
-            }
+            if (posCurrentClient && posCurrentClient.id) updateClientCreditDisplay(posCurrentClient.id);
             updatePaymentButtons();
-            if (posStep === 2) {
-                posCalculateChange();
-            }
+            if (posStep === 2) posCalculateChange();
         }, 300);
     }
     console.log('🔄 Basculé vers:', cartId, 'articles:', posCart.length);
 }
 
 function posDeleteCart(cartId) {
-    console.log('🗑️ Tentative de suppression du panier:', cartId);
-    
     if (cartId === 'panier1' && Object.keys(posMultiCarts).length === 1) {
         alert('❌ Impossible de supprimer le dernier panier.');
         return;
     }
-    if (!posMultiCarts[cartId]) {
-        console.warn('⚠️ Panier inexistant:', cartId);
-        return;
-    }
+    if (!posMultiCarts[cartId]) return;
     
     if (posCurrentCartId) {
         posMultiCarts[posCurrentCartId] = posCart.slice();
@@ -471,44 +434,17 @@ function posDeleteCart(cartId) {
         posCart = posMultiCarts[posCurrentCartId] || [];
         window.posCart = posCart;
         posRestaurerDonneesPanier(posCurrentCartId);
-        console.log('🔄 Basculé vers:', posCurrentCartId);
     }
     
     posReorganiserNumerosPaniers();
-    
     posSaveMultiCarts();
     
     if (isOnPOSPage()) {
         var c = document.getElementById('dynamicContent');
-        if (c) {
-            buildFullPOS(c);
-        } else {
-            renderPOS();
-        }
-        
-        setTimeout(function() {
-            if (posCurrentClient && posCurrentClient.name) {
-                var ci = document.getElementById('posClientSearchInput');
-                if (ci) ci.value = posCurrentClient.name;
-            }
-            if (posCurrentTable) {
-                var ti = document.getElementById('posTableNum');
-                if (ti) ti.value = posCurrentTable;
-            }
-            if (posAmountGiven > 0) {
-                var ai = document.getElementById('posAmountGiven');
-                if (ai) ai.value = posAmountGiven.toFixed(2);
-            }
-            if (posCurrentClient && posCurrentClient.id) {
-                updateClientCreditDisplay(posCurrentClient.id);
-            }
-            updatePaymentButtons();
-            if (posStep === 2) {
-                posCalculateChange();
-            }
-        }, 100);
+        if (c) buildFullPOS(c);
+        else renderPOS();
     }
-    console.log('✅ Panier supprimé:', cartId, 'Paniers restants:', Object.keys(posMultiCarts).length);
+    console.log('✅ Panier supprimé:', cartId);
 }
 
 function posResetAllCarts() {
@@ -544,7 +480,6 @@ function posGetTotalAllCarts() {
 
 async function preloadPosData() {
 if (typeof CacheDB === 'undefined') return;
-
 try {
 const results = await Promise.allSettled([
 CacheDB.getAll('categories'),
@@ -552,21 +487,15 @@ CacheDB.getAll('products'),
 CacheDB.getAll('clients'),
 CacheDB.getAll('stock')
 ]);
-
-console.log('⚡ Données POS préchargées en parallèle:', results.length, 'collections');
-} catch(e) {
-console.warn('Erreur préchargement POS:', e);
+console.log('⚡ Données POS préchargées:', results.length, 'collections');
+} catch(e) { console.warn('Erreur préchargement POS:', e); }
 }
-}
-
 preloadPosData();
 
 function posToggleTools() {
     posToolsVisible = !posToolsVisible;
     var toolsContainer = document.getElementById('posToolsContainer');
     var toggleBtn = document.getElementById('posToggleToolsBtn');
-
-    console.log('🔍 Toggle outils POS - État:', posToolsVisible);
 
     if (toolsContainer) {
         if (posToolsVisible) {
@@ -578,41 +507,29 @@ function posToggleTools() {
             toolsContainer.style.background = 'var(--bg-card)';
             toolsContainer.style.borderRadius = '12px';
             toolsContainer.style.border = '1px solid var(--border)';
-            toolsContainer.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
             toolsContainer.classList.add('visible');
         } else {
             toolsContainer.style.display = 'none';
             toolsContainer.classList.remove('visible');
         }
     }
-
     if (toggleBtn) {
         toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout';
         toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
     }
-
     var searchInput = document.getElementById('posSearchInput');
     if (searchInput) {
         searchInput.style.display = posToolsVisible ? 'flex' : 'none';
-        if (posToolsVisible) {
-            setTimeout(function() { searchInput.focus(); }, 100);
-        }
+        if (posToolsVisible) setTimeout(function() { searchInput.focus(); }, 100);
     }
-
     var micBtn = document.getElementById('posMicBtn');
-    if (micBtn) {
-        micBtn.style.display = posToolsVisible ? 'flex' : 'none';
-    }
-
+    if (micBtn) micBtn.style.display = posToolsVisible ? 'flex' : 'none';
     var tablesBtn = document.getElementById('posTablesBtn');
-    if (tablesBtn) {
-        tablesBtn.style.display = posToolsVisible ? 'inline-flex' : 'none';
-    }
-
+    if (tablesBtn) tablesBtn.style.display = posToolsVisible ? 'inline-flex' : 'none';
     var enligneBtn = document.getElementById('posEnLigneBtn');
-    if (enligneBtn) {
-        enligneBtn.style.display = posToolsVisible ? 'inline-flex' : 'none';
-    }
+    if (enligneBtn) enligneBtn.style.display = posToolsVisible ? 'inline-flex' : 'none';
+    var geminiBtn = document.getElementById('posGeminiVoiceBtn');
+    if (geminiBtn) geminiBtn.style.display = posToolsVisible ? 'inline-flex' : 'none';
 
     if (!posToolsVisible) {
         posViewMode = 'categories';
@@ -620,17 +537,11 @@ function posToggleTools() {
         posSelectedCategory = 'all';
         posSearchQuery = '';
         posProductOffset = 0;
-        
         var searchInput2 = document.getElementById('posSearchInput');
-        if (searchInput2) {
-            searchInput2.value = '';
-        }
+        if (searchInput2) searchInput2.value = '';
         var clearBtn = document.getElementById('posSearchClearBtn');
         if (clearBtn) clearBtn.style.display = 'none';
-        
-        if (isOnPOSPage()) {
-            filterProductGrid();
-        }
+        if (isOnPOSPage()) filterProductGrid();
     }
 }
 
@@ -645,14 +556,12 @@ container.style.paddingBottom = '20px';
 container.style.position = 'relative';
 }
 }
+
 async function loadClientCredits(clientId) {
 if (!clientId) return 0;
 if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
 try {
-const snapshot = await db.collection('credits')
-.where('clientId', '==', clientId)
-.where('paid', '==', false)
-.get();
+const snapshot = await db.collection('credits').where('clientId', '==', clientId).where('paid', '==', false).get();
 let total = 0;
 snapshot.forEach(doc => {
 const data = doc.data();
@@ -687,23 +596,15 @@ displayEl.style.textDecoration = 'underline';
 displayEl.style.textDecorationStyle = 'dotted';
 displayEl.onclick = function() {
 var posState = {
-cart: posCart,
-step: posStep,
-client: posCurrentClient,
-table: posCurrentTable,
-paymentMethod: posPaymentMethod,
-discountMAD: posDiscountMAD,
-amountGiven: posAmountGiven,
+cart: posCart, step: posStep, client: posCurrentClient, table: posCurrentTable,
+paymentMethod: posPaymentMethod, discountMAD: posDiscountMAD, amountGiven: posAmountGiven,
 timestamp: Date.now()
 };
 localStorage.setItem('posSavedState', JSON.stringify(posState));
-console.log('💾 État POS sauvegardé:', posState);
-
 var clientName = posCurrentClient ? posCurrentClient.name : '';
 var clientId = posCurrentClient ? posCurrentClient.id : '';
 localStorage.setItem('posSelectedCreditClientId', clientId);
 localStorage.setItem('posSelectedCreditClientName', clientName);
-
 navigateTo('credits');
 };
 } else {
@@ -720,7 +621,6 @@ displayEl.onclick = null;
 
 async function loadPosPage(c){
 applyDynamicContentScroll();
-
 posChargerToutesDonneesPaniers();
 posLoadMultiCarts();
 
@@ -734,12 +634,10 @@ var state = JSON.parse(savedState);
 if (state.timestamp && (Date.now() - state.timestamp) < 300000) {
 shouldRestore = true;
 restoredState = state;
-console.log('🔄 État POS trouvé pour restauration:', state);
 } else {
 localStorage.removeItem('posSavedState');
 }
 } catch(e) {
-console.warn('⚠️ Erreur lecture état POS:', e);
 localStorage.removeItem('posSavedState');
 }
 }
@@ -756,12 +654,6 @@ posCurrentTable = restoredState.table || '';
 posPaymentMethod = restoredState.paymentMethod || 'espece';
 posDiscountMAD = restoredState.discountMAD || 0;
 posAmountGiven = restoredState.amountGiven || 0;
-
-console.log('✅ État POS restauré avec succès');
-console.log('📦 Panier:', posCart.length, 'articles');
-console.log('👤 Client:', posCurrentClient ? posCurrentClient.name : 'Aucun');
-console.log('💳 Mode paiement:', posPaymentMethod);
-console.log('💰 Montant donné:', posAmountGiven);
 }
 
 posCommandesFilterText=''; posCommandesSortField='createdAt'; posCommandesSortOrder='desc'; posSearchQuery=''; productIndexBuilt=false; posProductOffset=0; posToolsVisible=false;
@@ -769,9 +661,7 @@ posCategoriesList=[]; posProductsList=[]; posAllClients=[]; posFilteredClients=[
 c.innerHTML='<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#14B8A6;"></i><p style="margin-top:15px;color:#64748b;">Chargement du POS...</p></div>';
 setStaticBackButtonVisibility(false);
 
-if (shouldRestore) {
-localStorage.removeItem('posSavedState');
-}
+if (shouldRestore) localStorage.removeItem('posSavedState');
 
 try {
 let [cc, cp, cl] = await Promise.all([
@@ -780,9 +670,7 @@ CacheDB.getAll('products'),
 CacheDB.getAll('clients')
 ]);
 
-if (cc.length) {
-posCategoriesList = cc.map(x => ({ id: x.id, nom: x.nom, imageBase64: x.imageBase64, recette: x.recette || false, ordre: x.ordre || 0 }));
-}
+if (cc.length) posCategoriesList = cc.map(x => ({ id: x.id, nom: x.nom, imageBase64: x.imageBase64, recette: x.recette || false, ordre: x.ordre || 0 }));
 if (cp.length) {
 posProductsList = cp.filter(x => x.disponible !== false).map(x => ({ ...x, description: x.description || '' }));
 productIndexBuilt = false;
@@ -834,7 +722,7 @@ posCart.push({id: item.id || 'credit-' + Date.now(),nom: item.nom || item.name |
 var total = data.total || 0;
 if (total > 0) { posAmountGiven = total; posDiscountMAD = 0; }
 posStep = 2; window.posStep = 2; posPaymentMethod = 'espece';
-if (typeof window.setVoiceMode === 'function') { window.setVoiceMode('payment', '💳 Paiement crédit', null); }
+if (typeof window.setVoiceMode === 'function') window.setVoiceMode('payment', '💳 Paiement crédit', null);
 } catch(e) { console.warn('❌ Erreur chargement crédit:', e); }
 }
 if(isOnPOSPage()) renderPOS();
@@ -846,25 +734,11 @@ if (amountInput && posAmountGiven > 0) {
 amountInput.value = posAmountGiven.toFixed(2);
 if (typeof posCalculateChange === 'function') posCalculateChange();
 }
-if (posCurrentClient && posCurrentClient.id) {
-updateClientCreditDisplay(posCurrentClient.id);
-}
+if (posCurrentClient && posCurrentClient.id) updateClientCreditDisplay(posCurrentClient.id);
 if (posCurrentClient && posCurrentClient.name) {
 var ci = document.getElementById('posClientSearchInput');
 if (ci) ci.value = posCurrentClient.name;
 }
-if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButtons();
-}, 500);
-}
-
-if (posStep === 2 && posAmountGiven > 0) {
-setTimeout(function() {
-var input = document.getElementById('posAmountGiven');
-if (input) { input.value = posAmountGiven.toFixed(2); if (typeof posCalculateChange === 'function') posCalculateChange(); }
-if (posCurrentClient && posCurrentClient.id) {
-updateClientCreditDisplay(posCurrentClient.id);
-}
-if (posCurrentClient && posCurrentClient.name) { var ci = document.getElementById('posClientSearchInput'); if (ci) ci.value = posCurrentClient.name; }
 if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButtons();
 }, 500);
 }
@@ -875,18 +749,13 @@ clearTimeout(window._searchTimeout);
 window._searchTimeout = setTimeout(function(){
 posProductOffset = 0;
 posSearchQuery = query.toLowerCase().trim();
-
 if (posViewMode === 'categories' && posSearchQuery.length > 0) {
 posViewMode = 'products';
 posSelectedCategoryForView = null;
 }
-
 if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
-    if (typeof fastSearch === 'function') {
-        posSearchCache[posSearchQuery] = fastSearch(posSearchQuery).slice();
-    }
+    if (typeof fastSearch === 'function') posSearchCache[posSearchQuery] = fastSearch(posSearchQuery).slice();
 }
-
 if(isOnPOSPage()) filterProductGrid();
 }, 80);
 }
@@ -897,9 +766,7 @@ if (input) {
 input.value = '';
 posSearchQuery = '';
 posProductOffset = 0;
-if (isOnPOSPage()) {
-filterProductGrid();
-}
+if (isOnPOSPage()) filterProductGrid();
 input.focus();
 var clearBtn = document.getElementById('posSearchClearBtn');
 if (clearBtn) clearBtn.style.display = 'none';
@@ -928,7 +795,6 @@ function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProduc
 
 function filterProductGrid(){
 if(!isOnPOSPage() || posStep !== 1) return;
-
 var grid = document.getElementById('posProductGrid') || document.querySelector('.pos-products-grid');
 if(!grid) return;
 
@@ -938,29 +804,20 @@ return;
 }
 
 var f;
-if (posSearchCache[posSearchQuery]) {
-    f = posSearchCache[posSearchQuery].slice();
-} else {
-    f = fastSearch(posSearchQuery);
-    posSearchCache[posSearchQuery] = f.slice();
-}
+if (posSearchCache[posSearchQuery]) f = posSearchCache[posSearchQuery].slice();
+else { f = fastSearch(posSearchQuery); posSearchCache[posSearchQuery] = f.slice(); }
 
 if (posSelectedCategoryForView) {
 f = f.filter(function(p) {
-if (p.categories && p.categories.length > 0) {
-return p.categories.includes(posSelectedCategoryForView);
-}
+if (p.categories && p.categories.length > 0) return p.categories.includes(posSelectedCategoryForView);
 return p.categorie === posSelectedCategoryForView;
 });
 } else if (posSelectedCategory !== 'all') {
 f = f.filter(function(p) {
-if (p.categories && p.categories.length > 0) {
-return p.categories.includes(posSelectedCategory);
-}
+if (p.categories && p.categories.length > 0) return p.categories.includes(posSelectedCategory);
 return p.categorie === posSelectedCategory;
 });
 }
-
 f.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
 
 var totalProducts = f.length;
@@ -976,7 +833,6 @@ grid.style.flexWrap = 'wrap';
 grid.style.alignContent = 'start';
 
 var html = '';
-
 html += '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:4px;background:var(--bg-page);border-radius:8px;">';
 html += '<button onclick="retournerCategories()" style="display:flex;align-items:center;gap:6px;background:var(--black);color:var(--white);border:none;border-radius:8px;padding:6px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;">';
 html += '<i class="fas fa-arrow-left"></i> Retour aux catégories';
@@ -992,9 +848,7 @@ html += '<i class="fas fa-search" style="font-size:2.5rem;color:#94a3b8;"></i>';
 html += '<p style="color:#94a3b8;margin-top:10px;">Aucun produit dans cette catégorie</p>';
 html += '</div>';
 } else {
-if(posSearchQuery) {
-html += '<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">' + totalProducts + ' résultat' + (totalProducts>1?'s':'') + '</div>';
-}
+if(posSearchQuery) html += '<div style="grid-column:1/-1;padding:3px 8px;font-size:0.75rem;color:#94a3b8;">' + totalProducts + ' résultat' + (totalProducts>1?'s':'') + '</div>';
 
 for(var j = 0; j < displayProducts.length; j++){
 var p = displayProducts[j];
@@ -1005,36 +859,17 @@ if(p.stock !== undefined){
 if(p.stock <= 0){ sc = 'pos-out-of-stock'; stt = ' (Rupture)'; }
 else if(p.stock <= 5) stt = ' (' + p.stock + ' rest.)';
 }
-
 var dn = escapeHtml(p.nom);
-if(posSearchQuery) {
-dn = dn.replace(new RegExp('(' + posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','gi'), '<mark style="background:#fef3c7;border-radius:3px;color:#111827;">$1</mark>');
-}
+if(posSearchQuery) dn = dn.replace(new RegExp('(' + posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','gi'), '<mark style="background:#fef3c7;border-radius:3px;color:#111827;">$1</mark>');
 
-var isMobile = window.innerWidth < 700;
-
-var cardStyle = isMobile ?
-'padding:4px 2px;min-height:110px;max-height:140px;aspect-ratio:1/1;border-radius:6px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
-'padding:6px 8px;min-height:150px;max-height:190px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
-
-var imgStyle = isMobile ?
-'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;' :
-'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
-
-var nameStyle = isMobile ?
-'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:1px 0;' :
-'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:2px 0;';
-
-var priceStyle = isMobile ?
-'font-size:10px !important;font-weight:700 !important;color:var(--text-primary);' :
-'font-size:0.8rem !important;font-weight:700 !important;color:var(--text-primary);';
+var cardStyle = isMobile ? 'padding:4px 2px;min-height:110px;max-height:140px;aspect-ratio:1/1;border-radius:6px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' : 'padding:6px 8px;min-height:150px;max-height:190px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
+var imgStyle = isMobile ? 'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;' : 'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
+var nameStyle = isMobile ? 'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:1px 0;' : 'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:2px 0;';
+var priceStyle = isMobile ? 'font-size:10px !important;font-weight:700 !important;color:var(--text-primary);' : 'font-size:0.8rem !important;font-weight:700 !important;color:var(--text-primary);';
 
 var imgContent = '';
-if (p.imageBase64) {
-imgContent = '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">';
-} else {
-imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;color:var(--text-muted);' : 'font-size:26px;color:var(--text-muted);') + '"></i>';
-}
+if (p.imageBase64) imgContent = '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">';
+else imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;color:var(--text-muted);' : 'font-size:26px;color:var(--text-muted);') + '"></i>';
 
 html += '<div class="pos-product-card ' + sc + '" style="' + cardStyle + 'content-visibility:auto;contain-intrinsic-size:150px 150px;" onclick="posAddToCartOrOpenOptions(\'' + p.id + '\')">' +
 '<div class="pos-product-img" style="' + imgStyle + '">' + imgContent + '</div>' +
@@ -1061,7 +896,6 @@ function afficherCategories(grid) {
 var isMobile = window.innerWidth < 700;
 var isTablette = window.innerWidth >= 700 && window.innerWidth <= 1024;
 var isPC = window.innerWidth > 1024;
-
 var gridCols = isMobile ? 'repeat(3, 1fr)' : (isTablette ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)');
 grid.style.gridTemplateColumns = gridCols;
 grid.style.overflowX = 'hidden';
@@ -1070,7 +904,6 @@ grid.style.flexWrap = 'wrap';
 grid.style.alignContent = 'start';
 
 var html = '';
-
 html += '<div style="grid-column:1/-1;padding:6px 8px;font-size:0.9rem;font-weight:700;color:var(--text-primary);">';
 html += '📂 Choisissez une catégorie';
 html += '</div>';
@@ -1089,73 +922,26 @@ return (a.nom || '').localeCompare(b.nom || '');
 });
 
 var imgSize, cardMinHeight, cardMaxHeight, folderSize, nameSize, countSize;
-
-if (isPC) {
-imgSize = '140px';
-cardMinHeight = '160px';
-cardMaxHeight = '200px';
-folderSize = '65px';
-nameSize = '16px';
-countSize = '12px';
-} else if (isTablette) {
-imgSize = '130px';
-cardMinHeight = '150px';
-cardMaxHeight = '180px';
-folderSize = '60px';
-nameSize = '13px';
-countSize = '10px';
-} else {
-imgSize = '45px';
-cardMinHeight = '65px';
-cardMaxHeight = '80px';
-folderSize = '20px';
-nameSize = '8px';
-countSize = '7px';
-}
-
-if (window.innerWidth < 400) {
-imgSize = '35px';
-cardMinHeight = '50px';
-cardMaxHeight = '65px';
-folderSize = '16px';
-nameSize = '7px';
-countSize = '6px';
-}
+if (isPC) { imgSize='140px'; cardMinHeight='160px'; cardMaxHeight='200px'; folderSize='65px'; nameSize='16px'; countSize='12px'; }
+else if (isTablette) { imgSize='130px'; cardMinHeight='150px'; cardMaxHeight='180px'; folderSize='60px'; nameSize='13px'; countSize='10px'; }
+else { imgSize='45px'; cardMinHeight='65px'; cardMaxHeight='80px'; folderSize='20px'; nameSize='8px'; countSize='7px'; }
+if (window.innerWidth < 400) { imgSize='35px'; cardMinHeight='50px'; cardMaxHeight='65px'; folderSize='16px'; nameSize='7px'; countSize='6px'; }
 
 for (var i = 0; i < sortedCategories.length; i++) {
 var cat = sortedCategories[i];
 var count = posProductsList.filter(function(p) {
-if (p.categories && p.categories.length > 0) {
-return p.categories.includes(cat.nom);
-}
+if (p.categories && p.categories.length > 0) return p.categories.includes(cat.nom);
 return p.categorie === cat.nom;
 }).length;
 
 var imgContent = '';
-if (cat.imageBase64) {
-imgContent = '<img src="' + escapeHtml(cat.imageBase64) + '" loading="lazy" alt="' + escapeHtml(cat.nom) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
-} else {
-imgContent = '<i class="fas fa-folder" style="font-size:' + folderSize + ';color:var(--accent);"></i>';
-}
+if (cat.imageBase64) imgContent = '<img src="' + escapeHtml(cat.imageBase64) + '" loading="lazy" alt="' + escapeHtml(cat.nom) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+else imgContent = '<i class="fas fa-folder" style="font-size:' + folderSize + ';color:var(--accent);"></i>';
 
-var cardStyle = 'min-height:' + cardMinHeight + ';max-height:' + cardMaxHeight + ';' +
-'padding:8px 4px;border-radius:10px;' +
-'border:2px solid transparent;' +
-'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
-'width:100%;background:#FFFFFF;cursor:pointer;' +
-'transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);gap:2px;';
-
-var imgStyle = 'width:' + imgSize + ';height:' + imgSize + ';' +
-'border-radius:50%;overflow:hidden;flex-shrink:0;' +
-'background:var(--gray-100);display:flex;align-items:center;justify-content:center;' +
-'margin-bottom:2px;border:2px solid var(--gray-200);';
-
-var nameStyle = 'font-size:' + nameSize + ';font-weight:700;text-align:center;' +
-'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
-'max-width:100%;color:#000000;margin-top:2px;line-height:1.2;display:block;';
-
-var countStyle = 'font-size:' + countSize + ';color:var(--text-muted);' +
-'font-weight:500;display:block;margin-top:0px;';
+var cardStyle = 'min-height:' + cardMinHeight + ';max-height:' + cardMaxHeight + ';padding:8px 4px;border-radius:10px;border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;background:#FFFFFF;cursor:pointer;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);gap:2px;';
+var imgStyle = 'width:' + imgSize + ';height:' + imgSize + ';border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--gray-100);display:flex;align-items:center;justify-content:center;margin-bottom:2px;border:2px solid var(--gray-200);';
+var nameStyle = 'font-size:' + nameSize + ';font-weight:700;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;color:#000000;margin-top:2px;line-height:1.2;display:block;';
+var countStyle = 'font-size:' + countSize + ';color:var(--text-muted);font-weight:500;display:block;margin-top:0px;';
 
 html += '<div class="pos-category-card" data-cat-name="' + escapeHtml(cat.nom) + '" style="' + cardStyle + '" ' +
 'onclick="selectionnerCategorie(\'' + escapeHtml(cat.nom).replace(/'/g, "\\'") + '\')"' +
@@ -1167,7 +953,6 @@ html += '<div class="pos-category-card" data-cat-name="' + escapeHtml(cat.nom) +
 '</div>';
 }
 }
-
 grid.innerHTML = html;
 }
 
@@ -1180,7 +965,6 @@ card.style.boxShadow = 'none';
 card.style.background = '#FFFFFF';
 card.style.color = '#000000';
 });
-
 document.querySelectorAll('.pos-category-card').forEach(function(card) {
 var nameSpan = card.querySelector('span:first-of-type');
 var catNameAttr = card.getAttribute('data-cat-name');
@@ -1193,22 +977,14 @@ card.style.transform = 'translateY(-2px)';
 card.style.boxShadow = '0 4px 12px rgba(20,184,166,0.25)';
 }
 });
-
 posSelectedCategoryForView = catName;
 posViewMode = 'products';
 posProductOffset = 0;
 posSearchQuery = '';
-
 posSelectedCategory = catName;
-
 var searchInput = document.getElementById('posSearchInput');
-if (searchInput) {
-searchInput.value = '';
-}
-
-if (isOnPOSPage()) {
-filterProductGrid();
-}
+if (searchInput) searchInput.value = '';
+if (isOnPOSPage()) filterProductGrid();
 }
 
 function retournerCategories() {
@@ -1220,21 +996,14 @@ card.style.boxShadow = 'none';
 card.style.background = '#FFFFFF';
 card.style.color = '#000000';
 });
-
 posViewMode = 'categories';
 posSelectedCategoryForView = null;
 posSelectedCategory = 'all';
 posSearchQuery = '';
 posProductOffset = 0;
-
 var searchInput = document.getElementById('posSearchInput');
-if (searchInput) {
-searchInput.value = '';
-}
-
-if (isOnPOSPage()) {
-filterProductGrid();
-}
+if (searchInput) searchInput.value = '';
+if (isOnPOSPage()) filterProductGrid();
 }
 
 function posSearchClient(query){
@@ -1253,21 +1022,16 @@ return;
 }
 if (clearBtn) clearBtn.style.display = 'flex';
 
-if (typeof window.clientSearchCache === 'undefined') {
-    window.clientSearchCache = {};
-}
-if (window.clientSearchCache[q]) {
-    posFilteredClients = window.clientSearchCache[q].slice();
-} else {
-    posFilteredClients = posAllClients.filter(function(c){
-        return (c.nom||'').toLowerCase().indexOf(q)!==-1 ||
-        (c.prenom||'').toLowerCase().indexOf(q)!==-1 ||
-        (c.telephone||'').toLowerCase().indexOf(q)!==-1 ||
-        (c.description||'').toLowerCase().indexOf(q)!==-1;
-    });
-    var keys = Object.keys(window.clientSearchCache);
-    if (keys.length > 100) window.clientSearchCache = {};
-    window.clientSearchCache[q] = posFilteredClients.slice();
+if (typeof window.clientSearchCache === 'undefined') window.clientSearchCache = {};
+if (window.clientSearchCache[q]) posFilteredClients = window.clientSearchCache[q].slice();
+else {
+posFilteredClients = posAllClients.filter(function(c){
+return (c.nom||'').toLowerCase().indexOf(q)!==-1 || (c.prenom||'').toLowerCase().indexOf(q)!==-1 ||
+(c.telephone||'').toLowerCase().indexOf(q)!==-1 || (c.description||'').toLowerCase().indexOf(q)!==-1;
+});
+var keys = Object.keys(window.clientSearchCache);
+if (keys.length > 100) window.clientSearchCache = {};
+window.clientSearchCache[q] = posFilteredClients.slice();
 }
 
 if (posFilteredClients.length === 1) {
@@ -1280,27 +1044,19 @@ if (clearBtn) clearBtn.style.display = 'flex';
 updateClientCreditDisplay(client.id);
 updatePaymentButtons();
 if (isOnPOSPage()) renderPOS();
-setTimeout(function() {
-if (posStep === 1 && isOnPOSPage()) {
-posGoToStep2();
-}
-}, 300);
+setTimeout(function() { if (posStep === 1 && isOnPOSPage()) posGoToStep2(); }, 300);
 return;
 }
-if (posFilteredClients.length > 0) {
-renderClientDropdown();
-} else {
-if (dropdown) dropdown.style.display = 'none';
-}
+if (posFilteredClients.length > 0) renderClientDropdown();
+else { if (dropdown) dropdown.style.display = 'none'; }
 }
 
 function renderClientDropdown(){
 var d = document.getElementById('posClientDropdown');
 if (!d) return;
 var h = '';
-if (posFilteredClients.length === 0) {
-h = '<div style="padding:8px;color:#94a3b8;text-align:center;font-size:24px;">Aucun</div>';
-} else {
+if (posFilteredClients.length === 0) h = '<div style="padding:8px;color:#94a3b8;text-align:center;font-size:24px;">Aucun</div>';
+else {
 posFilteredClients.forEach(function(c){
 h += '<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:24px;">'+
 escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+
@@ -1325,11 +1081,7 @@ if(clearBtn) clearBtn.style.display='flex';
 updatePaymentButtons();
 updateClientCreditDisplay(cid);
 if(isOnPOSPage()) renderPOS();
-setTimeout(function() {
-if (posStep === 1 && isOnPOSPage()) {
-posGoToStep2();
-}
-}, 300);
+setTimeout(function() { if (posStep === 1 && isOnPOSPage()) posGoToStep2(); }, 300);
 }
 
 document.addEventListener('click',function(e){
@@ -1337,9 +1089,7 @@ var d=document.getElementById('posClientDropdown');
 var s=document.getElementById('posClientSearchInput');
 if(d && s && !s.contains(e.target) && !d.contains(e.target)) {
 d.style.display='none';
-if (posCurrentClient && posCurrentClient.name) {
-s.value = posCurrentClient.name;
-}
+if (posCurrentClient && posCurrentClient.name) s.value = posCurrentClient.name;
 }
 });
 
@@ -1375,18 +1125,12 @@ function posAddToCartOrOpenOptions(pid){
 async function posOpenOptionsModal(pid) {
 var p = posProductsList.find(function(x) { return x.id === pid; });
 if (!p) return;
-if (p.stock !== undefined && p.stock <= 0) {
-alert('Rupture');
-return;
-}
+if (p.stock !== undefined && p.stock <= 0) { alert('Rupture'); return; }
 
 try {
 var doc = await db.collection('products').doc(pid).get();
-if (doc.exists) {
-posCurrentProductIngredients = doc.data().ingredients || [];
-} else {
-posCurrentProductIngredients = [];
-}
+if (doc.exists) posCurrentProductIngredients = doc.data().ingredients || [];
+else posCurrentProductIngredients = [];
 } catch(e) {
 console.error('Erreur chargement ingrédients:', e);
 posCurrentProductIngredients = [];
@@ -1396,14 +1140,8 @@ if (typeof allStockData === 'undefined' || allStockData.length === 0) {
 try {
 const snap = await db.collection('stock').orderBy('nom').get();
 allStockData = [];
-snap.forEach(function(d) {
-var dd = d.data();
-dd.id = d.id;
-allStockData.push(dd);
-});
-} catch(e) {
-console.error('Erreur chargement stock:', e);
-}
+snap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allStockData.push(dd); });
+} catch(e) { console.error('Erreur chargement stock:', e); }
 }
 
 var grouped = {};
@@ -1411,16 +1149,8 @@ posCurrentProductIngredients.forEach(function(ing) {
 var stockItem = allStockData.find(function(s) { return s.id === ing.idStock; });
 var cat = stockItem ? (stockItem.categorie || 'Ingrédients') : 'Ingrédients';
 if (!grouped[cat]) grouped[cat] = [];
-
 var stockDisponible = stockItem ? (stockItem.quantite || 0) : 0;
-
-grouped[cat].push({
-nom: ing.nom,
-idStock: ing.idStock,
-quantite: ing.quantite || 1,
-unite: ing.unite || '',
-stockDisponible: stockDisponible
-});
+grouped[cat].push({ nom: ing.nom, idStock: ing.idStock, quantite: ing.quantite || 1, unite: ing.unite || '', stockDisponible: stockDisponible });
 });
 
 var order = ['Sauces', 'Légumes', 'Fruits', 'Viande', 'Poulet', 'Poisson', 'Ingrédients'];
@@ -1433,34 +1163,26 @@ return a.localeCompare(b);
 });
 
 posCurrentProductId = pid;
-
 var h = '<h4 style="font-size:1.2rem;margin-bottom:12px;">' + escapeHtml(p.nom) + '</h4>';
 h += '<p style="color:#64748b;font-size:0.85rem;margin-bottom:12px;">Sélectionnez les ingrédients à conserver (décochez pour exclure) :</p>';
 
-if (sortedCats.length === 0) {
-h += '<div style="color:#94a3b8;padding:12px;">Aucun ingrédient pour ce produit</div>';
-} else {
+if (sortedCats.length === 0) h += '<div style="color:#94a3b8;padding:12px;">Aucun ingrédient pour ce produit</div>';
+else {
 sortedCats.forEach(function(cat) {
 h += '<div style="margin-bottom:14px;">';
 h += '<label style="font-weight:700;font-size:0.9rem;display:block;margin-bottom:4px;">🥫 ' + escapeHtml(cat) + '</label>';
 h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-
 grouped[cat].forEach(function(ing) {
 var disabled = ing.stockDisponible <= 0 ? 'disabled' : '';
 var styleDisabled = ing.stockDisponible <= 0 ? 'opacity:0.5;' : '';
-
 h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + styleDisabled + '">';
 h += '<input type="checkbox" class="pos-interdit-check" value="' + escapeHtml(ing.nom) + '" ' + disabled + ' checked>';
 h += ' ' + escapeHtml(ing.nom);
 if (ing.unite) h += ' (' + escapeHtml(ing.unite) + ')';
-if (ing.stockDisponible > 0) {
-h += ' <span style="font-size:0.7rem;color:#94a3b8;">stock: ' + ing.stockDisponible + '</span>';
-} else {
-h += ' <span style="font-size:0.7rem;color:#ef4444;">❌ rupture</span>';
-}
+if (ing.stockDisponible > 0) h += ' <span style="font-size:0.7rem;color:#94a3b8;">stock: ' + ing.stockDisponible + '</span>';
+else h += ' <span style="font-size:0.7rem;color:#ef4444;">❌ rupture</span>';
 h += '</label>';
 });
-
 h += '</div></div>';
 });
 }
@@ -1481,58 +1203,31 @@ h += '<div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify
 h += '<button class="btn-cancel" onclick="closeModal()" style="font-size:0.9rem;padding:10px 20px;">Annuler</button>';
 h += '<button class="btn-save" onclick="posConfirmOptions()" style="font-size:0.9rem;padding:10px 24px;"><i class="fas fa-check"></i> Ajouter au panier</button>';
 h += '</div>';
-
 openModal('Personnaliser - ' + escapeHtml(p.nom), h);
 }
 
 function posConfirmOptions() {
 var interdits = [];
-document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) {
-interdits.push(cb.value);
-});
+document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) { interdits.push(cb.value); });
 var epice = (document.querySelector('input[name="pos-epice"]:checked') || {}).value || 'Normal';
 var sel = (document.querySelector('input[name="pos-sel"]:checked') || {}).value || 'Normal';
 var p = posProductsList.find(function(x) { return x.id === posCurrentProductId; });
 if (!p) { closeModal(); return; }
 
 var ingredientsExclus = [];
-document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) {
-ingredientsExclus.push(cb.value.toLowerCase().trim());
-});
+document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) { ingredientsExclus.push(cb.value.toLowerCase().trim()); });
 
 var ex = posCart.find(function(x) { return x.id === posCurrentProductId; });
 if (ex) {
-if (p.stock !== undefined && ex.quantite >= p.stock) {
-alert('Stock insuffisant');
-closeModal();
-return;
-}
+if (p.stock !== undefined && ex.quantite >= p.stock) { alert('Stock insuffisant'); closeModal(); return; }
 ex.quantite += 1;
 } else {
 var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
-posCart.push({
-id: p.id,
-nom: p.nom,
-prixUnitaire: pr,
-prixAchat: p.prixAchat || 0,
-prixPromo: p.prixPromo || 0,
-prixVente: p.prixVente || 0,
-quantite: 1,
-categorie: p.categorie || '',
-imageBase64: p.imageBase64 || '',
-sauces: [],
-interdits: interdits,
-epice: epice,
-sel: sel,
-ingredientsExclus: ingredientsExclus
-});
+posCart.push({ id: p.id, nom: p.nom, prixUnitaire: pr, prixAchat: p.prixAchat || 0, prixPromo: p.prixPromo || 0, prixVente: p.prixVente || 0, quantite: 1, categorie: p.categorie || '', imageBase64: p.imageBase64 || '', sauces: [], interdits: interdits, epice: epice, sel: sel, ingredientsExclus: ingredientsExclus });
 }
 
 decrementerIngredientsStock(posCurrentProductId, ingredientsExclus);
-
-if (typeof window.onProductAdded === 'function') {
-window.onProductAdded(p.id);
-}
+if (typeof window.onProductAdded === 'function') window.onProductAdded(p.id);
 closeModal();
 updateCartOnly();
 posMultiCarts[posCurrentCartId] = posCart.slice();
@@ -1545,46 +1240,25 @@ db.collection('products').doc(productId).get().then(function(doc) {
 if (!doc.exists) return;
 var productData = doc.data();
 var ingredients = productData.ingredients || [];
-
 ingredients.forEach(function(ing) {
-var isExcluded = ingredientsExclus.some(function(excl) {
-return excl === ing.nom.toLowerCase().trim();
-});
-
+var isExcluded = ingredientsExclus.some(function(excl) { return excl === ing.nom.toLowerCase().trim(); });
 if (!isExcluded && ing.idStock) {
 var quantite = ing.quantite || 1;
-
 db.collection('stock').doc(ing.idStock).get().then(function(stockDoc) {
 if (!stockDoc.exists) return;
 var stockData = stockDoc.data();
 var nouveauStock = Math.max(0, (stockData.quantite || 0) - quantite);
-
-db.collection('stock').doc(ing.idStock).update({
-quantite: nouveauStock,
-updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-}).then(function() {
+db.collection('stock').doc(ing.idStock).update({ quantite: nouveauStock, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function() {
 var stockItem = allStockData.find(function(s) { return s.id === ing.idStock; });
-if (stockItem) {
-stockItem.quantite = nouveauStock;
-CacheDB.set('stock', ing.idStock, stockItem);
-}
-if (typeof renderStockTable === 'function') {
-renderStockTable();
-}
-console.log('✅ Stock mis à jour: ' + ing.nom + ' → ' + nouveauStock);
-}).catch(function(err) {
-console.error('❌ Erreur mise à jour stock:', err);
-});
-}).catch(function(err) {
-console.error('❌ Erreur récupération stock:', err);
+if (stockItem) { stockItem.quantite = nouveauStock; CacheDB.set('stock', ing.idStock, stockItem); }
+if (typeof renderStockTable === 'function') renderStockTable();
+}).catch(function(err) { console.error('❌ Erreur stock:', err); });
 });
 }
 });
-}).catch(function(err) {
-console.error('❌ Erreur récupération produit:', err);
-});
+}).catch(function(err) { console.error('❌ Erreur produit:', err); });
 }
-// ==================== updateCartOnly - NOM SUR UNE LIGNE + QUANTITÉ CLIQUABLE ====================
+
 function updateCartOnly(){
 if(!isOnPOSPage()) return;
 var ci=document.querySelector('.pos-cart-items');
@@ -1594,7 +1268,6 @@ if(posCart.length===0) {
 html='<div class="pos-cart-empty"><i class="fas fa-shopping-basket"></i><p>Panier vide</p></div>';
 } else {
 var isMobile = window.innerWidth < 700;
-
 for(var k=0;k<posCart.length;k++){
 var it=posCart[k], opts='';
 if(it.interdits&&it.interdits.length) opts+=' <span style="color:#ef4444;font-size:0.5rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>';
@@ -1616,10 +1289,10 @@ html+='<div class="pos-cart-item" style="display:flex;flex-direction:column;padd
 '</div>' +
 '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">' +
 '<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:10px;flex-shrink:0;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-minus"></i></button>' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-minus"></i></button>' +
 '<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" inputmode="numeric" onchange="posSetQty('+k+',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur();}" style="width:'+qtyInputSize+';height:'+btnSize+';text-align:center;font-size:'+qtyFontSize+';font-weight:700;border:2px solid var(--border);border-radius:6px;padding:0;background:var(--white);color:var(--text-primary);-moz-appearance:textfield;appearance:textfield;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
-'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 4px;font-size:1rem;transition:all 0.2s;margin-left:4px;"><i class="fas fa-times"></i></button>' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
+'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 4px;font-size:1rem;margin-left:4px;"><i class="fas fa-times"></i></button>' +
 '</div>' +
 '<span class="pos-cart-item-total" style="font-size:'+totalSize+';font-weight:700;white-space:nowrap;flex-shrink:0;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
 '</div>' +
@@ -1630,21 +1303,15 @@ ci.innerHTML=html;
 var badge=document.querySelector('.pos-cart-badge');
 if(badge) badge.textContent=posCart.length;
 var tr=document.querySelector('.pos-cart-total-row span:last-child');
-if(tr){
-var st=posCalculateTotal(),t=st-posDiscountMAD;
-tr.textContent=t.toFixed(2)+' MAD';
-}
+if(tr){ var st=posCalculateTotal(),t=st-posDiscountMAD; tr.textContent=t.toFixed(2)+' MAD'; }
 var vb=document.querySelector('.pos-validate-btn');
-if(vb) {
-vb.disabled=posCart.length===0;
-}
+if(vb) vb.disabled=posCart.length===0;
 }
 
 function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('factureCounter'))||0; factureCounter++; localStorage.setItem('factureCounter',factureCounter); return 'FACT-'+new Date().getFullYear()+'-'+String(factureCounter).padStart(5,'0'); }
 
 function renderPOS(){
 applyDynamicContentScroll();
-
 if(!isOnPOSPage()) return;
 var now=Date.now(); if(now-posLastRenderTime<100&&posCart.length>0) return; posLastRenderTime=now;
 var c=document.getElementById('dynamicContent'); if(!c) return;
@@ -1665,7 +1332,6 @@ function buildFullPOS(c){
 if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#14B8A6;"></i><p>Chargement...</p></div>'; return; }
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var isMobile = window.innerWidth < 700;
-var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
 
 var stepSize = isMobile ? '16px' : '18px';
 var stepNumberSize = isMobile ? '16px' : '18px';
@@ -1684,10 +1350,9 @@ var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-con
 '</div>';
 
 var multiCartBar = '<div class="pos-multi-carts-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border);margin-bottom:4px;">';
-
 var cartCount = Object.keys(posMultiCarts).length;
 var isMax = cartCount >= MAX_PANIERS;
-multiCartBar += '<button onclick="posCreateNewCart()" style="background:' + (isMax ? '#94a3b8' : '#14B8A6') + ';color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:' + (isMax ? 'not-allowed' : 'pointer') + ';display:flex;align-items:center;gap:4px;opacity:' + (isMax ? '0.6' : '1') + ';" ' + (isMax ? 'disabled' : '') + ' title="' + (isMax ? 'Limite de ' + MAX_PANIERS + ' paniers atteinte' : '') + '"><i class="fas fa-plus"></i> Nouveau</button>';
+multiCartBar += '<button onclick="posCreateNewCart()" style="background:' + (isMax ? '#94a3b8' : '#14B8A6') + ';color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:' + (isMax ? 'not-allowed' : 'pointer') + ';display:flex;align-items:center;gap:4px;opacity:' + (isMax ? '0.6' : '1') + ';" ' + (isMax ? 'disabled' : '') + '><i class="fas fa-plus"></i> Nouveau</button>';
 
 var cartKeys = Object.keys(posMultiCarts);
 for (var k = 0; k < cartKeys.length; k++) {
@@ -1696,49 +1361,31 @@ var isActive = (cid === posCurrentCartId);
 var count = (posMultiCarts[cid] || []).length;
 var total = 0;
 var items = posMultiCarts[cid] || [];
-for (var itm = 0; itm < items.length; itm++) {
-total += (items[itm].prixUnitaire || 0) * (items[itm].quantite || 0);
-}
+for (var itm = 0; itm < items.length; itm++) total += (items[itm].prixUnitaire || 0) * (items[itm].quantite || 0);
 var clientName = '';
-if (posMultiPaniersData[cid] && posMultiPaniersData[cid].client) {
-clientName = posMultiPaniersData[cid].client.name || '';
-}
+if (posMultiPaniersData[cid] && posMultiPaniersData[cid].client) clientName = posMultiPaniersData[cid].client.name || '';
 var displayName = clientName ? clientName.substring(0, 12) : '';
-
 var bgColor = isActive ? '#f0fdf4' : 'var(--bg-page)';
 var borderColor = isActive ? '#14B8A6' : 'var(--border)';
 var textColor = isActive ? '#14B8A6' : 'var(--text-primary)';
 var fontWeight = isActive ? '700' : '500';
 
-multiCartBar += '<div style="display:flex;align-items:center;gap:2px;border:2px solid ' + borderColor + ';border-radius:6px;background:' + bgColor + ';padding:2px 8px;transition:all 0.2s ease;">';
+multiCartBar += '<div style="display:flex;align-items:center;gap:2px;border:2px solid ' + borderColor + ';border-radius:6px;background:' + bgColor + ';padding:2px 8px;">';
 multiCartBar += '<button onclick="posSwitchToCart(\'' + cid + '\')" style="background:none;border:none;cursor:pointer;font-weight:' + fontWeight + ';font-size:12px;color:' + textColor + ';padding:2px 4px;">' + cid + ' (' + count + ')</button>';
-if (displayName) {
-multiCartBar += '<span style="font-size:9px;color:#94a3b8;max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(displayName) + '</span>';
-}
-if (count > 0) {
-multiCartBar += '<span style="font-size:9px;color:#94a3b8;">' + total.toFixed(0) + ' MAD</span>';
-}
-if (cartKeys.length > 1) {
-multiCartBar += '<button onclick="posDeleteCart(\'' + cid + '\')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 4px;font-weight:700;" title="Supprimer ce panier">✕</button>';
-}
+if (displayName) multiCartBar += '<span style="font-size:9px;color:#94a3b8;max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(displayName) + '</span>';
+if (count > 0) multiCartBar += '<span style="font-size:9px;color:#94a3b8;">' + total.toFixed(0) + ' MAD</span>';
+if (cartKeys.length > 1) multiCartBar += '<button onclick="posDeleteCart(\'' + cid + '\')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 4px;font-weight:700;">✕</button>';
 multiCartBar += '</div>';
 }
 
 var grandTotal = posGetTotalAllCarts();
 multiCartBar += '<span style="font-size:11px;color:#94a3b8;margin-left:auto;">Total: ' + grandTotal.toFixed(2) + ' MAD</span>';
-
-if (cartKeys.length > 1) {
-multiCartBar += '<button onclick="posResetAllCarts()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;" title="Vider tous les paniers">🗑️ Tout</button>';
-}
-
+if (cartKeys.length > 1) multiCartBar += '<button onclick="posResetAllCarts()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;">🗑️ Tout</button>';
 multiCartBar += '</div>';
 
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
-
 var mobileCartStyle = '';
-if (isMobile) {
-mobileCartStyle = 'width:100% !important;max-height:35vh !important;min-height:150px !important;margin-top:4px !important;flex:1 !important;';
-}
+if (isMobile) mobileCartStyle = 'width:100% !important;max-height:35vh !important;min-height:150px !important;margin-top:4px !important;flex:1 !important;';
 
 var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(110px, 1fr))';
 var gridGap = isMobile ? '4px' : '8px';
@@ -1746,12 +1393,9 @@ var gridPadding = isMobile ? '2px' : '4px';
 var panelPadding = isMobile ? '8px' : '12px';
 
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:6px;height:auto;padding-bottom:30px;">' +
-stepIndicator +
-multiCartBar +
+stepIndicator + multiCartBar +
 '<div class="pos-row" style="display:flex;flex-direction:column;gap:8px;width:100%;height:auto;">' +
-
 '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:100%; background:var(--bg-card); border-radius:var(--radius-xl); box-shadow:var(--shadow-xs); border:1px solid var(--border); display:flex; flex-direction:column; height:auto; overflow:visible; min-height:350px; max-height:80vh; flex:8;">' +
-
 '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;">' +
 '<div style="display:flex;justify-content:center;align-items:center;margin-bottom:2px;">' +
 '<button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#14B8A6;color:#fff;border:none;border-radius:6px;padding:5px 20px;font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;">🔍 Afficher tout</button>' +
@@ -1760,22 +1404,26 @@ multiCartBar +
 '<div id="posToolsContainer" style="display:none;flex-direction:column;gap:4px;margin-bottom:4px;padding:5px 8px;background:var(--bg-page);border-radius:6px;border:1px solid var(--border);">' +
 
 '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-'<div style="flex:1;min-width:120px;display:flex;align-items:center;background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:2px 12px;position:relative;height:'+(isMobile?'34px':'38px')+';transition:var(--transition);">' +
+'<div style="flex:1;min-width:120px;display:flex;align-items:center;background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:2px 12px;position:relative;height:'+(isMobile?'34px':'38px')+';">' +
 '<i class="fas fa-search" style="color:var(--text-muted);margin-right:6px;font-size:'+(isMobile?'13px':'15px')+';"></i>' +
 '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher un produit..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:'+(isMobile?'13px':'15px')+';padding-right:28px;height:'+(isMobile?'34px':'38px')+';color:var(--text-primary);">' +
-'<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:2px;color:var(--text-muted);font-size:'+(isMobile?'14px':'16px')+';align-items:center;justify-content:center;" title="Effacer"><i class="fas fa-times-circle"></i></button>' +
+'<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:2px;color:var(--text-muted);font-size:'+(isMobile?'14px':'16px')+';"><i class="fas fa-times-circle"></i></button>' +
 '</div>' +
 
-'<button id="posMicBtn" title="Recherche vocale" style="background:var(--bg-page);border:2px solid var(--border);border-radius:50%;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:var(--text-primary);transition:var(--transition);" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
+'<button id="posMicBtn" title="Recherche vocale" style="background:var(--bg-page);border:2px solid var(--border);border-radius:50%;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:var(--text-primary);" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
+
+// 🎤 BOUTON GEMINI VOIX (UNIQUEMENT POUR ADMIN)
+(window.posIsClientMode ? '' :
+'<button id="posGeminiVoiceBtn" onclick="posOuvrirCommandeVocaleGemini()" style="background:linear-gradient(135deg, #8B5CF6, #7C3AED);color:#fff;border:none;border-radius:40px;padding:6px 14px;font-weight:700;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 4px 14px rgba(139, 92, 246, 0.3);transition:all 0.2s;" onmouseover="this.style.transform=\'translateY(-2px)\';" onmouseout="this.style.transform=\'translateY(0)\';" title="Commander par la voix avec Gemini AI">🎤 Gemini</button>'
+) +
 
 '<div style="display:flex;gap:6px;margin-left:auto;">' +
 (window.posIsClientMode ? '' :
-'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;transition:var(--transition);">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
-'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;transition:var(--transition);">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
+'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
+'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;">🌐 En ligne <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
 ) +
 '</div>' +
 '</div>' +
-'' +
 '</div>' +
 '</div>' +
 
@@ -1807,10 +1455,10 @@ h+='<div class="pos-cart-item" style="display:flex;flex-direction:column;padding
 '</div>' +
 '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">' +
 '<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:10px;flex-shrink:0;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-minus"></i></button>' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';"><i class="fas fa-minus"></i></button>' +
 '<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" inputmode="numeric" onchange="posSetQty('+k+',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur();}" style="width:'+qtyInputSize+';height:'+btnSize+';text-align:center;font-size:'+qtyFontSize+';font-weight:700;border:2px solid var(--border);border-radius:6px;padding:0;background:var(--white);color:var(--text-primary);-moz-appearance:textfield;appearance:textfield;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
-'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 4px;font-size:1rem;transition:all 0.2s;margin-left:4px;"><i class="fas fa-times"></i></button>' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';"><i class="fas fa-plus"></i></button>' +
+'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 4px;font-size:1rem;margin-left:4px;"><i class="fas fa-times"></i></button>' +
 '</div>' +
 '<span class="pos-cart-item-total" style="font-size:'+totalSize+';font-weight:700;white-space:nowrap;flex-shrink:0;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
 '</div>' +
@@ -1818,29 +1466,25 @@ h+='<div class="pos-cart-item" style="display:flex;flex-direction:column;padding
 }
 }
 h+='</div><div style="padding:2px 0;display:flex;gap:3px;align-items:center;flex-shrink:0;"><label style="font-size:'+(isMobile?'12px':'0.7rem')+';">Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:50px;padding:2px;border:2px solid #e2e8f0;border-radius:4px;font-size:'+(isMobile?'12px':'0.7rem')+';"></div><div class="pos-cart-footer" style="padding:2px 0;flex-shrink:0;">'+(posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;font-size:'+(isMobile?'12px':'0.8rem')+';"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#ef4444;font-size:'+(isMobile?'12px':'0.8rem')+';"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'')+'<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:'+(isMobile?'18px':'20px')+';font-weight:700;padding:3px 0;border-top:2px solid var(--border);"><span>Total</span><span>'+t.toFixed(2)+' MAD</span></div>' +
-
-'<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+' style="width:100%;padding:10px;background:#14B8A6;color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:700;height:40px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:12px;"><i class="fas fa-check-circle"></i> Valider</button>' +
-
-'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:#14B8A6;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.25);z-index:9999;display:flex;align-items:center;justify-content:center;transition:all 0.3s;" onmouseover="this.style.transform=\'scale(1.1)\';this.style.boxShadow=\'0 6px 25px rgba(0,0,0,0.35)\';" onmouseout="this.style.transform=\'scale(1)\';this.style.boxShadow=\'0 4px 15px rgba(0,0,0,0.25)\';"><i class="fas fa-arrow-up"></i></button>' +
-
+'<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'')+' style="width:100%;padding:10px;background:#14B8A6;color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:700;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:12px;"><i class="fas fa-check-circle"></i> Valider</button>' +
+'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:#14B8A6;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.25);z-index:9999;display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrow-up"></i></button>' +
 '</div>';
 }else{
 var canCredit=posCurrentClient&&posCurrentClient.id;
 var creditDisplay = '';
-if (posCurrentClient && posCurrentClient.id) {
-creditDisplay = '<div id="clientCreditDisplay" style="font-size:20px;font-weight:700;padding:2px 0;text-align:right;"></div>';
-}
+if (posCurrentClient && posCurrentClient.id) creditDisplay = '<div id="clientCreditDisplay" style="font-size:20px;font-weight:700;padding:2px 0;text-align:right;"></div>';
+
 h+='<div class="pos-cart-header" style="padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;"><h3 style="font-size:'+(isMobile?'16px':'0.85rem')+';"><i class="fas fa-credit-card"></i> Paiement</h3></div><div class="pos-payment-form" style="padding:6px 10px;flex:1;overflow-y:auto;max-height:400px;"><div style="margin-bottom:3px;">' +
 '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">' +
 '<label style="font-size:'+(isMobile?'12px':'0.7rem')+';font-weight:600;flex-shrink:0;">Client</label>' +
-'<button onclick="posAjouterNouveauClient()" style="background:#8B5CF6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:'+(isMobile?'11px':'0.7rem')+';font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0;transition:all 0.2s;" onmouseover="this.style.transform=\'scale(1.05)\';" onmouseout="this.style.transform=\'scale(1)\';">' +
-'<i class="fas fa-plus" style="font-size:'+(isMobile?'10px':'0.65rem')+';"></i> Nouveau' +
+'<button onclick="posAjouterNouveauClient()" style="background:#8B5CF6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:'+(isMobile?'11px':'0.7rem')+';font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0;">' +
+'<i class="fas fa-plus"></i> Nouveau' +
 '</button>' +
 '</div>' +
 '<div style="position:relative;">' +
 '<div style="display:flex;align-items:center;background:#fff;border:2px solid #e2e8f0;border-radius:6px;padding:2px 8px;position:relative;">' +
 '<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:4px 0;width:100%;background:transparent;font-size:18px !important;font-weight:700 !important;padding-right:24px;">' +
-'<button id="posClientClearBtn" onclick="clearClientSearch()" style="display:'+((posCurrentClient && posCurrentClient.name) ? 'flex' : 'none')+';position:absolute;right:4px;background:none;border:none;cursor:pointer;padding:2px;color:#94a3b8;font-size:1rem;align-items:center;justify-content:center;" title="Effacer le client"><i class="fas fa-times-circle"></i></button>' +
+'<button id="posClientClearBtn" onclick="clearClientSearch()" style="display:'+((posCurrentClient && posCurrentClient.name) ? 'flex' : 'none')+';position:absolute;right:4px;background:none;border:none;cursor:pointer;padding:2px;color:#94a3b8;font-size:1rem;"><i class="fas fa-times-circle"></i></button>' +
 '</div>' +
 '<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #e2e8f0;border-radius:0 0 6px 6px;max-height:150px;overflow-y:auto;z-index:50;"></div>' +
 '</div>'+creditDisplay+'</div><div style="margin:2px 0;font-size:0.5rem;text-align:center;">— OU —</div><div style="margin-bottom:3px;"><label style="font-size:'+(isMobile?'12px':'0.7rem')+';font-weight:600;">Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:4px;border:2px solid #e2e8f0;border-radius:4px;font-size:'+(isMobile?'14px':'0.85rem')+';"></div><div style="margin-bottom:3px;"><div style="padding:4px;background:#f8fafc;border-radius:4px;">' +
@@ -1855,9 +1499,7 @@ if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') {
 h+='<div style="margin-bottom:3px;"><label style="font-size:'+(isMobile?'12px':'0.7rem')+';font-weight:600;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:6px;border:2px solid #e2e8f0;border-radius:4px;font-size:24px !important;font-weight:700 !important;"><div id="posChangeDisplay" style="font-size:22px;font-weight:700;padding:2px 0;margin-right:6px;"></div></div>';
 }
 h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()" style="width:100%;padding:8px;margin-top:4px;background:#14B8A6;color:#fff;border:none;border-radius:8px;font-size:16px !important;font-weight:700 !important;min-height:40px;margin-bottom:12px;"><i class="fas fa-check-circle"></i> Finaliser</button>' +
-
-'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:#14B8A6;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.25);z-index:9999;display:flex;align-items:center;justify-content:center;transition:all 0.3s;" onmouseover="this.style.transform=\'scale(1.1)\';this.style.boxShadow=\'0 6px 25px rgba(0,0,0,0.35)\';" onmouseout="this.style.transform=\'scale(1)\';this.style.boxShadow=\'0 4px 15px rgba(0,0,0,0.25)\';"><i class="fas fa-arrow-up"></i></button>' +
-
+'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:#14B8A6;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.25);z-index:9999;display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrow-up"></i></button>' +
 '</div>';
 }
 h+='</div></div></div></div>'; c.innerHTML=h;
@@ -1870,9 +1512,7 @@ posSelectedCategoryForView = null;
 filterProductGrid();
 var toolsContainer = document.getElementById('posToolsContainer');
 var toggleBtn = document.getElementById('posToggleToolsBtn');
-if (toolsContainer) {
-toolsContainer.style.display = posToolsVisible ? 'flex' : 'none';
-}
+if (toolsContainer) toolsContainer.style.display = posToolsVisible ? 'flex' : 'none';
 if (toggleBtn) {
 toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout';
 toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
@@ -1891,20 +1531,13 @@ if (clearBtn) clearBtn.style.display = 'flex';
 }
 
 function posNaviguerEtape(etape) {
-console.log('🔄 Navigation vers étape', etape);
-if (etape === 1) {
-posGoToStep1();
-} else if (etape === 2) {
-posGoToStep2();
-}
+if (etape === 1) posGoToStep1();
+else if (etape === 2) posGoToStep2();
 }
 
 function posFilterCategory(ca){
-if (ca === 'all') {
-retournerCategories();
-} else {
-selectionnerCategorie(ca);
-}
+if (ca === 'all') retournerCategories();
+else selectionnerCategorie(ca);
 }
 function posUpdateDiscountMAD(v){ posDiscountMAD=parseFloat(v)||0; if(posDiscountMAD<0) posDiscountMAD=0; if(isOnPOSPage()) renderPOS(); }
 function posUpdateQty(i,ch){ var it=posCart[i]; if(!it) return; var p=posProductsList.find(function(x){ return x.id===it.id; }),nq=it.quantite+ch; if(nq<=0) posCart.splice(i,1); else{ if(p&&p.stock!==undefined&&nq>p.stock){ alert('Max: '+p.stock); return; } it.quantite=nq; } updateCartOnly(); posMultiCarts[posCurrentCartId] = posCart.slice(); posSauvegarderDonneesPanier(posCurrentCartId); posSaveMultiCarts(); }
@@ -1919,21 +1552,16 @@ posSaveMultiCarts();
 posStep = 2;
 window.posStep = 2;
 setStaticBackButtonVisibility(true);
-if (posCurrentClient && posCurrentClient.id) {
-updateClientCreditDisplay(posCurrentClient.id);
-}
-if (typeof window.resetVoiceQuantityMode === 'function') {
-    window.resetVoiceQuantityMode();
-}
+if (posCurrentClient && posCurrentClient.id) updateClientCreditDisplay(posCurrentClient.id);
+if (typeof window.resetVoiceQuantityMode === 'function') window.resetVoiceQuantityMode();
 if (typeof window.setVoiceMode === 'function') {
-if (typeof window.lastAddedProductId !== 'undefined') { window.lastAddedProductId = null; }
+if (typeof window.lastAddedProductId !== 'undefined') window.lastAddedProductId = null;
 window.setVoiceMode('payment', '🎤 Mode paiement', null);
 }
 if(isOnPOSPage()) renderPOS();
 }
 
 function posGoToStep1(){
-console.log('🔄 Retour à l\'étape 1 (panier)');
 posStep = 1;
 window.posStep = 1;
 delete window.posCommandeId;
@@ -1941,16 +1569,9 @@ delete window.posVenteId;
 setStaticBackButtonVisibility(false);
 posCart = posMultiCarts[posCurrentCartId] || [];
 window.posCart = posCart;
-if (typeof window.setVoiceMode === 'function') {
-window.setVoiceMode('search', '🎤 Recherche vocale active', null);
-}
-if (typeof showVoiceResult === 'function') {
-showVoiceResult('↩️ Retour au panier');
-}
+if (typeof window.setVoiceMode === 'function') window.setVoiceMode('search', '🎤 Recherche vocale active', null);
 var c = document.getElementById('dynamicContent');
-if (c && isOnPOSPage()) {
-buildFullPOS(c);
-}
+if (c && isOnPOSPage()) buildFullPOS(c);
 }
 
 function posSetPaymentMethod(m){ if((m==='credit'||m==='partiel')&&(!posCurrentClient||!posCurrentClient.id)){ alert('Client requis'); return; } posPaymentMethod=m; posAmountGiven=0; if(isOnPOSPage()) renderPOS(); }
@@ -1964,30 +1585,21 @@ var t=st-posDiscountMAD;
 posAmountGiven=parseFloat(ai.value)||0;
 var c=posAmountGiven-t;
 if(posAmountGiven>0) {
-if(c>=0) {
-cd.innerHTML='<div style="font-size:24px;font-weight:700;color:#16a34a;display:flex;align-items:center;justify-content:flex-start;"><span>✅ Rendu</span><span style="margin-left:12px;margin-right:12px;">'+c.toFixed(2)+' MAD</span></div>';
-} else {
-cd.innerHTML='<div style="font-size:24px;font-weight:700;color:#ef4444;display:flex;align-items:center;justify-content:flex-start;"><span>❌ Manquant</span><span style="margin-left:12px;margin-right:12px;">'+Math.abs(c).toFixed(2)+' MAD</span></div>';
-}
-} else {
-cd.innerHTML='';
-}
+if(c>=0) cd.innerHTML='<div style="font-size:24px;font-weight:700;color:#16a34a;display:flex;align-items:center;justify-content:flex-start;"><span>✅ Rendu</span><span style="margin-left:12px;margin-right:12px;">'+c.toFixed(2)+' MAD</span></div>';
+else cd.innerHTML='<div style="font-size:24px;font-weight:700;color:#ef4444;display:flex;align-items:center;justify-content:flex-start;"><span>❌ Manquant</span><span style="margin-left:12px;margin-right:12px;">'+Math.abs(c).toFixed(2)+' MAD</span></div>';
+} else cd.innerHTML='';
 }
 
 async function updateClientFidelityAsync(clientId, total, profitTotal) {
-try {
-return await forceUpdateClient(clientId, total, profitTotal);
-} catch(e) {
-console.error('❌ Erreur updateClientFidelityAsync:', e);
-return false;
+try { return await forceUpdateClient(clientId, total, profitTotal); }
+catch(e) { console.error('❌ Erreur updateClientFidelityAsync:', e); return false; }
 }
-}
+
 async function posFinalizeSale(){
 if(posCart.length === 0){
 alert('❌ Le panier est vide. Ajoutez des articles avant de finaliser.');
 return;
 }
-
 if(isFinalizing) return;
 var st=posCalculateTotal(), t=st-posDiscountMAD;
 if(!posCurrentClient && !posCurrentTable){ posCurrentClient = { id: null, name: 'Passager' }; }
@@ -2029,19 +1641,12 @@ localStorage.removeItem('posSavedState');
 if(posCurrentClient && posCurrentClient.id && paid) {
 try {
 const success = await forceUpdateClient(posCurrentClient.id, t, profitTotal);
-if (success) {
-console.log('✅ Client mis à jour avec succès !');
-} else {
-console.warn('⚠️ Échec de la mise à jour client');
-}
-} catch(e) {
-console.warn('⚠️ Erreur mise à jour client:', e);
-}
+if (success) console.log('✅ Client mis à jour avec succès !');
+else console.warn('⚠️ Échec de la mise à jour client');
+} catch(e) { console.warn('⚠️ Erreur mise à jour client:', e); }
 }
 
-if (posCurrentClient && posCurrentClient.id) {
-clientCreditsCache[posCurrentClient.id] = undefined;
-}
+if (posCurrentClient && posCurrentClient.id) clientCreditsCache[posCurrentClient.id] = undefined;
 var venteId = ventesRef.id;
 if (typeof window.sendWhatsApp === 'function') {
 var originalCloseModal = window.closeModal;
@@ -2060,7 +1665,7 @@ var modalHtml = '<p style="text-align:center;">Voulez-vous envoyer la facture pa
 openModal('📱 Envoyer la facture WhatsApp', modalHtml);
 setTimeout(function() {
 var yesBtn = document.getElementById('whatsappYesBtn'), noBtn = document.getElementById('whatsappNoBtn');
-if (yesBtn) { yesBtn.addEventListener('click', function() {
+if (yesBtn) yesBtn.addEventListener('click', function() {
 window.closeModal = originalCloseModal;
 closeModal();
 if (typeof window.posStopVoiceSearch === 'function') window.posStopVoiceSearch();
@@ -2072,8 +1677,8 @@ window.posStep = 1;
 if(isOnPOSPage()) renderPOS();
 if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
 }, 500);
-}); }
-if (noBtn) { noBtn.addEventListener('click', function() {
+});
+if (noBtn) noBtn.addEventListener('click', function() {
 window.closeModal = originalCloseModal;
 closeModal();
 posResetCart();
@@ -2081,7 +1686,7 @@ posStep = 1;
 window.posStep = 1;
 if(isOnPOSPage()) renderPOS();
 if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-}); }
+});
 }, 100);
 } else {
 posResetCart();
@@ -2115,46 +1720,27 @@ posCurrentTable = '';
 posPaymentMethod = 'espece';
 delete window.posCommandeId;
 delete window.posVenteId;
-
 localStorage.removeItem('posSavedState');
 posSauvegarderDonneesPanier(posCurrentCartId);
 posSaveMultiCarts();
-
-if (document.getElementById('posClientSearchInput')) {
-document.getElementById('posClientSearchInput').value = '';
-}
-if (document.getElementById('clientCreditDisplay')) {
-document.getElementById('clientCreditDisplay').style.display = 'none';
-}
+if (document.getElementById('posClientSearchInput')) document.getElementById('posClientSearchInput').value = '';
+if (document.getElementById('clientCreditDisplay')) document.getElementById('clientCreditDisplay').style.display = 'none';
 if (isOnPOSPage()) renderPOS();
 }
 
-function posChargerCommandesTables() {
-posCommandesTablesCount = 0;
-}
-
-function posChargerCommandesEnLigneCount() {
-posCommandesEnLigneCount = 0;
-}
-
-function posAfficherCommandesTables() {
-alert('Fonction à implémenter selon votre logique');
-}
+function posChargerCommandesTables() { posCommandesTablesCount = 0; }
+function posChargerCommandesEnLigneCount() { posCommandesEnLigneCount = 0; }
+function posAfficherCommandesTables() { alert('Fonction à implémenter selon votre logique'); }
 
 function posToggleVoiceSearch() {
-if (typeof window.toggleVoiceSearch === 'function') {
-window.toggleVoiceSearch();
-} else {
-alert('Fonction de recherche vocale non disponible');
-}
+if (typeof window.toggleVoiceSearch === 'function') window.toggleVoiceSearch();
+else alert('Fonction de recherche vocale non disponible');
 }
 
 function updateClearButtonVisibility() {
 var input = document.getElementById('posSearchInput');
 var btn = document.getElementById('posSearchClearBtn');
-if (input && btn) {
-btn.style.display = (input.value && input.value.length > 0) ? 'flex' : 'none';
-}
+if (input && btn) btn.style.display = (input.value && input.value.length > 0) ? 'flex' : 'none';
 }
 
 function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userData.role==='caissier'||window.currentUserData.userData.role==='admin')){ if(posCart.length>0&&posStep===1){ if(!confirm('⚠️ '+posCart.length+' article(s) dans le panier. Garder ?')) posResetCart(); } navigateTo('pos'); } }
@@ -2165,7 +1751,6 @@ function posAjouterNouveauClient() {
             <h3 style="margin-bottom:15px;font-size:1.3rem;display:flex;align-items:center;gap:10px;">
                 <i class="fas fa-user-plus" style="color:#14B8A6;"></i> Ajouter un nouveau client
             </h3>
-            <p style="color:#64748b;font-size:0.9rem;margin-bottom:15px;">Remplissez les informations ci-dessous. Seuls le nom et prénom sont obligatoires.</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div>
                     <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Prénom *</label>
@@ -2198,27 +1783,15 @@ function posAjouterNouveauClient() {
             </div>
         </div>
     `;
-    
     openModal('➕ Nouveau client', modalHtml);
-    
     setTimeout(function() {
         var prenomInput = document.getElementById('posNewClientPrenom');
         if (prenomInput) prenomInput.focus();
     }, 300);
-    
-    document.getElementById('posConfirmNewClientBtn').addEventListener('click', function() {
-        posConfirmerAjoutClient();
-    });
-    
+    document.getElementById('posConfirmNewClientBtn').addEventListener('click', function() { posConfirmerAjoutClient(); });
     ['posNewClientPrenom', 'posNewClientNom', 'posNewClientTelephone', 'posNewClientEmail', 'posNewClientAdresse'].forEach(function(id) {
         var input = document.getElementById(id);
-        if (input) {
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    posConfirmerAjoutClient();
-                }
-            });
-        }
+        if (input) input.addEventListener('keydown', function(e) { if (e.key === 'Enter') posConfirmerAjoutClient(); });
     });
 }
 
@@ -2228,7 +1801,6 @@ async function posConfirmerAjoutClient() {
     var telephone = document.getElementById('posNewClientTelephone');
     var email = document.getElementById('posNewClientEmail');
     var adresse = document.getElementById('posNewClientAdresse');
-    
     var prenomVal = prenom ? prenom.value.trim() : '';
     var nomVal = nom ? nom.value.trim() : '';
     var telephoneVal = telephone ? telephone.value.trim() : '';
@@ -2241,13 +1813,10 @@ async function posConfirmerAjoutClient() {
         else if (!nomVal && nom) nom.focus();
         return;
     }
-    
     try {
         var existing = posAllClients.find(function(c) {
-            return (c.nom || '').toLowerCase() === nomVal.toLowerCase() && 
-                   (c.prenom || '').toLowerCase() === prenomVal.toLowerCase();
+            return (c.nom || '').toLowerCase() === nomVal.toLowerCase() && (c.prenom || '').toLowerCase() === prenomVal.toLowerCase();
         });
-        
         if (existing) {
             alert('⚠️ Ce client existe déjà : ' + prenomVal + ' ' + nomVal);
             closeModal();
@@ -2259,76 +1828,30 @@ async function posConfirmerAjoutClient() {
             if (isOnPOSPage()) renderPOS();
             return;
         }
-        
         var newClientData = {
-            nom: nomVal,
-            prenom: prenomVal,
-            telephone: telephoneVal || '',
-            email: emailVal || '',
-            adresse: adresseVal || '',
-            username: '',
-            genre: '',
-            whatsapp: '',
-            facebook: '',
-            instagram: '',
-            ca: 0,
-            profit: 0,
-            pointsFidelite: 0,
-            allergies: [],
-            aime: [],
-            deteste: [],
-            description: '',
+            nom: nomVal, prenom: prenomVal, telephone: telephoneVal || '', email: emailVal || '', adresse: adresseVal || '',
+            username: '', genre: '', whatsapp: '', facebook: '', instagram: '', ca: 0, profit: 0, pointsFidelite: 0,
+            allergies: [], aime: [], deteste: [], description: '',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        
         var docRef = await db.collection('clients').add(newClientData);
         var newClient = {
-            id: docRef.id,
-            nom: nomVal,
-            prenom: prenomVal,
-            telephone: telephoneVal || '',
-            email: emailVal || '',
-            adresse: adresseVal || '',
-            username: '',
-            genre: '',
-            whatsapp: '',
-            facebook: '',
-            instagram: '',
-            ca: 0,
-            profit: 0,
-            pointsFidelite: 0,
-            allergies: [],
-            aime: [],
-            deteste: [],
-            description: ''
+            id: docRef.id, nom: nomVal, prenom: prenomVal, telephone: telephoneVal || '', email: emailVal || '', adresse: adresseVal || '',
+            username: '', genre: '', whatsapp: '', facebook: '', instagram: '', ca: 0, profit: 0, pointsFidelite: 0,
+            allergies: [], aime: [], deteste: [], description: ''
         };
-        
         posAllClients.push(newClient);
         posFilteredClients.push(newClient);
         if (window.allClientsData) window.allClientsData.push(newClient);
-        
-        if (typeof CacheDB !== 'undefined' && CacheDB.set) {
-            CacheDB.set('clients', docRef.id, newClient);
-        }
-        
-        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-            setTimeout(function() {
-                CacheDB.saveCollection('clients');
-            }, 500);
-        }
-        
+        if (typeof CacheDB !== 'undefined' && CacheDB.set) CacheDB.set('clients', docRef.id, newClient);
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) setTimeout(function() { CacheDB.saveCollection('clients'); }, 500);
         posCurrentClient = { id: docRef.id, name: nomVal + ' ' + prenomVal };
         var input = document.getElementById('posClientSearchInput');
         if (input) input.value = posCurrentClient.name;
-        
         updateClientCreditDisplay(docRef.id);
         updatePaymentButtons();
-        
         closeModal();
         if (isOnPOSPage()) renderPOS();
-        
-        console.log('✅ Nouveau client ajouté:', prenomVal, nomVal);
-        
     } catch(e) {
         console.error('❌ Erreur ajout client:', e);
         alert('❌ Erreur lors de l\'ajout du client: ' + e.message);
@@ -2340,12 +1863,10 @@ if (window.innerWidth <= 700) {
 var row = document.querySelector('.pos-row');
 var produits = document.querySelector('.pos-products-panel');
 var panier = document.querySelector('.pos-cart-panel');
-
 if (row && produits && panier) {
 row.style.display = 'flex';
 row.style.flexDirection = 'column';
 row.style.flexWrap = 'nowrap';
-
 produits.style.width = '100%';
 produits.style.maxWidth = '100%';
 produits.style.minWidth = '100%';
@@ -2353,7 +1874,6 @@ produits.style.height = 'auto';
 produits.style.minHeight = '300px';
 produits.style.maxHeight = '60vh';
 produits.style.flex = '1';
-
 panier.style.width = '100%';
 panier.style.maxWidth = '100%';
 panier.style.minWidth = '100%';
@@ -2374,6 +1894,497 @@ setTimeout(corrigerDispositionMobile, 100);
 
 window.addEventListener('load', corrigerDispositionMobile);
 window.addEventListener('resize', corrigerDispositionMobile);
+
+// ============================================================
+// 🎤 MODULE GEMINI VOIX - COMMANDE PAR LA VOIX
+// ============================================================
+
+/**
+ * Ouvre le modal de commande vocale Gemini
+ */
+function posOuvrirCommandeVocaleGemini() {
+    if (posGeminiEnCours) {
+        alert('⏳ Une reconnaissance est déjà en cours...');
+        return;
+    }
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert('❌ La reconnaissance vocale n\'est pas supportée par ce navigateur.\n\nUtilisez Chrome, Edge ou Safari récent.');
+        return;
+    }
+    if (typeof posProductsList === 'undefined' || posProductsList.length === 0) {
+        alert('❌ Aucun produit chargé. Réessayez dans quelques secondes.');
+        return;
+    }
+    
+    var html = `
+        <div style="padding:10px; text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;">
+                <i class="fas fa-robot" style="font-size:2.5rem;color:#8B5CF6;"></i>
+                <h3 style="margin:0;font-size:1.3rem;color:#7C3AED;font-weight:700;">Commande vocale Gemini</h3>
+            </div>
+            
+            <div style="padding:16px;background:linear-gradient(135deg,#F3E8FF,#EDE9FE);border-radius:12px;border:2px solid #8B5CF6;margin-bottom:16px;">
+                <p style="margin:0;color:#5B21B6;font-size:1rem;font-weight:600;">💡 Exemples de phrases :</p>
+                <p style="margin:8px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Ajouter 3 Merindina au panier et 2 Coca Cola »</p>
+                <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« 5 croissants, 1 café noir »</p>
+            </div>
+            
+            <button id="posGeminiMicBtn" onclick="posDemarrerEcouteGemini()" 
+                style="width:140px;height:140px;border-radius:50%;border:none;cursor:pointer;
+                       background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:#fff;
+                       font-size:3rem;box-shadow:0 8px 24px rgba(139,92,246,0.4);
+                       transition:all 0.3s;display:flex;align-items:center;justify-content:center;
+                       margin:20px auto;">
+                <i class="fas fa-microphone" id="posGeminiMicIcon"></i>
+            </button>
+            
+            <p id="posGeminiStatus" style="color:#64748b;font-size:1rem;margin-top:8px;min-height:24px;">Appuyez pour parler</p>
+            
+            <div id="posGeminiTranscript" style="margin-top:16px;padding:12px;background:#f8fafc;
+                border-radius:10px;border:1px solid #e2e8f0;min-height:50px;
+                color:#1e293b;font-size:1rem;text-align:left;display:none;">
+                <strong style="color:#8B5CF6;">📝 Transcription :</strong>
+                <p id="posGeminiTranscriptText" style="margin:6px 0 0;font-style:italic;"></p>
+            </div>
+            
+            <div id="posGeminiResult" style="margin-top:16px;display:none;"></div>
+        </div>
+    `;
+    openModal('🎤 Commande vocale', html);
+}
+
+/**
+ * Démarre l'écoute vocale
+ */
+function posDemarrerEcouteGemini() {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    
+    var micBtn = document.getElementById('posGeminiMicBtn');
+    var micIcon = document.getElementById('posGeminiMicIcon');
+    var status = document.getElementById('posGeminiStatus');
+    var transcriptBox = document.getElementById('posGeminiTranscript');
+    var transcriptText = document.getElementById('posGeminiTranscriptText');
+    
+    // Si déjà en écoute, on arrête
+    if (posGeminiRecognition) {
+        try { posGeminiRecognition.stop(); } catch(e) {}
+        posGeminiRecognition = null;
+        if (micBtn) micBtn.style.background = 'linear-gradient(135deg,#8B5CF6,#7C3AED)';
+        if (micIcon) micIcon.className = 'fas fa-microphone';
+        if (status) status.textContent = 'Écoute arrêtée';
+        return;
+    }
+    
+    posGeminiTranscriptFinal = '';
+    posGeminiRecognition = new SpeechRecognition();
+    posGeminiRecognition.lang = 'fr-FR';
+    posGeminiRecognition.continuous = false;
+    posGeminiRecognition.interimResults = true;
+    posGeminiRecognition.maxAlternatives = 1;
+    
+    if (micBtn) {
+        micBtn.style.background = 'linear-gradient(135deg,#EF4444,#DC2626)';
+        micBtn.style.animation = 'posPulse 1.5s infinite';
+    }
+    if (micIcon) micIcon.className = 'fas fa-stop';
+    if (status) {
+        status.textContent = '🎙️ Je vous écoute...';
+        status.style.color = '#8B5CF6';
+        status.style.fontWeight = '700';
+    }
+    if (transcriptBox) transcriptBox.style.display = 'block';
+    if (transcriptText) transcriptText.textContent = '...';
+    
+    // Ajouter animation pulse
+    if (!document.getElementById('posGeminiPulseStyle')) {
+        var style = document.createElement('style');
+        style.id = 'posGeminiPulseStyle';
+        style.textContent = `@keyframes posPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
+            100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+        }`;
+        document.head.appendChild(style);
+    }
+    
+    posGeminiRecognition.onresult = function(event) {
+        var interim = '';
+        var finalText = '';
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+            var transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) finalText += transcript + ' ';
+            else interim += transcript;
+        }
+        if (finalText) posGeminiTranscriptFinal += finalText;
+        var displayText = (posGeminiTranscriptFinal + interim).trim();
+        if (transcriptText) transcriptText.textContent = displayText || '...';
+    };
+    
+    posGeminiRecognition.onerror = function(event) {
+        console.error('❌ Erreur reconnaissance vocale :', event.error);
+        var status = document.getElementById('posGeminiStatus');
+        if (status) {
+            if (event.error === 'no-speech') status.textContent = '❌ Aucune parole détectée. Réessayez.';
+            else if (event.error === 'not-allowed') status.textContent = '❌ Micro non autorisé. Activez-le dans le navigateur.';
+            else status.textContent = '❌ Erreur : ' + event.error;
+            status.style.color = '#ef4444';
+        }
+        posResetGeminiMicUI();
+        posGeminiRecognition = null;
+    };
+    
+    posGeminiRecognition.onend = function() {
+        var finalText = posGeminiTranscriptFinal.trim();
+        posResetGeminiMicUI();
+        posGeminiRecognition = null;
+        
+        if (finalText.length < 3) {
+            var status = document.getElementById('posGeminiStatus');
+            if (status) {
+                status.textContent = '⚠️ Rien d\'entendu. Réessayez.';
+                status.style.color = '#f59e0b';
+            }
+            return;
+        }
+        // Envoyer à Gemini
+        posEnvoyerTexteAGemini(finalText);
+    };
+    
+    try { posGeminiRecognition.start(); }
+    catch(e) {
+        console.error('Impossible de démarrer la reconnaissance :', e);
+        alert('❌ Erreur micro : ' + e.message);
+        posResetGeminiMicUI();
+    }
+}
+
+function posResetGeminiMicUI() {
+    var micBtn = document.getElementById('posGeminiMicBtn');
+    var micIcon = document.getElementById('posGeminiMicIcon');
+    if (micBtn) {
+        micBtn.style.background = 'linear-gradient(135deg,#8B5CF6,#7C3AED)';
+        micBtn.style.animation = 'none';
+    }
+    if (micIcon) micIcon.className = 'fas fa-microphone';
+}
+
+/**
+ * Envoie le texte transcrit à Gemini pour extraire les produits + quantités
+ */
+async function posEnvoyerTexteAGemini(texte) {
+    if (posGeminiEnCours) return;
+    posGeminiEnCours = true;
+    
+    var status = document.getElementById('posGeminiStatus');
+    var resultBox = document.getElementById('posGeminiResult');
+    
+    if (status) {
+        status.textContent = '🤖 Gemini analyse votre commande...';
+        status.style.color = '#8B5CF6';
+        status.style.fontWeight = '700';
+    }
+    if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '<div style="text-align:center;padding:16px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#8B5CF6;"></i><p style="color:#64748b;margin-top:8px;">Analyse en cours...</p></div>';
+    }
+    
+    try {
+        var productNames = posProductsList.map(function(p) { return p.nom; }).filter(Boolean);
+        if (productNames.length === 0) throw new Error('Catalogue vide');
+        
+        var productListStr = productNames.slice(0, 300).map(function(n) {
+            return '"' + n.replace(/"/g, '\\"') + '"';
+        }).join(', ');
+        
+        var prompt = `Tu es un assistant de point de vente. L'utilisateur a dit une commande à voix haute.
+
+Phrase entendue :
+"${texte}"
+
+Catalogue de produits disponibles :
+[${productListStr}]
+
+Ta mission :
+1. Identifie TOUS les produits mentionnés dans la phrase qui correspondent au catalogue.
+2. Pour chaque produit, extrait la quantité (nombre en chiffres ou en mots : "un", "deux", "trois"...). Si aucune quantité n'est précisée, mets 1.
+3. Retourne UNIQUEMENT un tableau JSON valide, sans texte autour, sans \`\`\`json.
+
+Format attendu :
+[
+  { "nom": "Nom exact du produit", "quantite": 3 },
+  { "nom": "Autre produit", "quantite": 2 }
+]
+
+Règles :
+- Le "nom" doit correspondre EXACTEMENT à un nom du catalogue (copie-colle).
+- Ignore les mots comme "ajouter", "au panier", "et", "puis", "s'il te plaît".
+- Si aucun produit n'est identifié, retourne [].
+- Ne mets JAMAIS de texte avant ou après le JSON.`.trim();
+        
+        var response = await fetch(POS_GEMINI_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt })
+        });
+        
+        if (!response.ok) throw new Error('Erreur réseau : ' + response.status);
+        var data = await response.json();
+        if (data.error) throw new Error('Erreur Worker : ' + (data.error.message || JSON.stringify(data.error)));
+        
+        console.log('🤖 Réponse Gemini voix :', data);
+        
+        var rawText = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+        var cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        
+        var produitsReconnus = [];
+        try {
+            produitsReconnus = JSON.parse(cleaned);
+            if (!Array.isArray(produitsReconnus)) throw new Error('Pas un tableau');
+        } catch(e) {
+            console.warn('⚠️ Parsing JSON échoué, tentative regex...');
+            var regex = /["']nom["']\s*:\s*["']([^"']+)["']\s*,\s*["']quantite["']\s*:\s*(\d+)/gi;
+            var match;
+            while ((match = regex.exec(cleaned)) !== null) {
+                produitsReconnus.push({ nom: match[1].trim(), quantite: parseInt(match[2], 10) || 1 });
+            }
+        }
+        
+        if (produitsReconnus.length === 0) {
+            if (resultBox) {
+                resultBox.innerHTML = `<div style="padding:14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;color:#92400E;font-size:0.95rem;text-align:left;">
+                    ⚠️ <strong>Aucun produit reconnu.</strong><br>
+                    Essayez : « Ajouter 3 Merindina et 2 Coca Cola »
+                </div>`;
+            }
+            posGeminiEnCours = false;
+            return;
+        }
+        
+        // Matcher avec le catalogue
+        var produitsValides = [];
+        produitsReconnus.forEach(function(rec) {
+            var recNom = (rec.nom || '').trim();
+            if (!recNom) return;
+            var recNomLower = recNom.toLowerCase();
+            var recNomNorm = recNomLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            
+            var produit = posProductsList.find(function(p) { return (p.nom || '').toLowerCase() === recNomLower; });
+            if (!produit) {
+                produit = posProductsList.find(function(p) {
+                    var pNomNorm = (p.nom || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    return pNomNorm === recNomNorm;
+                });
+            }
+            if (!produit) {
+                produit = posProductsList.find(function(p) {
+                    var pNomLower = (p.nom || '').toLowerCase();
+                    return pNomLower.includes(recNomLower) || recNomLower.includes(pNomLower);
+                });
+            }
+            
+            if (produit) {
+                produitsValides.push({
+                    produit: produit,
+                    quantite: Math.max(1, parseInt(rec.quantite, 10) || 1),
+                    nomOriginal: recNom
+                });
+            } else {
+                console.warn('⚠️ Non trouvé dans le catalogue :', recNom);
+            }
+        });
+        
+        if (produitsValides.length === 0) {
+            if (resultBox) {
+                resultBox.innerHTML = `<div style="padding:14px;background:#FEE2E2;border:2px solid #EF4444;border-radius:10px;color:#991B1B;font-size:0.95rem;text-align:left;">
+                    ❌ <strong>Aucun produit ne correspond au catalogue.</strong>
+                </div>`;
+            }
+            posGeminiEnCours = false;
+            return;
+        }
+        
+        posAfficherResultatGeminiVoice(produitsValides, resultBox);
+        
+    } catch(e) {
+        console.error('❌ Erreur Gemini Voice:', e);
+        if (resultBox) {
+            resultBox.innerHTML = `<div style="padding:14px;background:#FEE2E2;border:2px solid #EF4444;border-radius:10px;color:#991B1B;font-size:0.9rem;text-align:left;">
+                ❌ <strong>Erreur :</strong> ${escapeHtml(e.message)}
+            </div>`;
+        }
+    } finally {
+        posGeminiEnCours = false;
+    }
+}
+
+/**
+ * Affiche la liste des produits reconnus + bouton "Ajouter au panier"
+ */
+function posAfficherResultatGeminiVoice(produits, container) {
+    if (!container) container = document.getElementById('posGeminiResult');
+    if (!container) return;
+    
+    var totalGeneral = 0;
+    var lignesHtml = produits.map(function(item) {
+        var p = item.produit;
+        var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
+        var sousTotal = pr * item.quantite;
+        totalGeneral += sousTotal;
+        return `
+            <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:8px 6px;font-weight:600;color:#1e293b;font-size:0.9rem;text-align:left;">
+                    ${escapeHtml(p.nom)}
+                </td>
+                <td style="padding:8px 6px;text-align:center;color:#8B5CF6;font-weight:700;font-size:1rem;">
+                    ×${item.quantite}
+                </td>
+                <td style="padding:8px 6px;text-align:right;color:#64748b;font-size:0.85rem;">
+                    ${pr.toFixed(2)} MAD
+                </td>
+                <td style="padding:8px 6px;text-align:right;font-weight:700;color:#7C3AED;font-size:0.9rem;">
+                    ${sousTotal.toFixed(2)} MAD
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Sauvegarder les produits dans une variable globale pour le bouton
+    window._posGeminiProduitsEnAttente = produits;
+    
+    container.innerHTML = `
+        <div style="padding:14px;background:#F5F3FF;border:2px solid #8B5CF6;border-radius:12px;text-align:left;">
+            <p style="margin:0 0 10px;color:#7C3AED;font-weight:700;font-size:1rem;">
+                ✅ ${produits.length} produit(s) reconnu(s) :
+            </p>
+            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                <thead>
+                    <tr style="background:#EDE9FE;">
+                        <th style="padding:6px;text-align:left;color:#7C3AED;font-size:0.8rem;">Produit</th>
+                        <th style="padding:6px;text-align:center;color:#7C3AED;font-size:0.8rem;">Qté</th>
+                        <th style="padding:6px;text-align:right;color:#7C3AED;font-size:0.8rem;">Prix</th>
+                        <th style="padding:6px;text-align:right;color:#7C3AED;font-size:0.8rem;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>${lignesHtml}</tbody>
+            </table>
+            <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:10px;border-top:2px solid #8B5CF6;">
+                <span style="font-weight:700;color:#5B21B6;font-size:1rem;">Total général :</span>
+                <span style="font-weight:800;color:#7C3AED;font-size:1.2rem;">${totalGeneral.toFixed(2)} MAD</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button onclick="posAnnulerGeminiVoice()" 
+                    style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;">
+                    ❌ Annuler
+                </button>
+                <button onclick="posConfirmerAjoutGeminiVoice()" 
+                    style="flex:2;padding:12px;background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 4px 14px rgba(139,92,246,0.3);">
+                    ✅ Ajouter au panier
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Ajoute les produits reconnus au panier POS
+ */
+function posConfirmerAjoutGeminiVoice() {
+    var produits = window._posGeminiProduitsEnAttente;
+    if (!produits || produits.length === 0) {
+        alert('❌ Aucun produit à ajouter');
+        return;
+    }
+    
+    var ajoutCount = 0;
+    var stockAlertes = [];
+    
+    produits.forEach(function(item) {
+        var p = item.produit;
+        var qte = item.quantite;
+        
+        // Vérifier le stock
+        if (p.stock !== undefined && p.stock <= 0) {
+            stockAlertes.push(p.nom + ' (rupture)');
+            return;
+        }
+        
+        var ex = posCart.find(function(x) { return x.id === p.id; });
+        if (ex) {
+            var nouvelleQte = ex.quantite + qte;
+            if (p.stock !== undefined && nouvelleQte > p.stock) {
+                stockAlertes.push(p.nom + ' (stock max: ' + p.stock + ')');
+                ex.quantite = p.stock;
+            } else {
+                ex.quantite = nouvelleQte;
+            }
+        } else {
+            var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
+            posCart.push({
+                id: p.id,
+                nom: p.nom,
+                prixUnitaire: pr,
+                prixAchat: p.prixAchat || 0,
+                prixPromo: p.prixPromo || 0,
+                prixVente: p.prixVente || 0,
+                quantite: qte,
+                categorie: p.categorie || '',
+                imageBase64: p.imageBase64 || '',
+                sauces: [],
+                interdits: [],
+                epice: 'Normal',
+                sel: 'Normal'
+            });
+        }
+        ajoutCount += qte;
+    });
+    
+    // Sauvegarder le panier
+    window.posCart = posCart;
+    posMultiCarts[posCurrentCartId] = posCart.slice();
+    posSauvegarderDonneesPanier(posCurrentCartId);
+    posSaveMultiCarts();
+    
+    // Fermer le modal et rafraîchir le panier
+    closeModal();
+    window._posGeminiProduitsEnAttente = null;
+    
+    if (isOnPOSPage()) {
+        updateCartOnly();
+        // Scroll vers le panier
+        setTimeout(function() {
+            var cartPanel = document.querySelector('.pos-cart-panel');
+            if (cartPanel) cartPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+    }
+    
+    // Message de confirmation
+    var msg = '✅ ' + ajoutCount + ' article(s) ajouté(s) au panier !';
+    if (stockAlertes.length > 0) {
+        msg += '\n\n⚠️ Attention stock :\n• ' + stockAlertes.join('\n• ');
+    }
+    alert(msg);
+}
+
+/**
+ * Annule l'ajout depuis la voix Gemini
+ */
+function posAnnulerGeminiVoice() {
+    window._posGeminiProduitsEnAttente = null;
+    closeModal();
+}
+
+// Exposer les fonctions Gemini
+window.posOuvrirCommandeVocaleGemini = posOuvrirCommandeVocaleGemini;
+window.posDemarrerEcouteGemini = posDemarrerEcouteGemini;
+window.posEnvoyerTexteAGemini = posEnvoyerTexteAGemini;
+window.posConfirmerAjoutGeminiVoice = posConfirmerAjoutGeminiVoice;
+window.posAnnulerGeminiVoice = posAnnulerGeminiVoice;
+
+// ============================================================
+// EXPOSITION GLOBALE
+// ============================================================
 
 window.posCart=posCart; window.posStep=posStep; window.posProductsList=posProductsList; window.posAllClients=posAllClients; window.posCurrentClient=posCurrentClient; window.posCurrentTable=posCurrentTable; window.posDiscountMAD=posDiscountMAD; window.posAmountGiven=posAmountGiven; window.posPaymentMethod=posPaymentMethod; window.posResetCart=posResetCart; window.posAddToCartOrOpenOptions=posAddToCartOrOpenOptions; window.posSetPaymentMethod=posSetPaymentMethod; window.posCalculateTotal=posCalculateTotal; window.posFinalizeSale=posFinalizeSale; window.posGoToStep2=posGoToStep2; window.posGoToStep1=posGoToStep1; window.posSearchProducts=posSearchProducts; window.clearPosSearch=clearPosSearch; window.clearClientSearch=clearClientSearch; window.updateClearButtonVisibility=updateClearButtonVisibility; window.updateCartOnly=updateCartOnly; window.renderPOS=renderPOS; window.updatePaymentButtons=updatePaymentButtons; window.loadMoreProducts=loadMoreProducts; window.loadClientCredits=loadClientCredits; window.updateClientCreditDisplay=updateClientCreditDisplay; window.posCalculateChange=posCalculateChange; window.onProductAdded=window.onProductAdded||function(pid){ console.log('Produit ajouté:',pid); };
 window.posNaviguerEtape = posNaviguerEtape;
@@ -2411,16 +2422,9 @@ window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 
 console.log('🚀 E-SOLUTION - POS chargé avec corrections');
 console.log('✅ forceUpdateClient disponible');
-console.log('✅ Bouton "Afficher tout" corrigé');
-console.log('✅ Correction mobile panier en bas');
-console.log('✅ Crédit client cliquable - REDIRECTION VERS PAGE CRÉDITS AVEC SAUVEGARDE D\'ÉTAT');
-console.log('✅ Catégories actives : texte noir sur fond blanc');
-console.log('✅ Multi-paniers activé - ' + Object.keys(posMultiCarts).length + ' panier(s) disponible(s)');
-console.log('✅ Chaque panier sauvegarde son propre client, table, paiement, remise, montant donné');
-console.log('✅ Ajout rapide de client avec bouton "Nouveau" dans la section paiement');
-console.log('✅ LIMITE À ' + MAX_PANIERS + ' PANIERS MAXIMUM');
-console.log('✅ NAVIGATION FLUIDE ENTRE PANIERS AVEC RE-RENDU COMPLET');
-console.log('✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET');
-console.log('✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À ' + MAX_PANIERS + ')');
+console.log('✅ Multi-paniers activé');
 console.log('✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER');
+console.log('🎤 NOUVEAU : Commande vocale Gemini AI');
+console.log('   → Cliquez sur "🎤 Gemini" dans la barre d\'outils');
+console.log('   → Exemple : "Ajouter 3 Merindina et 2 Coca Cola"');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
