@@ -1,11 +1,12 @@
-// ==================== POS-AI.JS - E-SOLUTION (VERSION INTELLIGENTE v2.2 FR) ====================
+// ==================== POS-AI.JS - E-SOLUTION (VERSION INTELLIGENTE v2.3 FR) ====================
 // Module IA séparé pour le POS - Commande vocale par Gemini
 // ✅ Comprend la DARIJA marocaine (lettres latines)
 // ✅ Détecte automatiquement le CLIENT dans la phrase
-// ✅ Recherche CLIENT dans : nom, prenom, username, telephone, whatsapp, description, adresse, email
+// ✅ Recherche CLIENT par SCORE pondéré : nom(50) + prenom(50) + username(40) + description(40) + tel(30) + adresse(10) + email(10)
+// ✅ Extraction du nom par mots-clés si Gemini échoue
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
 // ✅ Micro qui s'arrête après 3 SECONDES DE SILENCE
-// ✅ 🔊 Synthèse vocale en FRANÇAIS
+// ✅ 🔊 Synthèse vocale FRANÇAISE (voix NORMALE)
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
 // ✅ 💾 Cache des commandes récentes (réponse instantanée)
@@ -38,11 +39,12 @@ function posGeminiNormaliser(texte) {
     return (texte || '')
         .toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 }
 
-// ==================== 🔊 SYNTHÈSE VOCALE (FRANÇAIS) ====================
+// ==================== 🔊 SYNTHÈSE VOCALE (FRANÇAIS - VOIX NORMALE) ====================
 function posGeminiParler(texte) {
     if (!POS_GEMINI_TTS_ENABLED) return;
     if (!('speechSynthesis' in window)) {
@@ -54,11 +56,10 @@ function posGeminiParler(texte) {
 
     var utterance = new SpeechSynthesisUtterance(texte);
     utterance.lang = POS_GEMINI_TTS_LANG;
-    utterance.rate = 1.1;
+    utterance.rate = 1.0;    // 🐢 Vitesse NORMALE
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
-    // Trouver une voix française de qualité
     var voices = window.speechSynthesis.getVoices();
     var voixFr = voices.find(function(v) { return v.lang.startsWith('fr') && v.name.includes('Google'); })
               || voices.find(function(v) { return v.lang.startsWith('fr') && v.name.includes('Microsoft'); })
@@ -484,6 +485,9 @@ Ex 6: "Ahmed, zid 3 Merindina"
 Ex 7: "Zid 2 Coca pour Fatima"
 → { "client": "Fatima", "produits": [{"nom": "Coca Cola", "quantite": 2}] }
 
+Ex 8: "Pour le client footballeur, zid 3 Merindina"
+→ { "client": "footballeur", "produits": [{"nom": "Merindina", "quantite": 3}] }
+
 ═══════════════════════════════════════════════════════
 🎯 MISSION:
 ═══════════════════════════════════════════════════════
@@ -491,7 +495,7 @@ Ex 7: "Zid 2 Coca pour Fatima"
 Return ONLY a JSON object (no text before/after):
 
 {
-  "client": "Name" or null,
+  "client": "Name or description word" or null,
   "produits": [
     { "nom": "EXACT name from catalog", "quantite": 3 }
   ]
@@ -500,6 +504,7 @@ Return ONLY a JSON object (no text before/after):
 RULES:
 - "nom" = exact match from catalog.
 - Ignore products not in catalog.
+- For "client": if the user says a NAME or DESCRIPTION WORD, return it EXACTLY as spoken (e.g., "footballeur", "Ahmed", "Fatima"). The app will search in nom, prenom, username, description.
 - If no client, "client": null.
 - No text around JSON.`.trim();
 
@@ -588,7 +593,6 @@ RULES:
 
         // ============================================================
         // ✅ MATCHING INTELLIGENT DU PRODUIT
-        // Recherche dans : nom, description, categorie, brand, categories[]
         // ============================================================
         var produitsValides = [];
         var produitsNonTrouves = [];
@@ -796,7 +800,7 @@ function posAfficherResultatGeminiVoice(produits, container, clientDetecte, prod
                     <p style="margin:0;color:#92400E;font-weight:700;font-size:1rem;">
                         👤 Client détecté : <span style="color:#78350F;">${escapeHtml(clientDetecte)}</span>
                     </p>
-                    <p style="margin:2px 0 0;color:#B45309;font-size:0.8rem;">Sélectionné automatiquement dans la base</p>
+                    <p style="margin:2px 0 0;color:#B45309;font-size:0.8rem;">Sera recherché dans la base (nom, prénom, description...)</p>
                 </div>
             </div>
         `;
@@ -916,7 +920,7 @@ function posGeminiChoisirSuggestion(nomProduit) {
     posGeminiParler(nomProduit + ' ajouté.');
 }
 
-// ==================== CONFIRMATION AJOUT AU PANIER (avec RECHERCHE CLIENT INTELLIGENTE) ====================
+// ==================== CONFIRMATION AJOUT AU PANIER (v2.3 - SCORE PONDÉRÉ) ====================
 function posConfirmerAjoutGeminiVoice() {
     var produits = posGeminiProduitsEnAttente;
     if (!produits || produits.length === 0) {
@@ -925,146 +929,142 @@ function posConfirmerAjoutGeminiVoice() {
     }
 
     // ============================================================
-    // ✅ ÉTAPE 1 : RECHERCHE INTELLIGENTE DU CLIENT
+    // ✅ ÉTAPE 1 : RECHERCHE CLIENT PAR SCORE PONDÉRÉ
     // ============================================================
     var nomClient = (posGeminiClientEnAttente || '').trim();
+    var phraseComplete = (posGeminiTranscriptFinal || '').trim();
     var clientTrouve = null;
 
-    if (nomClient) {
-        console.log('👤 Recherche client :', nomClient);
-        console.log('📋 Clients disponibles :', (window.posAllClients || []).length);
-
+    if (nomClient || phraseComplete) {
         var clients = window.posAllClients || [];
-        var nomNorm = posGeminiNormaliser(nomClient);
-        var motsRecherche = nomNorm.split(/\s+/).filter(function(m) { return m.length >= 3; });
+        console.log('👤 Nom client Gemini :', nomClient);
+        console.log('📝 Phrase complète :', phraseComplete);
+        console.log('📋 Clients disponibles :', clients.length);
 
-        console.log('🔍 Mots-clés client :', motsRecherche);
+        // 🔧 Construire la liste des mots-clés à chercher
+        var motsAChercher = [];
 
-        // 1️⃣ Match EXACT sur nom complet (nom + prénom)
-        clientTrouve = clients.find(function(c) {
-            var full1 = posGeminiNormaliser((c.nom || '') + ' ' + (c.prenom || ''));
-            var full2 = posGeminiNormaliser((c.prenom || '') + ' ' + (c.nom || ''));
-            return full1 === nomNorm || full2 === nomNorm;
-        });
-        if (clientTrouve) console.log('✅ Client trouvé (nom complet):', clientTrouve.nom);
-
-        // 2️⃣ Match EXACT sur nom / prénom / username
-        if (!clientTrouve) {
-            clientTrouve = clients.find(function(c) {
-                return posGeminiNormaliser(c.nom) === nomNorm
-                    || posGeminiNormaliser(c.prenom) === nomNorm
-                    || posGeminiNormaliser(c.username) === nomNorm;
+        if (nomClient) {
+            var nomNorm = posGeminiNormaliser(nomClient);
+            motsAChercher.push(nomNorm);
+            nomNorm.split(/\s+/).forEach(function(m) {
+                if (m.length >= 3) motsAChercher.push(m);
             });
-            if (clientTrouve) console.log('✅ Client trouvé (nom/prenom/username):', clientTrouve.nom);
         }
 
-        // 3️⃣ Match sur téléphone / whatsapp
-        if (!clientTrouve) {
-            var chiffres = nomClient.replace(/\D/g, '');
-            if (chiffres.length >= 6) {
-                clientTrouve = clients.find(function(c) {
-                    var tel = (c.telephone || '').replace(/\D/g, '');
-                    var wa = (c.whatsapp || '').replace(/\D/g, '');
-                    return (tel && tel.includes(chiffres)) || (wa && wa.includes(chiffres));
-                });
-                if (clientTrouve) console.log('✅ Client trouvé (téléphone):', clientTrouve.nom);
-            }
-        }
+        // ✅ Extraction manuelle si Gemini n'a rien trouvé
+        if (!nomClient && phraseComplete) {
+            var phraseNorm = posGeminiNormaliser(phraseComplete);
+            var declencheurs = ['client', 'pour', 'li', 'si', 'lalla', 'm3a'];
+            var motsPhrase = phraseNorm.split(/\s+/);
 
-        // 4️⃣ Match partiel nom/prénom/username
-        if (!clientTrouve) {
-            clientTrouve = clients.find(function(c) {
-                var n = posGeminiNormaliser(c.nom);
-                var p = posGeminiNormaliser(c.prenom);
-                var u = posGeminiNormaliser(c.username);
-                return n.includes(nomNorm) || p.includes(nomNorm) || u.includes(nomNorm)
-                    || nomNorm.includes(n) || nomNorm.includes(p) || nomNorm.includes(u);
-            });
-            if (clientTrouve) console.log('✅ Client trouvé (partiel):', clientTrouve.nom);
-        }
-
-        // 5️⃣ Match par mot dans nom/prénom
-        if (!clientTrouve && motsRecherche.length > 0) {
-            clientTrouve = clients.find(function(c) {
-                var n = posGeminiNormaliser(c.nom);
-                var p = posGeminiNormaliser(c.prenom);
-                return motsRecherche.some(function(mot) {
-                    return n.includes(mot) || p.includes(mot);
-                });
-            });
-            if (clientTrouve) console.log('✅ Client trouvé (mot-clé):', clientTrouve.nom);
-        }
-
-        // 6️⃣ ⭐ RECHERCHE DANS LA DESCRIPTION DU CLIENT
-        if (!clientTrouve) {
-            console.log('🔎 Recherche dans la description du client...');
-            var candidats = [];
-
-            clients.forEach(function(c) {
-                var desc = posGeminiNormaliser(c.description);
-                if (!desc) return;
-
-                var score = 0;
-                var motsMatched = [];
-                motsRecherche.forEach(function(mot) {
-                    if (desc.includes(mot)) {
-                        score += mot.length;
-                        motsMatched.push(mot);
+            for (var i = 0; i < motsPhrase.length; i++) {
+                if (declencheurs.includes(motsPhrase[i]) && i + 1 < motsPhrase.length) {
+                    var cand = motsPhrase[i + 1];
+                    if (cand && cand.length >= 3) {
+                        motsAChercher.push(cand);
+                        if (i + 2 < motsPhrase.length && motsPhrase[i + 2].length >= 3) {
+                            motsAChercher.push(motsPhrase[i + 1] + ' ' + motsPhrase[i + 2]);
+                        }
                     }
-                });
+                }
+            }
 
-                if (desc.includes(nomNorm)) score += 100;
-
-                if (score > 0) {
-                    candidats.push({ client: c, score: score, mots: motsMatched });
+            // Ajouter tous les mots significatifs en fallback
+            var stopWords = ['pour', 'client', 'avec', 'puis', 'zid', 'bghit', '3tini', 'merindina', 'coca', 'cola', 'pizza', 'cafe', 'café', 'croissant', 'atay', 'jus', 'et', 'les', 'des', 'une', 'un'];
+            motsPhrase.forEach(function(m) {
+                if (m.length >= 4 && !stopWords.includes(m)) {
+                    motsAChercher.push(m);
                 }
             });
-
-            candidats.sort(function(a, b) { return b.score - a.score; });
-
-            if (candidats.length > 0) {
-                clientTrouve = candidats[0].client;
-                console.log('🎯 Client trouvé via DESCRIPTION :', clientTrouve.nom, '| score:', candidats[0].score, '| mots:', candidats[0].mots);
-            }
         }
 
-        // 7️⃣ ⭐ RECHERCHE DANS TOUS LES CHAMPS (fallback)
-        if (!clientTrouve) {
-            console.log('🔎 Recherche dans tous les champs du client...');
-            var candidats2 = [];
+        // Dédupliquer
+        motsAChercher = motsAChercher.filter(function(m, idx, arr) {
+            return arr.indexOf(m) === idx && m.length >= 3;
+        });
 
-            clients.forEach(function(c) {
-                var tousLesChamps = [
-                    posGeminiNormaliser(c.nom),
-                    posGeminiNormaliser(c.prenom),
-                    posGeminiNormaliser(c.username),
-                    posGeminiNormaliser(c.description),
-                    posGeminiNormaliser(c.adresse),
-                    posGeminiNormaliser(c.email),
-                    posGeminiNormaliser(c.telephone),
-                    posGeminiNormaliser(c.whatsapp)
-                ].join(' ');
+        console.log('🔍 Mots-clés à chercher :', motsAChercher);
 
-                var score = 0;
-                motsRecherche.forEach(function(mot) {
-                    if (tousLesChamps.includes(mot)) score += mot.length;
-                });
+        // ============================================================
+        // 🎯 SCORE pour chaque client
+        // ============================================================
+        var scores = clients.map(function(c) {
+            var nom = posGeminiNormaliser(c.nom);
+            var prenom = posGeminiNormaliser(c.prenom);
+            var username = posGeminiNormaliser(c.username);
+            var description = posGeminiNormaliser(c.description);
+            var adresse = posGeminiNormaliser(c.adresse);
+            var email = posGeminiNormaliser(c.email);
+            var tel = (c.telephone || '').replace(/\D/g, '');
+            var whatsapp = (c.whatsapp || '').replace(/\D/g, '');
 
-                if (score > 0) candidats2.push({ client: c, score: score });
+            var score = 0;
+            var details = [];
+
+            // 📌 Match nom complet exact
+            var nomCompletGemini = posGeminiNormaliser(nomClient || '');
+            var full1 = posGeminiNormaliser((c.nom || '') + ' ' + (c.prenom || ''));
+            var full2 = posGeminiNormaliser((c.prenom || '') + ' ' + (c.nom || ''));
+            if (nomCompletGemini && (full1 === nomCompletGemini || full2 === nomCompletGemini)) {
+                score += 1000;
+                details.push('nom complet exact +1000');
+            }
+
+            motsAChercher.forEach(function(mot) {
+                if (!mot) return;
+
+                // NOM : +50 exact / +30 partiel
+                if (nom === mot) { score += 50; details.push('nom=' + mot + ' +50'); }
+                else if (nom && mot && (nom.includes(mot) || mot.includes(nom))) { score += 30; details.push('nom~' + mot); }
+
+                // PRENOM : +50 exact / +30 partiel
+                if (prenom === mot) { score += 50; details.push('prenom=' + mot + ' +50'); }
+                else if (prenom && mot && (prenom.includes(mot) || mot.includes(prenom))) { score += 30; details.push('prenom~' + mot); }
+
+                // USERNAME : +40 exact / +20 partiel
+                if (username === mot) { score += 40; details.push('username=' + mot); }
+                else if (username && mot && username.includes(mot)) { score += 20; details.push('username~' + mot); }
+
+                // ⭐ DESCRIPTION : +40 exact / +25 partiel
+                if (description === mot) { score += 40; details.push('desc=' + mot); }
+                else if (description && description.includes(mot)) { score += 25; details.push('desc~' + mot); }
+
+                // TELEPHONE / WHATSAPP
+                var chiffresMot = mot.replace(/\D/g, '');
+                if (chiffresMot.length >= 6) {
+                    if ((tel && tel.includes(chiffresMot)) || (whatsapp && whatsapp.includes(chiffresMot))) {
+                        score += 30;
+                        details.push('tel +30');
+                    }
+                }
+
+                // ADRESSE : +10
+                if (adresse && adresse.includes(mot)) { score += 10; details.push('adresse'); }
+
+                // EMAIL : +10
+                if (email && email.includes(mot)) { score += 10; details.push('email'); }
             });
 
-            candidats2.sort(function(a, b) { return b.score - a.score; });
+            return { client: c, score: score, details: details };
+        });
 
-            if (candidats2.length > 0) {
-                clientTrouve = candidats2[0].client;
-                console.log('🎯 Client trouvé via TOUS CHAMPS :', clientTrouve.nom, '| score:', candidats2[0].score);
+        scores = scores.filter(function(s) { return s.score > 0; });
+        scores.sort(function(a, b) { return b.score - a.score; });
+
+        if (scores.length > 0) {
+            clientTrouve = scores[0].client;
+            console.log('🏆 MEILLEUR CLIENT (score ' + scores[0].score + '):', clientTrouve.nom, clientTrouve.prenom);
+            console.log('   Détails :', scores[0].details.join(', '));
+
+            if (scores.length > 1) {
+                console.log('   Autres candidats :');
+                scores.slice(1, 4).forEach(function(s) {
+                    console.log('   - ' + s.client.nom + ' ' + (s.client.prenom || '') + ' (score ' + s.score + ')');
+                });
             }
-        }
-
-        if (clientTrouve) {
-            console.log('✅ Client FINAL trouvé :', clientTrouve.nom, clientTrouve.prenom, '(ID:', clientTrouve.id + ')');
         } else {
-            console.warn('⚠️ Client "' + nomClient + '" NON trouvé dans la base');
+            console.warn('⚠️ Aucun client trouvé. Mots :', motsAChercher);
         }
     }
 
@@ -1079,38 +1079,30 @@ function posConfirmerAjoutGeminiVoice() {
     var result = window.posAddMultipleProductsToCart(produits);
 
     // ============================================================
-    // ✅ ÉTAPE 3 : APPLIQUER LE CLIENT (phase paiement)
+    // ✅ ÉTAPE 3 : APPLIQUER LE CLIENT
     // ============================================================
     if (clientTrouve) {
         closeModal();
 
         setTimeout(function() {
-            // 1. Remplir le champ de recherche client
-            var clientInput = document.getElementById('posClientSearchInput');
             var nomComplet = clientTrouve.nom + ' ' + (clientTrouve.prenom || '');
+            var clientInput = document.getElementById('posClientSearchInput');
             if (clientInput) clientInput.value = nomComplet;
 
-            // 2. Appeler posSearchClient
             if (typeof window.posSearchClient === 'function') {
                 window.posSearchClient(nomComplet);
-                console.log('🔍 posSearchClient appelé avec :', nomComplet);
             }
 
-            // 3. Forcer la sélection directe du client
             setTimeout(function() {
                 if (window.posCurrentClient && window.posCurrentClient.id === clientTrouve.id) {
-                    console.log('✅ Client déjà appliqué :', window.posCurrentClient.name);
-                } else {
-                    if (typeof window.posSelectClientFromDropdown === 'function') {
-                        window.posSelectClientFromDropdown(clientTrouve.id, nomComplet);
-                        console.log('✅ Client forcé via posSelectClientFromDropdown');
-                    }
+                    console.log('✅ Client déjà appliqué');
+                } else if (typeof window.posSelectClientFromDropdown === 'function') {
+                    window.posSelectClientFromDropdown(clientTrouve.id, nomComplet);
+                    console.log('✅ Client forcé via posSelectClientFromDropdown');
                 }
 
-                // Mettre à jour l'input
                 if (clientInput) clientInput.value = nomComplet;
 
-                // Rafraîchir l'affichage du client dans le paiement
                 if (typeof window.updateClientCreditDisplay === 'function') {
                     window.updateClientCreditDisplay(clientTrouve.id);
                 }
@@ -1147,7 +1139,6 @@ function posConfirmerAjoutGeminiVoice() {
         }
     }
 
-    // Reset
     posGeminiProduitsEnAttente = [];
     posGeminiClientEnAttente = null;
 
@@ -1196,13 +1187,13 @@ window.posAfficherResultatGeminiVoice = posAfficherResultatGeminiVoice;
 window.posGeminiChoisirSuggestion = posGeminiChoisirSuggestion;
 window.posGeminiParler = posGeminiParler;
 
-console.log('🤖 POS-AI.js v2.2 FR chargé - Module Gemini Voice INTELLIGENT');
+console.log('🤖 POS-AI.js v2.3 FR chargé - Module Gemini Voice INTELLIGENT');
 console.log('   ✅ Darija marocaine supportée');
-console.log('   ✅ Détection automatique du client');
-console.log('   ✅ Recherche client : nom + prenom + username + tel + whatsapp + description + adresse + email');
-console.log('   ✅ Recherche produit : nom + description + categorie + brand + categories[]');
+console.log('   ✅ Recherche CLIENT par SCORE pondéré (nom 50 + prenom 50 + username 40 + desc 40 + tel 30 + adresse 10 + email 10)');
+console.log('   ✅ Extraction du nom par mots-clés si Gemini échoue');
+console.log('   ✅ Recherche PRODUIT : nom + description + categorie + brand + categories[]');
 console.log('   ✅ Silence de 3s avant arrêt du micro');
-console.log('   🔊 Synthèse vocale en FRANÇAIS');
+console.log('   🔊 Synthèse vocale FRANÇAISE (voix NORMALE)');
 console.log('   🎯 Suggestions intelligentes si produit non trouvé');
 console.log('   🎨 Alertes stock bas automatiques');
 console.log('   💾 Cache des commandes récentes (réponse instantanée)');
