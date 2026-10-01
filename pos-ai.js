@@ -1,11 +1,11 @@
-// ==================== POS-AI.JS - E-SOLUTION (VERSION INTELLIGENTE v2.1) ====================
+// ==================== POS-AI.JS - E-SOLUTION (VERSION INTELLIGENTE v2.2 FR) ====================
 // Module IA séparé pour le POS - Commande vocale par Gemini
 // ✅ Comprend la DARIJA marocaine (lettres latines)
 // ✅ Détecte automatiquement le CLIENT dans la phrase
 // ✅ Recherche CLIENT dans : nom, prenom, username, telephone, whatsapp, description, adresse, email
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
 // ✅ Micro qui s'arrête après 3 SECONDES DE SILENCE
-// ✅ 🔊 Synthèse vocale (Gemini répond à voix haute)
+// ✅ 🔊 Synthèse vocale en FRANÇAIS
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
 // ✅ 💾 Cache des commandes récentes (réponse instantanée)
@@ -18,10 +18,9 @@ const POS_GEMINI_SILENCE_DURATION = 3000;
 const POS_GEMINI_CACHE_KEY = 'posGeminiCache';
 const POS_GEMINI_CACHE_MAX_AGE = 7 * 24 * 3600000;
 
-// 🔊 Synthèse vocale
+// 🔊 Synthèse vocale — FRANÇAIS
 const POS_GEMINI_TTS_ENABLED = true;
-const POS_GEMINI_TTS_LANG = 'ar-MA';       // ✅ Arabe marocain (fallback fr-FR si non dispo)
-const POS_GEMINI_TTS_LANG_FALLBACK = 'fr-FR';
+const POS_GEMINI_TTS_LANG = 'fr-FR';
 
 // ==================== ÉTAT GEMINI ====================
 var posGeminiRecognition = null;
@@ -43,7 +42,7 @@ function posGeminiNormaliser(texte) {
         .trim();
 }
 
-// ==================== 🔊 SYNTHÈSE VOCALE (Arabe + Fallback FR) ====================
+// ==================== 🔊 SYNTHÈSE VOCALE (FRANÇAIS) ====================
 function posGeminiParler(texte) {
     if (!POS_GEMINI_TTS_ENABLED) return;
     if (!('speechSynthesis' in window)) {
@@ -54,49 +53,30 @@ function posGeminiParler(texte) {
     try { window.speechSynthesis.cancel(); } catch(e) {}
 
     var utterance = new SpeechSynthesisUtterance(texte);
-    utterance.rate = 1.0;
+    utterance.lang = POS_GEMINI_TTS_LANG;
+    utterance.rate = 1.1;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
+    // Trouver une voix française de qualité
     var voices = window.speechSynthesis.getVoices();
-    console.log('🔊 Voix disponibles :', voices.length);
-
-    // 🎯 Chercher une voix arabe (ar-MA, ar-SA, ar-EG, ar)
-    var voixArabe = voices.find(function(v) { return v.lang === 'ar-MA'; })
-                  || voices.find(function(v) { return v.lang === 'ar-SA'; })
-                  || voices.find(function(v) { return v.lang === 'ar-EG'; })
-                  || voices.find(function(v) { return v.lang.startsWith('ar'); })
-                  || voices.find(function(v) { return v.name.toLowerCase().includes('arab'); });
-
-    // 🎯 Sinon voix française
     var voixFr = voices.find(function(v) { return v.lang.startsWith('fr') && v.name.includes('Google'); })
+              || voices.find(function(v) { return v.lang.startsWith('fr') && v.name.includes('Microsoft'); })
               || voices.find(function(v) { return v.lang.startsWith('fr'); });
-
-    if (voixArabe) {
-        utterance.voice = voixArabe;
-        utterance.lang = voixArabe.lang;
-        console.log('🔊 TTS en ARABE avec voix :', voixArabe.name, '(' + voixArabe.lang + ')');
-    } else if (voixFr) {
+    if (voixFr) {
         utterance.voice = voixFr;
         utterance.lang = voixFr.lang;
-        console.log('🔊 TTS en FRANÇAIS avec voix :', voixFr.name, '(pas de voix arabe trouvée)');
-    } else {
-        utterance.lang = POS_GEMINI_TTS_LANG_FALLBACK;
-        console.log('🔊 TTS avec voix par défaut');
     }
 
     window.speechSynthesis.speak(utterance);
-    console.log('🔊 TTS :', texte);
+    console.log('🔊 TTS (FR) :', texte);
 }
 
 // Charger les voix dès qu'elles sont dispo
 if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices();
     window.speechSynthesis.onvoiceschanged = function() {
-        var voices = window.speechSynthesis.getVoices();
-        console.log('🔊 Voix chargées :', voices.length, 'voix');
-        var arabes = voices.filter(function(v) { return v.lang.startsWith('ar'); });
-        console.log('🔊 Voix arabes disponibles :', arabes.length, arabes.map(function(v) { return v.name; }));
+        window.speechSynthesis.getVoices();
     };
 }
 
@@ -899,7 +879,7 @@ function posAfficherResultatGeminiVoice(produits, container, clientDetecte, prod
         </div>
     `;
 
-    // 🔊 Annonce vocale
+    // 🔊 Annonce vocale en FRANÇAIS
     var resume = '';
     if (clientDetecte) resume += 'Client ' + clientDetecte + '. ';
     resume += produits.length + ' produit' + (produits.length > 1 ? 's' : '') + ' reconnu' + (produits.length > 1 ? 's' : '') + '. ';
@@ -946,7 +926,6 @@ function posConfirmerAjoutGeminiVoice() {
 
     // ============================================================
     // ✅ ÉTAPE 1 : RECHERCHE INTELLIGENTE DU CLIENT
-    // Champs : nom, prenom, username, telephone, whatsapp, description, adresse, email
     // ============================================================
     var nomClient = (posGeminiClientEnAttente || '').trim();
     var clientTrouve = null;
@@ -1217,13 +1196,13 @@ window.posAfficherResultatGeminiVoice = posAfficherResultatGeminiVoice;
 window.posGeminiChoisirSuggestion = posGeminiChoisirSuggestion;
 window.posGeminiParler = posGeminiParler;
 
-console.log('🤖 POS-AI.js v2.1 chargé - Module Gemini Voice INTELLIGENT');
+console.log('🤖 POS-AI.js v2.2 FR chargé - Module Gemini Voice INTELLIGENT');
 console.log('   ✅ Darija marocaine supportée');
 console.log('   ✅ Détection automatique du client');
 console.log('   ✅ Recherche client : nom + prenom + username + tel + whatsapp + description + adresse + email');
 console.log('   ✅ Recherche produit : nom + description + categorie + brand + categories[]');
 console.log('   ✅ Silence de 3s avant arrêt du micro');
-console.log('   🔊 Synthèse vocale ARABE (avec fallback FR)');
+console.log('   🔊 Synthèse vocale en FRANÇAIS');
 console.log('   🎯 Suggestions intelligentes si produit non trouvé');
 console.log('   🎨 Alertes stock bas automatiques');
 console.log('   💾 Cache des commandes récentes (réponse instantanée)');
