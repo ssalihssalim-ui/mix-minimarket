@@ -19,6 +19,7 @@
 // ✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À 5)
 // ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE DÉFINITIVEMENT
 // ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
+// ✅ 📴 MODE HORS-LIGNE : enregistre les ventes dans localStorage + sync auto
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -59,31 +60,26 @@ var posLastRenderTime = 0;
 var isFinalizing = false;
 
 var posProductOffset = 0;
-var posProductBatchSize = 30;   // ⚡ 50 → 30
+var posProductBatchSize = 30;
 var posHasMoreProducts = false;
 
 var clientCreditsCache = {};
 var clientSearchTimeout = null;
 
-// ⚡ CACHE DE RECHERCHE PRODUIT (partagé avec pos-audio.js)
 if (typeof window.posSearchCache === 'undefined') {
     window.posSearchCache = {};
 }
 var posSearchCache = window.posSearchCache;
 
-// ✅ MODE CATÉGORIES / PRODUITS
 var posViewMode = 'categories';
 var posSelectedCategoryForView = null;
 
-// ==================== MULTI-PANIERS AVEC SAUVEGARDE COMPLÈTE ====================
 var posMultiCarts = {};
 var posCurrentCartId = 'panier1';
 var posMultiCartCounter = 1;
 
-// ✅ STOCKAGE DES DONNÉES DE CHAQUE PANIER (client, table, paiement, remise, montant donné)
 var posMultiPaniersData = {};
 
-// ✅ LIMITE MAXIMALE DE PANIERS
 var MAX_PANIERS = 5;
 
 // ======================================================
@@ -189,7 +185,6 @@ btn.style.display = visible ? 'block' : 'none';
 
 // ==================== MULTI-PANIERS - FONCTIONS AVEC SAUVEGARDE COMPLÈTE ====================
 
-// ✅ SAUVEGARDER LES DONNÉES D'UN PANIER (client, table, paiement, etc.)
 function posSauvegarderDonneesPanier(cartId) {
     posMultiPaniersData[cartId] = {
         client: posCurrentClient ? { 
@@ -206,7 +201,6 @@ function posSauvegarderDonneesPanier(cartId) {
     };
 }
 
-// ✅ RESTAURER LES DONNÉES D'UN PANIER
 function posRestaurerDonneesPanier(cartId) {
     if (posMultiPaniersData[cartId]) {
         var data = posMultiPaniersData[cartId];
@@ -227,7 +221,6 @@ function posRestaurerDonneesPanier(cartId) {
     return false;
 }
 
-// ✅ CHARGER TOUTES LES DONNÉES DES PANIERS DEPUIS localStorage
 function posChargerToutesDonneesPaniers() {
     try {
         var allData = localStorage.getItem('posMultiPaniersData');
@@ -317,7 +310,6 @@ function posSaveMultiCarts() {
     } catch(e) { console.warn('⚠️ Erreur sauvegarde multi-paniers:', e); }
 }
 
-// ✅ RÉORGANISER LES NUMÉROS DES PANIERS (1 À 5)
 function posReorganiserNumerosPaniers() {
     var cartKeys = Object.keys(posMultiCarts);
     if (cartKeys.length === 0) {
@@ -357,7 +349,6 @@ function posReorganiserNumerosPaniers() {
     posSaveMultiCarts();
 }
 
-// ✅ CRÉER UN NOUVEAU PANIER - AVEC LIMITE DE 5 ET RÉUTILISATION DES NUMÉROS
 function posCreateNewCart() {
     posMultiCarts[posCurrentCartId] = posCart.slice();
     posSauvegarderDonneesPanier(posCurrentCartId);
@@ -410,7 +401,6 @@ function posCreateNewCart() {
     return newCartId;
 }
 
-// ✅ CHANGER DE PANIER - VERSION FLUIDE CORRIGÉE
 function posSwitchToCart(cartId) {
     if (!posMultiCarts[cartId]) { 
         console.warn('⚠️ Panier inexistant:', cartId); 
@@ -460,7 +450,6 @@ function posSwitchToCart(cartId) {
     console.log('🔄 Basculé vers:', cartId, 'articles:', posCart.length);
 }
 
-// ✅ SUPPRIMER UN PANIER - AVEC RÉORGANISATION DES NUMÉROS
 function posDeleteCart(cartId) {
     console.log('🗑️ Tentative de suppression du panier:', cartId);
     
@@ -527,7 +516,6 @@ function posDeleteCart(cartId) {
     console.log('✅ Panier supprimé:', cartId, 'Paniers restants:', Object.keys(posMultiCarts).length);
 }
 
-// ✅ VIDER TOUS LES PANIERS
 function posResetAllCarts() {
     if (!confirm('⚠️ Vider TOUS les paniers ? Cette action est irréversible.')) return;
     posMultiCarts = { 'panier1': [] };
@@ -559,7 +547,6 @@ function posGetTotalAllCarts() {
     return total;
 }
 
-// ==================== OPTIMISATION : PRÉCHARGEMENT DU POS ====================
 async function preloadPosData() {
 if (typeof CacheDB === 'undefined') return;
 
@@ -577,10 +564,8 @@ console.warn('Erreur préchargement POS:', e);
 }
 }
 
-// Lancer le préchargement immédiatement
 preloadPosData();
 
-// ==================== TOGGLE OUTILS POS - CORRIGÉ AVEC DESIGN MODERNE ====================
 function posToggleTools() {
     posToolsVisible = !posToolsVisible;
     var toolsContainer = document.getElementById('posToolsContainer');
@@ -654,7 +639,6 @@ function posToggleTools() {
     }
 }
 
-// ==================== APPLIQUER LE SCROLL SUR DYNAMICCONTENT ====================
 function applyDynamicContentScroll() {
 var container = document.getElementById('dynamicContent');
 if (container) {
@@ -688,7 +672,6 @@ return 0;
 }
 }
 
-// ✅ VERSION MODIFIÉE : affichage crédit cliquable - REDIRECTION VERS PAGE CRÉDITS AVEC SAUVEGARDE D'ÉTAT
 async function updateClientCreditDisplay(clientId) {
 var displayEl = document.getElementById('clientCreditDisplay');
 if (!displayEl) return;
@@ -741,13 +724,9 @@ displayEl.onclick = null;
 }
 }
 
-// ============================================================
-// ✅ loadPosPage - VERSION CORRIGÉE AVEC RESTAURATION AVANT RESET
-// ============================================================
 async function loadPosPage(c){
 applyDynamicContentScroll();
 
-// ✅ Charger les multi-paniers et leurs données
 posChargerToutesDonneesPaniers();
 posLoadMultiCarts();
 
@@ -897,7 +876,6 @@ if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButto
 }
 }
 
-// ⚡ OPTIMISATION : debounce 80ms + cache
 function posSearchProducts(query){
 clearTimeout(window._searchTimeout);
 window._searchTimeout = setTimeout(function(){
@@ -909,7 +887,6 @@ posViewMode = 'products';
 posSelectedCategoryForView = null;
 }
 
-// ⚡ OPTIMISATION : pré-remplir le cache (partagé avec pos-audio.js)
 if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
     if (typeof fastSearch === 'function') {
         posSearchCache[posSearchQuery] = fastSearch(posSearchQuery).slice();
@@ -917,7 +894,7 @@ if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
 }
 
 if(isOnPOSPage()) filterProductGrid();
-}, 80);   // ⚡ 150ms → 80ms
+}, 80);
 }
 
 function clearPosSearch() {
@@ -955,7 +932,6 @@ if (clearBtn) clearBtn.style.display = 'none';
 
 function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProductGrid(); }
 
-// ==================== FILTER PRODUCT GRID AVEC MODE CATÉGORIES ====================
 function filterProductGrid(){
 if(!isOnPOSPage() || posStep !== 1) return;
 
@@ -967,7 +943,6 @@ afficherCategories(grid);
 return;
 }
 
-// ⚡ OPTIMISATION : utiliser le cache si disponible
 var f;
 if (posSearchCache[posSearchQuery]) {
     f = posSearchCache[posSearchQuery].slice();
@@ -1067,7 +1042,6 @@ imgContent = '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" alt=""
 imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;color:var(--text-muted);' : 'font-size:26px;color:var(--text-muted);') + '"></i>';
 }
 
-// ⚡ OPTIMISATION : content-visibility auto sur les cartes
 html += '<div class="pos-product-card ' + sc + '" style="' + cardStyle + 'content-visibility:auto;contain-intrinsic-size:150px 150px;" onclick="posAddToCartOrOpenOptions(\'' + p.id + '\')">' +
 '<div class="pos-product-img" style="' + imgStyle + '">' + imgContent + '</div>' +
 '<div class="pos-product-info" style="display:flex;flex-direction:column;align-items:center;width:100%;flex:1;justify-content:center;overflow:hidden;min-height:0;">' +
@@ -1089,7 +1063,6 @@ grid.innerHTML = html;
 updateClearButtonVisibility();
 }
 
-// ==================== AFFICHER LES CATÉGORIES - VERSION CORRIGÉE ====================
 function afficherCategories(grid) {
 var isMobile = window.innerWidth < 700;
 var isTablette = window.innerWidth >= 700 && window.innerWidth <= 1024;
@@ -1204,7 +1177,6 @@ html += '<div class="pos-category-card" data-cat-name="' + escapeHtml(cat.nom) +
 grid.innerHTML = html;
 }
 
-// ==================== SÉLECTIONNER UNE CATÉGORIE - AVEC TEXTE NOIR SUR FOND BLANC ====================
 function selectionnerCategorie(catName) {
 document.querySelectorAll('.pos-category-card').forEach(function(card) {
 card.classList.remove('active');
@@ -1245,7 +1217,6 @@ filterProductGrid();
 }
 }
 
-// ==================== RETOURNER AUX CATÉGORIES ====================
 function retournerCategories() {
 document.querySelectorAll('.pos-category-card').forEach(function(card) {
 card.classList.remove('active');
@@ -1272,7 +1243,6 @@ filterProductGrid();
 }
 }
 
-// ⚡ OPTIMISATION : cache de recherche client
 function posSearchClient(query){
 var q = query.toLowerCase().trim();
 posCurrentClient = null;
@@ -1289,7 +1259,6 @@ return;
 }
 if (clearBtn) clearBtn.style.display = 'flex';
 
-// ⚡ OPTIMISATION : cache de recherche client
 if (typeof window.clientSearchCache === 'undefined') {
     window.clientSearchCache = {};
 }
@@ -1622,7 +1591,6 @@ console.error('❌ Erreur récupération produit:', err);
 });
 }
 
-// ==================== updateCartOnly - NOM SUR UNE LIGNE ====================
 function updateCartOnly(){
 if(!isOnPOSPage()) return;
 var ci=document.querySelector('.pos-cart-items');
@@ -1696,7 +1664,6 @@ return;
 buildFullPOS(c);
 }
 
-// ==================== buildFullPOS AVEC HAUTEURS CORRIGÉES ET DESIGN MODERNE ====================
 function buildFullPOS(c){
 if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#14B8A6;"></i><p>Chargement...</p></div>'; return; }
 var st=posCalculateTotal(),t=st-posDiscountMAD;
@@ -1719,7 +1686,6 @@ var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-con
 '</div>' +
 '</div>';
 
-// ==================== BARRE MULTI-PANIERS AVEC NOM DU CLIENT - VERSION AMÉLIORÉE ====================
 var multiCartBar = '<div class="pos-multi-carts-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border);margin-bottom:4px;">';
 
 var cartCount = Object.keys(posMultiCarts).length;
@@ -1818,7 +1784,6 @@ multiCartBar +
 '</div>' +
 '</div>' +
 
-// ⚡ OPTIMISATION : content-visibility sur la grille
 '<div class="pos-products-grid" id="posProductGrid" style="grid-template-columns:'+gridCols+';gap:'+gridGap+';padding:'+gridPadding+';overflow-x:hidden;overflow-y:auto;flex-wrap:wrap;align-content:start;flex:1;contain:layout paint;content-visibility:auto;"></div>' +
 '</div>' +
 
@@ -1958,7 +1923,6 @@ setStaticBackButtonVisibility(true);
 if (posCurrentClient && posCurrentClient.id) {
 updateClientCreditDisplay(posCurrentClient.id);
 }
-// 🔥 CORRECTION : réinitialiser le mode quantité AVANT de passer en mode paiement
 if (typeof window.resetVoiceQuantityMode === 'function') {
     window.resetVoiceQuantityMode();
 }
@@ -2020,126 +1984,232 @@ return false;
 }
 }
 
+// ============================================================
+// ✅ posFinalizeSale() — CORRIGÉE POUR LE MODE HORS-LIGNE
+// ============================================================
 async function posFinalizeSale(){
+// ==================== VÉRIFICATIONS DE BASE ====================
 if(posCart.length === 0){
-alert('❌ Le panier est vide. Ajoutez des articles avant de finaliser.');
-return;
+    alert('❌ Le panier est vide. Ajoutez des articles avant de finaliser.');
+    return;
 }
-
 if(isFinalizing) return;
-var st=posCalculateTotal(), t=st-posDiscountMAD;
+
+var st = posCalculateTotal();
+var t = st - posDiscountMAD;
+
 if(!posCurrentClient && !posCurrentTable){ posCurrentClient = { id: null, name: 'Passager' }; }
 if(posCurrentTable && (posPaymentMethod==='credit'||posPaymentMethod==='partiel')){ alert('Table = espèces uniquement.'); return; }
 if((posPaymentMethod==='credit'||posPaymentMethod==='partiel') && !posCurrentClient){ alert('Client requis pour crédit/partiel.'); return; }
+
 if(posPaymentMethod==='espece' || posPaymentMethod==='partiel'){
-var amountInput = document.getElementById('posAmountGiven');
-var givenAmount = parseFloat(amountInput ? amountInput.value : 0) || 0;
-if (givenAmount <= 0) { posAmountGiven = t; if (amountInput) amountInput.value = t.toFixed(2); }
-else { posAmountGiven = givenAmount; }
-if(posPaymentMethod==='espece' && posAmountGiven < t){ alert('Montant insuffisant.'); return; }
+    var amountInput = document.getElementById('posAmountGiven');
+    var givenAmount = parseFloat(amountInput ? amountInput.value : 0) || 0;
+    if (givenAmount <= 0) { posAmountGiven = t; if (amountInput) amountInput.value = t.toFixed(2); }
+    else { posAmountGiven = givenAmount; }
+    if(posPaymentMethod==='espece' && posAmountGiven < t){ alert('Montant insuffisant.'); return; }
 }
-isFinalizing=true;
-var fb=document.querySelector('.pos-finalize-btn');
-if(fb){ fb.disabled=true; fb.textContent='⏳...'; }
-var vendeur=document.getElementById('posVendeur').value.trim()||(window.currentUserData?window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom:'');
-try{
-var fn=getNextFactureNum(), remaining=0, paid=true, statutPaiement='payé', change=0;
-if(posPaymentMethod==='credit'){ paid=false; remaining=t; statutPaiement='crédit'; }
-else if(posPaymentMethod==='partiel'){ remaining = t - posAmountGiven; paid = false; statutPaiement='partiel'; change = Math.max(0, posAmountGiven - t); }
-else { change = posAmountGiven - t; }
-if(posCurrentTable && !posCurrentClient){ paid=false; statutPaiement='en_attente'; remaining=t; }
-var profitTotal=0, itemsDetail=posCart.map(function(it){
-var pa=it.prixAchat||0, pvn=it.prixVente||0, pp=it.prixPromo||0, pvr=pp>0?pp:pvn, prof=(pvr-pa)*it.quantite;
-profitTotal+=prof;
-return {id:it.id, nom:it.nom, quantite:it.quantite, prixVente:pvr, prixAchat:pa, prixPromo:pp, profit:prof, sauces:[], interdits:it.interdits||[], epice:it.epice||'Normal', sel:it.sel||'Normal'};
-});
-var sd={factureNum:fn, items:itemsDetail, subtotal:st, discountMAD:posDiscountMAD, total:t, clientId:posCurrentClient ? posCurrentClient.id : null, clientName:posCurrentClient ? posCurrentClient.name : 'Passager', table:posCurrentTable || null, vendeur:vendeur, paymentMethod:posPaymentMethod, statutPaiement:statutPaiement, amountGiven:posAmountGiven, change:change, paid:paid, remainingAmount:remaining, profitTotal:profitTotal, createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-var batch=db.batch(), ventesRef=db.collection('ventes').doc();
-batch.set(ventesRef,sd);
-if(!paid){ var creditsRef=db.collection('credits').doc(); batch.set(creditsRef,sd); }
-if(window.posCommandeId){ batch.update(db.collection('commandes').doc(window.posCommandeId), {statut:'payé', paidAt:firebase.firestore.FieldValue.serverTimestamp(), factureNum:fn}); delete window.posCommandeId; }
-if(window.posVenteId){ batch.update(db.collection('ventes').doc(window.posVenteId), {paid:true, statutPaiement:'payé', remainingAmount:0, paidAt:firebase.firestore.FieldValue.serverTimestamp()}); delete window.posVenteId; }
-for(var i=0;i<posCart.length;i++){ var it=posCart[i]; batch.update(db.collection('products').doc(it.id), {stock:firebase.firestore.FieldValue.increment(-it.quantite), vendues:firebase.firestore.FieldValue.increment(it.quantite), ca:firebase.firestore.FieldValue.increment(it.prixUnitaire*it.quantite)}); }
-await batch.commit();
 
-localStorage.removeItem('posSavedState');
+// ==================== VERROUILLAGE UI ====================
+isFinalizing = true;
+var fb = document.querySelector('.pos-finalize-btn');
+if(fb){ fb.disabled = true; fb.textContent = '⏳...'; }
 
-if(posCurrentClient && posCurrentClient.id && paid) {
+var vendeur = '';
 try {
-const success = await forceUpdateClient(posCurrentClient.id, t, profitTotal);
-if (success) {
-console.log('✅ Client mis à jour avec succès !');
-} else {
-console.warn('⚠️ Échec de la mise à jour client');
+    var vInput = document.getElementById('posVendeur');
+    if (vInput) vendeur = vInput.value.trim();
+} catch(e) {}
+if (!vendeur && window.currentUserData) {
+    vendeur = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
 }
+
+try {
+    // ==================== CONSTRUCTION DES DONNÉES ====================
+    var fn = getNextFactureNum();
+    var remaining = 0, paid = true, statutPaiement = 'payé', change = 0;
+
+    if(posPaymentMethod==='credit'){ paid=false; remaining=t; statutPaiement='crédit'; }
+    else if(posPaymentMethod==='partiel'){ remaining = t - posAmountGiven; paid = false; statutPaiement='partiel'; change = Math.max(0, posAmountGiven - t); }
+    else { change = posAmountGiven - t; }
+    if(posCurrentTable && !posCurrentClient){ paid=false; statutPaiement='en_attente'; remaining=t; }
+
+    var profitTotal = 0;
+    var itemsDetail = posCart.map(function(it){
+        var pa=it.prixAchat||0, pvn=it.prixVente||0, pp=it.prixPromo||0;
+        var pvr = pp>0 ? pp : pvn;
+        var prof = (pvr-pa) * it.quantite;
+        profitTotal += prof;
+        return {id:it.id, nom:it.nom, quantite:it.quantite, prixVente:pvr, prixAchat:pa, prixPromo:pp, profit:prof, sauces:[], interdits:it.interdits||[], epice:it.epice||'Normal', sel:it.sel||'Normal'};
+    });
+
+    // ✅ DONNÉES PURES (sans FieldValue) — utilisables pour localStorage
+    var venteData = {
+        factureNum: fn,
+        items: itemsDetail,
+        subtotal: st,
+        discountMAD: posDiscountMAD,
+        total: t,
+        clientId: posCurrentClient ? posCurrentClient.id : null,
+        clientName: posCurrentClient ? posCurrentClient.name : 'Passager',
+        table: posCurrentTable || null,
+        vendeur: vendeur,
+        paymentMethod: posPaymentMethod,
+        statutPaiement: statutPaiement,
+        amountGiven: posAmountGiven,
+        change: change,
+        paid: paid,
+        remainingAmount: remaining,
+        profitTotal: profitTotal,
+        achat: itemsDetail.reduce(function(s, it){ return s + (it.prixAchat || 0) * (it.quantite || 1); }, 0),
+        createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 },
+        _offlineCreatedAt: new Date().toISOString()
+    };
+
+    // ============================================================
+    // 📴 DÉTECTION HORS-LIGNE (AVANT tout appel Firestore)
+    // ============================================================
+    var isOffline = !navigator.onLine;
+    console.log('🎯 FINALIZE — isOffline:', isOffline, '| total:', t.toFixed(2));
+
+    if (isOffline) {
+        // ================= MODE HORS-LIGNE PUR =================
+        // AUCUN appel Firestore. Sauvegarde locale uniquement.
+        console.log('📴 MODE HORS-LIGNE — enregistrement localStorage');
+
+        var venteOfflineId = 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        var venteOffline = Object.assign({}, venteData, {
+            id: venteOfflineId,
+            _isOffline: true
+        });
+
+        try {
+            var ventesLS = JSON.parse(localStorage.getItem('posVentesOffline') || '[]');
+            ventesLS.push(venteOffline);
+            localStorage.setItem('posVentesOffline', JSON.stringify(ventesLS));
+            console.log('✅ Vente hors-ligne sauvegardée :', venteOfflineId);
+        } catch(e) {
+            console.error('❌ Erreur localStorage:', e);
+        }
+
+        // Mise à jour stock local (mémoire)
+        for (var i = 0; i < posCart.length; i++) {
+            var itm = posCart[i];
+            var prod = posProductsList.find(function(p) { return p.id === itm.id; });
+            if (prod) {
+                if (prod.stock !== undefined) prod.stock = Math.max(0, prod.stock - itm.quantite);
+                prod.vendues = (prod.vendues || 0) + itm.quantite;
+                prod.ca = (prod.ca || 0) + (itm.prixUnitaire * itm.quantite);
+            }
+        }
+
+        // Mise à jour client local (mémoire)
+        if (posCurrentClient && posCurrentClient.id && paid) {
+            var cli = posAllClients.find(function(c) { return c.id === posCurrentClient.id; });
+            if (cli) {
+                cli.ca = (cli.ca || 0) + t;
+                cli.profit = (cli.profit || 0) + profitTotal;
+            }
+        }
+
+        // Notification visuelle
+        var notif = document.createElement('div');
+        notif.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:99999;padding:14px 18px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:12px;color:#92400E;font-family:sans-serif;font-size:0.95rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-width:340px;';
+        notif.innerHTML = '<strong>📴 Vente enregistrée hors-ligne</strong><br><span style="font-size:0.85rem;">Facture #' + fn + ' — ' + t.toFixed(2) + ' MAD</span>';
+        document.body.appendChild(notif);
+        setTimeout(function() {
+            notif.style.opacity = '0';
+            notif.style.transition = 'opacity 0.3s';
+            setTimeout(function() { notif.remove(); }, 300);
+        }, 4000);
+
+    } else {
+        // ================= MODE EN LIGNE =================
+        console.log('🌐 MODE EN LIGNE — envoi Firestore');
+
+        var batch = db.batch();
+        var ventesRef = db.collection('ventes').doc();
+        var sd = Object.assign({}, venteData, {
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        delete sd._offlineCreatedAt;
+
+        batch.set(ventesRef, sd);
+
+        if(!paid){
+            var creditsRef = db.collection('credits').doc();
+            batch.set(creditsRef, sd);
+        }
+
+        if(window.posCommandeId){
+            batch.update(db.collection('commandes').doc(window.posCommandeId), {
+                statut:'payé',
+                paidAt:firebase.firestore.FieldValue.serverTimestamp(),
+                factureNum:fn
+            });
+            delete window.posCommandeId;
+        }
+        if(window.posVenteId){
+            batch.update(db.collection('ventes').doc(window.posVenteId), {
+                paid:true,
+                statutPaiement:'payé',
+                remainingAmount:0,
+                paidAt:firebase.firestore.FieldValue.serverTimestamp()
+            });
+            delete window.posVenteId;
+        }
+
+        for(var j=0;j<posCart.length;j++){
+            var itj = posCart[j];
+            batch.update(db.collection('products').doc(itj.id), {
+                stock: firebase.firestore.FieldValue.increment(-itj.quantite),
+                vendues: firebase.firestore.FieldValue.increment(itj.quantite),
+                ca: firebase.firestore.FieldValue.increment(itj.prixUnitaire*itj.quantite)
+            });
+        }
+
+        await batch.commit();
+        console.log('✅ Vente envoyée à Firestore');
+
+        if(posCurrentClient && posCurrentClient.id && paid) {
+            try { await forceUpdateClient(posCurrentClient.id, t, profitTotal); }
+            catch(e) { console.warn('⚠️ forceUpdateClient:', e); }
+        }
+
+        // Sauvegarde dans le cache local aussi
+        try {
+            if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+                await CacheDB.set('ventes', ventesRef.id, Object.assign({id: ventesRef.id}, venteData));
+            }
+        } catch(e) {}
+    }
+
+    // ============================================================
+    // ✅ RESET + RETOUR ÉTAPE 1 (DANS LES 2 CAS)
+    // ============================================================
+    localStorage.removeItem('posSavedState');
+    if (posCurrentClient && posCurrentClient.id) {
+        clientCreditsCache[posCurrentClient.id] = undefined;
+    }
+
+    posResetCart();
+    posStep = 1;
+    window.posStep = 1;
+    if(isOnPOSPage()) renderPOS();
+
+    if (!isOffline && navigator.onLine) {
+        setTimeout(function(){ 
+            if (typeof CacheDB !== 'undefined' && CacheDB.sync) CacheDB.sync().catch(function(){}); 
+        }, 500);
+    }
+
 } catch(e) {
-console.warn('⚠️ Erreur mise à jour client:', e);
+    console.error('❌ Erreur finalize:', e);
+    alert('Erreur: ' + e.message);
+} finally {
+    isFinalizing = false;
+    if(fb){ fb.disabled = false; fb.innerHTML = '<i class="fas fa-check-circle"></i> Finaliser'; }
 }
-}
-
-if (posCurrentClient && posCurrentClient.id) {
-clientCreditsCache[posCurrentClient.id] = undefined;
-}
-var venteId = ventesRef.id;
-if (typeof window.sendWhatsApp === 'function') {
-var originalCloseModal = window.closeModal;
-window.closeModal = function() {
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-window.closeModal = originalCloseModal;
-var o = document.getElementById('modalOverlay');
-if (o) o.classList.add('hidden');
-window.editingId = null;
-};
-var modalHtml = '<p style="text-align:center;">Voulez-vous envoyer la facture par WhatsApp ?</p><div style="display:flex;justify-content:center;gap:10px;margin-top:15px;"><button class="btn-save" id="whatsappYesBtn">✅ Oui</button><button class="btn-cancel" id="whatsappNoBtn">❌ Non</button></div>';
-openModal('📱 Envoyer la facture WhatsApp', modalHtml);
-setTimeout(function() {
-var yesBtn = document.getElementById('whatsappYesBtn'), noBtn = document.getElementById('whatsappNoBtn');
-if (yesBtn) { yesBtn.addEventListener('click', function() {
-window.closeModal = originalCloseModal;
-closeModal();
-if (typeof window.posStopVoiceSearch === 'function') window.posStopVoiceSearch();
-window.sendWhatsApp(venteId);
-setTimeout(function() {
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-}, 500);
-}); }
-if (noBtn) { noBtn.addEventListener('click', function() {
-window.closeModal = originalCloseModal;
-closeModal();
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-}); }
-}, 100);
-} else {
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-}
-
-if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-setTimeout(function() {
-CacheDB.saveCollection('ventes');
-CacheDB.saveCollection('products');
-CacheDB.saveCollection('clients');
-CacheDB.saveCollection('credits');
-}, 500);
-}
-
-}catch(e){ alert('Erreur: '+e.message); }
-finally { isFinalizing=false; if(fb){ fb.disabled=false; fb.innerHTML='<i class="fas fa-check-circle"></i> Finaliser'; } }
 }
 
 function posResetCart() {
@@ -2197,7 +2267,6 @@ btn.style.display = (input.value && input.value.length > 0) ? 'flex' : 'none';
 
 function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userData.role==='caissier'||window.currentUserData.userData.role==='admin')){ if(posCart.length>0&&posStep===1){ if(!confirm('⚠️ '+posCart.length+' article(s) dans le panier. Garder ?')) posResetCart(); } navigateTo('pos'); } }
 
-// ==================== AJOUT RAPIDE D'UN NOUVEAU CLIENT (COMPATIBLE ADMIN-CRUD) ====================
 function posAjouterNouveauClient() {
     var modalHtml = `
         <div style="padding:10px;">
@@ -2374,7 +2443,6 @@ async function posConfirmerAjoutClient() {
     }
 }
 
-// ==================== CORRECTION MOBILE PANIER EN BAS ====================
 function corrigerDispositionMobile() {
 if (window.innerWidth <= 700) {
 var row = document.querySelector('.pos-row');
@@ -2430,7 +2498,6 @@ window.posToolsVisible = posToolsVisible;
 window.applyDynamicContentScroll = applyDynamicContentScroll;
 window.forceUpdateClient = forceUpdateClient;
 window.corrigerDispositionMobile = corrigerDispositionMobile;
-// Multi-paniers
 window.posMultiCarts = posMultiCarts;
 window.posCurrentCartId = posCurrentCartId;
 window.posMultiCartCounter = posMultiCartCounter;
@@ -2446,9 +2513,98 @@ window.posGetTotalAllCarts = posGetTotalAllCarts;
 window.posSauvegarderDonneesPanier = posSauvegarderDonneesPanier;
 window.posRestaurerDonneesPanier = posRestaurerDonneesPanier;
 window.posChargerToutesDonneesPaniers = posChargerToutesDonneesPaniers;
-// Ajout rapide client
 window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
+
+// ============================================================
+// 🔄 SYNCHRONISATION AUTOMATIQUE DES VENTES HORS-LIGNE
+// ============================================================
+async function posSyncVentesOffline() {
+    if (!navigator.onLine) return;
+
+    var ventes = [];
+    try {
+        ventes = JSON.parse(localStorage.getItem('posVentesOffline') || '[]');
+    } catch(e) { return; }
+    if (ventes.length === 0) return;
+
+    console.log('🔄 Sync de', ventes.length, 'vente(s) hors-ligne...');
+
+    var restantes = [];
+    for (var i = 0; i < ventes.length; i++) {
+        var v = ventes[i];
+        try {
+            var sd = {
+                factureNum: v.factureNum,
+                items: v.items,
+                subtotal: v.subtotal,
+                discountMAD: v.discountMAD,
+                total: v.total,
+                clientId: v.clientId,
+                clientName: v.clientName,
+                table: v.table,
+                vendeur: v.vendeur,
+                paymentMethod: v.paymentMethod,
+                statutPaiement: v.statutPaiement,
+                amountGiven: v.amountGiven,
+                change: v.change,
+                paid: v.paid,
+                remainingAmount: v.remainingAmount,
+                profitTotal: v.profitTotal,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                _offlineCreatedAt: v._offlineCreatedAt
+            };
+
+            var batch = db.batch();
+            var ventesRef = db.collection('ventes').doc();
+            batch.set(ventesRef, sd);
+
+            if (!v.paid) {
+                var creditsRef = db.collection('credits').doc();
+                batch.set(creditsRef, sd);
+            }
+
+            if (v.items) {
+                for (var j = 0; j < v.items.length; j++) {
+                    var it = v.items[j];
+                    batch.update(db.collection('products').doc(it.id), {
+                        stock: firebase.firestore.FieldValue.increment(-it.quantite),
+                        vendues: firebase.firestore.FieldValue.increment(it.quantite),
+                        ca: firebase.firestore.FieldValue.increment(it.prixVente * it.quantite)
+                    });
+                }
+            }
+
+            await batch.commit();
+
+            if (v.clientId && v.paid) {
+                try { await forceUpdateClient(v.clientId, v.total, v.profitTotal); } catch(e) {}
+            }
+
+            console.log('✅ Vente hors-ligne synchronisée:', v.factureNum);
+        } catch(e) {
+            console.warn('⚠️ Échec sync', v.factureNum, ':', e.message);
+            restantes.push(v);
+        }
+    }
+
+    try { localStorage.setItem('posVentesOffline', JSON.stringify(restantes)); } catch(e) {}
+    console.log('✅ Sync terminée. Restantes:', restantes.length);
+}
+
+if (!window._posSyncOfflineAttached) {
+    window._posSyncOfflineAttached = true;
+    window.addEventListener('online', function() {
+        console.log('🌐 Connexion rétablie — sync...');
+        setTimeout(posSyncVentesOffline, 1000);
+    });
+    setInterval(function() {
+        if (navigator.onLine) posSyncVentesOffline();
+    }, 30000);
+    setTimeout(function() { if (navigator.onLine) posSyncVentesOffline(); }, 3000);
+}
+
+window.posSyncVentesOffline = posSyncVentesOffline;
 
 console.log('🚀 E-SOLUTION - POS chargé avec corrections');
 console.log('✅ forceUpdateClient disponible');
@@ -2456,11 +2612,8 @@ console.log('✅ Bouton "Afficher tout" corrigé');
 console.log('✅ Correction mobile panier en bas');
 console.log('✅ Crédit client cliquable - REDIRECTION VERS PAGE CRÉDITS AVEC SAUVEGARDE D\'ÉTAT');
 console.log('✅ Catégories actives : texte noir sur fond blanc');
-console.log('✅ Multi-paniers activé - ' + Object.keys(posMultiCarts).length + ' panier(s) disponible(s)');
-console.log('✅ Chaque panier sauvegarde son propre client, table, paiement, remise, montant donné');
-console.log('✅ Ajout rapide de client avec bouton "Nouveau" dans la section paiement');
+console.log('✅ Multi-paniers activé');
+console.log('✅ Ajout rapide de client');
 console.log('✅ LIMITE À ' + MAX_PANIERS + ' PANIERS MAXIMUM');
-console.log('✅ NAVIGATION FLUIDE ENTRE PANIERS AVEC RE-RENDU COMPLET');
-console.log('✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET');
-console.log('✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À ' + MAX_PANIERS + ')');
+console.log('✅ 📴 MODE HORS-LIGNE : sauvegarde localStorage + sync auto');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
