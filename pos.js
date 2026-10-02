@@ -19,6 +19,7 @@
 // ✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER
 // ✅ NOUVEAU : 🎤 MODULE IA SÉPARÉ dans pos-ai.js
 // ✅ 🎤 MICRO AUTONOME : plus besoin de pos-audio.js
+// ✅ 📴 MODE HORS-LIGNE : enregistre les ventes localement + sync auto
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -80,6 +81,80 @@ var posMultiCartCounter = 1;
 var posMultiPaniersData = {};
 
 var MAX_PANIERS = 5;
+
+// ============================================================
+// 📡 GESTION HORS-LIGNE
+// ============================================================
+function posIsOnline() {
+    return navigator.onLine;
+}
+
+var posOfflineQueueCount = 0;
+
+function posAfficherStatutConnexion() {
+    var indicator = document.getElementById('posConnectionIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'posConnectionIndicator';
+        indicator.style.cssText = `
+            position: fixed; top: 10px; right: 10px; z-index: 99999;
+            padding: 8px 14px; border-radius: 20px; font-size: 0.85rem;
+            font-weight: 700; font-family: sans-serif; display: flex;
+            align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+        `;
+        document.body.appendChild(indicator);
+    }
+
+    (async function() {
+        var count = 0;
+        try {
+            if (typeof getAllPendingOperations === 'function') {
+                var pending = await getAllPendingOperations();
+                count = pending.length;
+                posOfflineQueueCount = count;
+            }
+        } catch(e) {}
+
+        var online = posIsOnline();
+        if (!online) {
+            indicator.style.background = '#FEE2E2';
+            indicator.style.color = '#991B1B';
+            indicator.innerHTML = '📴 Hors-ligne' + (count > 0 ? ' — ' + count + ' en attente' : '');
+        } else if (count > 0) {
+            indicator.style.background = '#FEF3C7';
+            indicator.style.color = '#92400E';
+            indicator.innerHTML = '⏳ ' + count + ' à synchroniser';
+        } else {
+            indicator.style.background = '#D1FAE5';
+            indicator.style.color = '#065F46';
+            indicator.innerHTML = '✅ En ligne';
+            setTimeout(function() {
+                if (indicator && posIsOnline() && posOfflineQueueCount === 0) {
+                    indicator.style.opacity = '0.3';
+                }
+            }, 3000);
+        }
+        indicator.style.opacity = '1';
+    })();
+}
+
+if (!window._posOfflineListeners) {
+    window._posOfflineListeners = true;
+    window.addEventListener('online', function() {
+        console.log('🌐 Connexion rétablie');
+        posAfficherStatutConnexion();
+        if (typeof CacheDB !== 'undefined' && CacheDB.sync) {
+            CacheDB.sync().then(function() {
+                posAfficherStatutConnexion();
+            });
+        }
+    });
+    window.addEventListener('offline', function() {
+        console.log('📴 Connexion perdue');
+        posAfficherStatutConnexion();
+    });
+}
 
 // ======================================================
 // ✅ FONCTION DE FORCE POUR METTRE À JOUR LE CLIENT
@@ -614,6 +689,7 @@ displayEl.onclick = null;
 
 async function loadPosPage(c){
 applyDynamicContentScroll();
+posAfficherStatutConnexion();
 posChargerToutesDonneesPaniers();
 posLoadMultiCarts();
 
@@ -1618,117 +1694,280 @@ catch(e) { console.error('❌ Erreur updateClientFidelityAsync:', e); return fal
 }
 
 async function posFinalizeSale(){
-if(posCart.length === 0){
-alert('❌ Le panier est vide. Ajoutez des articles avant de finaliser.');
-return;
-}
-if(isFinalizing) return;
-var st=posCalculateTotal(), t=st-posDiscountMAD;
-if(!posCurrentClient && !posCurrentTable){ posCurrentClient = { id: null, name: 'Passager' }; }
-if(posCurrentTable && (posPaymentMethod==='credit'||posPaymentMethod==='partiel')){ alert('Table = espèces uniquement.'); return; }
-if((posPaymentMethod==='credit'||posPaymentMethod==='partiel') && !posCurrentClient){ alert('Client requis pour crédit/partiel.'); return; }
-if(posPaymentMethod==='espece' || posPaymentMethod==='partiel'){
-var amountInput = document.getElementById('posAmountGiven');
-var givenAmount = parseFloat(amountInput ? amountInput.value : 0) || 0;
-if (givenAmount <= 0) { posAmountGiven = t; if (amountInput) amountInput.value = t.toFixed(2); }
-else { posAmountGiven = givenAmount; }
-if(posPaymentMethod==='espece' && posAmountGiven < t){ alert('Montant insuffisant.'); return; }
-}
-isFinalizing=true;
-var fb=document.querySelector('.pos-finalize-btn');
-if(fb){ fb.disabled=true; fb.textContent='⏳...'; }
-var vendeur=document.getElementById('posVendeur').value.trim()||(window.currentUserData?window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom:'');
-try{
-var fn=getNextFactureNum(), remaining=0, paid=true, statutPaiement='payé', change=0;
-if(posPaymentMethod==='credit'){ paid=false; remaining=t; statutPaiement='crédit'; }
-else if(posPaymentMethod==='partiel'){ remaining = t - posAmountGiven; paid = false; statutPaiement='partiel'; change = Math.max(0, posAmountGiven - t); }
-else { change = posAmountGiven - t; }
-if(posCurrentTable && !posCurrentClient){ paid=false; statutPaiement='en_attente'; remaining=t; }
-var profitTotal=0, itemsDetail=posCart.map(function(it){
-var pa=it.prixAchat||0, pvn=it.prixVente||0, pp=it.prixPromo||0, pvr=pp>0?pp:pvn, prof=(pvr-pa)*it.quantite;
-profitTotal+=prof;
-return {id:it.id, nom:it.nom, quantite:it.quantite, prixVente:pvr, prixAchat:pa, prixPromo:pp, profit:prof, sauces:[], interdits:it.interdits||[], epice:it.epice||'Normal', sel:it.sel||'Normal'};
-});
-var sd={factureNum:fn, items:itemsDetail, subtotal:st, discountMAD:posDiscountMAD, total:t, clientId:posCurrentClient ? posCurrentClient.id : null, clientName:posCurrentClient ? posCurrentClient.name : 'Passager', table:posCurrentTable || null, vendeur:vendeur, paymentMethod:posPaymentMethod, statutPaiement:statutPaiement, amountGiven:posAmountGiven, change:change, paid:paid, remainingAmount:remaining, profitTotal:profitTotal, createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-var batch=db.batch(), ventesRef=db.collection('ventes').doc();
-batch.set(ventesRef,sd);
-if(!paid){ var creditsRef=db.collection('credits').doc(); batch.set(creditsRef,sd); }
-if(window.posCommandeId){ batch.update(db.collection('commandes').doc(window.posCommandeId), {statut:'payé', paidAt:firebase.firestore.FieldValue.serverTimestamp(), factureNum:fn}); delete window.posCommandeId; }
-if(window.posVenteId){ batch.update(db.collection('ventes').doc(window.posVenteId), {paid:true, statutPaiement:'payé', remainingAmount:0, paidAt:firebase.firestore.FieldValue.serverTimestamp()}); delete window.posVenteId; }
-for(var i=0;i<posCart.length;i++){ var it=posCart[i]; batch.update(db.collection('products').doc(it.id), {stock:firebase.firestore.FieldValue.increment(-it.quantite), vendues:firebase.firestore.FieldValue.increment(it.quantite), ca:firebase.firestore.FieldValue.increment(it.prixUnitaire*it.quantite)}); }
-await batch.commit();
+    if(posCart.length === 0){
+        alert('❌ Le panier est vide. Ajoutez des articles avant de finaliser.');
+        return;
+    }
+    if(isFinalizing) return;
 
-localStorage.removeItem('posSavedState');
+    var st=posCalculateTotal(), t=st-posDiscountMAD;
+    if(!posCurrentClient && !posCurrentTable){ posCurrentClient = { id: null, name: 'Passager' }; }
+    if(posCurrentTable && (posPaymentMethod==='credit'||posPaymentMethod==='partiel')){ alert('Table = espèces uniquement.'); return; }
+    if((posPaymentMethod==='credit'||posPaymentMethod==='partiel') && !posCurrentClient){ alert('Client requis pour crédit/partiel.'); return; }
 
-if(posCurrentClient && posCurrentClient.id && paid) {
-try {
-const success = await forceUpdateClient(posCurrentClient.id, t, profitTotal);
-if (success) console.log('✅ Client mis à jour avec succès !');
-else console.warn('⚠️ Échec de la mise à jour client');
-} catch(e) { console.warn('⚠️ Erreur mise à jour client:', e); }
-}
+    if(posPaymentMethod==='espece' || posPaymentMethod==='partiel'){
+        var amountInput = document.getElementById('posAmountGiven');
+        var givenAmount = parseFloat(amountInput ? amountInput.value : 0) || 0;
+        if (givenAmount <= 0) { posAmountGiven = t; if (amountInput) amountInput.value = t.toFixed(2); }
+        else { posAmountGiven = givenAmount; }
+        if(posPaymentMethod==='espece' && posAmountGiven < t){ alert('Montant insuffisant.'); return; }
+    }
 
-if (posCurrentClient && posCurrentClient.id) clientCreditsCache[posCurrentClient.id] = undefined;
-var venteId = ventesRef.id;
-if (typeof window.sendWhatsApp === 'function') {
-var originalCloseModal = window.closeModal;
-window.closeModal = function() {
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-window.closeModal = originalCloseModal;
-var o = document.getElementById('modalOverlay');
-if (o) o.classList.add('hidden');
-window.editingId = null;
-};
-var modalHtml = '<p style="text-align:center;">Voulez-vous envoyer la facture par WhatsApp ?</p><div style="display:flex;justify-content:center;gap:10px;margin-top:15px;"><button class="btn-save" id="whatsappYesBtn">✅ Oui</button><button class="btn-cancel" id="whatsappNoBtn">❌ Non</button></div>';
-openModal('📱 Envoyer la facture WhatsApp', modalHtml);
-setTimeout(function() {
-var yesBtn = document.getElementById('whatsappYesBtn'), noBtn = document.getElementById('whatsappNoBtn');
-if (yesBtn) yesBtn.addEventListener('click', function() {
-window.closeModal = originalCloseModal;
-closeModal();
-if (typeof window.posStopVoiceSearch === 'function') window.posStopVoiceSearch();
-window.sendWhatsApp(venteId);
-setTimeout(function() {
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-}, 500);
-});
-if (noBtn) noBtn.addEventListener('click', function() {
-window.closeModal = originalCloseModal;
-closeModal();
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-});
-}, 100);
-} else {
-posResetCart();
-posStep = 1;
-window.posStep = 1;
-if(isOnPOSPage()) renderPOS();
-if(navigator.onLine) setTimeout(function(){ CacheDB.sync().catch(function(){}); },500);
-}
+    isFinalizing=true;
+    var fb=document.querySelector('.pos-finalize-btn');
+    if(fb){ fb.disabled=true; fb.textContent='⏳...'; }
 
-if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-setTimeout(function() {
-CacheDB.saveCollection('ventes');
-CacheDB.saveCollection('products');
-CacheDB.saveCollection('clients');
-CacheDB.saveCollection('credits');
-}, 500);
-}
+    var vendeur = '';
+    try {
+        var vendeurInput = document.getElementById('posVendeur');
+        if (vendeurInput) vendeur = vendeurInput.value.trim();
+    } catch(e) {}
+    if (!vendeur && window.currentUserData) {
+        vendeur = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    }
 
-}catch(e){ alert('Erreur: '+e.message); }
-finally { isFinalizing=false; if(fb){ fb.disabled=false; fb.innerHTML='<i class="fas fa-check-circle"></i> Finaliser'; } }
+    try {
+        var fn=getNextFactureNum(), remaining=0, paid=true, statutPaiement='payé', change=0;
+        if(posPaymentMethod==='credit'){ paid=false; remaining=t; statutPaiement='crédit'; }
+        else if(posPaymentMethod==='partiel'){ remaining = t - posAmountGiven; paid = false; statutPaiement='partiel'; change = Math.max(0, posAmountGiven - t); }
+        else { change = posAmountGiven - t; }
+        if(posCurrentTable && !posCurrentClient){ paid=false; statutPaiement='en_attente'; remaining=t; }
+
+        var profitTotal=0, itemsDetail=posCart.map(function(it){
+            var pa=it.prixAchat||0, pvn=it.prixVente||0, pp=it.prixPromo||0, pvr=pp>0?pp:pvn, prof=(pvr-pa)*it.quantite;
+            profitTotal+=prof;
+            return {id:it.id, nom:it.nom, quantite:it.quantite, prixVente:pvr, prixAchat:pa, prixPromo:pp, profit:prof, sauces:[], interdits:it.interdits||[], epice:it.epice||'Normal', sel:it.sel||'Normal'};
+        });
+
+        var sd = {
+            factureNum: fn,
+            items: itemsDetail,
+            subtotal: st,
+            discountMAD: posDiscountMAD,
+            total: t,
+            clientId: posCurrentClient ? posCurrentClient.id : null,
+            clientName: posCurrentClient ? posCurrentClient.name : 'Passager',
+            table: posCurrentTable || null,
+            vendeur: vendeur,
+            paymentMethod: posPaymentMethod,
+            statutPaiement: statutPaiement,
+            amountGiven: posAmountGiven,
+            change: change,
+            paid: paid,
+            remainingAmount: remaining,
+            profitTotal: profitTotal,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            _offlineCreatedAt: new Date().toISOString()
+        };
+
+        // ============================================================
+        // 📴 DÉTECTION HORS-LIGNE
+        // ============================================================
+        var isOffline = !posIsOnline();
+        var venteId = null;
+
+        if (isOffline) {
+            // ================= MODE HORS-LIGNE =================
+            console.log('📴 MODE HORS-LIGNE — enregistrement local');
+
+            venteId = 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            sd._offlineId = venteId;
+
+            // 1) Mettre la vente en file d'attente
+            if (typeof CacheDB !== 'undefined' && CacheDB.addPendingOperation) {
+                await CacheDB.addPendingOperation({
+                    type: 'set',
+                    collection: 'ventes',
+                    docId: venteId,
+                    data: sd
+                });
+                await CacheDB.set('ventes', venteId, Object.assign({ id: venteId }, sd));
+            }
+
+            // 2) Crédit en attente si non payé
+            if (!paid && typeof CacheDB !== 'undefined' && CacheDB.addPendingOperation) {
+                var creditId = 'offline_credit_' + Date.now();
+                await CacheDB.addPendingOperation({
+                    type: 'set',
+                    collection: 'credits',
+                    docId: creditId,
+                    data: Object.assign({ _offlineId: creditId }, sd)
+                });
+                await CacheDB.set('credits', creditId, Object.assign({ id: creditId }, sd));
+            }
+
+            // 3) Mettre à jour le stock local (mémoire)
+            for (var i = 0; i < posCart.length; i++) {
+                var it = posCart[i];
+                var prod = posProductsList.find(function(p) { return p.id === it.id; });
+                if (prod) {
+                    if (prod.stock !== undefined) {
+                        prod.stock = Math.max(0, prod.stock - it.quantite);
+                    }
+                    prod.vendues = (prod.vendues || 0) + it.quantite;
+                    prod.ca = (prod.ca || 0) + (it.prixUnitaire * it.quantite);
+                }
+                if (typeof CacheDB !== 'undefined' && CacheDB.addPendingOperation) {
+                    await CacheDB.addPendingOperation({
+                        type: 'update',
+                        collection: 'products',
+                        docId: it.id,
+                        data: {
+                            stock: { __fieldValue: 'increment', value: -it.quantite },
+                            vendues: { __fieldValue: 'increment', value: it.quantite },
+                            ca: { __fieldValue: 'increment', value: it.prixUnitaire * it.quantite }
+                        }
+                    });
+                }
+            }
+
+            // 4) Mettre à jour le client local (CA / profit)
+            if (posCurrentClient && posCurrentClient.id && paid) {
+                var cli = posAllClients.find(function(c) { return c.id === posCurrentClient.id; });
+                if (cli) {
+                    cli.ca = (cli.ca || 0) + t;
+                    cli.profit = (cli.profit || 0) + profitTotal;
+                }
+                if (typeof CacheDB !== 'undefined' && CacheDB.addPendingOperation) {
+                    await CacheDB.addPendingOperation({
+                        type: 'update',
+                        collection: 'clients',
+                        docId: posCurrentClient.id,
+                        data: {
+                            ca: { __fieldValue: 'increment', value: t },
+                            profit: { __fieldValue: 'increment', value: profitTotal }
+                        }
+                    });
+                }
+            }
+
+            console.log('✅ Vente enregistrée hors-ligne :', venteId);
+
+            // Notification visuelle
+            var notif = document.createElement('div');
+            notif.style.cssText = `
+                position: fixed; bottom: 20px; right: 20px; z-index: 99999;
+                padding: 14px 18px; background: #FEF3C7; border: 2px solid #F59E0B;
+                border-radius: 12px; color: #92400E; font-family: sans-serif;
+                font-size: 0.95rem; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+                max-width: 340px;
+            `;
+            notif.innerHTML = '<strong>📴 Vente enregistrée hors-ligne</strong><br>' +
+                              '<span style="font-size:0.85rem;">Facture #' + fn + ' — ' + t.toFixed(2) + ' MAD<br>' +
+                              'Sera synchronisée automatiquement.</span>';
+            document.body.appendChild(notif);
+            setTimeout(function() {
+                notif.style.opacity = '0';
+                notif.style.transition = 'opacity 0.3s';
+                setTimeout(function() { notif.remove(); }, 300);
+            }, 5000);
+
+            posAfficherStatutConnexion();
+
+        } else {
+            // ================= MODE EN LIGNE =================
+            console.log('🌐 MODE EN LIGNE — envoi au serveur');
+
+            var batch=db.batch(), ventesRef=db.collection('ventes').doc();
+            venteId = ventesRef.id;
+            batch.set(ventesRef,sd);
+
+            if(!paid){ var creditsRef=db.collection('credits').doc(); batch.set(creditsRef,sd); }
+            if(window.posCommandeId){ batch.update(db.collection('commandes').doc(window.posCommandeId), {statut:'payé', paidAt:firebase.firestore.FieldValue.serverTimestamp(), factureNum:fn}); delete window.posCommandeId; }
+            if(window.posVenteId){ batch.update(db.collection('ventes').doc(window.posVenteId), {paid:true, statutPaiement:'payé', remainingAmount:0, paidAt:firebase.firestore.FieldValue.serverTimestamp()}); delete window.posVenteId; }
+            for(var j=0;j<posCart.length;j++){
+                var itj=posCart[j];
+                batch.update(db.collection('products').doc(itj.id), {
+                    stock:firebase.firestore.FieldValue.increment(-itj.quantite),
+                    vendues:firebase.firestore.FieldValue.increment(itj.quantite),
+                    ca:firebase.firestore.FieldValue.increment(itj.prixUnitaire*itj.quantite)
+                });
+            }
+            await batch.commit();
+
+            if(posCurrentClient && posCurrentClient.id && paid) {
+                try {
+                    await forceUpdateClient(posCurrentClient.id, t, profitTotal);
+                } catch(e) { console.warn('⚠️ Erreur forceUpdateClient:', e); }
+            }
+
+            if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+                try {
+                    await CacheDB.set('ventes', venteId, Object.assign({ id: venteId }, sd));
+                } catch(e) {}
+            }
+        }
+
+        localStorage.removeItem('posSavedState');
+        if (posCurrentClient && posCurrentClient.id) clientCreditsCache[posCurrentClient.id] = undefined;
+
+        // ============================================================
+        // WhatsApp (uniquement en ligne)
+        // ============================================================
+        if (!isOffline && typeof window.sendWhatsApp === 'function') {
+            var originalCloseModal = window.closeModal;
+            window.closeModal = function() {
+                posResetCart();
+                posStep = 1;
+                window.posStep = 1;
+                if(isOnPOSPage()) renderPOS();
+                if(posIsOnline()) setTimeout(function(){ if (CacheDB && CacheDB.sync) CacheDB.sync().catch(function(){}); }, 500);
+                window.closeModal = originalCloseModal;
+                var o = document.getElementById('modalOverlay');
+                if (o) o.classList.add('hidden');
+                window.editingId = null;
+            };
+            var modalHtml = '<p style="text-align:center;">Voulez-vous envoyer la facture par WhatsApp ?</p><div style="display:flex;justify-content:center;gap:10px;margin-top:15px;"><button class="btn-save" id="whatsappYesBtn">✅ Oui</button><button class="btn-cancel" id="whatsappNoBtn">❌ Non</button></div>';
+            openModal('📱 Envoyer la facture WhatsApp', modalHtml);
+            setTimeout(function() {
+                var yesBtn = document.getElementById('whatsappYesBtn'), noBtn = document.getElementById('whatsappNoBtn');
+                if (yesBtn) yesBtn.addEventListener('click', function() {
+                    window.closeModal = originalCloseModal;
+                    closeModal();
+                    if (typeof window.posStopVoiceSearch === 'function') window.posStopVoiceSearch();
+                    window.sendWhatsApp(venteId);
+                    setTimeout(function() {
+                        posResetCart();
+                        posStep = 1;
+                        window.posStep = 1;
+                        if(isOnPOSPage()) renderPOS();
+                    }, 500);
+                });
+                if (noBtn) noBtn.addEventListener('click', function() {
+                    window.closeModal = originalCloseModal;
+                    closeModal();
+                    posResetCart();
+                    posStep = 1;
+                    window.posStep = 1;
+                    if(isOnPOSPage()) renderPOS();
+                });
+            }, 100);
+        } else {
+            posResetCart();
+            posStep = 1;
+            window.posStep = 1;
+            if(isOnPOSPage()) renderPOS();
+            if(!isOffline && posIsOnline()) {
+                setTimeout(function(){ if (CacheDB && CacheDB.sync) CacheDB.sync().catch(function(){}); }, 500);
+            }
+        }
+
+        if (!isOffline && typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            setTimeout(function() {
+                CacheDB.saveCollection('ventes');
+                CacheDB.saveCollection('products');
+                CacheDB.saveCollection('clients');
+                CacheDB.saveCollection('credits');
+            }, 500);
+        }
+
+    } catch(e) {
+        console.error('❌ Erreur finalize:', e);
+        alert('Erreur: ' + e.message);
+    } finally {
+        isFinalizing=false;
+        if(fb){ fb.disabled=false; fb.innerHTML='<i class="fas fa-check-circle"></i> Finaliser'; }
+    }
 }
 
 function posResetCart() {
@@ -1760,7 +1999,6 @@ function posAfficherCommandesTables() { alert('Fonction à implémenter selon vo
 var posProductMicRecognition = null;
 
 function posToggleVoiceSearch() {
-    // Si une écoute est en cours → arrêter
     if (posProductMicRecognition) {
         try { posProductMicRecognition.stop(); } catch(e) {}
         posProductMicRecognition = null;
@@ -1786,7 +2024,6 @@ function posToggleVoiceSearch() {
     posProductMicRecognition.interimResults = false;
     posProductMicRecognition.maxAlternatives = 1;
 
-    // Feedback visuel
     var micBtn = document.getElementById('posMicBtn');
     if (micBtn) {
         micBtn.style.background = 'linear-gradient(135deg,#EF4444,#DC2626)';
@@ -2103,6 +2340,10 @@ window.posChargerToutesDonneesPaniers = posChargerToutesDonneesPaniers;
 window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 
+// ✅ Exposition hors-ligne
+window.posIsOnline = posIsOnline;
+window.posAfficherStatutConnexion = posAfficherStatutConnexion;
+
 // ✅ Exposition pour pos-ai.js
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 window.isOnPOSPage = isOnPOSPage;
@@ -2116,5 +2357,6 @@ console.log('✅ Multi-paniers activé');
 console.log('✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER');
 console.log('✅ Tous les champs client chargés (username, whatsapp, email, adresse)');
 console.log('✅ 🎤 Micro AUTONOME (plus besoin de pos-audio.js)');
+console.log('✅ 📴 MODE HORS-LIGNE activé');
 console.log('🎤 Module IA disponible via pos-ai.js (bouton 🎤 Gemini)');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
