@@ -19,7 +19,7 @@
 // ✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER
 // ✅ NOUVEAU : 🎤 MODULE IA SÉPARÉ dans pos-ai.js
 // ✅ 🎤 MICRO AUTONOME : plus besoin de pos-audio.js
-// ✅ 📴 MODE HORS-LIGNE : enregistre les ventes localement + sync auto
+// ✅ 📴 MODE HORS-LIGNE : enregistre les ventes localement + sync auto (SILENCIEUX)
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -83,76 +83,22 @@ var posMultiPaniersData = {};
 var MAX_PANIERS = 5;
 
 // ============================================================
-// 📡 GESTION HORS-LIGNE
+// 📡 GESTION HORS-LIGNE (SILENCIEUX - pas d'indicateur visuel)
 // ============================================================
 function posIsOnline() {
     return navigator.onLine;
 }
 
-var posOfflineQueueCount = 0;
-
-function posAfficherStatutConnexion() {
-    var indicator = document.getElementById('posConnectionIndicator');
-    if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'posConnectionIndicator';
-        indicator.style.cssText = `
-            position: fixed; top: 10px; right: 10px; z-index: 99999;
-            padding: 8px 14px; border-radius: 20px; font-size: 0.85rem;
-            font-weight: 700; font-family: sans-serif; display: flex;
-            align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: all 0.3s;
-        `;
-        document.body.appendChild(indicator);
-    }
-
-    (async function() {
-        var count = 0;
-        try {
-            if (typeof getAllPendingOperations === 'function') {
-                var pending = await getAllPendingOperations();
-                count = pending.length;
-                posOfflineQueueCount = count;
-            }
-        } catch(e) {}
-
-        var online = posIsOnline();
-        if (!online) {
-            indicator.style.background = '#FEE2E2';
-            indicator.style.color = '#991B1B';
-            indicator.innerHTML = '📴 Hors-ligne' + (count > 0 ? ' — ' + count + ' en attente' : '');
-        } else if (count > 0) {
-            indicator.style.background = '#FEF3C7';
-            indicator.style.color = '#92400E';
-            indicator.innerHTML = '⏳ ' + count + ' à synchroniser';
-        } else {
-            indicator.style.background = '#D1FAE5';
-            indicator.style.color = '#065F46';
-            indicator.innerHTML = '✅ En ligne';
-            setTimeout(function() {
-                if (indicator && posIsOnline() && posOfflineQueueCount === 0) {
-                    indicator.style.opacity = '0.3';
-                }
-            }, 3000);
-        }
-        indicator.style.opacity = '1';
-    })();
-}
-
 if (!window._posOfflineListeners) {
     window._posOfflineListeners = true;
     window.addEventListener('online', function() {
-        console.log('🌐 Connexion rétablie');
-        posAfficherStatutConnexion();
+        console.log('🌐 Connexion rétablie — synchronisation...');
         if (typeof CacheDB !== 'undefined' && CacheDB.sync) {
-            CacheDB.sync().then(function() {
-                posAfficherStatutConnexion();
-            });
+            CacheDB.sync().catch(function() {});
         }
     });
     window.addEventListener('offline', function() {
-        console.log('📴 Connexion perdue');
-        posAfficherStatutConnexion();
+        console.log('📴 Connexion perdue — mode hors-ligne actif');
     });
 }
 
@@ -689,7 +635,6 @@ displayEl.onclick = null;
 
 async function loadPosPage(c){
 applyDynamicContentScroll();
-posAfficherStatutConnexion();
 posChargerToutesDonneesPaniers();
 posLoadMultiCarts();
 
@@ -1768,7 +1713,7 @@ async function posFinalizeSale(){
 
         if (isOffline) {
             // ================= MODE HORS-LIGNE =================
-            console.log('📴 MODE HORS-LIGNE — enregistrement local');
+            console.log('📴 MODE HORS-LIGNE — enregistrement local silencieux');
 
             venteId = 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
             sd._offlineId = venteId;
@@ -1841,28 +1786,7 @@ async function posFinalizeSale(){
                 }
             }
 
-            console.log('✅ Vente enregistrée hors-ligne :', venteId);
-
-            // Notification visuelle
-            var notif = document.createElement('div');
-            notif.style.cssText = `
-                position: fixed; bottom: 20px; right: 20px; z-index: 99999;
-                padding: 14px 18px; background: #FEF3C7; border: 2px solid #F59E0B;
-                border-radius: 12px; color: #92400E; font-family: sans-serif;
-                font-size: 0.95rem; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-                max-width: 340px;
-            `;
-            notif.innerHTML = '<strong>📴 Vente enregistrée hors-ligne</strong><br>' +
-                              '<span style="font-size:0.85rem;">Facture #' + fn + ' — ' + t.toFixed(2) + ' MAD<br>' +
-                              'Sera synchronisée automatiquement.</span>';
-            document.body.appendChild(notif);
-            setTimeout(function() {
-                notif.style.opacity = '0';
-                notif.style.transition = 'opacity 0.3s';
-                setTimeout(function() { notif.remove(); }, 300);
-            }, 5000);
-
-            posAfficherStatutConnexion();
+            console.log('✅ Vente enregistrée hors-ligne silencieusement :', fn, t.toFixed(2), 'MAD');
 
         } else {
             // ================= MODE EN LIGNE =================
@@ -1943,6 +1867,8 @@ async function posFinalizeSale(){
                 });
             }, 100);
         } else {
+            // PAS de WhatsApp (hors-ligne OU fonction non dispo)
+            // → Reset automatique et silencieux, retour étape 1 immédiat
             posResetCart();
             posStep = 1;
             window.posStep = 1;
@@ -2342,7 +2268,6 @@ window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 
 // ✅ Exposition hors-ligne
 window.posIsOnline = posIsOnline;
-window.posAfficherStatutConnexion = posAfficherStatutConnexion;
 
 // ✅ Exposition pour pos-ai.js
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
@@ -2357,6 +2282,6 @@ console.log('✅ Multi-paniers activé');
 console.log('✅ QUANTITÉ CLIQUABLE + ESPACEMENT BOUTONS PANIER');
 console.log('✅ Tous les champs client chargés (username, whatsapp, email, adresse)');
 console.log('✅ 🎤 Micro AUTONOME (plus besoin de pos-audio.js)');
-console.log('✅ 📴 MODE HORS-LIGNE activé');
+console.log('✅ 📴 MODE HORS-LIGNE SILENCIEUX activé');
 console.log('🎤 Module IA disponible via pos-ai.js (bouton 🎤 Gemini)');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
