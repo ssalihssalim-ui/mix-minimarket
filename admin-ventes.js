@@ -8,6 +8,7 @@
 // ✅ SYNCHRONISATION AVEC ADMIN CREDITS : Quand un crédit est payé, la vente devient "Payé"
 // ✅ NOUVEAU CHAMP "RESTANT" DANS LES VENTES
 // ✅ ARTICLES ET OPTIONS VISIBLES POUR TOUT LE MONDE (ADMIN ET CAISSIER)
+// ✅ 📴 VENTES HORS-LIGNE : affichage depuis localStorage + sync auto
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -117,7 +118,6 @@ function selectAllVisibleVentes() {
     var data = window.filteredVentes || window.allVentesData;
     var pageData = getPageData('ventes', data);
     window.venteSelectedIds = pageData.map(function(d) { return d.id; });
-    // Ajouter aux ventesSelectionnees
     window.venteSelectedIds.forEach(function(id) {
         ventesSelectionnees.add(id);
     });
@@ -128,7 +128,6 @@ function selectAllVisibleVentes() {
 // ✅ FONCTION POUR TOUT DÉSÉLECTIONNER
 function deselectAllVisibleVentes() {
     window.venteSelectedIds = [];
-    // Supprimer les IDs de la sélection
     var ids = Array.from(ventesSelectionnees);
     ids.forEach(function(id) {
         ventesSelectionnees.delete(id);
@@ -193,7 +192,6 @@ ventesSelectionnees.clear();
 alert(`✅ ${totalDeleted} vente(s) supprimée(s) !`);
 loadVentes();
 
-// ✅ AJOUT : Sauvegarde du cache après suppression en masse
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('ventes');
 }
@@ -663,7 +661,6 @@ min-width: 160px !important;
     width: auto !important;
 }
 
-/* Imprimer - Indigo */
 #ventesPage .action-buttons .btn-print,
 #commandesPage .action-buttons .btn-print {
     background: #6366f1 !important;
@@ -674,7 +671,6 @@ min-width: 160px !important;
     background: #4f46e5 !important;
 }
 
-/* WhatsApp - Vert */
 #ventesPage .action-buttons .btn-whatsapp,
 #commandesPage .action-buttons .btn-whatsapp {
     background: #25D366 !important;
@@ -685,7 +681,6 @@ min-width: 160px !important;
     background: #128C7E !important;
 }
 
-/* Payer - Émeraude */
 #ventesPage .action-buttons .btn-payer,
 #commandesPage .action-buttons .btn-payer {
     background: #10B981 !important;
@@ -696,7 +691,6 @@ min-width: 160px !important;
     background: #059669 !important;
 }
 
-/* Modifier - Orange */
 #ventesPage .action-buttons .btn-edit,
 #commandesPage .action-buttons .btn-edit {
     background: #f59e0b !important;
@@ -707,7 +701,6 @@ min-width: 160px !important;
     background: #d97706 !important;
 }
 
-/* Supprimer - Rouge */
 #ventesPage .action-buttons .btn-delete,
 #commandesPage .action-buttons .btn-delete {
     background: #ef4444 !important;
@@ -718,7 +711,6 @@ min-width: 160px !important;
     background: #dc2626 !important;
 }
 
-/* Valider commande - Bleu */
 #commandesPage .action-buttons .btn-add.validate-btn {
     background: #2563eb !important;
     color: #fff !important;
@@ -727,7 +719,6 @@ min-width: 160px !important;
     background: #1d4ed8 !important;
 }
 
-/* Annuler commande - Rouge */
 #commandesPage .action-buttons .btn-delete.cancel-btn {
     background: #ef4444 !important;
     color: #fff !important;
@@ -912,7 +903,6 @@ background: #dc2626;
 transform: scale(1.02);
 }
 
-/* ✅ STATS EN HAUT DE PAGE */
 .ventes-stats-grid {
 display: grid;
 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1223,7 +1213,6 @@ var statutMap = {
 };
 var st = statutMap[d.statut] || { class: 'status-warning', label: d.statut || 'Inconnu', icon: 'fa-question-circle' };
 
-// ✅ BOUTONS AVEC TEXTE POUR COMMANDES
 var act = '';
 if (d.statut === 'en_attente') {
 act = `
@@ -1285,7 +1274,6 @@ alert('✅ Validée !');
 loadCommandes();
 CacheDB.sync();
 
-// ✅ AJOUT : Sauvegarde du cache
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('commandes');
 }
@@ -1314,7 +1302,6 @@ alert('❌ Annulée');
 loadCommandes();
 CacheDB.sync();
 
-// ✅ AJOUT : Sauvegarde du cache
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('commandes');
 }
@@ -1337,7 +1324,6 @@ window.venteSelectedIndex = -1;
 if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
 if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
 
-// Obtenir la date d'aujourd'hui pour les inputs
 var today = new Date().toISOString().split('T')[0];
 
 c.innerHTML = `
@@ -1399,7 +1385,6 @@ onkeyup="handleVentesSearch(this.value);">
 </button>
 </div>
 </div>
-<!-- ✅ STATISTIQUES EN HAUT DE PAGE -->
 <div class="ventes-stats-grid" id="ventesStatsGrid">
 <div class="ventes-stat-card">
 <span class="stat-value blue" id="ventesStatsTotal">0.00</span>
@@ -1426,19 +1411,16 @@ onkeyup="handleVentesSearch(this.value);">
 loadVentes();
 }
 
-// ✅ Fonction pour appliquer le filtre de date personnalisé
 function appliquerFiltreDatePersonnalise() {
 var debut = document.getElementById('ventesDateDebut').value;
 var fin = document.getElementById('ventesDateFin').value;
 window.ventesDateDebut = debut;
 window.ventesDateFin = fin;
-// Réinitialiser le select de période
 document.getElementById('ventesPeriodSelect').value = 'all';
 window.ventesPeriod = 'all';
 applyVentesFilters();
 }
 
-// ✅ Fonction pour réinitialiser tous les filtres
 function reinitialiserFiltres() {
 document.getElementById('ventesDateDebut').value = '';
 document.getElementById('ventesDateFin').value = '';
@@ -1518,35 +1500,85 @@ applyVentesFilters();
 return false;
 }
 
+// ============================================================
+// ✅ loadVentes — CORRIGÉE POUR AFFICHER LES VENTES HORS-LIGNE
+// ============================================================
 async function loadVentes() {
 var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
 var vendeurCaissier = '';
 if (!isAdmin && window.currentUserData) {
-vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
 }
+
+var ventesFirestore = [];
+var ventesOffline = [];
+
+// 🌐 1) Firestore (si en ligne)
+if (navigator.onLine) {
+    try {
+        const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').limit(2000).get();
+        snapshot.forEach(dc => {
+            var d = dc.data(); d.id = dc.id;
+            var achat = 0, profit = 0;
+            if (d.items) {
+                d.items.forEach(function(it) {
+                    var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
+                        pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
+                    achat += pa * q;
+                    profit += (pvr - pa) * q;
+                });
+            }
+            d.achat = achat; d.profit = profit;
+            ventesFirestore.push(d);
+        });
+    } catch (e) {
+        console.warn('⚠️ Erreur Firestore ventes:', e);
+    }
+}
+
+// 📴 2) Ventes hors-ligne depuis localStorage
 try {
-const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').limit(2000).get();
-window.allVentesData = [];
-snapshot.forEach(dc => {
-var d = dc.data(); d.id = dc.id;
-var achat = 0, profit = 0;
-if (d.items) {
-d.items.forEach(function(it) {
-var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
-pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
-achat += pa * q;
-profit += (pvr - pa) * q;
-});
+    var ventesOfflineRaw = JSON.parse(localStorage.getItem('posVentesOffline') || '[]');
+    ventesOfflineRaw.forEach(function(v) {
+        var dejaPresente = ventesFirestore.some(function(f) { return f.factureNum === v.factureNum; });
+        if (dejaPresente) return;
+
+        var achat = 0, profit = 0;
+        if (v.items) {
+            v.items.forEach(function(it) {
+                var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
+                    pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
+                achat += pa * q;
+                profit += (pvr - pa) * q;
+            });
+        }
+        v.achat = achat; v.profit = profit;
+        v._isOffline = true;
+        ventesOffline.push(v);
+    });
+    console.log('📴 Ventes hors-ligne chargées:', ventesOffline.length);
+} catch(e) {
+    console.warn('⚠️ Erreur localStorage ventes:', e);
 }
-d.achat = achat; d.profit = profit;
-window.allVentesData.push(d);
-});
-if (!isAdmin) {
-window.allVentesData = window.allVentesData.filter(function(d) { return d.vendeur === vendeurCaissier; });
+
+// 🔀 3) Fusion Firestore + localStorage
+window.allVentesData = ventesFirestore.concat(ventesOffline);
+
+// Filtre vendeur si caissier
+if (!isAdmin && vendeurCaissier) {
+    window.allVentesData = window.allVentesData.filter(function(d) { return d.vendeur === vendeurCaissier; });
 }
+
+// Tri par date desc
+window.allVentesData.sort(function(a, b) {
+    var da = a.createdAt?.seconds || 0;
+    var db = b.createdAt?.seconds || 0;
+    return db - da;
+});
+
 if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
 if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
-} catch (e) { console.error('Erreur chargement ventes:', e); }
+
 window.currentPages.ventes = 1;
 applyVentesFilters();
 }
@@ -1554,7 +1586,6 @@ applyVentesFilters();
 function applyVentesFilters() {
 var filtered = filterByPeriodWithDates(window.allVentesData, window.ventesPeriod);
 
-// ✅ Filtre par date personnalisée
 if (window.ventesDateDebut && window.ventesDateFin) {
 var debut = new Date(window.ventesDateDebut);
 debut.setHours(0, 0, 0, 0);
@@ -1593,13 +1624,11 @@ filtered = applySort('ventes', filtered, 'createdAt');
 }
 window.filteredVentes = filtered;
 
-// ✅ Mettre à jour les statistiques
 updateVentesStats(filtered);
 
 renderVentesTablePro();
 }
 
-// ✅ Filtre par période avec les nouvelles options (3 jours, 15 jours)
 function filterByPeriodWithDates(data, period) {
 if (!period || period === 'all') return data;
 var now = new Date(), cutoff;
@@ -1616,7 +1645,6 @@ return date && date >= cutoff;
 });
 }
 
-// ✅ Mettre à jour les statistiques en haut de page
 function updateVentesStats(data) {
 var total = 0, profit = 0, achat = 0;
 data.forEach(function(d) {
@@ -1631,21 +1659,16 @@ document.getElementById('ventesStatsCount').textContent = data.length;
 document.getElementById('ventesStatsAchat').textContent = achat.toFixed(2);
 }
 
-// ✅ FONCTION POUR SYNCHRONISER UNE VENTE DEPUIS UN CRÉDIT
-// Appelée depuis admin-credits.js quand un crédit est payé
 async function synchroVenteDepuisCredit(creditData) {
     try {
-        // Chercher la vente correspondante par factureNum
         var factureNum = creditData.factureNum;
         if (!factureNum) return;
 
-        // Chercher dans allVentesData
         var vente = window.allVentesData.find(function(v) {
             return v.factureNum === factureNum || v.id === creditData.id;
         });
 
         if (!vente) {
-            // Essayer de charger depuis Firestore
             var snapshot = await db.collection('ventes')
                 .where('factureNum', '==', factureNum)
                 .limit(1)
@@ -1668,7 +1691,6 @@ async function synchroVenteDepuisCredit(creditData) {
             var restantCredit = creditData.remainingAmount || 0;
             var estPaye = creditData.paid || (restantCredit <= 0.01);
             
-            // ✅ Déterminer le statut correct
             var statutPaiement = 'crédit';
             if (estPaye) {
                 statutPaiement = 'payé';
@@ -1676,12 +1698,11 @@ async function synchroVenteDepuisCredit(creditData) {
                 statutPaiement = 'partiel';
             }
 
-            // ✅ Mettre à jour la vente
             var updateData = {
                 paid: estPaye,
                 statutPaiement: statutPaiement,
-                amountGiven: montantPaye, // ✅ Montant total payé (augmente)
-                remainingAmount: restantCredit, // ✅ Reste à payer (diminue)
+                amountGiven: montantPaye,
+                remainingAmount: restantCredit,
                 change: Math.max(0, montantPaye - totalVente),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -1692,7 +1713,6 @@ async function synchroVenteDepuisCredit(creditData) {
 
             await db.collection('ventes').doc(vente.id).update(updateData);
             
-            // ✅ Mettre à jour le cache
             var updatedVente = {
                 ...vente,
                 ...updateData,
@@ -1703,7 +1723,6 @@ async function synchroVenteDepuisCredit(creditData) {
             };
             await CacheDB.set('ventes', vente.id, updatedVente);
             
-            // ✅ Mettre à jour dans allVentesData
             var index = window.allVentesData.findIndex(function(v) {
                 return v.id === vente.id;
             });
@@ -1711,7 +1730,6 @@ async function synchroVenteDepuisCredit(creditData) {
                 window.allVentesData[index] = updatedVente;
             }
             
-            // ✅ Mettre à jour dans filteredVentes
             var fIndex = (window.filteredVentes || []).findIndex(function(v) {
                 return v.id === vente.id;
             });
@@ -1721,13 +1739,11 @@ async function synchroVenteDepuisCredit(creditData) {
             
             var statusLabel = statutPaiement === 'payé' ? 'Payé ✅' : 
                              statutPaiement === 'partiel' ? 'Partiel ⏳' : 'Crédit 💳';
-            console.log('✅ Vente synchronisée depuis crédit:', factureNum, '→ statut:', statusLabel, '| Donné:', montantPaye.toFixed(2), '| Restant:', restantCredit.toFixed(2));
+            console.log('✅ Vente synchronisée depuis crédit:', factureNum, '→ statut:', statusLabel);
             
-            // ✅ Rafraîchir l'affichage
             updateVentesStats(window.filteredVentes || window.allVentesData);
             renderVentesTablePro();
             
-            // ✅ Sauvegarde du cache
             if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
                 CacheDB.saveCollection('ventes');
             }
@@ -1737,7 +1753,6 @@ async function synchroVenteDepuisCredit(creditData) {
     }
 }
 
-// ✅ Exposer la fonction pour admin-credits.js
 window.synchroVenteDepuisCredit = synchroVenteDepuisCredit;
 
 function renderVentesTablePro() {
@@ -1774,7 +1789,6 @@ return;
 
 var tv = 0, tProfit = 0, tAchat = 0;
 
-// ✅ AJOUT DE LA COLONNE "RESTANT" - ARTICLES VISIBLES POUR TOUS
 var h = `
 <div class="table-container">
 <table class="data-table">
@@ -1832,13 +1846,10 @@ tv += d.total || 0;
 tProfit += d.profit || 0;
 tAchat += d.achat || 0;
 
-// ✅ Statut : si le crédit est payé via admin-credits, statut = payé
 var statutPaiement = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
-// ✅ Si le crédit est payé mais que le statut n'est pas "payé", on le corrige
 if (d.paid && statutPaiement !== 'payé') {
     statutPaiement = 'payé';
 }
-// ✅ Si montant donné > 0 et restant > 0, c'est partiel
 if (d.amountGiven > 0 && d.remainingAmount > 0 && statutPaiement !== 'partiel') {
     statutPaiement = 'partiel';
 }
@@ -1852,10 +1863,8 @@ var statutMap = {
 };
 var st = statutMap[statutPaiement] || { class: 'status-warning', label: statutPaiement || 'Inconnu', icon: 'fa-question-circle' };
 
-// ✅ Mode de paiement : garder le mode original (crédit, espèces, etc.)
 var paymentMethod = d.paymentMethod || 'crédit';
 
-// ✅ BOUTONS AVEC TEXTE - COMME ADMIN CREDITS
 var actions = `
 <div class="action-buttons" style="display:flex; gap:4px; align-items:center; justify-content:center; flex-wrap:nowrap;">
     <button class="btn-print" onclick="printFacture('${d.id}')" title="Imprimer / PDF">Imprimer</button>
@@ -1872,7 +1881,6 @@ if (isAdmin) {
 }
 actions += `</div>`;
 
-// ✅ Affichage du restant avec couleur
 var restantColor = (d.remainingAmount || 0) > 0 ? '#ef4444' : '#14B8A6';
 
 h += `
@@ -1969,7 +1977,6 @@ saveDocument('ventes', data, function() {
 closeModal(); 
 loadVentes(); 
 
-// ✅ AJOUT : Sauvegarde du cache
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('ventes');
 }
@@ -1983,7 +1990,6 @@ alert('✅ Supprimé');
 loadVentes();
 CacheDB.sync();
 
-// ✅ AJOUT : Sauvegarde du cache
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('ventes');
 }
@@ -2197,14 +2203,10 @@ clearBtn.classList.add('hidden');
 }
 }
 
-// ==================== FONCTIONS POUR LE MODAL DÉTAILS FACTURE (FONT SIZE AGRANDI) ====================
-
-// Variable pour stocker l'ID de la facture en cours
+// ==================== MODAL DÉTAILS FACTURE ====================
 var currentFactureId = null;
 
-// Fonction pour ouvrir le modal des détails de facture
 function openFactureDetails(factureId, factureNum) {
-    // Créer le modal s'il n'existe pas
     var modal = document.getElementById('factureDetailsModal');
     if (!modal) {
         var modalHTML = `
@@ -2240,7 +2242,6 @@ function openFactureDetails(factureId, factureNum) {
         div.innerHTML = modalHTML;
         document.body.appendChild(div.firstElementChild);
         
-        // Fermer en cliquant à l'extérieur
         document.getElementById('factureDetailsModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeFactureDetails();
@@ -2250,14 +2251,12 @@ function openFactureDetails(factureId, factureNum) {
         modal = document.getElementById('factureDetailsModal');
     }
     
-    // Afficher le modal
     modal.style.display = 'flex';
     document.getElementById('factureDetailsTitle').textContent = '📄 Détails facture N° ' + (factureNum || 'N/A');
     currentFactureId = factureId;
     loadFactureDetails(factureId);
 }
 
-// Fonction pour fermer le modal des détails
 function closeFactureDetails() {
     var modal = document.getElementById('factureDetailsModal');
     if (modal) {
@@ -2266,7 +2265,6 @@ function closeFactureDetails() {
     currentFactureId = null;
 }
 
-// Fonction pour charger les données de la facture
 async function loadFactureDetails(factureId) {
     var body = document.getElementById('factureDetailsBody');
     if (!body) return;
@@ -2298,7 +2296,6 @@ async function loadFactureDetails(factureId) {
     }
 }
 
-// Fonction pour afficher les détails de la facture - FONT SIZE AGRANDI
 function renderFactureDetails(data) {
     var body = document.getElementById('factureDetailsBody');
     if (!body) return;
@@ -2307,7 +2304,6 @@ function renderFactureDetails(data) {
     var dateStr = date.toLocaleDateString('fr-FR');
     var timeStr = date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
     
-    // ✅ Statut : si le crédit est payé via admin-credits, statut = payé
     var statutPaiement = data.statutPaiement || (data.paid ? 'payé' : 'crédit');
     if (data.paid && statutPaiement !== 'payé') {
         statutPaiement = 'payé';
@@ -2425,7 +2421,6 @@ function renderFactureDetails(data) {
     body.innerHTML = html;
 }
 
-// Fonction pour imprimer depuis le modal
 function printFactureDetails() {
     if (currentFactureId) {
         printFacture(currentFactureId);
@@ -2436,7 +2431,6 @@ function printFactureDetails() {
 
 // ==================== PAGINATION ====================
 
-// Fonction de pagination générique
 function getPaginationHTML(pageType, totalItems) {
     var perPage = window.itemsPerPage || 15;
     var totalPages = Math.ceil(totalItems / perPage);
@@ -2452,7 +2446,6 @@ function getPaginationHTML(pageType, totalItems) {
     return html;
 }
 
-// Fonction pour changer de page
 function changePage(pageType, page) {
     console.log('🔄 changePage appelé:', pageType, page);
     
@@ -2472,7 +2465,6 @@ function changePage(pageType, page) {
     window.currentPages[pageType] = page;
     console.log('📄 Page courante:', page);
     
-    // Re-rendre la page correspondante
     if (pageType === 'ventes' && typeof window.renderVentesTablePro === 'function') {
         window.renderVentesTablePro();
     } else if (pageType === 'credits' && typeof window.renderCreditsTablePro === 'function') {
@@ -2520,26 +2512,21 @@ window.updateVentesStats = updateVentesStats;
 window.appliquerFiltreDatePersonnalise = appliquerFiltreDatePersonnalise;
 window.reinitialiserFiltres = reinitialiserFiltres;
 
-// ✅ AJOUT DE LA FONCTION DE SYNCHRONISATION
 window.synchroVenteDepuisCredit = synchroVenteDepuisCredit;
 
-// ✅ AJOUT DES FONCTIONS MODAL FACTURE
 window.openFactureDetails = openFactureDetails;
 window.closeFactureDetails = closeFactureDetails;
 window.loadFactureDetails = loadFactureDetails;
 window.renderFactureDetails = renderFactureDetails;
 window.printFactureDetails = printFactureDetails;
 
-// ✅ AJOUT DES FONCTIONS PAGINATION
 window.getPaginationHTML = window.getPaginationHTML || getPaginationHTML;
 window.changePage = window.changePage || changePage;
 
-// ✅ ALIAS POUR COMPATIBILITÉ AVEC admin.js
 window.renderVentesTable = window.renderVentesTablePro;
 window.renderCommandesTable = window.renderCommandesTablePro;
 window.renderCreditsTable = window.renderCreditsTablePro;
 
-// ✅ AJOUT DES FONCTIONS SÉLECTION (COMME DANS LES CRÉDITS)
 window.toggleVenteSelectionMode = toggleVenteSelectionMode;
 window.selectAllVisibleVentes = selectAllVisibleVentes;
 window.deselectAllVisibleVentes = deselectAllVisibleVentes;
@@ -2547,13 +2534,12 @@ window.toggleSelectAllVisibleVentes = toggleSelectAllVisibleVentes;
 window.selectAllVentesBtnState = selectAllVentesBtnState;
 
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
+console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
 console.log('✅ Détails facture modal ajouté - Font size agrandi');
 console.log('✅ Pagination corrigée - Utilise window.itemsPerPage');
 console.log('✅ Statistiques en haut de page avec filtres de date');
 console.log('✅ Filtres rapides : Aujourd\'hui, 3j, 7j, 15j, 30j, 90j, 365j');
 console.log('✅ Boutons avec texte - Comme admin credits');
-console.log('✅ Synchronisation avec admin credits : Quand un crédit est payé, la vente devient "Payé"');
-console.log('✅ Nouveau champ "Restant" dans les ventes - Diminue avec le paiement');
-console.log('✅ Champ "Donné" augmente avec le paiement');
-console.log('✅ Sélection en masse comme admin credits - Bouton "Sélectionner" pour activer/désactiver');
-console.log('✅ Articles et Options visibles pour tout le monde (admin ET caissier)');
+console.log('✅ Synchronisation avec admin credits');
+console.log('✅ Sélection en masse');
+console.log('✅ Articles et Options visibles pour tout le monde');
