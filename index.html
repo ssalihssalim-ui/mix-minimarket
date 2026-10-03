@@ -150,17 +150,17 @@ Contenu du modal
 </div>
 </div>
 
-<!-- ==================== SCRIPTS (ORDRE CORRIGÉ POUR PAGINATION) ==================== -->
+<!-- ==================== SCRIPTS (ORDRE CORRIGÉ POUR PAGINATION + HORS-LIGNE) ==================== -->
+<script src="firebase-config.js"></script> <!-- ✅ DÉPLACÉ : AVANT db-cache.js -->
 <script src="db-cache.js"></script>
-<script src="firebase-config.js"></script>
 <script src="auth.js"></script>
-<script src="admin-crud.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="admin-ventes.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="admin-credits.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="admin.js"></script> <!-- ✅ CHARGÉ AVANT script.js -->
-<script src="script.js"></script> <!-- ✅ script.js APRÈS les autres -->
+<script src="admin-crud.js"></script>
+<script src="admin-ventes.js"></script>
+<script src="admin-credits.js"></script>
+<script src="admin.js"></script>
+<script src="script.js"></script>
 <script src="pos.js"></script>
-<script src="pos-ai.js"></script> <!-- ✅ NOUVEAU : module IA Gemini Voice -->
+<script src="pos-ai.js"></script>
 <script src="client.js"></script>
 <script src="menutactile.js"></script>
 <script src="depenses.js"></script>
@@ -170,20 +170,110 @@ Contenu du modal
 
 <script>
 if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)).catch(err => console.error('SW ✗', err));
+    navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)).catch(err => console.error('SW ✗', err));
 }
+
+// ============================================================
+// ✅ 📴 DÉTECTION HORS-LIGNE + SYNCHRONISATION AUTOMATIQUE
+// ============================================================
+(function() {
+    function createOfflineIndicator() {
+        var indicator = document.createElement('div');
+        indicator.id = 'globalConnectionIndicator';
+        indicator.style.cssText = `
+            position: fixed; top: 10px; right: 10px; z-index: 99999;
+            padding: 8px 14px; border-radius: 20px; font-size: 0.8rem;
+            font-weight: 700; font-family: sans-serif; display: flex;
+            align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s; pointer-events: none;
+        `;
+        document.body.appendChild(indicator);
+        return indicator;
+    }
+
+    function updateIndicator() {
+        var indicator = document.getElementById('globalConnectionIndicator') || createOfflineIndicator();
+        var countOffline = 0;
+        try {
+            countOffline = JSON.parse(localStorage.getItem('posVentesOffline') || '[]').length;
+        } catch(e) {}
+
+        if (!navigator.onLine) {
+            indicator.style.background = '#FEE2E2';
+            indicator.style.color = '#991B1B';
+            indicator.innerHTML = '📴 Hors-ligne' + (countOffline > 0 ? ' — ' + countOffline + ' vente(s) en attente' : '');
+            indicator.style.opacity = '1';
+        } else if (countOffline > 0) {
+            indicator.style.background = '#FEF3C7';
+            indicator.style.color = '#92400E';
+            indicator.innerHTML = '⏳ ' + countOffline + ' vente(s) à synchroniser';
+            indicator.style.opacity = '1';
+        } else {
+            indicator.style.background = '#D1FAE5';
+            indicator.style.color = '#065F46';
+            indicator.innerHTML = '✅ En ligne';
+            setTimeout(function() {
+                if (indicator && navigator.onLine && countOffline === 0) {
+                    indicator.style.opacity = '0.3';
+                }
+            }, 3000);
+        }
+    }
+
+    async function syncVentesOffline() {
+        if (!navigator.onLine) return;
+        if (typeof window.posSyncVentesOffline === 'function') {
+            try {
+                await window.posSyncVentesOffline();
+            } catch(e) {
+                console.warn('⚠️ Erreur sync ventes:', e);
+            }
+        }
+        updateIndicator();
+    }
+
+    window.addEventListener('online', function() {
+        console.log('🌐 Connexion rétablie');
+        updateIndicator();
+        setTimeout(syncVentesOffline, 1000);
+    });
+
+    window.addEventListener('offline', function() {
+        console.log('📴 Connexion perdue — mode hors-ligne activé');
+        updateIndicator();
+    });
+
+    setInterval(function() {
+        if (navigator.onLine) {
+            syncVentesOffline();
+        }
+        updateIndicator();
+    }, 30000);
+
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            updateIndicator();
+            if (navigator.onLine) {
+                syncVentesOffline();
+            }
+        }, 1500);
+    });
+
+    window.updateOfflineIndicator = updateIndicator;
+    window.syncVentesOffline = syncVentesOffline;
+})();
 
 // ✅ AJOUT : Sauvegarde automatique au chargement de l'application
 window.addEventListener('load', function() {
-setTimeout(function() {
-if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
-console.log('💾 Sauvegarde initiale des données...');
-CacheDB.saveAll();
-if (typeof CacheDB.setupRealtime === 'function') {
-CacheDB.setupRealtime();
-}
-}
-}, 2000);
+    setTimeout(function() {
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+            console.log('💾 Sauvegarde initiale des données...');
+            CacheDB.saveAll();
+            if (typeof CacheDB.setupRealtime === 'function') {
+                CacheDB.setupRealtime();
+            }
+        }
+    }, 2000);
 });
 </script>
 
