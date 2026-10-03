@@ -20,6 +20,7 @@
 // ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE DÉFINITIVEMENT
 // ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
 // ✅ 📴 MODE HORS-LIGNE : enregistre les ventes dans localStorage + sync auto
+// ✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -607,6 +608,12 @@ function posToggleTools() {
     var micBtn = document.getElementById('posMicBtn');
     if (micBtn) {
         micBtn.style.display = posToolsVisible ? 'flex' : 'none';
+    }
+
+    // 🤖 GEMINI : afficher/masquer le bouton Gemini avec les outils
+    var geminiBtn = document.getElementById('posGeminiBtn');
+    if (geminiBtn) {
+        geminiBtn.style.display = posToolsVisible ? 'flex' : 'none';
     }
 
     var tablesBtn = document.getElementById('posTablesBtn');
@@ -1773,6 +1780,10 @@ multiCartBar +
 
 '<button id="posMicBtn" title="Recherche vocale" style="background:var(--bg-page);border:2px solid var(--border);border-radius:50%;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:var(--text-primary);transition:var(--transition);" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
 
+// ==================== 🤖 BOUTON GEMINI VOICE AJOUTÉ ====================
+'<button id="posGeminiBtn" title="Commande vocale Gemini (FR)" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED);border:none;border-radius:50%;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#fff;transition:var(--transition);box-shadow:0 3px 10px rgba(139,92,246,0.35);" onclick="posOuvrirCommandeVocaleGemini()"><i class="fas fa-robot"></i></button>' +
+// =====================================================================
+
 '<div style="display:flex;gap:6px;margin-left:auto;">' +
 (window.posIsClientMode ? '' :
 '<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:var(--bg-page);border:2px solid var(--border);border-radius:40px;padding:6px 14px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:var(--text-primary);cursor:pointer;transition:var(--transition);">🍽️ Tables <span style="background:#ef4444;color:#fff;border-radius:20px;padding:0 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
@@ -2616,4 +2627,5 @@ console.log('✅ Multi-paniers activé');
 console.log('✅ Ajout rapide de client');
 console.log('✅ LIMITE À ' + MAX_PANIERS + ' PANIERS MAXIMUM');
 console.log('✅ 📴 MODE HORS-LIGNE : sauvegarde localStorage + sync auto');
+console.log('✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
