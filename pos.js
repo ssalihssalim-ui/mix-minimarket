@@ -21,6 +21,7 @@
 // ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
 // ✅ 📴 MODE HORS-LIGNE : enregistre les ventes dans localStorage + sync auto
 // ✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)
+// ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -2528,6 +2529,106 @@ window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 
 // ============================================================
+// 🤖 FONCTION POUR AJOUTER PLUSIEURS PRODUITS AU PANIER
+// (Utilisée par pos-ai.js pour la commande vocale Gemini)
+// ============================================================
+function posAddMultipleProductsToCart(produitsList) {
+    var ajoutCount = 0;
+    var stockAlertes = [];
+
+    if (!produitsList || produitsList.length === 0) {
+        return { ajoutCount: 0, stockAlertes: [] };
+    }
+
+    console.log('🛒 Ajout de', produitsList.length, 'produit(s) au panier (Gemini)...');
+
+    for (var i = 0; i < produitsList.length; i++) {
+        var item = produitsList[i];
+        var produit = item.produit;
+        var quantite = item.quantite || 1;
+
+        if (!produit || !produit.id) {
+            console.warn('⚠️ Produit invalide ignoré:', item);
+            continue;
+        }
+
+        // Vérifier le stock
+        if (produit.stock !== undefined && produit.stock <= 0) {
+            stockAlertes.push(produit.nom + ' : rupture de stock');
+            continue;
+        }
+
+        // Chercher si le produit existe déjà dans le panier
+        var existant = posCart.find(function(x) { return x.id === produit.id; });
+
+        if (existant) {
+            // Vérifier le stock disponible
+            var nouvelleQte = existant.quantite + quantite;
+            if (produit.stock !== undefined && nouvelleQte > produit.stock) {
+                stockAlertes.push(produit.nom + ' : stock insuffisant (max ' + produit.stock + ')');
+                nouvelleQte = produit.stock;
+                quantite = produit.stock - existant.quantite;
+                if (quantite <= 0) continue;
+            }
+            existant.quantite = nouvelleQte;
+            console.log('   ➕ ' + produit.nom + ' → quantité: ' + nouvelleQte);
+        } else {
+            // Vérifier le stock
+            if (produit.stock !== undefined && quantite > produit.stock) {
+                stockAlertes.push(produit.nom + ' : stock insuffisant (max ' + produit.stock + ')');
+                quantite = produit.stock;
+                if (quantite <= 0) continue;
+            }
+
+            var prix = produit.prixPromo && produit.prixPromo > 0 ? produit.prixPromo : produit.prixVente;
+
+            posCart.push({
+                id: produit.id,
+                nom: produit.nom,
+                prixUnitaire: prix,
+                prixAchat: produit.prixAchat || 0,
+                prixPromo: produit.prixPromo || 0,
+                prixVente: produit.prixVente || 0,
+                quantite: quantite,
+                categorie: produit.categorie || '',
+                imageBase64: produit.imageBase64 || '',
+                sauces: [],
+                interdits: [],
+                epice: 'Normal',
+                sel: 'Normal'
+            });
+            console.log('   ➕ ' + produit.nom + ' (nouveau) ×' + quantite);
+        }
+
+        ajoutCount += quantite;
+    }
+
+    // ✅ IMPORTANT : Mettre à jour window.posCart
+    window.posCart = posCart;
+
+    // ✅ Sauvegarder dans le panier multi-cartes
+    posMultiCarts[posCurrentCartId] = posCart.slice();
+    posSauvegarderDonneesPanier(posCurrentCartId);
+    posSaveMultiCarts();
+
+    // ✅ Rafraîchir l'affichage du panier
+    if (typeof updateCartOnly === 'function') {
+        updateCartOnly();
+    }
+
+    console.log('✅ Ajout terminé :', ajoutCount, 'article(s). Alertes:', stockAlertes.length);
+
+    return {
+        ajoutCount: ajoutCount,
+        stockAlertes: stockAlertes
+    };
+}
+
+// Exposer globalement
+window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
+
+
+// ============================================================
 // 🔄 SYNCHRONISATION AUTOMATIQUE DES VENTES HORS-LIGNE
 // ============================================================
 async function posSyncVentesOffline() {
@@ -2628,4 +2729,5 @@ console.log('✅ Ajout rapide de client');
 console.log('✅ LIMITE À ' + MAX_PANIERS + ' PANIERS MAXIMUM');
 console.log('✅ 📴 MODE HORS-LIGNE : sauvegarde localStorage + sync auto');
 console.log('✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)');
+console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
