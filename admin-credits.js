@@ -10,6 +10,8 @@
 // ✅ SYNCHRONISATION AVEC ADMIN VENTES : Quand un crédit est payé, la vente se met à jour
 // ✅ SEUL L'ADMIN PEUT SUPPRIMER - LE CAISSIER N'A PAS LE BOUTON SUPPRIMER
 // ✅ GESTION DES CRÉDITS À 0 MAD : Marqué comme payé automatiquement
+// ✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé
+// ✅ NOUVEAU : Création de facture de paiement + envoi WhatsApp après paiement
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -20,7 +22,7 @@ window.allCreditsData = window.allCreditsData || [];
 window.clientsDataForSearch = window.clientsDataForSearch || [];
 window._posFilterClientId = null;
 window._posFilterClientName = null;
-window._fromPos = false;  // ✅ Indique si on vient du POS
+window._fromPos = false;
 window.creditsDateDebut = window.creditsDateDebut || '';
 window.creditsDateFin = window.creditsDateFin || '';
 
@@ -707,21 +709,19 @@ injectCreditsStyles();
 
 await loadClientsForSearchCredits();
 
-// ✅ Vérifier si on vient du POS avec un client pré-sélectionné
 var savedClientId = localStorage.getItem('posSelectedCreditClientId');
 var savedClientName = localStorage.getItem('posSelectedCreditClientName');
 
 if (savedClientId && savedClientName) {
     window._posFilterClientId = savedClientId;
     window._posFilterClientName = savedClientName;
-    window._fromPos = true;  // ✅ On vient du POS
-    // Nettoyer le localStorage après récupération
+    window._fromPos = true;
     localStorage.removeItem('posSelectedCreditClientId');
     localStorage.removeItem('posSelectedCreditClientName');
 } else {
     window._posFilterClientId = null;
     window._posFilterClientName = null;
-    window._fromPos = false;  // ✅ Navigation normale
+    window._fromPos = false;
 }
 
 window.creditsPeriod = 'all';
@@ -734,10 +734,8 @@ window.creditSelectedIds = [];
 if (!window.sortOrders.credits) window.sortOrders.credits = {};
 if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
 
-// ✅ Si un client est pré-sélectionné, on met son nom dans la recherche
 var searchPlaceholder = window._posFilterClientName || 'Rechercher (client, produit, description)...';
 
-// ✅ Afficher le bouton uniquement si on vient du POS
 var showBackButton = window._fromPos ? '' : 'display:none;';
 var filterMessage = window._posFilterClientName ? 
     `<div style="padding:8px 12px; background:#f0fdf4; border-radius:8px; margin-top:8px; border:2px solid #14B8A6; font-size:18px; font-weight:600; color:#0D9488;">
@@ -800,6 +798,10 @@ onkeyup="handleCreditsSearch(this.value);">
 <button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;">
 <i class="fas fa-trash"></i> Supprimer
 </button>
+<!-- ✅ NOUVEAU : Bouton "Marquer payé" (apparaît avec la sélection) -->
+<button id="paySelectedBtn" class="btn-save" onclick="paySelectedCredits()" style="display:none; background:#10B981; color:#fff; font-size:18px !important;padding:10px 16px !important;">
+<i class="fas fa-check-circle"></i> Marquer payé
+</button>
 </div>
 </div>
 <!-- ✅ STATISTIQUES EN HAUT DE PAGE -->
@@ -828,16 +830,13 @@ onkeyup="handleCreditsSearch(this.value);">
 
 loadCredits();
 
-// ✅ Si un client est pré-sélectionné, on remplit la barre de recherche et on lance la recherche
 if (window._posFilterClientName) {
     setTimeout(function() {
         var searchInput = document.getElementById('creditsSearchInput');
         if (searchInput) {
             searchInput.value = window._posFilterClientName;
-            // Déclencher la recherche automatiquement
             window.creditsSearch = window._posFilterClientName;
             applyCreditsFilters();
-            // Afficher le bouton "effacer"
             var clearBtn = document.getElementById('creditsClearBtn');
             if (clearBtn) clearBtn.classList.remove('hidden');
         }
@@ -845,20 +844,17 @@ if (window._posFilterClientName) {
 }
 }
 
-// ✅ Fonction pour appliquer le filtre de date personnalisé
 function appliquerFiltreDatePersonnaliseCredits() {
 var debut = document.getElementById('creditsDateDebut').value;
 var fin = document.getElementById('creditsDateFin').value;
 window.creditsDateDebut = debut;
 window.creditsDateFin = fin;
-// Réinitialiser le select de période
 document.getElementById('creditsPeriodSelect').value = 'all';
 window.creditsPeriod = 'all';
 applyCreditsFilters();
 }
 window.appliquerFiltreDatePersonnaliseCredits = appliquerFiltreDatePersonnaliseCredits;
 
-// ✅ Fonction pour réinitialiser tous les filtres
 function reinitialiserFiltresCredits() {
 document.getElementById('creditsDateDebut').value = '';
 document.getElementById('creditsDateFin').value = '';
@@ -872,7 +868,6 @@ window._posFilterClientId = null;
 window._posFilterClientName = null;
 window._fromPos = false;
 applyCreditsFilters();
-// ✅ Recharger la page pour enlever le bouton
 loadCreditsPage(document.getElementById('dynamicContent'));
 }
 window.reinitialiserFiltresCredits = reinitialiserFiltresCredits;
@@ -889,7 +884,6 @@ var searchField = document.getElementById('creditsSearchInput');
 if (searchField) {
 searchField.value = '';
 window.creditsSearch = '';
-// ✅ Réinitialiser aussi le filtre client
 window._posFilterClientId = null;
 window._posFilterClientName = null;
 window._fromPos = false;
@@ -898,7 +892,6 @@ var clearBtn = document.getElementById('creditsClearBtn');
 if (clearBtn) {
 clearBtn.classList.add('hidden');
 }
-// ✅ Recharger la page pour enlever le bouton
 loadCreditsPage(document.getElementById('dynamicContent'));
 }
 }
@@ -1014,7 +1007,6 @@ applyCreditsFilters();
 function applyCreditsFilters() {
 var filtered = filterByPeriodWithDatesCredits(window.allCreditsData, window.creditsPeriod);
 
-// ✅ Filtre par date personnalisée
 if (window.creditsDateDebut && window.creditsDateFin) {
 var debut = new Date(window.creditsDateDebut);
 debut.setHours(0, 0, 0, 0);
@@ -1027,12 +1019,10 @@ return date >= debut && date <= fin;
 });
 }
 
-// ✅ Filtre par client pré-sélectionné depuis le POS (prioritaire sur la recherche)
 if (window._posFilterClientId) {
     filtered = filtered.filter(function(d) {
         return d.clientId === window._posFilterClientId;
     });
-    // On ne réinitialise pas le nom du client pour qu'il reste dans la recherche
 }
 
 if (window.creditsSearch && window.creditsSearch.trim() !== '') {
@@ -1055,13 +1045,11 @@ filtered = applySort('credits', filtered, 'createdAt');
 
 window.filteredCredits = filtered;
 
-// ✅ Mettre à jour les statistiques
 updateCreditsStats(filtered);
 
 renderCreditsTablePro();
 }
 
-// ✅ Filtre par période avec les nouvelles options (3 jours, 15 jours)
 function filterByPeriodWithDatesCredits(data, period) {
 if (!period || period === 'all') return data;
 var now = new Date(), cutoff;
@@ -1078,7 +1066,6 @@ return date && date >= cutoff;
 });
 }
 
-// ✅ Mettre à jour les statistiques en haut de page
 function updateCreditsStats(data) {
 var total = 0, totalImpayes = 0, totalPaye = 0;
 data.forEach(function(d) {
@@ -1178,7 +1165,6 @@ articlesHtml = '-';
 var mode = d.paymentMethod || '-';
 var amountPaid = d.amountGiven || 0;
 
-// ✅ BOUTONS AVEC TEXTE - UNIQUEMENT LES CLASSES (les styles sont dans le CSS)
 var actions = `
 <div class="action-buttons" style="display:flex; gap:4px; align-items:center; justify-content:center; flex-wrap:nowrap;">
     <button class="btn-print" onclick="printFacture('${d.id}')" title="Imprimer / PDF">Imprimer</button>
@@ -1190,7 +1176,6 @@ if (!d.paid) {
 actions += `
     <button class="btn-edit" onclick="editCredit('${d.id}')" title="Modifier">Modifier</button>
     `;
-// ✅ SEUL L'ADMIN PEUT SUPPRIMER - LE CAISSIER N'A PAS LE BOUTON SUPPRIMER
 if (isAdmin) {
     actions += `<button class="btn-delete" onclick="if(confirm('Supprimer définitivement ce crédit ?')) deleteCredit('${d.id}')" title="Supprimer">Supprimer</button>`;
 }
@@ -1244,6 +1229,7 @@ window.selectAllBtnState = false;
 
 var selectBtn = document.getElementById('toggleSelectionBtn');
 var deleteBtn = document.getElementById('deleteSelectedBtn');
+var payBtn = document.getElementById('paySelectedBtn'); // ✅ NOUVEAU
 if (selectBtn) {
 if (window.creditSelectionMode) {
 selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
@@ -1256,6 +1242,10 @@ selectAllBtn.style.display = window.creditSelectionMode ? 'inline-block' : 'none
 }
 if (deleteBtn) {
 deleteBtn.style.display = 'none';
+}
+// ✅ NOUVEAU : cacher le bouton "Marquer payé"
+if (payBtn) {
+payBtn.style.display = 'none';
 }
 renderCreditsTablePro();
 }
@@ -1271,13 +1261,25 @@ updateDeleteButtonVisibility();
 renderCreditsTablePro();
 }
 
+// ✅ MODIFIÉ : Afficher aussi le bouton "Marquer payé"
 function updateDeleteButtonVisibility() {
 var deleteBtn = document.getElementById('deleteSelectedBtn');
+var payBtn = document.getElementById('paySelectedBtn'); // ✅ NOUVEAU
+
 if (deleteBtn) {
 if (window.creditSelectedIds.length === 0) {
 deleteBtn.style.display = 'none';
 } else {
 deleteBtn.style.display = 'inline-block';
+}
+}
+
+// ✅ NOUVEAU : afficher/masquer le bouton "Marquer payé"
+if (payBtn) {
+if (window.creditSelectedIds.length === 0) {
+payBtn.style.display = 'none';
+} else {
+payBtn.style.display = 'inline-block';
 }
 }
 }
@@ -1337,13 +1339,14 @@ window.creditSelectionMode = false;
 var selectBtn = document.getElementById('toggleSelectionBtn');
 var deleteBtn = document.getElementById('deleteSelectedBtn');
 var selectAllBtn = document.getElementById('selectAllBtn');
+var payBtn = document.getElementById('paySelectedBtn'); // ✅ NOUVEAU
 if (selectBtn) selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
 if (deleteBtn) deleteBtn.style.display = 'none';
 if (selectAllBtn) selectAllBtn.style.display = 'none';
+if (payBtn) payBtn.style.display = 'none'; // ✅ NOUVEAU
 loadCredits();
 CacheDB.sync();
 
-// ✅ AJOUT : Sauvegarde du cache
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('credits');
 }
@@ -1352,9 +1355,366 @@ alert('❌ Erreur: ' + e.message);
 });
 }
 
+// ============================================================
+// ✅ NOUVELLE FONCTION : Marquer payés tous les crédits sélectionnés
+// ✅ + Créer une facture de paiement + proposer WhatsApp
+// ============================================================
+async function paySelectedCredits() {
+    if (!window.creditSelectedIds || window.creditSelectedIds.length === 0) {
+        alert('❌ Aucun crédit sélectionné.');
+        return;
+    }
+
+    var count = window.creditSelectedIds.length;
+    var alreadyPaid = 0;
+    var toPay = [];
+    var totalImpayes = 0;
+
+    window.creditSelectedIds.forEach(function(id) {
+        var credit = (window.allCreditsData || []).find(function(c) { return c.id === id; });
+        if (!credit) return;
+        if (credit.paid) {
+            alreadyPaid++;
+        } else {
+            toPay.push(credit);
+            totalImpayes += credit.remainingAmount || credit.total || 0;
+        }
+    });
+
+    if (toPay.length === 0) {
+        alert('⚠️ Tous les crédits sélectionnés sont déjà payés.');
+        return;
+    }
+
+    var message = '💳 Marquer ' + toPay.length + ' crédit(s) comme PAYÉ(S) ?\n\n';
+    message += '💰 Montant total à régulariser : ' + totalImpayes.toFixed(2) + ' MAD\n';
+    if (alreadyPaid > 0) {
+        message += '\n⚠️ ' + alreadyPaid + ' crédit(s) déjà payé(s) seront ignorés.\n';
+    }
+    message += '\nConfirmer ?';
+
+    if (!confirm(message)) return;
+
+    try {
+        var paiements = [];
+        var promises = toPay.map(function(credit) {
+            var restant = credit.remainingAmount || credit.total || 0;
+            var nouveauPaye = (credit.amountGiven || 0) + restant;
+
+            paiements.push({
+                creditId: credit.id,
+                factureNum: credit.factureNum || credit.id.substring(0, 8),
+                clientId: credit.clientId,
+                clientName: credit.clientName || 'Client inconnu',
+                montantPaye: restant,
+                totalCredit: credit.total || 0,
+                items: credit.items || []
+            });
+
+            return db.collection('credits').doc(credit.id).update({
+                amountGiven: nouveauPaye,
+                remainingAmount: 0,
+                paid: true,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastPaymentAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastPaymentAmount: restant
+            }).then(function() {
+                var updatedCredit = {
+                    ...credit,
+                    amountGiven: nouveauPaye,
+                    remainingAmount: 0,
+                    paid: true
+                };
+                return CacheDB.set('credits', credit.id, updatedCredit).then(function() {
+                    var idx = window.allCreditsData.findIndex(function(c) { return c.id === credit.id; });
+                    if (idx !== -1) window.allCreditsData[idx] = updatedCredit;
+
+                    if (window.filteredCredits) {
+                        var fidx = window.filteredCredits.findIndex(function(c) { return c.id === credit.id; });
+                        if (fidx !== -1) window.filteredCredits[fidx] = updatedCredit;
+                    }
+
+                    if (typeof window.synchroVenteDepuisCredit === 'function') {
+                        var creditData = {
+                            id: credit.id,
+                            factureNum: credit.factureNum,
+                            amountGiven: nouveauPaye,
+                            total: credit.total,
+                            paid: true,
+                            remainingAmount: 0,
+                            clientId: credit.clientId,
+                            clientName: credit.clientName
+                        };
+                        return window.synchroVenteDepuisCredit(creditData);
+                    }
+                    return Promise.resolve();
+                });
+            });
+        });
+
+        await Promise.all(promises);
+
+        // ✅ Créer une facture de paiement
+        var facturePaiement = await creerFacturePaiementCredits(paiements, totalImpayes);
+
+        updateCreditsStats(window.filteredCredits || window.allCreditsData);
+        renderCreditsTablePro();
+
+        window.creditSelectedIds = [];
+        window.creditSelectionMode = false;
+        window.selectAllBtnState = false;
+
+        var selectBtn = document.getElementById('toggleSelectionBtn');
+        var selectAllBtn = document.getElementById('selectAllBtn');
+        var deleteBtn = document.getElementById('deleteSelectedBtn');
+        var payBtn = document.getElementById('paySelectedBtn');
+        if (selectBtn) selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+        if (selectAllBtn) {
+            selectAllBtn.style.display = 'none';
+            selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+        }
+        if (deleteBtn) deleteBtn.style.display = 'none';
+        if (payBtn) payBtn.style.display = 'none';
+
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('credits');
+            CacheDB.saveCollection('ventes');
+        }
+
+        CacheDB.sync();
+
+        // ✅ Afficher le modal WhatsApp avec la facture
+        posAfficherOptionWhatsAppPaiement(facturePaiement);
+
+    } catch (e) {
+        console.error('❌ Erreur paiement groupé:', e);
+        alert('❌ Erreur lors du paiement groupé : ' + e.message);
+    }
+}
+window.paySelectedCredits = paySelectedCredits;
+
+// ============================================================
+// ✅ NOUVELLE FONCTION : Créer une facture de paiement de crédits
+// ============================================================
+async function creerFacturePaiementCredits(paiements, totalPaye) {
+    var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
+    factureCounter++;
+    localStorage.setItem('factureCounter', factureCounter);
+    var numFacture = 'PAI-' + new Date().getFullYear() + '-' + String(factureCounter).padStart(5, '0');
+
+    var clientIds = [...new Set(paiements.map(p => p.clientId).filter(Boolean))];
+    var clientNames = [...new Set(paiements.map(p => p.clientName).filter(Boolean))];
+    var clientId = clientIds.length === 1 ? clientIds[0] : null;
+    var clientName = clientNames.length === 1 ? clientNames[0] : (clientNames.length + ' clients');
+
+    var vendeur = '';
+    if (window.currentUserData) {
+        vendeur = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    }
+
+    var items = paiements.map(function(p) {
+        return {
+            id: p.creditId,
+            nom: 'Crédit #' + p.factureNum + (p.clientName ? ' - ' + p.clientName : ''),
+            quantite: 1,
+            prixVente: p.montantPaye,
+            prixAchat: 0,
+            prixPromo: 0,
+            profit: 0
+        };
+    });
+
+    var factureData = {
+        factureNum: numFacture,
+        items: items,
+        subtotal: totalPaye,
+        discountMAD: 0,
+        total: totalPaye,
+        clientId: clientId,
+        clientName: clientName,
+        table: null,
+        vendeur: vendeur,
+        paymentMethod: 'espece',
+        statutPaiement: 'payé',
+        amountGiven: totalPaye,
+        change: 0,
+        paid: true,
+        remainingAmount: 0,
+        profitTotal: 0,
+        type: 'paiement_credits',
+        creditsPayes: paiements.map(p => ({
+            creditId: p.creditId,
+            factureNum: p.factureNum,
+            montantPaye: p.montantPaye,
+            clientName: p.clientName
+        })),
+        createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
+    };
+
+    try {
+        if (navigator.onLine) {
+            var sd = Object.assign({}, factureData, {
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            var docRef = await db.collection('factures_paiement').add(sd);
+            factureData.id = docRef.id;
+
+            if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+                await CacheDB.set('factures_paiement', docRef.id, Object.assign({id: docRef.id}, factureData));
+            }
+        } else {
+            factureData.id = 'offline_' + Date.now();
+            var facturesLS = JSON.parse(localStorage.getItem('facturesPaiementOffline') || '[]');
+            facturesLS.push(factureData);
+            localStorage.setItem('facturesPaiementOffline', JSON.stringify(facturesLS));
+        }
+    } catch(e) {
+        console.warn('⚠️ Erreur sauvegarde facture paiement:', e);
+    }
+
+    return factureData;
+}
+window.creerFacturePaiementCredits = creerFacturePaiementCredits;
+
+// ============================================================
+// 📱 AFFICHER LE MODAL WHATSAPP APRÈS PAIEMENT DE CRÉDITS
+// ============================================================
+function posAfficherOptionWhatsAppPaiement(factureData) {
+    try {
+        var clientName = factureData.clientName || 'Client';
+        var clientId = factureData.clientId;
+        var clientTel = '';
+
+        if (clientId) {
+            var client = (window.clientsDataForSearch || []).find(function(c) { return c.id === clientId; });
+            if (client) {
+                clientTel = client.telephone || client.whatsapp || '';
+            }
+        }
+
+        var lignesCredits = factureData.creditsPayes.map(function(c) {
+            return '• Facture #' + c.factureNum + ' → ' + c.montantPaye.toFixed(2) + ' MAD';
+        }).join('\n');
+
+        var dateStr = new Date().toLocaleDateString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        var messageWhatsApp =
+            '✅ *REÇU DE PAIEMENT*\n' +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            '📄 Reçu N° : ' + factureData.factureNum + '\n' +
+            '📅 Date : ' + dateStr + '\n' +
+            '👤 Client : ' + clientName + '\n' +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            '*CRÉDITS RÉGLÉS :*\n' +
+            lignesCredits + '\n' +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            '💵 *TOTAL PAYÉ : ' + factureData.total.toFixed(2) + ' MAD*\n' +
+            '💳 Mode : Espèces\n' +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            'Merci pour votre règlement ! 🙏\n' +
+            'E-SOLUTION POS';
+
+        window._posWhatsAppPaiementData = {
+            message: messageWhatsApp,
+            clientTel: clientTel,
+            clientName: clientName,
+            factureNum: factureData.factureNum
+        };
+
+        var confirmHtml = `
+            <div style="padding:16px;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:8px;">✅</div>
+                <h3 style="margin:0 0 4px;color:#10B981;font-size:1.3rem;font-weight:700;">Paiement enregistré !</h3>
+                <p style="color:#64748b;margin:0 0 16px;font-size:0.95rem;">
+                    Reçu <strong>${escapeHtml(factureData.factureNum)}</strong> — <strong>${factureData.total.toFixed(2)} MAD</strong>
+                </p>
+
+                <div style="padding:14px;background:#F0FDF4;border:2px solid #10B981;border-radius:10px;margin-bottom:16px;text-align:left;">
+                    <p style="margin:0;font-size:0.9rem;color:#065F46;">
+                        <strong>👤 Client :</strong> ${escapeHtml(clientName)}<br>
+                        <strong>📄 Nb crédits :</strong> ${factureData.creditsPayes.length}<br>
+                        ${clientTel ? '<strong>📞 Téléphone :</strong> ' + escapeHtml(clientTel) : '<em style="color:#92400E;">⚠️ Aucun numéro de téléphone enregistré</em>'}
+                    </p>
+                </div>
+
+                <p style="color:#334155;font-weight:600;margin-bottom:12px;font-size:1rem;">
+                    📱 Voulez-vous envoyer le reçu par WhatsApp ?
+                </p>
+
+                <div style="display:flex;gap:8px;">
+                    <button onclick="posFermerModalWhatsAppPaiement()"
+                        style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;">
+                        ❌ Non
+                    </button>
+                    <button onclick="posEnvoyerWhatsAppPaiement()"
+                        style="flex:2;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(37,211,102,0.3);">
+                        <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Envoyer WhatsApp
+                    </button>
+                </div>
+            </div>
+        `;
+
+        openModal('🧾 Paiement validé', confirmHtml);
+
+    } catch(e) {
+        console.error('❌ Erreur posAfficherOptionWhatsAppPaiement:', e);
+    }
+}
+window.posAfficherOptionWhatsAppPaiement = posAfficherOptionWhatsAppPaiement;
+
+// ============================================================
+// 📱 ENVOYER WHATSAPP POUR LE PAIEMENT
+// ============================================================
+function posEnvoyerWhatsAppPaiement() {
+    try {
+        var data = window._posWhatsAppPaiementData;
+        if (!data) {
+            alert('❌ Aucune facture en mémoire.');
+            closeModal();
+            return;
+        }
+
+        var message = data.message || '';
+        var tel = (data.clientTel || '').replace(/\D/g, '');
+
+        if (tel) {
+            if (tel.startsWith('0')) {
+                tel = '212' + tel.substring(1);
+            } else if (tel.startsWith('+')) {
+                tel = tel.replace(/\D/g, '');
+            }
+        }
+
+        var url;
+        if (tel && tel.length >= 8) {
+            url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(message);
+        } else {
+            url = 'https://wa.me/?text=' + encodeURIComponent(message);
+        }
+
+        window.open(url, '_blank');
+
+        closeModal();
+        window._posWhatsAppPaiementData = null;
+
+    } catch(e) {
+        console.error('❌ Erreur posEnvoyerWhatsAppPaiement:', e);
+        alert('❌ Erreur WhatsApp : ' + e.message);
+    }
+}
+window.posEnvoyerWhatsAppPaiement = posEnvoyerWhatsAppPaiement;
+
+function posFermerModalWhatsAppPaiement() {
+    window._posWhatsAppPaiementData = null;
+    closeModal();
+}
+window.posFermerModalWhatsAppPaiement = posFermerModalWhatsAppPaiement;
+
 // ==================== PAIEMENT CRÉDIT (AVEC MODAL) ====================
 
-// Fonction pour ouvrir le modal de paiement crédit
 function openCreditPaymentModal(creditId) {
     var data = window.filteredCredits || window.allCreditsData || [];
     var credit = data.find(function(c) { return c.id === creditId; });
@@ -1371,10 +1731,8 @@ function openCreditPaymentModal(creditId) {
     var restant = credit.remainingAmount || credit.total || 0;
     var total = credit.total || 0;
     
-    // ✅ Si le crédit a un total de 0, on le marque comme payé directement
     if (total <= 0) {
         if (confirm('⚠️ Ce crédit a un total de 0 MAD. Voulez-vous le marquer comme payé ?')) {
-            // Appeler directement la fonction de paiement avec un montant de 0
             confirmerPaiementCreditZero(creditId);
         }
         return;
@@ -1434,7 +1792,6 @@ function openCreditPaymentModal(creditId) {
     openModal('💰 Paiement crédit', modalHtml);
 }
 
-// ✅ Fonction pour gérer les crédits à 0 MAD
 async function confirmerPaiementCreditZero(creditId) {
     try {
         var data = window.filteredCredits || window.allCreditsData || [];
@@ -1464,7 +1821,6 @@ async function confirmerPaiementCreditZero(creditId) {
         var fIndex = (window.filteredCredits || []).findIndex(function(c) { return c.id === creditId; });
         if (fIndex !== -1) window.filteredCredits[fIndex] = updatedCredit;
 
-        // ✅ Synchronisation avec admin ventes
         if (typeof window.synchroVenteDepuisCredit === 'function') {
             var creditData = {
                 id: creditId,
@@ -1497,7 +1853,7 @@ async function confirmerPaiementCreditZero(creditId) {
     }
 }
 
-// Fonction pour confirmer le paiement depuis le modal
+// ✅ MODIFIÉ : Créer facture + proposer WhatsApp après paiement individuel
 async function confirmCreditPayment(creditId) {
     var amountInput = document.getElementById('creditPaymentAmount');
     if (!amountInput) {
@@ -1539,7 +1895,6 @@ async function confirmCreditPayment(creditId) {
             lastPaymentAmount: montant
         });
 
-        // ✅ Mettre à jour dans le cache
         var updatedCredit = {
             ...credit,
             amountGiven: nouveauPaye,
@@ -1548,19 +1903,16 @@ async function confirmCreditPayment(creditId) {
         };
         await CacheDB.set('credits', creditId, updatedCredit);
         
-        // ✅ Mettre à jour dans allCreditsData
         var index = window.allCreditsData.findIndex(function(c) { return c.id === creditId; });
         if (index !== -1) {
             window.allCreditsData[index] = updatedCredit;
         }
         
-        // ✅ Mettre à jour dans filteredCredits
         var fIndex = (window.filteredCredits || []).findIndex(function(c) { return c.id === creditId; });
         if (fIndex !== -1) {
             window.filteredCredits[fIndex] = updatedCredit;
         }
         
-        // ✅ SYNCHRONISATION AVEC ADMIN VENTES
         if (typeof window.synchroVenteDepuisCredit === 'function') {
             var creditData = {
                 id: creditId,
@@ -1580,28 +1932,29 @@ async function confirmCreditPayment(creditId) {
         
         closeModal();
         
-        // ✅ Rafraîchir l'affichage
         updateCreditsStats(window.filteredCredits || window.allCreditsData);
         renderCreditsTablePro();
         CacheDB.sync();
 
-        // ✅ AJOUT : Sauvegarde du cache
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('credits');
             CacheDB.saveCollection('ventes');
         }
 
-        // Afficher un message de succès
-        var message = '✅ Paiement enregistré !\n';
-        message += '💰 Montant payé: ' + montant.toFixed(2) + ' MAD\n';
-        if (estPaye) {
-            message += '✅ Ce crédit est maintenant entièrement payé !\n';
-            message += '📊 La vente a été mise à jour avec le statut "Payé".';
-        } else {
-            message += '⏳ Reste à payer: ' + nouveauRestant.toFixed(2) + ' MAD\n';
-            message += '📊 La vente a été mise à jour avec le statut "Partiel".';
-        }
-        alert(message);
+        // ✅ NOUVEAU : Créer une facture de paiement + proposer WhatsApp
+        var paiements = [{
+            creditId: creditId,
+            factureNum: credit.factureNum || creditId.substring(0, 8),
+            clientId: credit.clientId,
+            clientName: credit.clientName || 'Client inconnu',
+            montantPaye: montant,
+            totalCredit: credit.total || 0,
+            items: credit.items || []
+        }];
+        var facturePaiement = await creerFacturePaiementCredits(paiements, montant);
+
+        // ✅ Afficher le modal WhatsApp
+        posAfficherOptionWhatsAppPaiement(facturePaiement);
 
     } catch(e) {
         console.error('Erreur paiement crédit:', e);
@@ -1611,10 +1964,8 @@ async function confirmCreditPayment(creditId) {
 
 // ==================== FONCTIONS POUR LE MODAL DÉTAILS FACTURE CRÉDIT ====================
 
-// Variable pour stocker l'ID du crédit en cours
 var currentCreditId = null;
 
-// Fonction pour ouvrir le modal des détails de facture crédit
 function openCreditFactureDetails(creditId, factureNum) {
     var modal = document.getElementById('creditFactureDetailsModal');
     if (!modal) {
@@ -1828,7 +2179,6 @@ function printCreditFactureDetails() {
 // ==================== ENVOYER WHATSAPP POUR UN CRÉDIT ====================
 async function sendCreditWhatsApp(creditId) {
     try {
-        // Récupérer les données du crédit
         const doc = await db.collection('credits').doc(creditId).get();
         if (!doc.exists) {
             alert('❌ Crédit introuvable');
@@ -1838,7 +2188,6 @@ async function sendCreditWhatsApp(creditId) {
         const credit = doc.data();
         let phone = '';
 
-        // Chercher le téléphone du client
         if (credit.clientId) {
             const clientDoc = await db.collection('clients').doc(credit.clientId).get();
             if (clientDoc.exists) {
@@ -1847,7 +2196,6 @@ async function sendCreditWhatsApp(creditId) {
             }
         }
         
-        // Normaliser le numéro
         phone = phone.replace(/[^\d+]/g, '').trim();
         if (phone.startsWith('0')) {
             phone = '+212' + phone.substring(1);
@@ -1860,7 +2208,6 @@ async function sendCreditWhatsApp(creditId) {
             return;
         }
 
-        // Construire le message
         var msg = '🧾 *CRÉDIT E-SOLUTION*\n';
         msg += '━━━━━━━━━━━━━━━━━━\n';
         msg += '📄 N°: ' + (credit.factureNum || creditId.substring(0, 8)) + '\n';
@@ -1884,10 +2231,8 @@ async function sendCreditWhatsApp(creditId) {
 
         var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
         
-        // Ouvrir WhatsApp
         var w = window.open(url, '_blank');
         if (!w || w.closed) {
-            // Popup bloquée, ouvrir un modal avec le lien
             var modalHtml = `
                 <div style="text-align:center;padding:10px;">
                     <i class="fab fa-whatsapp" style="font-size:4rem;color:#25D366;"></i>
@@ -2052,7 +2397,6 @@ loadCredits();
 CacheDB.sync();
 alert('✅ Crédit mis à jour');
 
-// ✅ AJOUT : Sauvegarde du cache
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('credits');
 }
@@ -2068,7 +2412,6 @@ window.allCreditsData = (window.allCreditsData || []).filter(function(c) { retur
 if (typeof loadCredits === 'function') loadCredits();
 CacheDB.sync();
 
-// ✅ AJOUT : Sauvegarde du cache
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('credits');
 }
@@ -2080,7 +2423,6 @@ throw e;
 
 // ==================== PAGINATION ====================
 
-// Fonction de pagination générique
 function getPaginationHTML(pageType, totalItems) {
     var perPage = window.itemsPerPage || 15;
     var totalPages = Math.ceil(totalItems / perPage);
@@ -2096,7 +2438,6 @@ function getPaginationHTML(pageType, totalItems) {
     return html;
 }
 
-// Fonction pour changer de page
 function changePage(pageType, page) {
     console.log('🔄 changePage appelé:', pageType, page);
     
@@ -2116,7 +2457,6 @@ function changePage(pageType, page) {
     window.currentPages[pageType] = page;
     console.log('📄 Page courante:', page);
     
-    // Re-rendre la page correspondante
     if (pageType === 'ventes' && typeof window.renderVentesTablePro === 'function') {
         window.renderVentesTablePro();
     } else if (pageType === 'credits' && typeof window.renderCreditsTablePro === 'function') {
@@ -2126,7 +2466,6 @@ function changePage(pageType, page) {
     }
 }
 
-// Fonction pour obtenir les données de la page courante
 function getPageData(pageType, data) {
     if (!window.currentPages) window.currentPages = {};
     var currentPage = window.currentPages[pageType] || 1;
@@ -2138,14 +2477,12 @@ function getPageData(pageType, data) {
 
 // ==================== FONCTIONS MANQUANTES AJOUTÉES ====================
 
-// ✅ FONCTION AJOUTÉE : closeCreditSelection
+// ✅ MODIFIÉ : Cacher aussi le bouton "Marquer payé"
 function closeCreditSelection() {
-    // Réinitialiser la sélection
     window.creditSelectedIds = [];
     window.creditSelectionMode = false;
     window.selectAllBtnState = false;
 
-    // Mettre à jour l'interface
     var paymentZone = document.getElementById('creditPaymentZone');
     if (paymentZone) paymentZone.style.display = 'none';
 
@@ -2163,7 +2500,10 @@ function closeCreditSelection() {
     var deleteBtn = document.getElementById('deleteSelectedBtn');
     if (deleteBtn) deleteBtn.style.display = 'none';
 
-    // Rafraîchir le tableau
+    // ✅ NOUVEAU : cacher aussi le bouton "Marquer payé"
+    var payBtn = document.getElementById('paySelectedBtn');
+    if (payBtn) payBtn.style.display = 'none';
+
     if (typeof renderCreditsTablePro === 'function') {
         renderCreditsTablePro();
     } else if (typeof renderCreditsTable === 'function') {
@@ -2172,7 +2512,6 @@ function closeCreditSelection() {
 }
 window.closeCreditSelection = closeCreditSelection;
 
-// ✅ FONCTION AJOUTÉE : validateCreditPayment
 function validateCreditPayment() {
     var amountInput = document.getElementById('creditPaymentAmountInput');
     if (!amountInput) {
@@ -2186,13 +2525,11 @@ function validateCreditPayment() {
         return;
     }
 
-    // Vérifier qu'un crédit est sélectionné
     if (!window.creditSelectedIds || window.creditSelectedIds.length === 0) {
         alert('❌ Aucun crédit sélectionné');
         return;
     }
 
-    // Pour chaque crédit sélectionné, appliquer le paiement
     var promises = window.creditSelectedIds.map(function(id) {
         var credit = (window.allCreditsData || []).find(function(c) { return c.id === id; });
         if (!credit) return Promise.resolve();
@@ -2201,14 +2538,12 @@ function validateCreditPayment() {
         var newPaid = total - amount;
         var isFullyPaid = newPaid <= 0.01;
 
-        // Mettre à jour dans Firestore
         return db.collection('credits').doc(id).update({
             amountGiven: (credit.amountGiven || 0) + amount,
             remainingAmount: Math.max(0, newPaid),
             paid: isFullyPaid,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(function() {
-            // Mettre à jour le cache
             var updatedCredit = {
                 ...credit,
                 amountGiven: (credit.amountGiven || 0) + amount,
@@ -2232,24 +2567,18 @@ function validateCreditPayment() {
 }
 window.validateCreditPayment = validateCreditPayment;
 
-// ✅ FONCTION POUR RETOURNER AU PAIEMENT DEPUIS LA PAGE CRÉDITS
 function retournerAuPaiement() {
-    // Réinitialiser les variables de filtre
     window._posFilterClientId = null;
     window._posFilterClientName = null;
     window._fromPos = false;
-    // Naviguer vers le POS
     navigateTo('pos');
 }
 window.retournerAuPaiement = retournerAuPaiement;
 
-// ✅ EXPOSER LES NOUVELLES FONCTIONS
 window.filterByPeriodWithDatesCredits = filterByPeriodWithDatesCredits;
 window.updateCreditsStats = updateCreditsStats;
 window.appliquerFiltreDatePersonnaliseCredits = appliquerFiltreDatePersonnaliseCredits;
 window.reinitialiserFiltresCredits = reinitialiserFiltresCredits;
-
-// ✅ EXPOSER LA FONCTION DE PAIEMENT CRÉDIT À 0
 window.confirmerPaiementCreditZero = confirmerPaiementCreditZero;
 
 // ==================== EXPOSITION DES FONCTIONS GLOBALES ====================
@@ -2286,25 +2615,27 @@ window.renderCreditFactureCell = renderCreditFactureCell;
 window.renderCreditDateCell = renderCreditDateCell;
 window.renderCreditClientCell = renderCreditClientCell;
 
-// ✅ AJOUT DES FONCTIONS MODAL FACTURE CRÉDIT
 window.openCreditFactureDetails = openCreditFactureDetails;
 window.closeCreditFactureDetails = closeCreditFactureDetails;
 window.loadCreditFactureDetails = loadCreditFactureDetails;
 window.renderCreditFactureDetails = renderCreditFactureDetails;
 window.printCreditFactureDetails = printCreditFactureDetails;
 
-// ✅ AJOUT DES FONCTIONS PAIEMENT CRÉDIT
 window.openCreditPaymentModal = openCreditPaymentModal;
 window.confirmCreditPayment = confirmCreditPayment;
 window.validateCreditPayment = validateCreditPayment;
 
-// ✅ AJOUT DE LA FONCTION WHATSAPP
 window.sendCreditWhatsApp = sendCreditWhatsApp;
 
-// ✅ ALIAS POUR COMPATIBILITÉ avec admin.js (qui appelle renderCreditsTable sans "Pro")
+// ✅ NOUVELLES FONCTIONS EXPOSÉES
+window.paySelectedCredits = paySelectedCredits;
+window.creerFacturePaiementCredits = creerFacturePaiementCredits;
+window.posAfficherOptionWhatsAppPaiement = posAfficherOptionWhatsAppPaiement;
+window.posEnvoyerWhatsAppPaiement = posEnvoyerWhatsAppPaiement;
+window.posFermerModalWhatsAppPaiement = posFermerModalWhatsAppPaiement;
+
 window.renderCreditsTable = renderCreditsTablePro;
 
-// ✅ PAGINATION - NE PAS écraser les fonctions existantes (admin.js/script.js fonctionnent déjà)
 window.getPaginationHTML = window.getPaginationHTML || getPaginationHTML;
 window.changePage = window.changePage || changePage;
 window.getPageData = window.getPageData || getPageData;
@@ -2325,3 +2656,5 @@ console.log('✅ Synchronisation avec admin ventes : Quand un crédit est payé,
 console.log('✅ Gestion des crédits à 0 MAD : Marqué comme payé automatiquement');
 console.log('✅ ALIAS renderCreditsTable = renderCreditsTablePro (compatibilité admin.js)');
 console.log('✅ changePage NON écrasée (garde la version d\'admin.js)');
+console.log('✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé');
+console.log('✅ NOUVEAU : Création facture "PAI-YYYY-XXXXX" après paiement + WhatsApp');
