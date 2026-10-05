@@ -22,7 +22,7 @@
 // ✅ 📴 MODE HORS-LIGNE : enregistre les ventes dans localStorage + sync auto
 // ✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)
 // ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
-// ✅ 🎤 CORRECTION MICRO : appel direct de pos-audio.js (multi-alias)
+// ✅ 🎤 CORRECTION MICRO FINALE : utilise window.toggleVoiceSearch EN PRIORITÉ
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -2263,19 +2263,22 @@ alert('Fonction à implémenter selon votre logique');
 }
 
 function posToggleVoiceSearch() {
-    // 🎤 CORRECTION : essayer plusieurs alias pour compatibilité pos-audio.js
-    if (typeof window.toggleVoiceSearch === 'function') {
-        console.log('✅ [pos.js] Appel window.toggleVoiceSearch');
-        window.toggleVoiceSearch();
-    } else if (typeof window.posToggleVoiceSearch === 'function' && window.posToggleVoiceSearch !== posToggleVoiceSearch) {
-        console.log('✅ [pos.js] Appel window.posToggleVoiceSearch');
-        window.posToggleVoiceSearch();
-    } else if (typeof window.posAudioToggleVoiceSearch === 'function') {
-        console.log('✅ [pos.js] Appel window.posAudioToggleVoiceSearch');
-        window.posAudioToggleVoiceSearch();
+    // 🎤 CORRECTION FINALE : appel DIRECT de la fonction de pos-audio.js
+    console.log('🎤 [pos.js] posToggleVoiceSearch appelé');
+    
+    // ⚠️ IMPORTANT : window.toggleVoiceSearch est défini par pos-audio.js
+    // NE PAS utiliser window.posToggleVoiceSearch car pos.js l'écrase à la fin
+    var fn = window.toggleVoiceSearch || window.posAudioToggleVoiceSearch;
+    
+    if (typeof fn === 'function') {
+        console.log('✅ [pos.js] Appel de la fonction vocale (pos-audio.js)');
+        fn();
     } else {
-        console.error('❌ [pos.js] Aucune fonction de recherche vocale trouvée');
-        alert('Fonction de recherche vocale non disponible — rechargez la page (Ctrl+Shift+R)');
+        console.error('❌ [pos.js] window.toggleVoiceSearch introuvable');
+        console.error('   typeof window.toggleVoiceSearch:', typeof window.toggleVoiceSearch);
+        console.error('   typeof window.posAudioToggleVoiceSearch:', typeof window.posAudioToggleVoiceSearch);
+        console.error('   typeof window.showVoiceResult:', typeof window.showVoiceResult);
+        alert('❌ Le module vocal (pos-audio.js) n\'est pas chargé.\n\nVérifiez que le fichier pos-audio.js existe et que l\'ordre des scripts dans index.html est correct.');
     }
 }
 
@@ -2740,5 +2743,5 @@ console.log('✅ LIMITE À ' + MAX_PANIERS + ' PANIERS MAXIMUM');
 console.log('✅ 📴 MODE HORS-LIGNE : sauvegarde localStorage + sync auto');
 console.log('✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)');
 console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)');
-console.log('✅ 🎤 CORRECTION MICRO : appel direct de pos-audio.js (multi-alias)');
+console.log('✅ 🎤 CORRECTION MICRO FINALE : utilise window.toggleVoiceSearch EN PRIORITÉ');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
