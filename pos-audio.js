@@ -197,7 +197,6 @@ function fastFindProduct(query) {
 }
 
 // ========== COMMANDES ==========
-// 🔥 CORRECTION 1 : tri par longueur décroissante + match exact de mot
 function extractNumberFromTranscript(transcript) {
     const cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const digits = cleaned.match(/\b\d+\b/);
@@ -239,7 +238,6 @@ function detectPeriodFilter(transcript) {
     return null;
 }
 
-// 🔥 NOUVEAU : Détection de filtre de catégorie (pour page Produits)
 function detectCategoryFilter(transcript) {
     if (!window.allCategoriesData || !Array.isArray(window.allCategoriesData)) return null;
     var cleaned = transcript.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -293,7 +291,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 🔥 NOUVEAU : PAGE PRODUITS - recherche produit ou filtre catégorie
+    // 🔥 PAGE PRODUITS - recherche produit ou filtre catégorie
     // ============================================================
     if (currentPage === 'Produits') {
         var catFilter = detectCategoryFilter(cleaned);
@@ -308,7 +306,7 @@ function parseVoiceCommand(transcript) {
     }
 
     // ============================================================
-    // 🔥 NOUVEAU : PAGE VENTES - recherche client ou filtre période
+    // 🔥 PAGE VENTES - recherche client ou filtre période
     // ============================================================
     if (currentPage === 'Ventes') {
         var periodV = detectPeriodFilter(cleaned);
@@ -1229,7 +1227,6 @@ window.posToggleVoiceSearch = posToggleVoiceSearch;
 window.posAudioToggleVoiceSearch = posToggleVoiceSearch;
 
 // 🔒 VERROUILLER window.toggleVoiceSearch AVEC LA FONCTION RÉELLE
-// (pos.js ne pourra PLUS l'écraser car writable: false)
 try {
     Object.defineProperty(window, 'toggleVoiceSearch', {
         value: posToggleVoiceSearch,
