@@ -23,6 +23,7 @@
 // ✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)
 // ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
 // ✅ 🎤 CORRECTION MICRO FINALE : utilise window.toggleVoiceSearch EN PRIORITÉ
+// ✅ 📱 WHATSAPP : option d'envoi de facture après validation vente en ligne
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -1999,6 +2000,7 @@ return false;
 
 // ============================================================
 // ✅ posFinalizeSale() — CORRIGÉE POUR LE MODE HORS-LIGNE
+// + 📱 AJOUT : Affichage option WhatsApp après vente en ligne
 // ============================================================
 async function posFinalizeSale(){
 // ==================== VÉRIFICATIONS DE BASE ====================
@@ -2083,6 +2085,7 @@ try {
     // 📴 DÉTECTION HORS-LIGNE (AVANT tout appel Firestore)
     // ============================================================
     var isOffline = !navigator.onLine;
+    var venteReussie = false;   // 📱 Pour savoir si on affiche WhatsApp
     console.log('🎯 FINALIZE — isOffline:', isOffline, '| total:', t.toFixed(2));
 
     if (isOffline) {
@@ -2135,6 +2138,9 @@ try {
             notif.style.transition = 'opacity 0.3s';
             setTimeout(function() { notif.remove(); }, 300);
         }, 4000);
+
+        // ⚠️ PAS de WhatsApp en mode hors-ligne
+        venteReussie = false;
 
     } else {
         // ================= MODE EN LIGNE =================
@@ -2195,6 +2201,9 @@ try {
                 await CacheDB.set('ventes', ventesRef.id, Object.assign({id: ventesRef.id}, venteData));
             }
         } catch(e) {}
+
+        // 📱 Vente en ligne réussie → on pourra proposer WhatsApp
+        venteReussie = true;
     }
 
     // ============================================================
@@ -2216,6 +2225,13 @@ try {
         }, 500);
     }
 
+    // 📱 AJOUT : Afficher l'option WhatsApp après une vente en ligne réussie
+    if (venteReussie) {
+        setTimeout(function() {
+            posAfficherOptionWhatsApp(venteData, fn, t);
+        }, 800);
+    }
+
 } catch(e) {
     console.error('❌ Erreur finalize:', e);
     alert('Erreur: ' + e.message);
@@ -2223,6 +2239,158 @@ try {
     isFinalizing = false;
     if(fb){ fb.disabled = false; fb.innerHTML = '<i class="fas fa-check-circle"></i> Finaliser'; }
 }
+}
+
+// ============================================================
+// 📱 WHATSAPP - AFFICHER LE MODAL APRÈS VALIDATION VENTE EN LIGNE
+// ============================================================
+function posAfficherOptionWhatsApp(venteData, factureNum, total) {
+    try {
+        console.log('📱 [WhatsApp] Proposition d\'envoi de facture #' + factureNum);
+
+        var clientName = venteData.clientName || 'Passager';
+        var clientId = venteData.clientId;
+        var clientTel = '';
+
+        // Chercher le téléphone du client
+        if (clientId) {
+            var client = posAllClients.find(function(c) { return c.id === clientId; });
+            if (client) {
+                clientTel = client.telephone || client.whatsapp || '';
+            }
+        }
+
+        // Préparer le message WhatsApp
+        var items = venteData.items || [];
+        var lignesProduits = items.map(function(it) {
+            return '• ' + it.nom + ' × ' + it.quantite + ' = ' + ((it.prixVente || 0) * it.quantite).toFixed(2) + ' MAD';
+        }).join('\n');
+
+        var dateStr = new Date().toLocaleDateString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        var messageWhatsApp =
+            '🧾 *FACTURE ' + factureNum + '*\n' +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            '📅 Date : ' + dateStr + '\n' +
+            '👤 Client : ' + clientName + '\n' +
+            (venteData.table ? '🍽️ Table : ' + venteData.table + '\n' : '') +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            '*DÉTAIL DE LA COMMANDE :*\n' +
+            lignesProduits + '\n' +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            (venteData.discountMAD > 0 ? '💰 Remise : -' + venteData.discountMAD.toFixed(2) + ' MAD\n' : '') +
+            '💵 *TOTAL : ' + total.toFixed(2) + ' MAD*\n' +
+            '💳 Paiement : ' + (venteData.paymentMethod === 'espece' ? 'Espèces' : venteData.paymentMethod === 'credit' ? 'Crédit' : 'Partiel') + '\n' +
+            '━━━━━━━━━━━━━━━━━━━━━\n' +
+            'Merci pour votre visite ! 🙏\n' +
+            'E-SOLUTION POS';
+
+        // Sauvegarder pour utilisation dans posEnvoyerWhatsApp
+        window._posWhatsAppData = {
+            message: messageWhatsApp,
+            clientTel: clientTel,
+            clientName: clientName,
+            factureNum: factureNum,
+            clientId: clientId
+        };
+
+        // Message de confirmation visuelle
+        var confirmHtml = `
+            <div style="padding:16px;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:8px;">✅</div>
+                <h3 style="margin:0 0 4px;color:#10B981;font-size:1.3rem;font-weight:700;">Vente validée !</h3>
+                <p style="color:#64748b;margin:0 0 16px;font-size:0.95rem;">
+                    Facture <strong>${escapeHtml(factureNum)}</strong> — <strong>${total.toFixed(2)} MAD</strong>
+                </p>
+
+                <div style="padding:14px;background:#F0FDF4;border:2px solid #10B981;border-radius:10px;margin-bottom:16px;text-align:left;">
+                    <p style="margin:0;font-size:0.9rem;color:#065F46;">
+                        <strong>👤 Client :</strong> ${escapeHtml(clientName)}<br>
+                        ${clientTel ? '<strong>📞 Téléphone :</strong> ' + escapeHtml(clientTel) : '<em style="color:#92400E;">⚠️ Aucun numéro de téléphone enregistré pour ce client</em>'}
+                    </p>
+                </div>
+
+                <p style="color:#334155;font-weight:600;margin-bottom:12px;font-size:1rem;">
+                    📱 Voulez-vous envoyer la facture par WhatsApp ?
+                </p>
+
+                <div style="display:flex;gap:8px;">
+                    <button onclick="posFermerModalWhatsApp()"
+                        style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;">
+                        ❌ Non
+                    </button>
+                    <button onclick="posEnvoyerWhatsApp()"
+                        style="flex:2;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(37,211,102,0.3);">
+                        <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Envoyer WhatsApp
+                    </button>
+                </div>
+            </div>
+        `;
+
+        openModal('🧾 Vente validée', confirmHtml);
+
+    } catch(e) {
+        console.error('❌ Erreur posAfficherOptionWhatsApp:', e);
+    }
+}
+
+// ============================================================
+// 📱 WHATSAPP - ENVOYER LE MESSAGE
+// ============================================================
+function posEnvoyerWhatsApp() {
+    try {
+        var data = window._posWhatsAppData;
+        if (!data) {
+            alert('❌ Aucune facture en mémoire.');
+            closeModal();
+            return;
+        }
+
+        var message = data.message || '';
+        var tel = (data.clientTel || '').replace(/\D/g, ''); // Garder uniquement les chiffres
+
+        // Nettoyer le numéro (si commence par 0, ajouter indicatif Maroc 212)
+        if (tel) {
+            if (tel.startsWith('0')) {
+                tel = '212' + tel.substring(1);
+            } else if (tel.startsWith('+')) {
+                tel = tel.replace(/\D/g, '');
+            }
+        }
+
+        // Construire l'URL WhatsApp
+        var url;
+        if (tel && tel.length >= 8) {
+            // Avec numéro → message direct
+            url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp] Envoi au numéro :', tel);
+        } else {
+            // Sans numéro → ouvrir WhatsApp Web sans destinataire
+            url = 'https://wa.me/?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp] Aucun numéro — WhatsApp Web sans destinataire');
+        }
+
+        // Ouvrir WhatsApp
+        window.open(url, '_blank');
+
+        closeModal();
+        window._posWhatsAppData = null;
+
+    } catch(e) {
+        console.error('❌ Erreur posEnvoyerWhatsApp:', e);
+        alert('❌ Erreur lors de l\'envoi WhatsApp : ' + e.message);
+    }
+}
+
+// ============================================================
+// 📱 WHATSAPP - FERMER LE MODAL SANS ENVOYER
+// ============================================================
+function posFermerModalWhatsApp() {
+    window._posWhatsAppData = null;
+    closeModal();
 }
 
 function posResetCart() {
@@ -2541,6 +2709,11 @@ window.posChargerToutesDonneesPaniers = posChargerToutesDonneesPaniers;
 window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 
+// 📱 WHATSAPP - Exposer les fonctions
+window.posAfficherOptionWhatsApp = posAfficherOptionWhatsApp;
+window.posEnvoyerWhatsApp = posEnvoyerWhatsApp;
+window.posFermerModalWhatsApp = posFermerModalWhatsApp;
+
 // ============================================================
 // 🤖 FONCTION POUR AJOUTER PLUSIEURS PRODUITS AU PANIER
 // (Utilisée par pos-ai.js pour la commande vocale Gemini)
@@ -2744,4 +2917,5 @@ console.log('✅ 📴 MODE HORS-LIGNE : sauvegarde localStorage + sync auto');
 console.log('✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)');
 console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)');
 console.log('✅ 🎤 CORRECTION MICRO FINALE : utilise window.toggleVoiceSearch EN PRIORITÉ');
+console.log('✅ 📱 WHATSAPP : envoi de facture après validation vente en ligne');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
