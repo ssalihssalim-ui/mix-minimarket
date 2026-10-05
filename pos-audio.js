@@ -10,6 +10,9 @@
 // 🔥 CORRECTION : Navigation utilise les noms ANGLAIS (products, categories...) pour matcher admin.js
 // 🔥 AJOUT : Recherche vocale sur pages Produits, Ventes, Crédits
 // 🔥 CORRECTION MICRO : ajout alias window.toggleVoiceSearch
+// 🔥 CORRECTION closeCreditSelection : protégé par try/catch
+
+console.log('🚀 [pos-audio] Début du chargement...');
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -31,16 +34,20 @@ var productIndexBuilt = false;
 // ========== PAYMENT STATE MACHINE ==========
 window.voicePaymentState = 0;
 
-// ✅ DÉFINIR closeCreditSelection comme FALLBACK
-if (typeof window.closeCreditSelection !== 'function') {
-    window.closeCreditSelection = function() {
-        console.log('closeCreditSelection appelé (fallback pos-audio)');
-        window.creditSelectionMode = false;
-        window.creditSelectedIds = [];
-        if (typeof renderCreditsTablePro === 'function') {
-            renderCreditsTablePro();
-        }
-    };
+// ✅ DÉFINIR closeCreditSelection comme FALLBACK (protégé contre les erreurs)
+try {
+    if (typeof window.closeCreditSelection !== 'function') {
+        window.closeCreditSelection = function() {
+            console.log('closeCreditSelection appelé (fallback pos-audio)');
+            window.creditSelectionMode = false;
+            window.creditSelectedIds = [];
+            if (typeof renderCreditsTablePro === 'function') {
+                renderCreditsTablePro();
+            }
+        };
+    }
+} catch(e) {
+    console.warn('⚠️ pos-audio: impossible de définir closeCreditSelection:', e);
 }
 
 var paymentKeywords = {
@@ -1245,14 +1252,18 @@ window.resetVoiceQuantityMode = function() {
 };
 
 // ✅ GARANTIR que closeCreditSelection existe
-if (typeof window.closeCreditSelection !== 'function') {
-    window.closeCreditSelection = function() {
-        window.creditSelectionMode = false;
-        window.creditSelectedIds = [];
-        if (typeof renderCreditsTablePro === 'function') {
-            renderCreditsTablePro();
-        }
-    };
+try {
+    if (typeof window.closeCreditSelection !== 'function') {
+        window.closeCreditSelection = function() {
+            window.creditSelectionMode = false;
+            window.creditSelectedIds = [];
+            if (typeof renderCreditsTablePro === 'function') {
+                renderCreditsTablePro();
+            }
+        };
+    }
+} catch(e) {
+    console.warn('⚠️ pos-audio: impossible de définir closeCreditSelection (fin):', e);
 }
 
 console.log('🎤 Module vocal v27 – QUANTITÉ PRIORITAIRE + RECHERCHE MULTI-PAGES');
@@ -1262,3 +1273,4 @@ console.log('✅ Recherche vocale sur page Ventes (client + période)');
 console.log('✅ Recherche vocale sur page Crédits (client + période)');
 console.log('✅ Navigation utilise les noms ANGLAIS pour matcher admin.js');
 console.log('✅ ALIAS window.toggleVoiceSearch ajouté pour compatibilité pos.js');
+console.log('🏁 [pos-audio] FIN — toggleVoiceSearch:', typeof window.toggleVoiceSearch);
