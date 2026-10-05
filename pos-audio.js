@@ -1,4 +1,4 @@
-// ==================== POS-AUDIO.JS v27 – QUANTITÉ PRIORITAIRE ====================
+// ==================== POS-AUDIO.JS v28 – VERROUILLAGE TOGGLEVOICESEARCH ====================
 // ✅ Le texte s'écrit dans la barre SANS icône ✍️
 // ✅ Recherche lancée automatiquement à chaque mot dicté (interim)
 // ✅ Produit dicté → affiché dans la barre ET recherche lancée
@@ -9,10 +9,22 @@
 // ✅ Le micro affiche la barre de recherche avant de démarrer
 // 🔥 CORRECTION : Navigation utilise les noms ANGLAIS (products, categories...) pour matcher admin.js
 // 🔥 AJOUT : Recherche vocale sur pages Produits, Ventes, Crédits
-// 🔥 CORRECTION MICRO : ajout alias window.toggleVoiceSearch
+// 🔥 CORRECTION MICRO : verrouillage window.toggleVoiceSearch pour empêcher pos.js de l'écraser
 // 🔥 CORRECTION closeCreditSelection : protégé par try/catch
 
 console.log('🚀 [pos-audio] Début du chargement...');
+
+// 🔒 VERROUILLER window.toggleVoiceSearch DÈS LE DÉBUT pour empêcher pos.js de l'écraser plus tard
+try {
+    Object.defineProperty(window, 'toggleVoiceSearch', {
+        value: null,
+        writable: false,
+        configurable: true
+    });
+    console.log('🔒 [pos-audio] Placeholder window.toggleVoiceSearch créé (verrouillé)');
+} catch(e) {
+    console.warn('⚠️ [pos-audio] Impossible de verrouiller window.toggleVoiceSearch:', e);
+}
 
 var voiceRecognition = null;
 var isRecording = false;
@@ -1216,8 +1228,20 @@ function posStopVoiceSearch() {
 window.posToggleVoiceSearch = posToggleVoiceSearch;
 window.posAudioToggleVoiceSearch = posToggleVoiceSearch;
 
-// 🔥 CORRECTION MICRO : ALIAS pour que pos.js trouve la fonction via window.toggleVoiceSearch
-window.toggleVoiceSearch = posToggleVoiceSearch;
+// 🔒 VERROUILLER window.toggleVoiceSearch AVEC LA FONCTION RÉELLE
+// (pos.js ne pourra PLUS l'écraser car writable: false)
+try {
+    Object.defineProperty(window, 'toggleVoiceSearch', {
+        value: posToggleVoiceSearch,
+        writable: false,
+        configurable: true
+    });
+    console.log('🔒 [pos-audio] window.toggleVoiceSearch VERROUILLÉ avec posToggleVoiceSearch');
+} catch(e) {
+    // Fallback : assignation normale si le verrou échoue
+    window.toggleVoiceSearch = posToggleVoiceSearch;
+    console.log('⚠️ [pos-audio] Fallback : window.toggleVoiceSearch assigné normalement');
+}
 
 window.showVoiceResult = showVoiceResult;
 window.setVoiceMode = setVoiceMode;
@@ -1266,11 +1290,11 @@ try {
     console.warn('⚠️ pos-audio: impossible de définir closeCreditSelection (fin):', e);
 }
 
-console.log('🎤 Module vocal v27 – QUANTITÉ PRIORITAIRE + RECHERCHE MULTI-PAGES');
+console.log('🎤 Module vocal v28 – QUANTITÉ PRIORITAIRE + VERROUILLAGE toggleVoiceSearch');
 console.log('✅ Recherche vocale sur POS (produits + quantité)');
 console.log('✅ Recherche vocale sur page Produits (nom + catégorie)');
 console.log('✅ Recherche vocale sur page Ventes (client + période)');
 console.log('✅ Recherche vocale sur page Crédits (client + période)');
 console.log('✅ Navigation utilise les noms ANGLAIS pour matcher admin.js');
-console.log('✅ ALIAS window.toggleVoiceSearch ajouté pour compatibilité pos.js');
+console.log('🔒 window.toggleVoiceSearch VERROUILLÉ — pos.js ne peut plus l\'écraser');
 console.log('🏁 [pos-audio] FIN — toggleVoiceSearch:', typeof window.toggleVoiceSearch);
