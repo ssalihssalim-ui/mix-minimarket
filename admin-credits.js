@@ -12,6 +12,7 @@
 // ✅ GESTION DES CRÉDITS À 0 MAD : Marqué comme payé automatiquement
 // ✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé
 // ✅ NOUVEAU : Création de facture de paiement + envoi WhatsApp après paiement
+// ✅ NOUVEAU : Récupération du numéro client depuis Firestore + envoi WhatsApp direct
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -1229,7 +1230,7 @@ window.selectAllBtnState = false;
 
 var selectBtn = document.getElementById('toggleSelectionBtn');
 var deleteBtn = document.getElementById('deleteSelectedBtn');
-var payBtn = document.getElementById('paySelectedBtn'); // ✅ NOUVEAU
+var payBtn = document.getElementById('paySelectedBtn');
 if (selectBtn) {
 if (window.creditSelectionMode) {
 selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
@@ -1243,7 +1244,6 @@ selectAllBtn.style.display = window.creditSelectionMode ? 'inline-block' : 'none
 if (deleteBtn) {
 deleteBtn.style.display = 'none';
 }
-// ✅ NOUVEAU : cacher le bouton "Marquer payé"
 if (payBtn) {
 payBtn.style.display = 'none';
 }
@@ -1261,10 +1261,9 @@ updateDeleteButtonVisibility();
 renderCreditsTablePro();
 }
 
-// ✅ MODIFIÉ : Afficher aussi le bouton "Marquer payé"
 function updateDeleteButtonVisibility() {
 var deleteBtn = document.getElementById('deleteSelectedBtn');
-var payBtn = document.getElementById('paySelectedBtn'); // ✅ NOUVEAU
+var payBtn = document.getElementById('paySelectedBtn');
 
 if (deleteBtn) {
 if (window.creditSelectedIds.length === 0) {
@@ -1274,7 +1273,6 @@ deleteBtn.style.display = 'inline-block';
 }
 }
 
-// ✅ NOUVEAU : afficher/masquer le bouton "Marquer payé"
 if (payBtn) {
 if (window.creditSelectedIds.length === 0) {
 payBtn.style.display = 'none';
@@ -1339,11 +1337,11 @@ window.creditSelectionMode = false;
 var selectBtn = document.getElementById('toggleSelectionBtn');
 var deleteBtn = document.getElementById('deleteSelectedBtn');
 var selectAllBtn = document.getElementById('selectAllBtn');
-var payBtn = document.getElementById('paySelectedBtn'); // ✅ NOUVEAU
+var payBtn = document.getElementById('paySelectedBtn');
 if (selectBtn) selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
 if (deleteBtn) deleteBtn.style.display = 'none';
 if (selectAllBtn) selectAllBtn.style.display = 'none';
-if (payBtn) payBtn.style.display = 'none'; // ✅ NOUVEAU
+if (payBtn) payBtn.style.display = 'none';
 loadCredits();
 CacheDB.sync();
 
@@ -1356,7 +1354,7 @@ alert('❌ Erreur: ' + e.message);
 }
 
 // ============================================================
-// ✅ NOUVELLE FONCTION : Marquer payés tous les crédits sélectionnés
+// ✅ FONCTION : Marquer payés tous les crédits sélectionnés
 // ✅ + Créer une facture de paiement + proposer WhatsApp
 // ============================================================
 async function paySelectedCredits() {
@@ -1483,8 +1481,8 @@ async function paySelectedCredits() {
 
         CacheDB.sync();
 
-        // ✅ Afficher le modal WhatsApp avec la facture
-        posAfficherOptionWhatsAppPaiement(facturePaiement);
+        // ✅ Afficher le modal WhatsApp avec la facture (await car async maintenant)
+        await posAfficherOptionWhatsAppPaiement(facturePaiement);
 
     } catch (e) {
         console.error('❌ Erreur paiement groupé:', e);
@@ -1494,7 +1492,7 @@ async function paySelectedCredits() {
 window.paySelectedCredits = paySelectedCredits;
 
 // ============================================================
-// ✅ NOUVELLE FONCTION : Créer une facture de paiement de crédits
+// ✅ FONCTION : Créer une facture de paiement de crédits
 // ============================================================
 async function creerFacturePaiementCredits(paiements, totalPaye) {
     var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
@@ -1578,19 +1576,38 @@ window.creerFacturePaiementCredits = creerFacturePaiementCredits;
 
 // ============================================================
 // 📱 AFFICHER LE MODAL WHATSAPP APRÈS PAIEMENT DE CRÉDITS
+// ✅ Récupère le numéro du client depuis Firestore si absent du cache
+// ✅ ASYNC maintenant pour permettre la récupération Firestore
 // ============================================================
-function posAfficherOptionWhatsAppPaiement(factureData) {
+async function posAfficherOptionWhatsAppPaiement(factureData) {
     try {
         var clientName = factureData.clientName || 'Client';
         var clientId = factureData.clientId;
         var clientTel = '';
 
+        // ✅ 1. Chercher dans le cache local
         if (clientId) {
             var client = (window.clientsDataForSearch || []).find(function(c) { return c.id === clientId; });
             if (client) {
                 clientTel = client.telephone || client.whatsapp || '';
             }
+
+            // ✅ 2. Si pas trouvé dans le cache → chercher dans Firestore
+            if (!clientTel && navigator.onLine) {
+                try {
+                    var clientDoc = await db.collection('clients').doc(clientId).get();
+                    if (clientDoc.exists) {
+                        var cData = clientDoc.data();
+                        clientTel = cData.telephone || cData.whatsapp || '';
+                        console.log('✅ Téléphone client récupéré depuis Firestore:', clientTel);
+                    }
+                } catch(e) {
+                    console.warn('⚠️ Erreur récupération téléphone client:', e);
+                }
+            }
         }
+
+        var telDisplay = clientTel ? clientTel.replace(/\D/g, '') : '';
 
         var lignesCredits = factureData.creditsPayes.map(function(c) {
             return '• Facture #' + c.factureNum + ' → ' + c.montantPaye.toFixed(2) + ' MAD';
@@ -1621,8 +1638,13 @@ function posAfficherOptionWhatsAppPaiement(factureData) {
             message: messageWhatsApp,
             clientTel: clientTel,
             clientName: clientName,
+            clientId: clientId,
             factureNum: factureData.factureNum
         };
+
+        var telInfo = telDisplay
+            ? '<strong>📞 Téléphone :</strong> ' + escapeHtml(clientTel) + ' <span style="color:#10B981;">✅</span>'
+            : '<em style="color:#92400E;">⚠️ Aucun numéro de téléphone enregistré pour ce client</em>';
 
         var confirmHtml = `
             <div style="padding:16px;text-align:center;">
@@ -1636,12 +1658,12 @@ function posAfficherOptionWhatsAppPaiement(factureData) {
                     <p style="margin:0;font-size:0.9rem;color:#065F46;">
                         <strong>👤 Client :</strong> ${escapeHtml(clientName)}<br>
                         <strong>📄 Nb crédits :</strong> ${factureData.creditsPayes.length}<br>
-                        ${clientTel ? '<strong>📞 Téléphone :</strong> ' + escapeHtml(clientTel) : '<em style="color:#92400E;">⚠️ Aucun numéro de téléphone enregistré</em>'}
+                        ${telInfo}
                     </p>
                 </div>
 
                 <p style="color:#334155;font-weight:600;margin-bottom:12px;font-size:1rem;">
-                    📱 Voulez-vous envoyer le reçu par WhatsApp ?
+                    📱 Voulez-vous envoyer le reçu par WhatsApp${telDisplay ? ' au ' + escapeHtml(clientTel) : ''} ?
                 </p>
 
                 <div style="display:flex;gap:8px;">
@@ -1667,6 +1689,7 @@ window.posAfficherOptionWhatsAppPaiement = posAfficherOptionWhatsAppPaiement;
 
 // ============================================================
 // 📱 ENVOYER WHATSAPP POUR LE PAIEMENT
+// ✅ Envoi direct au numéro du client (comme dans pos.js)
 // ============================================================
 function posEnvoyerWhatsAppPaiement() {
     try {
@@ -1680,6 +1703,7 @@ function posEnvoyerWhatsAppPaiement() {
         var message = data.message || '';
         var tel = (data.clientTel || '').replace(/\D/g, '');
 
+        // ✅ Normaliser le numéro (Maroc +212) - IDENTIQUE À POS.JS
         if (tel) {
             if (tel.startsWith('0')) {
                 tel = '212' + tel.substring(1);
@@ -1690,9 +1714,13 @@ function posEnvoyerWhatsAppPaiement() {
 
         var url;
         if (tel && tel.length >= 8) {
+            // ✅ Avec numéro → envoi direct au client
             url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp Paiement] Envoi au numéro :', tel);
         } else {
+            // ⚠️ Sans numéro → WhatsApp Web sans destinataire
             url = 'https://wa.me/?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp Paiement] Aucun numéro — WhatsApp Web sans destinataire');
         }
 
         window.open(url, '_blank');
@@ -1953,8 +1981,8 @@ async function confirmCreditPayment(creditId) {
         }];
         var facturePaiement = await creerFacturePaiementCredits(paiements, montant);
 
-        // ✅ Afficher le modal WhatsApp
-        posAfficherOptionWhatsAppPaiement(facturePaiement);
+        // ✅ Afficher le modal WhatsApp (await car async maintenant)
+        await posAfficherOptionWhatsAppPaiement(facturePaiement);
 
     } catch(e) {
         console.error('Erreur paiement crédit:', e);
@@ -2477,7 +2505,6 @@ function getPageData(pageType, data) {
 
 // ==================== FONCTIONS MANQUANTES AJOUTÉES ====================
 
-// ✅ MODIFIÉ : Cacher aussi le bouton "Marquer payé"
 function closeCreditSelection() {
     window.creditSelectedIds = [];
     window.creditSelectionMode = false;
@@ -2500,7 +2527,6 @@ function closeCreditSelection() {
     var deleteBtn = document.getElementById('deleteSelectedBtn');
     if (deleteBtn) deleteBtn.style.display = 'none';
 
-    // ✅ NOUVEAU : cacher aussi le bouton "Marquer payé"
     var payBtn = document.getElementById('paySelectedBtn');
     if (payBtn) payBtn.style.display = 'none';
 
@@ -2658,3 +2684,5 @@ console.log('✅ ALIAS renderCreditsTable = renderCreditsTablePro (compatibilit�
 console.log('✅ changePage NON écrasée (garde la version d\'admin.js)');
 console.log('✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé');
 console.log('✅ NOUVEAU : Création facture "PAI-YYYY-XXXXX" après paiement + WhatsApp');
+console.log('✅ NOUVEAU : Récupération automatique du numéro client depuis Firestore');
+console.log('✅ NOUVEAU : Envoi WhatsApp direct au numéro du client (comme pos.js)');
