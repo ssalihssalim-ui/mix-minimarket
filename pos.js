@@ -22,6 +22,7 @@
 // ✅ 📴 MODE HORS-LIGNE : enregistre les ventes dans localStorage + sync auto
 // ✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)
 // ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
+// ✅ 🎤 CORRECTION MICRO : appel direct de pos-audio.js (multi-alias)
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -2262,11 +2263,20 @@ alert('Fonction à implémenter selon votre logique');
 }
 
 function posToggleVoiceSearch() {
-if (typeof window.toggleVoiceSearch === 'function') {
-window.toggleVoiceSearch();
-} else {
-alert('Fonction de recherche vocale non disponible');
-}
+    // 🎤 CORRECTION : essayer plusieurs alias pour compatibilité pos-audio.js
+    if (typeof window.toggleVoiceSearch === 'function') {
+        console.log('✅ [pos.js] Appel window.toggleVoiceSearch');
+        window.toggleVoiceSearch();
+    } else if (typeof window.posToggleVoiceSearch === 'function' && window.posToggleVoiceSearch !== posToggleVoiceSearch) {
+        console.log('✅ [pos.js] Appel window.posToggleVoiceSearch');
+        window.posToggleVoiceSearch();
+    } else if (typeof window.posAudioToggleVoiceSearch === 'function') {
+        console.log('✅ [pos.js] Appel window.posAudioToggleVoiceSearch');
+        window.posAudioToggleVoiceSearch();
+    } else {
+        console.error('❌ [pos.js] Aucune fonction de recherche vocale trouvée');
+        alert('Fonction de recherche vocale non disponible — rechargez la page (Ctrl+Shift+R)');
+    }
 }
 
 function updateClearButtonVisibility() {
@@ -2730,4 +2740,5 @@ console.log('✅ LIMITE À ' + MAX_PANIERS + ' PANIERS MAXIMUM');
 console.log('✅ 📴 MODE HORS-LIGNE : sauvegarde localStorage + sync auto');
 console.log('✅ 🤖 BOUTON GEMINI VOICE AJOUTÉ (POS-AI.js)');
 console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)');
+console.log('✅ 🎤 CORRECTION MICRO : appel direct de pos-audio.js (multi-alias)');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
