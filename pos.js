@@ -20,6 +20,7 @@
 // ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE DÉFINITIVEMENT
 // ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
 // ✅ 🤖 BOUTON GEMINI AJOUTÉ À CÔTÉ DU MICRO
+// ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -60,31 +61,26 @@ var posLastRenderTime = 0;
 var isFinalizing = false;
 
 var posProductOffset = 0;
-var posProductBatchSize = 30;   // ⚡ 50 → 30
+var posProductBatchSize = 30;
 var posHasMoreProducts = false;
 
 var clientCreditsCache = {};
 var clientSearchTimeout = null;
 
-// ⚡ CACHE DE RECHERCHE PRODUIT (partagé avec pos-audio.js)
 if (typeof window.posSearchCache === 'undefined') {
     window.posSearchCache = {};
 }
 var posSearchCache = window.posSearchCache;
 
-// ✅ MODE CATÉGORIES / PRODUITS
 var posViewMode = 'categories';
 var posSelectedCategoryForView = null;
 
-// ==================== MULTI-PANIERS AVEC SAUVEGARDE COMPLÈTE ====================
 var posMultiCarts = {};
 var posCurrentCartId = 'panier1';
 var posMultiCartCounter = 1;
 
-// ✅ STOCKAGE DES DONNÉES DE CHAQUE PANIER (client, table, paiement, remise, montant donné)
 var posMultiPaniersData = {};
 
-// ✅ LIMITE MAXIMALE DE PANIERS
 var MAX_PANIERS = 5;
 
 // ======================================================
@@ -190,7 +186,6 @@ btn.style.display = visible ? 'block' : 'none';
 
 // ==================== MULTI-PANIERS - FONCTIONS AVEC SAUVEGARDE COMPLÈTE ====================
 
-// ✅ SAUVEGARDER LES DONNÉES D'UN PANIER (client, table, paiement, etc.)
 function posSauvegarderDonneesPanier(cartId) {
     posMultiPaniersData[cartId] = {
         client: posCurrentClient ? { 
@@ -207,7 +202,6 @@ function posSauvegarderDonneesPanier(cartId) {
     };
 }
 
-// ✅ RESTAURER LES DONNÉES D'UN PANIER
 function posRestaurerDonneesPanier(cartId) {
     if (posMultiPaniersData[cartId]) {
         var data = posMultiPaniersData[cartId];
@@ -228,7 +222,6 @@ function posRestaurerDonneesPanier(cartId) {
     return false;
 }
 
-// ✅ CHARGER TOUTES LES DONNÉES DES PANIERS DEPUIS localStorage
 function posChargerToutesDonneesPaniers() {
     try {
         var allData = localStorage.getItem('posMultiPaniersData');
@@ -318,7 +311,6 @@ function posSaveMultiCarts() {
     } catch(e) { console.warn('⚠️ Erreur sauvegarde multi-paniers:', e); }
 }
 
-// ✅ RÉORGANISER LES NUMÉROS DES PANIERS (1 À 5)
 function posReorganiserNumerosPaniers() {
     var cartKeys = Object.keys(posMultiCarts);
     if (cartKeys.length === 0) {
@@ -358,7 +350,6 @@ function posReorganiserNumerosPaniers() {
     posSaveMultiCarts();
 }
 
-// ✅ CRÉER UN NOUVEAU PANIER - AVEC LIMITE DE 5 ET RÉUTILISATION DES NUMÉROS
 function posCreateNewCart() {
     posMultiCarts[posCurrentCartId] = posCart.slice();
     posSauvegarderDonneesPanier(posCurrentCartId);
@@ -411,7 +402,6 @@ function posCreateNewCart() {
     return newCartId;
 }
 
-// ✅ CHANGER DE PANIER - VERSION FLUIDE CORRIGÉE
 function posSwitchToCart(cartId) {
     if (!posMultiCarts[cartId]) { 
         console.warn('⚠️ Panier inexistant:', cartId); 
@@ -461,7 +451,6 @@ function posSwitchToCart(cartId) {
     console.log('🔄 Basculé vers:', cartId, 'articles:', posCart.length);
 }
 
-// ✅ SUPPRIMER UN PANIER - AVEC RÉORGANISATION DES NUMÉROS
 function posDeleteCart(cartId) {
     console.log('🗑️ Tentative de suppression du panier:', cartId);
     
@@ -528,7 +517,6 @@ function posDeleteCart(cartId) {
     console.log('✅ Panier supprimé:', cartId, 'Paniers restants:', Object.keys(posMultiCarts).length);
 }
 
-// ✅ VIDER TOUS LES PANIERS
 function posResetAllCarts() {
     if (!confirm('⚠️ Vider TOUS les paniers ? Cette action est irréversible.')) return;
     posMultiCarts = { 'panier1': [] };
@@ -560,7 +548,6 @@ function posGetTotalAllCarts() {
     return total;
 }
 
-// ==================== OPTIMISATION : PRÉCHARGEMENT DU POS ====================
 async function preloadPosData() {
 if (typeof CacheDB === 'undefined') return;
 
@@ -578,10 +565,8 @@ console.warn('Erreur préchargement POS:', e);
 }
 }
 
-// Lancer le préchargement immédiatement
 preloadPosData();
 
-// ==================== TOGGLE OUTILS POS - CORRIGÉ AVEC DESIGN MODERNE ====================
 function posToggleTools() {
     posToolsVisible = !posToolsVisible;
     var toolsContainer = document.getElementById('posToolsContainer');
@@ -661,7 +646,6 @@ function posToggleTools() {
     }
 }
 
-// ==================== APPLIQUER LE SCROLL SUR DYNAMICCONTENT ====================
 function applyDynamicContentScroll() {
 var container = document.getElementById('dynamicContent');
 if (container) {
@@ -695,7 +679,6 @@ return 0;
 }
 }
 
-// ✅ VERSION MODIFIÉE : affichage crédit cliquable - REDIRECTION VERS PAGE CRÉDITS AVEC SAUVEGARDE D'ÉTAT
 async function updateClientCreditDisplay(clientId) {
 var displayEl = document.getElementById('clientCreditDisplay');
 if (!displayEl) return;
@@ -748,13 +731,9 @@ displayEl.onclick = null;
 }
 }
 
-// ============================================================
-// ✅ loadPosPage - VERSION CORRIGÉE AVEC RESTAURATION AVANT RESET
-// ============================================================
 async function loadPosPage(c){
 applyDynamicContentScroll();
 
-// ✅ Charger les multi-paniers et leurs données
 posChargerToutesDonneesPaniers();
 posLoadMultiCarts();
 
@@ -904,7 +883,6 @@ if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButto
 }
 }
 
-// ⚡ OPTIMISATION : debounce 80ms + cache
 function posSearchProducts(query){
 clearTimeout(window._searchTimeout);
 window._searchTimeout = setTimeout(function(){
@@ -916,7 +894,6 @@ posViewMode = 'products';
 posSelectedCategoryForView = null;
 }
 
-// ⚡ OPTIMISATION : pré-remplir le cache (partagé avec pos-audio.js)
 if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
     if (typeof fastSearch === 'function') {
         posSearchCache[posSearchQuery] = fastSearch(posSearchQuery).slice();
@@ -924,7 +901,7 @@ if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
 }
 
 if(isOnPOSPage()) filterProductGrid();
-}, 80);   // ⚡ 150ms → 80ms
+}, 80);
 }
 
 function clearPosSearch() {
@@ -962,7 +939,6 @@ if (clearBtn) clearBtn.style.display = 'none';
 
 function loadMoreProducts(){ posProductOffset+=posProductBatchSize; filterProductGrid(); }
 
-// ==================== FILTER PRODUCT GRID AVEC MODE CATÉGORIES ====================
 function filterProductGrid(){
 if(!isOnPOSPage() || posStep !== 1) return;
 
@@ -974,7 +950,6 @@ afficherCategories(grid);
 return;
 }
 
-// ⚡ OPTIMISATION : utiliser le cache si disponible
 var f;
 if (posSearchCache[posSearchQuery]) {
     f = posSearchCache[posSearchQuery].slice();
@@ -1074,7 +1049,6 @@ imgContent = '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" alt=""
 imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;color:var(--text-muted);' : 'font-size:26px;color:var(--text-muted);') + '"></i>';
 }
 
-// ⚡ OPTIMISATION : content-visibility auto sur les cartes
 html += '<div class="pos-product-card ' + sc + '" style="' + cardStyle + 'content-visibility:auto;contain-intrinsic-size:150px 150px;" onclick="posAddToCartOrOpenOptions(\'' + p.id + '\')">' +
 '<div class="pos-product-img" style="' + imgStyle + '">' + imgContent + '</div>' +
 '<div class="pos-product-info" style="display:flex;flex-direction:column;align-items:center;width:100%;flex:1;justify-content:center;overflow:hidden;min-height:0;">' +
@@ -1096,7 +1070,6 @@ grid.innerHTML = html;
 updateClearButtonVisibility();
 }
 
-// ==================== AFFICHER LES CATÉGORIES - VERSION CORRIGÉE ====================
 function afficherCategories(grid) {
 var isMobile = window.innerWidth < 700;
 var isTablette = window.innerWidth >= 700 && window.innerWidth <= 1024;
@@ -1211,7 +1184,6 @@ html += '<div class="pos-category-card" data-cat-name="' + escapeHtml(cat.nom) +
 grid.innerHTML = html;
 }
 
-// ==================== SÉLECTIONNER UNE CATÉGORIE - AVEC TEXTE NOIR SUR FOND BLANC ====================
 function selectionnerCategorie(catName) {
 document.querySelectorAll('.pos-category-card').forEach(function(card) {
 card.classList.remove('active');
@@ -1252,7 +1224,6 @@ filterProductGrid();
 }
 }
 
-// ==================== RETOURNER AUX CATÉGORIES ====================
 function retournerCategories() {
 document.querySelectorAll('.pos-category-card').forEach(function(card) {
 card.classList.remove('active');
@@ -1279,7 +1250,6 @@ filterProductGrid();
 }
 }
 
-// ⚡ OPTIMISATION : cache de recherche client
 function posSearchClient(query){
 var q = query.toLowerCase().trim();
 posCurrentClient = null;
@@ -1296,7 +1266,6 @@ return;
 }
 if (clearBtn) clearBtn.style.display = 'flex';
 
-// ⚡ OPTIMISATION : cache de recherche client
 if (typeof window.clientSearchCache === 'undefined') {
     window.clientSearchCache = {};
 }
@@ -1629,7 +1598,6 @@ console.error('❌ Erreur récupération produit:', err);
 });
 }
 
-// ==================== updateCartOnly - NOM SUR UNE LIGNE ====================
 function updateCartOnly(){
 if(!isOnPOSPage()) return;
 var ci=document.querySelector('.pos-cart-items');
@@ -1703,7 +1671,6 @@ return;
 buildFullPOS(c);
 }
 
-// ==================== buildFullPOS AVEC HAUTEURS CORRIGÉES ET DESIGN MODERNE ====================
 function buildFullPOS(c){
 if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#14B8A6;"></i><p>Chargement...</p></div>'; return; }
 var st=posCalculateTotal(),t=st-posDiscountMAD;
@@ -1726,7 +1693,6 @@ var stepIndicator = '<div class="pos-steps-nav" style="display:flex; justify-con
 '</div>' +
 '</div>';
 
-// ==================== BARRE MULTI-PANIERS AVEC NOM DU CLIENT - VERSION AMÉLIORÉE ====================
 var multiCartBar = '<div class="pos-multi-carts-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border);margin-bottom:4px;">';
 
 var cartCount = Object.keys(posMultiCarts).length;
@@ -1828,7 +1794,6 @@ multiCartBar +
 '</div>' +
 '</div>' +
 
-// ⚡ OPTIMISATION : content-visibility sur la grille
 '<div class="pos-products-grid" id="posProductGrid" style="grid-template-columns:'+gridCols+';gap:'+gridGap+';padding:'+gridPadding+';overflow-x:hidden;overflow-y:auto;flex-wrap:wrap;align-content:start;flex:1;contain:layout paint;content-visibility:auto;"></div>' +
 '</div>' +
 
@@ -1968,7 +1933,6 @@ setStaticBackButtonVisibility(true);
 if (posCurrentClient && posCurrentClient.id) {
 updateClientCreditDisplay(posCurrentClient.id);
 }
-// 🔥 CORRECTION : réinitialiser le mode quantité AVANT de passer en mode paiement
 if (typeof window.resetVoiceQuantityMode === 'function') {
     window.resetVoiceQuantityMode();
 }
@@ -2207,7 +2171,6 @@ btn.style.display = (input.value && input.value.length > 0) ? 'flex' : 'none';
 
 function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userData.role==='caissier'||window.currentUserData.userData.role==='admin')){ if(posCart.length>0&&posStep===1){ if(!confirm('⚠️ '+posCart.length+' article(s) dans le panier. Garder ?')) posResetCart(); } navigateTo('pos'); } }
 
-// ==================== AJOUT RAPIDE D'UN NOUVEAU CLIENT (COMPATIBLE ADMIN-CRUD) ====================
 function posAjouterNouveauClient() {
     var modalHtml = `
         <div style="padding:10px;">
@@ -2384,7 +2347,6 @@ async function posConfirmerAjoutClient() {
     }
 }
 
-// ==================== CORRECTION MOBILE PANIER EN BAS ====================
 function corrigerDispositionMobile() {
 if (window.innerWidth <= 700) {
 var row = document.querySelector('.pos-row');
@@ -2440,7 +2402,6 @@ window.posToolsVisible = posToolsVisible;
 window.applyDynamicContentScroll = applyDynamicContentScroll;
 window.forceUpdateClient = forceUpdateClient;
 window.corrigerDispositionMobile = corrigerDispositionMobile;
-// Multi-paniers
 window.posMultiCarts = posMultiCarts;
 window.posCurrentCartId = posCurrentCartId;
 window.posMultiCartCounter = posMultiCartCounter;
@@ -2456,9 +2417,98 @@ window.posGetTotalAllCarts = posGetTotalAllCarts;
 window.posSauvegarderDonneesPanier = posSauvegarderDonneesPanier;
 window.posRestaurerDonneesPanier = posRestaurerDonneesPanier;
 window.posChargerToutesDonneesPaniers = posChargerToutesDonneesPaniers;
-// Ajout rapide client
 window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
+
+// ============================================================
+// 🤖 [PATCH GEMINI 3] : FONCTION POUR AJOUTER PLUSIEURS PRODUITS AU PANIER
+// (Utilisée par pos-ai.js pour la commande vocale Gemini)
+// ============================================================
+function posAddMultipleProductsToCart(produitsList) {
+    var ajoutCount = 0;
+    var stockAlertes = [];
+
+    if (!produitsList || produitsList.length === 0) {
+        return { ajoutCount: 0, stockAlertes: [] };
+    }
+
+    console.log('🛒 Ajout de', produitsList.length, 'produit(s) au panier (Gemini)...');
+
+    for (var i = 0; i < produitsList.length; i++) {
+        var item = produitsList[i];
+        var produit = item.produit;
+        var quantite = item.quantite || 1;
+
+        if (!produit || !produit.id) {
+            console.warn('⚠️ Produit invalide ignoré:', item);
+            continue;
+        }
+
+        if (produit.stock !== undefined && produit.stock <= 0) {
+            stockAlertes.push(produit.nom + ' : rupture de stock');
+            continue;
+        }
+
+        var existant = posCart.find(function(x) { return x.id === produit.id; });
+
+        if (existant) {
+            var nouvelleQte = existant.quantite + quantite;
+            if (produit.stock !== undefined && nouvelleQte > produit.stock) {
+                stockAlertes.push(produit.nom + ' : stock insuffisant (max ' + produit.stock + ')');
+                nouvelleQte = produit.stock;
+                quantite = produit.stock - existant.quantite;
+                if (quantite <= 0) continue;
+            }
+            existant.quantite = nouvelleQte;
+            console.log('   ➕ ' + produit.nom + ' → quantité: ' + nouvelleQte);
+        } else {
+            if (produit.stock !== undefined && quantite > produit.stock) {
+                stockAlertes.push(produit.nom + ' : stock insuffisant (max ' + produit.stock + ')');
+                quantite = produit.stock;
+                if (quantite <= 0) continue;
+            }
+
+            var prix = produit.prixPromo && produit.prixPromo > 0 ? produit.prixPromo : produit.prixVente;
+
+            posCart.push({
+                id: produit.id,
+                nom: produit.nom,
+                prixUnitaire: prix,
+                prixAchat: produit.prixAchat || 0,
+                prixPromo: produit.prixPromo || 0,
+                prixVente: produit.prixVente || 0,
+                quantite: quantite,
+                categorie: produit.categorie || '',
+                imageBase64: produit.imageBase64 || '',
+                sauces: [],
+                interdits: [],
+                epice: 'Normal',
+                sel: 'Normal'
+            });
+            console.log('   ➕ ' + produit.nom + ' (nouveau) ×' + quantite);
+        }
+
+        ajoutCount += quantite;
+    }
+
+    window.posCart = posCart;
+    posMultiCarts[posCurrentCartId] = posCart.slice();
+    posSauvegarderDonneesPanier(posCurrentCartId);
+    posSaveMultiCarts();
+
+    if (typeof updateCartOnly === 'function') {
+        updateCartOnly();
+    }
+
+    console.log('✅ Ajout terminé :', ajoutCount, 'article(s). Alertes:', stockAlertes.length);
+
+    return {
+        ajoutCount: ajoutCount,
+        stockAlertes: stockAlertes
+    };
+}
+
+window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
 console.log('🚀 E-SOLUTION - POS chargé avec corrections');
 console.log('✅ forceUpdateClient disponible');
@@ -2474,4 +2524,5 @@ console.log('✅ NAVIGATION FLUIDE ENTRE PANIERS AVEC RE-RENDU COMPLET');
 console.log('✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET');
 console.log('✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À ' + MAX_PANIERS + ')');
 console.log('✅ 🤖 BOUTON GEMINI AJOUTÉ À CÔTÉ DU MICRO');
+console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
