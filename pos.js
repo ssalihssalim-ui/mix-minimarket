@@ -22,6 +22,7 @@
 // ✅ 🤖 BOUTON GEMINI AJOUTÉ À CÔTÉ DU MICRO
 // ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
 // ✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier
+// ✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -38,7 +39,8 @@ var posAllClients = [];
 var posFilteredClients = [];
 var posCurrentProductId = null;
 var posSearchQuery = '';
-var posToolsVisible = false;
+// ✅ [PATCH PC - OUTILS] : Sur PC (>= 1024px), les outils sont visibles par défaut
+var posToolsVisible = (window.innerWidth >= 1024);
 
 var productNameIndex = {};
 var productIndexBuilt = false;
@@ -778,7 +780,9 @@ console.log('💳 Mode paiement:', posPaymentMethod);
 console.log('💰 Montant donné:', posAmountGiven);
 }
 
-posCommandesFilterText=''; posCommandesSortField='createdAt'; posCommandesSortOrder='desc'; posSearchQuery=''; productIndexBuilt=false; posProductOffset=0; posToolsVisible=false;
+posCommandesFilterText=''; posCommandesSortField='createdAt'; posCommandesSortOrder='desc'; posSearchQuery=''; productIndexBuilt=false; posProductOffset=0; 
+// ✅ [PATCH PC - OUTILS] : Sur PC, garder les outils visibles par défaut
+posToolsVisible = (window.innerWidth >= 1024);
 posCategoriesList=[]; posProductsList=[]; posAllClients=[]; posFilteredClients=[];
 c.innerHTML='<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#14B8A6;"></i><p style="margin-top:15px;color:#64748b;">Chargement du POS...</p></div>';
 setStaticBackButtonVisibility(false);
@@ -1884,14 +1888,35 @@ if(posStep===1) {
 posViewMode = 'categories';
 posSelectedCategoryForView = null;
 filterProductGrid();
+
+// ✅ [PATCH PC - OUTILS] : Sur PC, forcer les outils visibles au premier chargement
+if (window.innerWidth >= 1024 && !window._posToolsInitialized) {
+    posToolsVisible = true;
+    window._posToolsInitialized = true;
+}
+
 var toolsContainer = document.getElementById('posToolsContainer');
 var toggleBtn = document.getElementById('posToggleToolsBtn');
 if (toolsContainer) {
-toolsContainer.style.display = posToolsVisible ? 'flex' : 'none';
+    toolsContainer.style.display = posToolsVisible ? 'flex' : 'none';
+    if (posToolsVisible) toolsContainer.classList.add('visible');
 }
 if (toggleBtn) {
-toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout';
-toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
+    toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout';
+    toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
+}
+// ✅ [PATCH PC - OUTILS] : Afficher aussi les sous-éléments (recherche, mic, gemini, tables, en ligne)
+if (posToolsVisible) {
+    var searchInput = document.getElementById('posSearchInput');
+    if (searchInput) searchInput.style.display = 'flex';
+    var micBtn = document.getElementById('posMicBtn');
+    if (micBtn) micBtn.style.display = 'flex';
+    var geminiBtn = document.getElementById('posGeminiBtn');
+    if (geminiBtn) geminiBtn.style.display = 'flex';
+    var tablesBtn = document.getElementById('posTablesBtn');
+    if (tablesBtn) tablesBtn.style.display = 'inline-flex';
+    var enligneBtn = document.getElementById('posEnLigneBtn');
+    if (enligneBtn) enligneBtn.style.display = 'inline-flex';
 }
 }
 if(posStep===2) {
@@ -2599,4 +2624,5 @@ console.log('✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À ' + MAX_PANIERS +
 console.log('✅ 🤖 BOUTON GEMINI AJOUTÉ À CÔTÉ DU MICRO');
 console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)');
 console.log('✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier');
+console.log('✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
