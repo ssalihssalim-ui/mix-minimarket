@@ -2990,7 +2990,7 @@ opacity: 1 !important;
 
     /* ✅ Image catégorie bien affichée */
     .pos-category-card .category-image {
-        width: 100% !important;
+        width: 90% !important;
         max-width: 170px !important;
         height: 170px !important;
         border-radius: 50% !important;
