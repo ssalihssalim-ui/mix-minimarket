@@ -2978,9 +2978,9 @@ opacity: 1 !important;
 
     /* ==================== CARTES CATÉGORIES ==================== */
     .pos-category-card {
-        min-height: 240px !important;
-        max-height: 280px !important;
-        padding: 14px 10px !important;
+        min-height: 230px !important;
+        max-height: 270px !important;
+        padding: 16px 12px !important;
         border: none !important;
         box-shadow: var(--shadow-xs) !important;
         gap: 8px !important;
@@ -2991,8 +2991,8 @@ opacity: 1 !important;
     /* ✅ Image catégorie bien affichée */
     .pos-category-card .category-image {
         width: 90% !important;
-        max-width: 170px !important;
-        height: 170px !important;
+        max-width: 160px !important;
+        height: 160px !important;
         border-radius: 50% !important;
         border: 3px solid var(--gray-200) !important;
         background: var(--gray-100) !important;
