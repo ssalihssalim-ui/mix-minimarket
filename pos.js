@@ -21,6 +21,7 @@
 // ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
 // ✅ 🤖 BOUTON GEMINI AJOUTÉ À CÔTÉ DU MICRO
 // ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
+// ✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -1598,6 +1599,7 @@ console.error('❌ Erreur récupération produit:', err);
 });
 }
 
+// ==================== updateCartOnly() ====================
 function updateCartOnly(){
 if(!isOnPOSPage()) return;
 var ci=document.querySelector('.pos-cart-items');
@@ -1628,7 +1630,8 @@ html+='<div class="pos-cart-item" style="display:flex;align-items:center;justify
 '</div>' +
 '<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:3px;flex-shrink:0;">' +
 '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-minus"></i></button>' +
-'<span class="pos-qty-value" style="font-size:'+qtySize+';font-weight:700;min-width:20px;text-align:center;">'+it.quantite+'</span>' +
+// ✅ [PATCH QTY INPUT] : champ quantité éditable au clavier
+'<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:2px solid var(--border);border-radius:4px;padding:2px 4px;background:#fff;color:var(--text-primary);-moz-appearance:textfield;">' +
 '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
 '<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px;font-size:0.8rem;transition:all 0.2s;"><i class="fas fa-times"></i></button>' +
 '</div>' +
@@ -1821,7 +1824,8 @@ h+='<div class="pos-cart-item" style="display:flex;align-items:center;justify-co
 '</div>' +
 '<div class="pos-cart-item-actions" style="display:flex;align-items:center;gap:3px;flex-shrink:0;">' +
 '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-minus"></i></button>' +
-'<span class="pos-qty-value" style="font-size:'+qtySize+';font-weight:700;min-width:20px;text-align:center;">'+it.quantite+'</span>' +
+// ✅ [PATCH QTY INPUT] : champ quantité éditable au clavier
+'<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:2px solid var(--border);border-radius:4px;padding:2px 4px;background:#fff;color:var(--text-primary);-moz-appearance:textfield;">' +
 '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:50%;border:2px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"><i class="fas fa-plus"></i></button>' +
 '<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px;font-size:0.8rem;transition:all 0.2s;"><i class="fas fa-times"></i></button>' +
 '</div>' +
@@ -1920,6 +1924,71 @@ selectionnerCategorie(ca);
 }
 function posUpdateDiscountMAD(v){ posDiscountMAD=parseFloat(v)||0; if(posDiscountMAD<0) posDiscountMAD=0; if(isOnPOSPage()) renderPOS(); }
 function posUpdateQty(i,ch){ var it=posCart[i]; if(!it) return; var p=posProductsList.find(function(x){ return x.id===it.id; }),nq=it.quantite+ch; if(nq<=0) posCart.splice(i,1); else{ if(p&&p.stock!==undefined&&nq>p.stock){ alert('Max: '+p.stock); return; } it.quantite=nq; } updateCartOnly(); posMultiCarts[posCurrentCartId] = posCart.slice(); posSauvegarderDonneesPanier(posCurrentCartId); posSaveMultiCarts(); }
+
+// ✅ [PATCH QTY INPUT] : Fonction pour mettre à jour la quantité depuis le champ input
+function posUpdateQtyInput(index, value) {
+    var it = posCart[index];
+    if (!it) return;
+    
+    var newQty = parseInt(value, 10);
+    
+    // Si valeur invalide → remettre la valeur actuelle
+    if (isNaN(newQty) || newQty < 1) {
+        var inputs = document.querySelectorAll('.pos-cart-items .pos-qty-input');
+        if (inputs[index]) inputs[index].value = it.quantite;
+        return;
+    }
+    
+    // Vérifier le stock
+    var p = posProductsList.find(function(x) { return x.id === it.id; });
+    if (p && p.stock !== undefined && newQty > p.stock) {
+        alert('⚠️ Stock maximum: ' + p.stock);
+        var inputs = document.querySelectorAll('.pos-cart-items .pos-qty-input');
+        if (inputs[index]) inputs[index].value = it.quantite;
+        return;
+    }
+    
+    // Mettre à jour la quantité
+    it.quantite = newQty;
+    
+    // Mettre à jour uniquement les totaux (pas de re-render pour ne pas perdre le focus)
+    updateCartTotalsOnly();
+    
+    // Sauvegarder
+    posMultiCarts[posCurrentCartId] = posCart.slice();
+    posSauvegarderDonneesPanier(posCurrentCartId);
+    posSaveMultiCarts();
+}
+
+// ✅ [PATCH QTY INPUT] : Mettre à jour UNIQUEMENT les totaux (sans re-render)
+function updateCartTotalsOnly() {
+    var badge = document.querySelector('.pos-cart-badge');
+    if (badge) badge.textContent = posCart.length;
+    
+    var tr = document.querySelector('.pos-cart-total-row span:last-child');
+    if (tr) {
+        var st = posCalculateTotal();
+        var t = st - posDiscountMAD;
+        tr.textContent = t.toFixed(2) + ' MAD';
+    }
+    
+    // Mettre à jour les sous-totaux de chaque ligne
+    var items = document.querySelectorAll('.pos-cart-items .pos-cart-item');
+    for (var i = 0; i < items.length; i++) {
+        var it = posCart[i];
+        if (!it) continue;
+        var totalSpan = items[i].querySelector('.pos-cart-item-total');
+        if (totalSpan) {
+            totalSpan.textContent = (it.prixUnitaire * it.quantite).toFixed(2) + ' MAD';
+        }
+    }
+    
+    var vb = document.querySelector('.pos-validate-btn');
+    if (vb) {
+        vb.disabled = posCart.length === 0;
+    }
+}
+
 function posRemoveItem(i){ posCart.splice(i,1); updateCartOnly(); posMultiCarts[posCurrentCartId] = posCart.slice(); posSauvegarderDonneesPanier(posCurrentCartId); posSaveMultiCarts(); }
 function posCalculateTotal(){ var t=0; for(var i=0;i<posCart.length;i++) t+=posCart[i].prixUnitaire*posCart[i].quantite; return t; }
 
@@ -2420,6 +2489,10 @@ window.posChargerToutesDonneesPaniers = posChargerToutesDonneesPaniers;
 window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 
+// ✅ [PATCH QTY INPUT] : Exposer la nouvelle fonction globalement
+window.posUpdateQtyInput = posUpdateQtyInput;
+window.updateCartTotalsOnly = updateCartTotalsOnly;
+
 // ============================================================
 // 🤖 [PATCH GEMINI 3] : FONCTION POUR AJOUTER PLUSIEURS PRODUITS AU PANIER
 // (Utilisée par pos-ai.js pour la commande vocale Gemini)
@@ -2525,4 +2598,5 @@ console.log('✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET');
 console.log('✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À ' + MAX_PANIERS + ')');
 console.log('✅ 🤖 BOUTON GEMINI AJOUTÉ À CÔTÉ DU MICRO');
 console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)');
+console.log('✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
