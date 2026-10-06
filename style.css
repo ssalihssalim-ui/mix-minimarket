@@ -2848,3 +2848,121 @@ opacity: 1 !important;
         width: 320px !important;
     }
 }
+
+/* ============================================================
+✅ [PATCH PC] : Panier à droite sur PC (comme sur iPad)
+✅ Ajouté à la fin - AUCUN autre code modifié
+============================================================ */
+
+/* ✅ PC GRAND ÉCRAN (> 1200px) - PANIER À DROITE */
+@media(min-width: 1200px) {
+
+    /* ✅ FORCER LE POS-ROW EN LIGNE (PRODUITS À GAUCHE, PANIER À DROITE) */
+    .pos-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 12px !important;
+        width: 100% !important;
+        height: calc(100vh - 140px) !important;
+        align-items: flex-start !important;
+    }
+
+    /* ✅ PRODUITS PANEL - 72% À GAUCHE */
+    .pos-products-panel {
+        width: 72% !important;
+        min-width: 0 !important;
+        max-width: 72% !important;
+        flex: 0 0 72% !important;
+        height: calc(100vh - 140px) !important;
+        min-height: 500px !important;
+        max-height: calc(100vh - 140px) !important;
+        margin-top: 0 !important;
+        order: 1 !important;
+    }
+
+    /* ✅ PANIER - 28% À DROITE (STICKY) */
+    .pos-cart-panel {
+        position: sticky !important;
+        top: 0 !important;
+        width: 28% !important;
+        min-width: 320px !important;
+        max-width: 28% !important;
+        flex: 0 0 28% !important;
+        height: auto !important;
+        max-height: calc(100vh - 140px) !important;
+        min-height: 500px !important;
+        margin-top: 0 !important;
+        align-self: flex-start !important;
+        order: 2 !important;
+    }
+
+    /* ✅ PRODUITS GRID */
+    .pos-products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+        gap: 8px !important;
+        padding: 6px !important;
+    }
+
+    /* ✅ CATÉGORIES GRID */
+    .pos-categories-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+        gap: 10px !important;
+        padding: 8px !important;
+    }
+
+    /* ✅ PANIER ITEMS - GRANDE HAUTEUR */
+    .pos-cart-items {
+        min-height: 400px !important;
+        max-height: 55vh !important;
+    }
+
+    /* ✅ FORMULAIRE DE PAIEMENT */
+    .pos-payment-form {
+        max-height: 60vh !important;
+    }
+}
+
+/* ✅ PC ÉCRAN LARGE (1024px - 1200px) - ÉGALEMENT À DROITE */
+@media(min-width: 1024px) and (max-width: 1199px) {
+
+    .pos-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        width: 100% !important;
+        height: calc(100vh - 140px) !important;
+        align-items: flex-start !important;
+    }
+
+    .pos-products-panel {
+        width: 70% !important;
+        min-width: 0 !important;
+        max-width: 70% !important;
+        flex: 0 0 70% !important;
+        height: calc(100vh - 140px) !important;
+        min-height: 450px !important;
+        max-height: calc(100vh - 140px) !important;
+        margin-top: 0 !important;
+        order: 1 !important;
+    }
+
+    .pos-cart-panel {
+        position: sticky !important;
+        top: 0 !important;
+        width: 30% !important;
+        min-width: 30% !important;
+        max-width: 30% !important;
+        flex: 0 0 30% !important;
+        height: auto !important;
+        max-height: calc(100vh - 140px) !important;
+        min-height: 450px !important;
+        margin-top: 0 !important;
+        align-self: flex-start !important;
+        order: 2 !important;
+    }
+
+    .pos-cart-items {
+        min-height: 350px !important;
+        max-height: 50vh !important;
+    }
+}
