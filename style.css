@@ -2966,3 +2966,340 @@ opacity: 1 !important;
         max-height: 50vh !important;
     }
 }
+
+/* ============================================================
+✅ [PATCH PC - CARTES] : Ajustement cartes catégories et produits sur PC
+✅ Images bien affichées + Noms lisibles + Marges entre les cartes
+✅ Ajouté à la fin - AUCUN autre code modifié
+============================================================ */
+
+/* ✅ PC GRAND ÉCRAN (> 1200px) - CARTES CATÉGORIES ET PRODUITS AJUSTÉES */
+@media(min-width: 1200px) {
+
+    /* ==================== CARTES CATÉGORIES ==================== */
+    .pos-category-card {
+        min-height: 240px !important;
+        max-height: 280px !important;
+        padding: 14px 10px !important;
+        border: none !important;
+        box-shadow: var(--shadow-xs) !important;
+        gap: 8px !important;
+        border-radius: 14px !important;
+        transition: all 0.25s ease !important;
+    }
+
+    /* ✅ Image catégorie bien affichée */
+    .pos-category-card .category-image {
+        width: 100% !important;
+        max-width: 170px !important;
+        height: 170px !important;
+        border-radius: 50% !important;
+        border: 3px solid var(--gray-200) !important;
+        background: var(--gray-100) !important;
+        overflow: hidden !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto 6px auto !important;
+    }
+
+    .pos-category-card .category-image img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        border-radius: 50% !important;
+        display: block !important;
+    }
+
+    /* ✅ Nom catégorie lisible */
+    .pos-category-card .category-name {
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.25 !important;
+        color: var(--text-primary) !important;
+        margin-top: 4px !important;
+        max-width: 100% !important;
+        display: block !important;
+    }
+
+    /* ✅ Compteur produits */
+    .pos-category-card .category-count {
+        font-size: 14px !important;
+        color: var(--text-muted) !important;
+        font-weight: 500 !important;
+        text-align: center !important;
+        display: block !important;
+    }
+
+    /* ✅ Icône dossier si pas d'image */
+    .pos-category-card .fas.fa-folder {
+        font-size: 80px !important;
+        color: var(--accent) !important;
+    }
+
+    /* ✅ Hover catégorie */
+    .pos-category-card:hover {
+        border: none !important;
+        transform: translateY(-3px) !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    /* ✅ Catégorie sélectionnée */
+    .pos-category-card.active {
+        border: none !important;
+        box-shadow: 0 4px 20px rgba(20,184,166,0.3) !important;
+    }
+
+    /* ==================== CARTES PRODUITS ==================== */
+    .pos-product-card {
+        min-height: 200px !important;
+        max-height: 240px !important;
+        padding: 8px 6px !important;
+        border: none !important;
+        box-shadow: var(--shadow-xs) !important;
+        gap: 4px !important;
+        border-radius: 12px !important;
+        transition: all 0.25s ease !important;
+    }
+
+    /* ✅ Image produit bien affichée */
+    .pos-product-img {
+        height: 110px !important;
+        width: 90% !important;
+        max-width: 120px !important;
+        margin: 0 auto 6px auto !important;
+        border-radius: 10px !important;
+        overflow: hidden !important;
+        background: var(--gray-100) !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: 2px solid var(--gray-200) !important;
+    }
+
+    .pos-product-img img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        border-radius: 8px !important;
+        display: block !important;
+    }
+
+    /* ✅ Nom produit lisible sur 2 lignes max */
+    .pos-product-name {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.25 !important;
+        color: var(--text-primary) !important;
+        max-width: 100% !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        padding: 0 4px !important;
+        margin-top: 4px !important;
+        min-height: 36px !important;
+    }
+
+    /* ✅ Prix produit lisible */
+    .pos-product-price {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+        display: block !important;
+        color: var(--text-primary) !important;
+        margin-top: 2px !important;
+    }
+
+    .pos-old-price {
+        font-size: 11px !important;
+        text-decoration: line-through !important;
+        color: var(--text-muted) !important;
+        margin-right: 4px !important;
+    }
+
+    .pos-promo-price {
+        font-size: 15px !important;
+        color: var(--danger) !important;
+        font-weight: 700 !important;
+    }
+
+    /* ✅ Hover produit */
+    .pos-product-card:hover {
+        border: none !important;
+        transform: translateY(-3px) !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    /* ==================== MARGES ENTRE LES CARTES ==================== */
+    /* ✅ Grille catégories : marges entre les cartes */
+    .pos-categories-grid {
+        gap: 20px !important;
+        padding: 16px !important;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    }
+
+    /* ✅ Grille produits : marges entre les cartes */
+    .pos-products-grid {
+        gap: 16px !important;
+        padding: 14px !important;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    }
+
+    /* ✅ Espacement supplémentaire entre les lignes */
+    .pos-categories-grid > * {
+        margin: 0 !important;
+    }
+
+    .pos-products-grid > * {
+        margin: 0 !important;
+    }
+}
+
+/* ✅ PC ÉCRAN LARGE (1024px - 1200px) - MÊMES AJUSTEMENTS */
+@media(min-width: 1024px) and (max-width: 1199px) {
+
+    /* ==================== CARTES CATÉGORIES ==================== */
+    .pos-category-card {
+        min-height: 220px !important;
+        max-height: 260px !important;
+        padding: 12px 8px !important;
+        border: none !important;
+        box-shadow: var(--shadow-xs) !important;
+        gap: 6px !important;
+        border-radius: 12px !important;
+    }
+
+    .pos-category-card .category-image {
+        width: 100% !important;
+        max-width: 150px !important;
+        height: 150px !important;
+        border-radius: 50% !important;
+        border: 3px solid var(--gray-200) !important;
+        margin: 0 auto 6px auto !important;
+    }
+
+    .pos-category-card .category-image img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        border-radius: 50% !important;
+    }
+
+    .pos-category-card .category-name {
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.25 !important;
+        text-align: center !important;
+        margin-top: 4px !important;
+        display: block !important;
+        color: var(--text-primary) !important;
+    }
+
+    .pos-category-card .category-count {
+        font-size: 13px !important;
+        color: var(--text-muted) !important;
+        text-align: center !important;
+    }
+
+    .pos-category-card .fas.fa-folder {
+        font-size: 70px !important;
+        color: var(--accent) !important;
+    }
+
+    .pos-category-card:hover {
+        border: none !important;
+        transform: translateY(-3px) !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    /* ==================== CARTES PRODUITS ==================== */
+    .pos-product-card {
+        min-height: 180px !important;
+        max-height: 215px !important;
+        padding: 6px 5px !important;
+        border: none !important;
+        box-shadow: var(--shadow-xs) !important;
+        gap: 3px !important;
+        border-radius: 10px !important;
+    }
+
+    .pos-product-img {
+        height: 95px !important;
+        width: 88% !important;
+        max-width: 105px !important;
+        margin: 0 auto 4px auto !important;
+        border-radius: 8px !important;
+        border: 2px solid var(--gray-200) !important;
+    }
+
+    .pos-product-img img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        border-radius: 6px !important;
+    }
+
+    .pos-product-name {
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.25 !important;
+        max-width: 100% !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        padding: 0 4px !important;
+        margin-top: 3px !important;
+        min-height: 34px !important;
+        text-align: center !important;
+    }
+
+    .pos-product-price {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+        margin-top: 2px !important;
+    }
+
+    .pos-old-price {
+        font-size: 10px !important;
+    }
+
+    .pos-promo-price {
+        font-size: 14px !important;
+    }
+
+    .pos-product-card:hover {
+        border: none !important;
+        transform: translateY(-3px) !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    /* ==================== MARGES ENTRE LES CARTES ==================== */
+    .pos-categories-grid {
+        gap: 16px !important;
+        padding: 12px !important;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    }
+
+    .pos-products-grid {
+        gap: 14px !important;
+        padding: 12px !important;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    }
+}
