@@ -23,6 +23,7 @@
 // ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
 // ✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier
 // ✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES
+// ✅ ⌨️ RACCOURCIS CLAVIER AJOUTÉS À LA FIN (Ctrl+K, flèches, Entrée, Échap)
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 
 var posCart = [];
@@ -2626,3 +2627,280 @@ console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemin
 console.log('✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier');
 console.log('✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
+console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (paiement), ← (panier), ↑↓←→ (navigation), Entrée (valider), Échap (retour)');
+
+// ============================================================
+// ⌨️ [PATCH KEYBOARD] : RACCOURCIS CLAVIER POUR LE POS (PC UNIQUEMENT)
+// ✅ Ctrl+K → Focus barre de recherche
+// ✅ → en panier → passe au paiement + focus Montant donné
+// ✅ ← en paiement → retour au panier
+// ✅ ↑ / ↓ / ← / → naviguent entre Client / Modes / Montant
+// ✅ ← / → naviguent entre Espèces / Partiel / Crédit
+// ✅ Entrée → valider / finaliser
+// ✅ Échap → retour au panier (en paiement)
+// ⚠️ Ce bloc est ISOLÉ et ne touche à AUCUNE fonction existante
+// ============================================================
+(function() {
+    'use strict';
+
+    var KB_FOCUS_DELAY = 250;
+    var kbPaymentFocus = 'amount'; // 'client' | 'modes' | 'amount' | 'finalize'
+
+    function kbIsOnPOS() {
+        var pt = document.getElementById('pageTitle') ? document.getElementById('pageTitle').textContent : '';
+        return pt === 'POS' || pt === 'Dashboard';
+    }
+
+    function kbIsModalOpen() {
+        var overlay = document.getElementById('modalOverlay');
+        if (!overlay) return false;
+        return !overlay.classList.contains('hidden');
+    }
+
+    function kbIsInInput() {
+        var el = document.activeElement;
+        if (!el) return false;
+        var tag = el.tagName.toLowerCase();
+        return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+    }
+
+    function kbGetStep() {
+        return (typeof window.posStep !== 'undefined') ? window.posStep : 1;
+    }
+
+    function kbGetPaymentMethod() {
+        return (typeof window.posPaymentMethod !== 'undefined') ? window.posPaymentMethod : 'espece';
+    }
+
+    function kbFocusAfterRender(selector, delay) {
+        setTimeout(function() {
+            var el = document.querySelector(selector);
+            if (el) {
+                try {
+                    el.focus();
+                    if (el.select && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+                        el.select();
+                    }
+                } catch(e) {}
+            }
+        }, delay || KB_FOCUS_DELAY);
+    }
+
+    function kbFocusSearch() {
+        if (kbGetStep() === 2) {
+            if (typeof window.posGoToStep1 === 'function') window.posGoToStep1();
+            kbFocusAfterRender('#posSearchInput', 400);
+            return;
+        }
+        var toolsContainer = document.getElementById('posToolsContainer');
+        if (toolsContainer && !toolsContainer.classList.contains('visible')) {
+            if (typeof window.posToggleTools === 'function') {
+                window.posToggleTools();
+            } else {
+                toolsContainer.classList.add('visible');
+                toolsContainer.style.display = 'flex';
+            }
+        }
+        kbFocusAfterRender('#posSearchInput', 250);
+    }
+
+    function kbGoToPayment() {
+        if (kbGetStep() !== 1) return;
+        if (!window.posCart || window.posCart.length === 0) return;
+        if (typeof window.posGoToStep2 === 'function') window.posGoToStep2();
+        kbPaymentFocus = 'amount';
+        kbFocusAfterRender('#posAmountGiven', 450);
+    }
+
+    function kbGoToCart() {
+        if (kbGetStep() !== 2) return;
+        if (typeof window.posGoToStep1 === 'function') window.posGoToStep1();
+        kbPaymentFocus = 'amount';
+    }
+
+    function kbFocusClient() {
+        var el = document.getElementById('posClientSearchInput');
+        if (el) {
+            el.focus();
+            try { el.select(); } catch(e) {}
+            kbPaymentFocus = 'client';
+        }
+    }
+
+    function kbFocusPaymentModes() {
+        var current = kbGetPaymentMethod();
+        var selector = '';
+        if (current === 'espece') selector = 'button[onclick*="posSetPaymentMethod(\'espece\')"]';
+        else if (current === 'credit') selector = '#posCreditBtn';
+        else if (current === 'partiel') selector = '#posPartielBtn';
+
+        var el = selector ? document.querySelector(selector) : null;
+        if (!el) el = document.querySelector('.pos-payment-btn');
+        if (el) {
+            el.focus();
+            kbPaymentFocus = 'modes';
+        }
+    }
+
+    function kbFocusAmount() {
+        var el = document.getElementById('posAmountGiven');
+        if (el) {
+            el.focus();
+            try { el.select(); } catch(e) {}
+            kbPaymentFocus = 'amount';
+        } else {
+            var fb = document.querySelector('.pos-finalize-btn');
+            if (fb) {
+                fb.focus();
+                kbPaymentFocus = 'finalize';
+            }
+        }
+    }
+
+    function kbGetAvailableModes() {
+        var hasClient = !!(window.posCurrentClient && window.posCurrentClient.id);
+        var modes = ['espece'];
+        if (hasClient) {
+            modes.push('credit');
+            modes.push('partiel');
+        }
+        return modes;
+    }
+
+    function kbSwitchPaymentMode(direction) {
+        var modes = kbGetAvailableModes();
+        if (modes.length <= 1) return;
+        var current = kbGetPaymentMethod();
+        var idx = modes.indexOf(current);
+        if (idx === -1) idx = 0;
+        var newIdx = (direction === 'next') ? (idx + 1) % modes.length : (idx - 1 + modes.length) % modes.length;
+        var newMode = modes[newIdx];
+        if (typeof window.posSetPaymentMethod === 'function') window.posSetPaymentMethod(newMode);
+        setTimeout(function() { kbFocusPaymentModes(); }, KB_FOCUS_DELAY + 100);
+    }
+
+    function kbHandleKeydown(e) {
+        if (!kbIsOnPOS()) return;
+        if (kbIsModalOpen()) return;
+
+        var key = e.key;
+        var ctrl = e.ctrlKey || e.metaKey;
+        var shift = e.shiftKey;
+        var alt = e.altKey;
+        var step = kbGetStep();
+
+        // Ctrl+K → focus recherche
+        if (ctrl && !shift && !alt && (key === 'k' || key === 'K')) {
+            e.preventDefault();
+            kbFocusSearch();
+            return;
+        }
+
+        // Dans un input
+        if (kbIsInInput()) {
+            if (key === 'Enter') {
+                var el = document.activeElement;
+                if (el && el.id === 'posAmountGiven') {
+                    e.preventDefault();
+                    if (typeof window.posFinalizeSale === 'function') window.posFinalizeSale();
+                    return;
+                }
+            }
+            if (key === 'Escape' && step === 2) {
+                e.preventDefault();
+                document.activeElement.blur();
+                kbPaymentFocus = 'amount';
+                kbFocusAmount();
+                return;
+            }
+            return;
+        }
+
+        // Mode panier
+        if (step === 1) {
+            if (key === 'ArrowRight') {
+                e.preventDefault();
+                kbGoToPayment();
+                return;
+            }
+            if (key === 'ArrowLeft') {
+                e.preventDefault();
+                var container = document.getElementById('dynamicContent');
+                if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+            if (key === 'Enter') {
+                e.preventDefault();
+                kbGoToPayment();
+                return;
+            }
+            return;
+        }
+
+        // Mode paiement
+        if (step === 2) {
+            if (key === 'ArrowRight') {
+                e.preventDefault();
+                kbSwitchPaymentMode('next');
+                return;
+            }
+            if (key === 'ArrowLeft') {
+                e.preventDefault();
+                kbSwitchPaymentMode('prev');
+                return;
+            }
+            if (key === 'ArrowUp') {
+                e.preventDefault();
+                kbFocusClient();
+                return;
+            }
+            if (key === 'ArrowDown') {
+                e.preventDefault();
+                if (kbPaymentFocus === 'client') {
+                    kbFocusPaymentModes();
+                } else if (kbPaymentFocus === 'modes') {
+                    kbFocusAmount();
+                } else {
+                    var fb = document.querySelector('.pos-finalize-btn');
+                    if (fb) {
+                        fb.focus();
+                        kbPaymentFocus = 'finalize';
+                    }
+                }
+                return;
+            }
+            if (key === 'Enter') {
+                e.preventDefault();
+                if (typeof window.posFinalizeSale === 'function') window.posFinalizeSale();
+                return;
+            }
+            if (key === 'Escape') {
+                e.preventDefault();
+                kbGoToCart();
+                return;
+            }
+            return;
+        }
+    }
+
+    // Surveillance du changement d'étape → focus auto montant en paiement
+    var kbLastStep = null;
+    setInterval(function() {
+        if (!kbIsOnPOS()) {
+            kbLastStep = null;
+            return;
+        }
+        var s = kbGetStep();
+        if (kbLastStep !== null && kbLastStep !== s) {
+            if (s === 2) {
+                setTimeout(function() { kbFocusAmount(); }, 300);
+            } else if (s === 1) {
+                kbPaymentFocus = 'amount';
+            }
+        }
+        kbLastStep = s;
+    }, 300);
+
+    document.addEventListener('keydown', kbHandleKeydown, false);
+
+})();
