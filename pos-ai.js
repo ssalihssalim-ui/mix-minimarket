@@ -1,9 +1,9 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6 - SANS SON + SANS MENTION GEMINI) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.1 - SANS SON + SANS MENTION GEMINI) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
-// ✅ ⚡ Micro qui s'arrête après 1.5 SECONDE de silence
+// ✅ ⚡ Micro qui s'arrête après 3 SECONDES de silence
 // ❌ 🔊 Synthèse vocale DÉSACTIVÉE (elle bloquait le micro sur iPhone)
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
@@ -14,8 +14,8 @@
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 const POS_AI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-// ⚡ Silence réduit à 1.5 seconde
-const POS_AI_SILENCE_DURATION = 1500;
+// ⚡ Silence réduit à 3 secondes (pour laisser le temps de parler)
+const POS_AI_SILENCE_DURATION = 3000;
 const POS_AI_CACHE_KEY = 'posGeminiCache'; // conservé pour compatibilité du cache existant
 const POS_AI_CACHE_MAX_AGE = 7 * 24 * 3600000;
 
@@ -31,6 +31,7 @@ var posAiSilenceTimer = null;
 var posAiManuallyStopped = false;
 var posAiAbortController = null;
 var posAiCache = null;
+var posAiCompteurNoSpeech = 0;
 
 // ==================== 📱 DÉTECTION PWA IPHONE ====================
 function posAiEstPwaIphone() {
@@ -133,6 +134,16 @@ function posOuvrirCommandeVocaleAi() {
         return;
     }
 
+    // 🔒 Vérification HTTPS (obligatoire pour le micro)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        alert(
+            '🔒 Connexion non sécurisée détectée\n\n' +
+            '⚠️ La reconnaissance vocale EXIGE une connexion HTTPS.\n\n' +
+            '✅ Solution : utilisez https:// au lieu de http://'
+        );
+        return;
+    }
+
     // 📱 Détection PWA iPhone
     if (posAiEstPwaIphone()) {
         alert(
@@ -175,7 +186,7 @@ function posOuvrirCommandeVocaleAi() {
                 <p style="margin:8px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Ajouter 3 Merindina et 2 Coca Cola »</p>
                 <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« 5 croissants et 1 café »</p>
                 <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Deux pizzas et un jus d'orange »</p>
-                <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 1.5 seconde de silence</p>
+                <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 3 secondes de silence</p>
             </div>
 
             <button id="posAiMicBtn" onclick="posDemarrerEcouteAi()"
@@ -202,7 +213,7 @@ function posOuvrirCommandeVocaleAi() {
     openModal('🎤 Commande vocale', html);
 }
 
-// ==================== DÉMARRAGE ÉCOUTE (silence 1.5s) ====================
+// ==================== DÉMARRAGE ÉCOUTE (silence 3s) ====================
 function posDemarrerEcouteAi() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -229,6 +240,7 @@ function posDemarrerEcouteAi() {
 
     posAiTranscriptFinal = '';
     posAiManuallyStopped = false;
+    posAiCompteurNoSpeech = 0;
 
     // ✅ CRÉATION D'UN NOUVEL OBJET À CHAQUE FOIS (contourne le bug iOS)
     posAiRecognition = new SpeechRecognition();
@@ -243,7 +255,7 @@ function posDemarrerEcouteAi() {
     }
     if (micIcon) micIcon.className = 'fas fa-stop';
     if (status) {
-        status.textContent = '🎙️ Je vous écoute... (parlez, puis attendez 1.5s)';
+        status.textContent = '🎙️ Je vous écoute... (parlez, puis attendez 3s)';
         status.style.color = '#8B5CF6';
         status.style.fontWeight = '700';
     }
@@ -275,7 +287,7 @@ function posDemarrerEcouteAi() {
 
         posAiSilenceTimer = setTimeout(function() {
             clearInterval(intervalCompteur);
-            console.log('⏱️ 1.5s de silence → arrêt auto');
+            console.log('⏱️ 3s de silence → arrêt auto');
             if (posAiRecognition) {
                 try { posAiRecognition.stop(); } catch(e) {}
             }
@@ -284,9 +296,21 @@ function posDemarrerEcouteAi() {
 
     posAiRecognition.onstart = function() {
         console.log('🎙️ Micro démarré');
+        console.log('   - lang:', posAiRecognition.lang);
+        console.log('   - continuous:', posAiRecognition.continuous);
+        console.log('   - interimResults:', posAiRecognition.interimResults);
+        console.log('   - PWA iPhone ?', posAiEstPwaIphone());
+        console.log('   - HTTPS ?', location.protocol === 'https:');
+
+        if (navigator.permissions) {
+            navigator.permissions.query({ name: 'microphone' })
+                .then(function(p) { console.log('   - État micro:', p.state); })
+                .catch(function(e) { console.log('   - Impossible de vérifier:', e.message); });
+        }
     };
 
     posAiRecognition.onresult = function(event) {
+        console.log('📥 onresult appelé, résultats:', event.results.length);
         var interim = '';
         var finalText = '';
         for (var i = event.resultIndex; i < event.results.length; i++) {
@@ -301,7 +325,7 @@ function posDemarrerEcouteAi() {
     };
 
     posAiRecognition.onerror = function(event) {
-        console.error('❌ Erreur reconnaissance vocale :', event.error);
+        console.error('❌ Erreur reconnaissance vocale :', event.error, '| message:', event.message);
 
         // ⚠️ Sur iPhone, "no-speech" arrive souvent alors qu'on a déjà du texte
         if (event.error === 'no-speech' && posAiTranscriptFinal.trim().length > 0) {
@@ -309,10 +333,28 @@ function posDemarrerEcouteAi() {
             return;
         }
 
+        // 🔄 Relance automatique si "no-speech" (max 2 fois)
+        if (event.error === 'no-speech' && posAiCompteurNoSpeech < 2) {
+            posAiCompteurNoSpeech++;
+            console.log('🔄 Relance auto n°' + posAiCompteurNoSpeech + ' après no-speech');
+            posAiManuallyStopped = true; // évite le déclenchement du onend
+            if (posAiSilenceTimer) {
+                clearTimeout(posAiSilenceTimer);
+                posAiSilenceTimer = null;
+            }
+            posResetAiMicUI();
+            posAiRecognition = null;
+
+            setTimeout(function() {
+                posDemarrerEcouteAi();
+            }, 500);
+            return;
+        }
+
         var status = document.getElementById('posAiStatus');
         if (status) {
             if (event.error === 'no-speech') {
-                status.textContent = '🎙️ Aucune parole détectée. Appuyez sur le micro pour réessayer.';
+                status.textContent = '🎙️ Aucune parole détectée. Vérifiez que le micro est bien autorisé et parlez plus fort.';
             } else if (event.error === 'not-allowed') {
                 status.textContent = '🔒 Micro bloqué. Autorisez le micro dans les réglages du navigateur.';
             } else if (event.error === 'aborted') {
@@ -351,7 +393,7 @@ function posDemarrerEcouteAi() {
         if (finalText.length < 3) {
             var status = document.getElementById('posAiStatus');
             if (status) {
-                status.textContent = '🎙️ Aucune parole captée. Appuyez sur le micro pour réessayer.';
+                status.textContent = '🎙️ Aucune parole captée. Vérifiez le micro et parlez plus fort.';
                 status.style.color = '#f59e0b';
             }
             return;
@@ -953,11 +995,13 @@ window.posAfficherResultatAiVoice = posAfficherResultatAiVoice;
 window.posAiChoisirSuggestion = posAiChoisirSuggestion;
 window.posAiParler = posAiParler;
 
-console.log('🤖 POS-AI.js v6 chargé - 100% FRANÇAIS + Micro 1.5s');
+console.log('🤖 POS-AI.js v6.1 chargé - 100% FRANÇAIS + Micro 3s');
 console.log('   ✅ 🎯 PRODUITS UNIQUEMENT (PAS de gestion client)');
 console.log('   ❌ 🔊 Synthèse vocale DÉSACTIVÉE (bloquait le micro iPhone)');
 console.log('   📱 Détection PWA iPhone → message "Ouvrez dans Safari"');
-console.log('   ⚡ Silence de 1.5s avant arrêt du micro');
+console.log('   ⚡ Silence de 3s avant arrêt du micro');
+console.log('   🔄 Relance auto après no-speech (max 2 fois)');
+console.log('   🔒 Vérification HTTPS au démarrage');
 console.log('   🎯 Suggestions intelligentes si produit non trouvé');
 console.log('   🎨 Alertes stock bas automatiques');
 console.log('   💾 Cache des commandes récentes');
