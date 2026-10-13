@@ -1,39 +1,52 @@
-// ==================== POS-AI.JS - E-SOLUTION (v5.1 FRANÇAIS - PRODUITS UNIQUEMENT) ====================
-// Module IA séparé pour le POS - Commande vocale par Gemini
-// ✅ 100% FRANÇAIS (aucune référence à l'arabe/darija)
-// ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS (PAS de gestion client)
+// ==================== POS-AI.JS - E-SOLUTION (v6 - SANS SON + SANS MENTION GEMINI) ====================
+// Module IA séparé pour le POS - Commande vocale
+// ✅ 100% FRANÇAIS
+// ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
 // ✅ ⚡ Micro qui s'arrête après 1.5 SECONDE de silence
-// ✅ 🔊 Synthèse vocale FRANÇAISE (voix NORMALE)
+// ❌ 🔊 Synthèse vocale DÉSACTIVÉE (elle bloquait le micro sur iPhone)
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
-// ✅ 💾 Cache des commandes récentes (réponse instantanée)
+// ✅ 💾 Cache des commandes récentes
+// ✅ 📱 Détection PWA iPhone → message "Ouvrez dans Safari"
 
 // ==================== 🔑 CONFIGURATION ====================
-const POS_GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
-const POS_GEMINI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
+const POS_AI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 // ⚡ Silence réduit à 1.5 seconde
-const POS_GEMINI_SILENCE_DURATION = 1500;
-const POS_GEMINI_CACHE_KEY = 'posGeminiCache';
-const POS_GEMINI_CACHE_MAX_AGE = 7 * 24 * 3600000;
+const POS_AI_SILENCE_DURATION = 1500;
+const POS_AI_CACHE_KEY = 'posGeminiCache'; // conservé pour compatibilité du cache existant
+const POS_AI_CACHE_MAX_AGE = 7 * 24 * 3600000;
 
-// 🔊 Synthèse vocale — FRANÇAIS
-const POS_GEMINI_TTS_ENABLED = true;
-const POS_GEMINI_TTS_LANG = 'fr-FR';
+// ❌ SYNTHÈSE VOCALE DÉSACTIVÉE DÉFINITIVEMENT (bloquait le micro sur iPhone)
+const POS_AI_TTS_ENABLED = false;
 
-// ==================== ÉTAT GEMINI ====================
-var posGeminiRecognition = null;
-var posGeminiEnCours = false;
-var posGeminiTranscriptFinal = '';
-var posGeminiProduitsEnAttente = [];
-var posGeminiSilenceTimer = null;
-var posGeminiManuallyStopped = false;
-var posGeminiAbortController = null;
-var posGeminiCache = null;
+// ==================== ÉTAT ====================
+var posAiRecognition = null;
+var posAiEnCours = false;
+var posAiTranscriptFinal = '';
+var posAiProduitsEnAttente = [];
+var posAiSilenceTimer = null;
+var posAiManuallyStopped = false;
+var posAiAbortController = null;
+var posAiCache = null;
+
+// ==================== 📱 DÉTECTION PWA IPHONE ====================
+function posAiEstPwaIphone() {
+    var ua = navigator.userAgent || '';
+    var isIphone = /iPhone|iPad|iPod/i.test(ua);
+    var isStandalone = (window.navigator.standalone === true) ||
+                       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    return isIphone && isStandalone;
+}
+
+function posAiEstIphone() {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+}
 
 // ==================== 🔧 HELPER : NORMALISATION ====================
-function posGeminiNormaliser(texte) {
+function posAiNormaliser(texte) {
     return (texte || '')
         .toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -42,81 +55,56 @@ function posGeminiNormaliser(texte) {
         .trim();
 }
 
-// ==================== 🔊 SYNTHÈSE VOCALE (FRANÇAIS - VOIX NORMALE) ====================
-function posGeminiParler(texte) {
-    if (!POS_GEMINI_TTS_ENABLED) return;
-    if (!('speechSynthesis' in window)) {
-        console.warn('⚠️ Synthèse vocale non supportée');
-        return;
-    }
-
-    try { window.speechSynthesis.cancel(); } catch(e) {}
-
-    var utterance = new SpeechSynthesisUtterance(texte);
-    utterance.lang = POS_GEMINI_TTS_LANG;
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    var voices = window.speechSynthesis.getVoices();
-    var voixFr = voices.find(function(v) { return v.lang.startsWith('fr') && v.name.includes('Google'); })
-              || voices.find(function(v) { return v.lang.startsWith('fr') && v.name.includes('Microsoft'); })
-              || voices.find(function(v) { return v.lang.startsWith('fr'); });
-    if (voixFr) {
-        utterance.voice = voixFr;
-        utterance.lang = voixFr.lang;
-    }
-
-    window.speechSynthesis.speak(utterance);
-    console.log('🔊 TTS (FR) :', texte);
+// ==================== 🔊 SYNTHÈSE VOCALE — DÉSACTIVÉE ====================
+// ❌ Cette fonction ne fait plus rien. Elle est conservée uniquement pour
+// éviter les erreurs "is not a function" si du code externe l'appelle.
+function posAiParler(texte) {
+    // ❌ SYNTHÈSE VOCALE DÉSACTIVÉE — elle bloquait le micro sur iPhone
+    // Aucun son n'est émis. On ne fait rien.
+    return;
 }
 
-// Charger les voix dès qu'elles sont dispo
-if ('speechSynthesis' in window) {
-    window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = function() {
-        window.speechSynthesis.getVoices();
-    };
-}
+// Alias pour compatibilité avec l'ancien nom
+window.posGeminiParler = posAiParler;
 
 // ==================== 💾 CACHE DES COMMANDES RÉCENTES ====================
-function posGeminiChargerCache() {
-    if (posGeminiCache !== null) return posGeminiCache;
+function posAiChargerCache() {
+    if (posAiCache !== null) return posAiCache;
     try {
-        var raw = localStorage.getItem(POS_GEMINI_CACHE_KEY);
+        var raw = localStorage.getItem(POS_AI_CACHE_KEY);
         if (!raw) {
-            posGeminiCache = {};
-            return posGeminiCache;
+            posAiCache = {};
+            return posAiCache;
         }
         var data = JSON.parse(raw);
         var now = Date.now();
         Object.keys(data).forEach(function(k) {
-            if (now - (data[k].ts || 0) > POS_GEMINI_CACHE_MAX_AGE) {
+            if (now - (data[k].ts || 0) > POS_AI_CACHE_MAX_AGE) {
                 delete data[k];
             }
         });
-        posGeminiCache = data;
-        console.log('💾 Cache chargé :', Object.keys(posGeminiCache).length, 'entrées');
-        return posGeminiCache;
+        posAiCache = data;
+        console.log('💾 Cache chargé :', Object.keys(posAiCache).length, 'entrées');
+        return posAiCache;
     } catch(e) {
         console.warn('⚠️ Erreur chargement cache :', e);
-        posGeminiCache = {};
-        return posGeminiCache;
+        posAiCache = {};
+        return posAiCache;
     }
 }
 
-function posGeminiSauverCache() {
-    if (!posGeminiCache) return;
+function posAiSauverCache() {
+    if (!posAiCache) return;
     try {
-        localStorage.setItem(POS_GEMINI_CACHE_KEY, JSON.stringify(posGeminiCache));
+        localStorage.setItem(POS_AI_CACHE_KEY, JSON.stringify(posAiCache));
     } catch(e) {
         console.warn('⚠️ Erreur sauvegarde cache :', e);
     }
 }
 
-function posGeminiChercherDansCache(texte) {
-    var cache = posGeminiChargerCache();
-    var key = posGeminiNormaliser(texte);
+function posAiChercherDansCache(texte) {
+    var cache = posAiChargerCache();
+    var key = posAiNormaliser(texte);
     if (cache[key]) {
         console.log('⚡ Cache HIT pour :', key);
         return cache[key];
@@ -124,30 +112,47 @@ function posGeminiChercherDansCache(texte) {
     return null;
 }
 
-function posGeminiStockerDansCache(texte, resultat) {
-    var cache = posGeminiChargerCache();
-    var key = posGeminiNormaliser(texte);
+function posAiStockerDansCache(texte, resultat) {
+    var cache = posAiChargerCache();
+    var key = posAiNormaliser(texte);
     cache[key] = {
         ts: Date.now(),
         hits: (cache[key] ? cache[key].hits + 1 : 1),
         result: resultat
     };
-    posGeminiSauverCache();
+    posAiSauverCache();
     console.log('💾 Stocké en cache :', key);
 }
 
 // ==================== FONCTION PRINCIPALE - OUVERTURE DU MODAL ====================
-function posOuvrirCommandeVocaleGemini() {
+function posOuvrirCommandeVocaleAi() {
     console.log('📦 Catalogue actuel :', (window.posProductsList || []).length, 'produits');
 
-    if (posGeminiEnCours) {
+    if (posAiEnCours) {
         alert('⏳ Une reconnaissance est déjà en cours...');
+        return;
+    }
+
+    // 📱 Détection PWA iPhone
+    if (posAiEstPwaIphone()) {
+        alert(
+            '📱 Mode PWA iPhone détecté\n\n' +
+            '⚠️ La reconnaissance vocale NE FONCTIONNE PAS dans une application installée sur iPhone (limitation Apple).\n\n' +
+            '✅ Solution : Ouvrez cette page dans Safari (pas depuis l\'icône de l\'écran d\'accueil).\n\n' +
+            'Le micro fonctionnera alors normalement.'
+        );
         return;
     }
 
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        alert('❌ La reconnaissance vocale n\'est pas supportée par ce navigateur.\n\nUtilisez Chrome, Edge ou Safari récent.');
+        var msg = '❌ La reconnaissance vocale n\'est pas supportée par ce navigateur.';
+        if (posAiEstIphone()) {
+            msg += '\n\n📱 Sur iPhone, ouvrez la page dans Safari (pas en PWA).';
+        } else {
+            msg += '\n\nUtilisez Chrome, Edge ou Safari récent.';
+        }
+        alert(msg);
         return;
     }
 
@@ -156,13 +161,13 @@ function posOuvrirCommandeVocaleGemini() {
         return;
     }
 
-    posGeminiChargerCache();
+    posAiChargerCache();
 
     var html = `
         <div style="padding:10px; text-align:center;">
             <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;">
                 <i class="fas fa-robot" style="font-size:2.5rem;color:#8B5CF6;"></i>
-                <h3 style="margin:0;font-size:1.3rem;color:#7C3AED;font-weight:700;">Commande vocale Gemini</h3>
+                <h3 style="margin:0;font-size:1.3rem;color:#7C3AED;font-weight:700;">Commande vocale</h3>
             </div>
 
             <div style="padding:16px;background:linear-gradient(135deg,#F3E8FF,#EDE9FE);border-radius:12px;border:2px solid #8B5CF6;margin-bottom:16px;">
@@ -171,64 +176,66 @@ function posOuvrirCommandeVocaleGemini() {
                 <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« 5 croissants et 1 café »</p>
                 <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Deux pizzas et un jus d'orange »</p>
                 <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 1.5 seconde de silence</p>
-                <p style="margin:4px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">🔊 Gemini vous répond à voix haute</p>
             </div>
 
-            <button id="posGeminiMicBtn" onclick="posDemarrerEcouteGemini()"
+            <button id="posAiMicBtn" onclick="posDemarrerEcouteAi()"
                 style="width:140px;height:140px;border-radius:50%;border:none;cursor:pointer;
                        background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:#fff;
                        font-size:3rem;box-shadow:0 8px 24px rgba(139,92,246,0.4);
                        transition:all 0.3s;display:flex;align-items:center;justify-content:center;
                        margin:20px auto;">
-                <i class="fas fa-microphone" id="posGeminiMicIcon"></i>
+                <i class="fas fa-microphone" id="posAiMicIcon"></i>
             </button>
 
-            <p id="posGeminiStatus" style="color:#64748b;font-size:1rem;margin-top:8px;min-height:24px;">Appuyez pour parler</p>
+            <p id="posAiStatus" style="color:#64748b;font-size:1rem;margin-top:8px;min-height:24px;">Appuyez pour parler</p>
 
-            <div id="posGeminiTranscript" style="margin-top:16px;padding:12px;background:#f8fafc;
+            <div id="posAiTranscript" style="margin-top:16px;padding:12px;background:#f8fafc;
                 border-radius:10px;border:1px solid #e2e8f0;min-height:50px;
                 color:#1e293b;font-size:1rem;text-align:left;display:none;">
                 <strong style="color:#8B5CF6;">📝 Transcription :</strong>
-                <p id="posGeminiTranscriptText" style="margin:6px 0 0;font-style:italic;"></p>
+                <p id="posAiTranscriptText" style="margin:6px 0 0;font-style:italic;"></p>
             </div>
 
-            <div id="posGeminiResult" style="margin-top:16px;display:none;"></div>
+            <div id="posAiResult" style="margin-top:16px;display:none;"></div>
         </div>
     `;
     openModal('🎤 Commande vocale', html);
 }
 
 // ==================== DÉMARRAGE ÉCOUTE (silence 1.5s) ====================
-function posDemarrerEcouteGemini() {
+function posDemarrerEcouteAi() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
-    var micBtn = document.getElementById('posGeminiMicBtn');
-    var micIcon = document.getElementById('posGeminiMicIcon');
-    var status = document.getElementById('posGeminiStatus');
-    var transcriptBox = document.getElementById('posGeminiTranscript');
-    var transcriptText = document.getElementById('posGeminiTranscriptText');
+    var micBtn = document.getElementById('posAiMicBtn');
+    var micIcon = document.getElementById('posAiMicIcon');
+    var status = document.getElementById('posAiStatus');
+    var transcriptBox = document.getElementById('posAiTranscript');
+    var transcriptText = document.getElementById('posAiTranscriptText');
 
-    if (posGeminiRecognition) {
-        posGeminiManuallyStopped = true;
-        if (posGeminiSilenceTimer) {
-            clearTimeout(posGeminiSilenceTimer);
-            posGeminiSilenceTimer = null;
+    // 🔁 Si une écoute est déjà en cours → on l'arrête proprement
+    if (posAiRecognition) {
+        posAiManuallyStopped = true;
+        if (posAiSilenceTimer) {
+            clearTimeout(posAiSilenceTimer);
+            posAiSilenceTimer = null;
         }
-        try { posGeminiRecognition.stop(); } catch(e) {}
-        posGeminiRecognition = null;
-        posResetGeminiMicUI();
+        try { posAiRecognition.stop(); } catch(e) {}
+        posAiRecognition = null;
+        posResetAiMicUI();
         if (status) status.textContent = 'Écoute arrêtée';
         return;
     }
 
-    posGeminiTranscriptFinal = '';
-    posGeminiManuallyStopped = false;
-    posGeminiRecognition = new SpeechRecognition();
-    posGeminiRecognition.lang = 'fr-FR';
-    posGeminiRecognition.continuous = true;
-    posGeminiRecognition.interimResults = true;
-    posGeminiRecognition.maxAlternatives = 1;
+    posAiTranscriptFinal = '';
+    posAiManuallyStopped = false;
+
+    // ✅ CRÉATION D'UN NOUVEL OBJET À CHAQUE FOIS (contourne le bug iOS)
+    posAiRecognition = new SpeechRecognition();
+    posAiRecognition.lang = 'fr-FR';
+    posAiRecognition.continuous = true;
+    posAiRecognition.interimResults = true;
+    posAiRecognition.maxAlternatives = 1;
 
     if (micBtn) {
         micBtn.style.background = 'linear-gradient(135deg,#EF4444,#DC2626)';
@@ -243,9 +250,9 @@ function posDemarrerEcouteGemini() {
     if (transcriptBox) transcriptBox.style.display = 'block';
     if (transcriptText) transcriptText.textContent = '...';
 
-    if (!document.getElementById('posGeminiPulseStyle')) {
+    if (!document.getElementById('posAiPulseStyle')) {
         var style = document.createElement('style');
-        style.id = 'posGeminiPulseStyle';
+        style.id = 'posAiPulseStyle';
         style.textContent = `@keyframes posPulse {
             0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
             70% { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
@@ -255,31 +262,31 @@ function posDemarrerEcouteGemini() {
     }
 
     function demarrerTimerSilence() {
-        if (posGeminiSilenceTimer) clearTimeout(posGeminiSilenceTimer);
-        var statusEl = document.getElementById('posGeminiStatus');
-        var fin = Date.now() + POS_GEMINI_SILENCE_DURATION;
+        if (posAiSilenceTimer) clearTimeout(posAiSilenceTimer);
+        var statusEl = document.getElementById('posAiStatus');
+        var fin = Date.now() + POS_AI_SILENCE_DURATION;
         var intervalCompteur = setInterval(function() {
             var reste = Math.ceil((fin - Date.now()) / 1000);
-            if (reste > 0 && statusEl && posGeminiRecognition) {
+            if (reste > 0 && statusEl && posAiRecognition) {
                 statusEl.textContent = '⏳ Arrêt dans ' + reste + 's...';
             }
             if (reste <= 0) clearInterval(intervalCompteur);
         }, 100);
 
-        posGeminiSilenceTimer = setTimeout(function() {
+        posAiSilenceTimer = setTimeout(function() {
             clearInterval(intervalCompteur);
             console.log('⏱️ 1.5s de silence → arrêt auto');
-            if (posGeminiRecognition) {
-                try { posGeminiRecognition.stop(); } catch(e) {}
+            if (posAiRecognition) {
+                try { posAiRecognition.stop(); } catch(e) {}
             }
-        }, POS_GEMINI_SILENCE_DURATION);
+        }, POS_AI_SILENCE_DURATION);
     }
 
-    posGeminiRecognition.onstart = function() {
+    posAiRecognition.onstart = function() {
         console.log('🎙️ Micro démarré');
     };
 
-    posGeminiRecognition.onresult = function(event) {
+    posAiRecognition.onresult = function(event) {
         var interim = '';
         var finalText = '';
         for (var i = event.resultIndex; i < event.results.length; i++) {
@@ -287,78 +294,89 @@ function posDemarrerEcouteGemini() {
             if (event.results[i].isFinal) finalText += transcript + ' ';
             else interim += transcript;
         }
-        if (finalText) posGeminiTranscriptFinal += finalText;
-        var displayText = (posGeminiTranscriptFinal + interim).trim();
+        if (finalText) posAiTranscriptFinal += finalText;
+        var displayText = (posAiTranscriptFinal + interim).trim();
         if (transcriptText) transcriptText.textContent = displayText || '...';
         if (displayText.length > 0) demarrerTimerSilence();
     };
 
-    posGeminiRecognition.onerror = function(event) {
+    posAiRecognition.onerror = function(event) {
         console.error('❌ Erreur reconnaissance vocale :', event.error);
-        if (event.error === 'no-speech' && posGeminiTranscriptFinal.trim().length > 0) {
+
+        // ⚠️ Sur iPhone, "no-speech" arrive souvent alors qu'on a déjà du texte
+        if (event.error === 'no-speech' && posAiTranscriptFinal.trim().length > 0) {
             console.log('ℹ️ no-speech ignoré, on continue');
             return;
         }
-        var status = document.getElementById('posGeminiStatus');
+
+        var status = document.getElementById('posAiStatus');
         if (status) {
-            if (event.error === 'no-speech') status.textContent = '❌ Aucune parole détectée. Réessayez.';
-            else if (event.error === 'not-allowed') status.textContent = '❌ Micro non autorisé. Activez-le dans le navigateur.';
-            else if (event.error === 'aborted') status.textContent = '⏹️ Écoute arrêtée';
-            else status.textContent = '❌ Erreur : ' + event.error;
+            if (event.error === 'no-speech') {
+                status.textContent = '🎙️ Aucune parole détectée. Appuyez sur le micro pour réessayer.';
+            } else if (event.error === 'not-allowed') {
+                status.textContent = '🔒 Micro bloqué. Autorisez le micro dans les réglages du navigateur.';
+            } else if (event.error === 'aborted') {
+                status.textContent = '⏹️ Écoute arrêtée';
+            } else if (event.error === 'audio-capture') {
+                status.textContent = '🎤 Micro indisponible. Vérifiez qu\'aucune autre app ne l\'utilise.';
+            } else if (event.error === 'network') {
+                status.textContent = '🌐 Problème réseau. Vérifiez votre connexion.';
+            } else {
+                status.textContent = '⚠️ Problème micro (' + event.error + '). Réessayez.';
+            }
             status.style.color = '#ef4444';
         }
-        if (posGeminiSilenceTimer) {
-            clearTimeout(posGeminiSilenceTimer);
-            posGeminiSilenceTimer = null;
+        if (posAiSilenceTimer) {
+            clearTimeout(posAiSilenceTimer);
+            posAiSilenceTimer = null;
         }
-        posResetGeminiMicUI();
-        posGeminiRecognition = null;
+        posResetAiMicUI();
+        posAiRecognition = null;
     };
 
-    posGeminiRecognition.onend = function() {
-        var finalText = posGeminiTranscriptFinal.trim();
-        if (posGeminiSilenceTimer) {
-            clearTimeout(posGeminiSilenceTimer);
-            posGeminiSilenceTimer = null;
+    posAiRecognition.onend = function() {
+        var finalText = posAiTranscriptFinal.trim();
+        if (posAiSilenceTimer) {
+            clearTimeout(posAiSilenceTimer);
+            posAiSilenceTimer = null;
         }
-        posResetGeminiMicUI();
-        posGeminiRecognition = null;
+        posResetAiMicUI();
+        posAiRecognition = null;
 
-        if (posGeminiManuallyStopped) {
-            posGeminiManuallyStopped = false;
+        if (posAiManuallyStopped) {
+            posAiManuallyStopped = false;
             return;
         }
 
         if (finalText.length < 3) {
-            var status = document.getElementById('posGeminiStatus');
+            var status = document.getElementById('posAiStatus');
             if (status) {
-                status.textContent = '⚠️ Rien d\'entendu. Réessayez.';
+                status.textContent = '🎙️ Aucune parole captée. Appuyez sur le micro pour réessayer.';
                 status.style.color = '#f59e0b';
             }
-            posGeminiParler('Rien entendu. Essayez encore.');
             return;
         }
 
-        var status = document.getElementById('posGeminiStatus');
+        var status = document.getElementById('posAiStatus');
         if (status) {
             status.textContent = '✅ Commande captée !';
             status.style.color = '#10B981';
         }
-        posEnvoyerTexteAGemini(finalText);
+        posEnvoyerTexteAAi(finalText);
     };
 
     try {
-        posGeminiRecognition.start();
+        posAiRecognition.start();
     } catch(e) {
         console.error('Impossible de démarrer la reconnaissance :', e);
         alert('❌ Erreur micro : ' + e.message);
-        posResetGeminiMicUI();
+        posResetAiMicUI();
     }
 }
 
-function posResetGeminiMicUI() {
-    var micBtn = document.getElementById('posGeminiMicBtn');
-    var micIcon = document.getElementById('posGeminiMicIcon');
+function posResetAiMicUI() {
+    var micBtn = document.getElementById('posAiMicBtn');
+    var micIcon = document.getElementById('posAiMicIcon');
     if (micBtn) {
         micBtn.style.background = 'linear-gradient(135deg,#8B5CF6,#7C3AED)';
         micBtn.style.animation = 'none';
@@ -366,19 +384,19 @@ function posResetGeminiMicUI() {
     if (micIcon) micIcon.className = 'fas fa-microphone';
 }
 
-// ==================== ENVOI À GEMINI (PRODUITS UNIQUEMENT) ====================
-async function posEnvoyerTexteAGemini(texte) {
-    if (posGeminiEnCours) return;
-    posGeminiEnCours = true;
+// ==================== ENVOI À L'IA (PRODUITS UNIQUEMENT) ====================
+async function posEnvoyerTexteAAi(texte) {
+    if (posAiEnCours) return;
+    posAiEnCours = true;
 
-    var status = document.getElementById('posGeminiStatus');
-    var resultBox = document.getElementById('posGeminiResult');
+    var status = document.getElementById('posAiStatus');
+    var resultBox = document.getElementById('posAiResult');
 
     console.log('🎤 Texte entendu :', texte);
     console.log('📦 Produits :', (window.posProductsList || []).length);
 
     if (status) {
-        status.textContent = '🤖 Gemini analyse...';
+        status.textContent = '🤖 Analyse en cours...';
         status.style.color = '#8B5CF6';
         status.style.fontWeight = '700';
     }
@@ -392,7 +410,7 @@ async function posEnvoyerTexteAGemini(texte) {
             throw new Error('Catalogue vide. Rechargez la page POS.');
         }
 
-        var cachedResult = posGeminiChercherDansCache(texte);
+        var cachedResult = posAiChercherDansCache(texte);
         var parsed = null;
 
         if (cachedResult && cachedResult.result) {
@@ -407,7 +425,6 @@ async function posEnvoyerTexteAGemini(texte) {
                 return '"' + n.replace(/"/g, '\\"') + '"';
             }).join(', ');
 
-            // ✅ PROMPT 100% FRANÇAIS — PRODUITS UNIQUEMENT
             var prompt = `Tu es un assistant de point de vente. Analyse la commande dictée en FRANÇAIS.
 
 PHRASE DITE :
@@ -479,30 +496,30 @@ Ex 7 : "Six msemen"
 - Pas de \`\`\`json autour du JSON.
 - Retourne UNIQUEMENT un TABLEAU (array), PAS un objet.`.trim();
 
-            console.log('📤 Envoi au Worker (prompt français - produits uniquement)...');
+            console.log('📤 Envoi au Worker...');
 
-            if (posGeminiAbortController) {
-                try { posGeminiAbortController.abort(); } catch(e) {}
+            if (posAiAbortController) {
+                try { posAiAbortController.abort(); } catch(e) {}
             }
-            posGeminiAbortController = new AbortController();
+            posAiAbortController = new AbortController();
             var timeoutId = setTimeout(function() {
-                if (posGeminiAbortController) {
-                    try { posGeminiAbortController.abort(); } catch(e) {}
+                if (posAiAbortController) {
+                    try { posAiAbortController.abort(); } catch(e) {}
                 }
             }, 20000);
 
-            var response = await fetch(POS_GEMINI_WORKER_URL, {
+            var response = await fetch(POS_AI_WORKER_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: prompt,
-                    imageBase64: POS_GEMINI_FAKE_IMAGE
+                    imageBase64: POS_AI_FAKE_IMAGE
                 }),
-                signal: posGeminiAbortController.signal
+                signal: posAiAbortController.signal
             });
 
             clearTimeout(timeoutId);
-            posGeminiAbortController = null;
+            posAiAbortController = null;
 
             console.log('📥 Status HTTP :', response.status);
 
@@ -512,18 +529,17 @@ Ex 7 : "Six msemen"
             }
 
             var data = await response.json();
-            if (data.error) throw new Error('Gemini : ' + (data.error.message || JSON.stringify(data.error)));
+            if (data.error) throw new Error('Erreur IA : ' + (data.error.message || JSON.stringify(data.error)));
 
             var rawText = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
             console.log('📝 Réponse brute :', rawText);
 
-            if (!rawText) throw new Error('Gemini n\'a rien répondu.');
+            if (!rawText) throw new Error('L\'IA n\'a rien répondu.');
 
             var cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
             try {
                 parsed = JSON.parse(cleaned);
-                // Si c'est un objet {client, produits}, on prend juste produits
                 if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.produits) {
                     parsed = parsed.produits;
                 }
@@ -541,10 +557,9 @@ Ex 7 : "Six msemen"
                 parsed = fallbackProduits;
             }
 
-            posGeminiStockerDansCache(texte, parsed);
+            posAiStockerDansCache(texte, parsed);
         }
 
-        // S'assurer que c'est un tableau
         var produitsReconnus = Array.isArray(parsed) ? parsed : [];
 
         console.log('🛒 Produits reconnus :', produitsReconnus);
@@ -556,8 +571,7 @@ Ex 7 : "Six msemen"
                     <em>Essayez : « Ajouter 3 Merindina et 2 Coca Cola »</em>
                 </div>`;
             }
-            posGeminiParler('Aucun produit reconnu. Réessayez.');
-            posGeminiEnCours = false;
+            posAiEnCours = false;
             return;
         }
 
@@ -571,7 +585,7 @@ Ex 7 : "Six msemen"
             var recNom = (rec.nom || '').trim();
             if (!recNom) return;
 
-            var recNomNorm = posGeminiNormaliser(recNom);
+            var recNomNorm = posAiNormaliser(recNom);
             var motsRecherche = recNomNorm.split(/\s+/).filter(function(m) { return m.length >= 3; });
 
             console.log('🔍 Recherche produit :', recNom, '| mots:', motsRecherche);
@@ -581,16 +595,16 @@ Ex 7 : "Six msemen"
 
             // 1️⃣ Match EXACT sur nom
             produit = window.posProductsList.find(function(p) {
-                return posGeminiNormaliser(p.nom) === recNomNorm;
+                return posAiNormaliser(p.nom) === recNomNorm;
             });
             if (produit) matchType = 'nom exact';
 
             // 2️⃣ Match EXACT sur description/categorie/brand
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
-                    return posGeminiNormaliser(p.description) === recNomNorm
-                        || posGeminiNormaliser(p.categorie) === recNomNorm
-                        || posGeminiNormaliser(p.brand) === recNomNorm;
+                    return posAiNormaliser(p.description) === recNomNorm
+                        || posAiNormaliser(p.categorie) === recNomNorm
+                        || posAiNormaliser(p.brand) === recNomNorm;
                 });
                 if (produit) matchType = 'desc/cat/brand exact';
             }
@@ -598,7 +612,7 @@ Ex 7 : "Six msemen"
             // 3️⃣ Match PARTIEL sur nom
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
-                    var pNom = posGeminiNormaliser(p.nom);
+                    var pNom = posAiNormaliser(p.nom);
                     return pNom.includes(recNomNorm) || recNomNorm.includes(pNom);
                 });
                 if (produit) matchType = 'nom partiel';
@@ -607,9 +621,9 @@ Ex 7 : "Six msemen"
             // 4️⃣ Match PARTIEL sur description/categorie/brand
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
-                    var pDesc = posGeminiNormaliser(p.description);
-                    var pCat = posGeminiNormaliser(p.categorie);
-                    var pBrand = posGeminiNormaliser(p.brand);
+                    var pDesc = posAiNormaliser(p.description);
+                    var pCat = posAiNormaliser(p.categorie);
+                    var pBrand = posAiNormaliser(p.brand);
                     return pDesc.includes(recNomNorm) || pCat.includes(recNomNorm) || pBrand.includes(recNomNorm);
                 });
                 if (produit) matchType = 'desc/cat/brand partiel';
@@ -619,11 +633,11 @@ Ex 7 : "Six msemen"
             if (!produit) {
                 var candidats = [];
                 window.posProductsList.forEach(function(p) {
-                    var pNom = posGeminiNormaliser(p.nom);
-                    var pDesc = posGeminiNormaliser(p.description);
-                    var pCat = posGeminiNormaliser(p.categorie);
-                    var pBrand = posGeminiNormaliser(p.brand);
-                    var pCats = (p.categories || []).map(posGeminiNormaliser).join(' ');
+                    var pNom = posAiNormaliser(p.nom);
+                    var pDesc = posAiNormaliser(p.description);
+                    var pCat = posAiNormaliser(p.categorie);
+                    var pBrand = posAiNormaliser(p.brand);
+                    var pCats = (p.categories || []).map(posAiNormaliser).join(' ');
 
                     var score = 0;
                     var motsMatched = [];
@@ -664,11 +678,11 @@ Ex 7 : "Six msemen"
                 var candidats2 = [];
                 window.posProductsList.forEach(function(p) {
                     var tousLesChamps = [
-                        posGeminiNormaliser(p.nom),
-                        posGeminiNormaliser(p.description),
-                        posGeminiNormaliser(p.categorie),
-                        posGeminiNormaliser(p.brand),
-                        (p.categories || []).map(posGeminiNormaliser).join(' ')
+                        posAiNormaliser(p.nom),
+                        posAiNormaliser(p.description),
+                        posAiNormaliser(p.categorie),
+                        posAiNormaliser(p.brand),
+                        (p.categories || []).map(posAiNormaliser).join(' ')
                     ].join(' ');
 
                     var score = 0;
@@ -701,25 +715,23 @@ Ex 7 : "Six msemen"
             }
         });
 
-        posAfficherResultatGeminiVoice(produitsValides, resultBox, produitsNonTrouves);
+        posAfficherResultatAiVoice(produitsValides, resultBox, produitsNonTrouves);
 
     } catch(e) {
-        console.error('❌ Erreur Gemini Voice:', e);
+        console.error('❌ Erreur Voice:', e);
         if (e.name === 'AbortError') {
             if (resultBox) resultBox.innerHTML = `<div style="padding:14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;color:#92400E;text-align:left;">⏱️ <strong>Délai dépassé.</strong> Réessayez.</div>`;
-            posGeminiParler('Délai dépassé. Réessayez.');
         } else {
             if (resultBox) resultBox.innerHTML = `<div style="padding:14px;background:#FEE2E2;border:2px solid #EF4444;border-radius:10px;color:#991B1B;text-align:left;">❌ <strong>Erreur :</strong> ${escapeHtml(e.message)}</div>`;
-            posGeminiParler('Erreur. Réessayez.');
         }
     } finally {
-        posGeminiEnCours = false;
+        posAiEnCours = false;
     }
 }
 
 // ==================== AFFICHAGE RÉSULTAT (PRODUITS UNIQUEMENT) ====================
-function posAfficherResultatGeminiVoice(produits, container, produitsNonTrouves) {
-    if (!container) container = document.getElementById('posGeminiResult');
+function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
+    if (!container) container = document.getElementById('posAiResult');
     if (!container) return;
 
     produitsNonTrouves = produitsNonTrouves || [];
@@ -758,13 +770,13 @@ function posAfficherResultatGeminiVoice(produits, container, produitsNonTrouves)
         `;
     }).join('');
 
-    posGeminiProduitsEnAttente = produits;
+    posAiProduitsEnAttente = produits;
 
     var suggestionsHtml = '';
     if (produitsNonTrouves.length > 0) {
         var suggestionsItems = produitsNonTrouves.map(function(item) {
             var suggHtml = item.suggestions.map(function(sugg) {
-                return `<button onclick="posGeminiChoisirSuggestion('${escapeHtml(sugg.nom).replace(/'/g, "\\'")}')" 
+                return `<button onclick="posAiChoisirSuggestion('${escapeHtml(sugg.nom).replace(/'/g, "\\'")}')" 
                     style="padding:4px 10px;margin:2px;background:#E0E7FF;color:#4F46E5;border:1px solid #4F46E5;border-radius:6px;cursor:pointer;font-size:0.8rem;font-weight:600;">
                     ${escapeHtml(sugg.nom)}
                 </button>`;
@@ -824,25 +836,21 @@ function posAfficherResultatGeminiVoice(produits, container, produitsNonTrouves)
             ${stockHtml}
             ${suggestionsHtml}
             <div style="display:flex;gap:10px;margin-top:16px;">
-                <button onclick="posAnnulerGeminiVoice()"
+                <button onclick="posAnnulerAiVoice()"
                     style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;">
                     ❌ Annuler
                 </button>
-                <button onclick="posConfirmerAjoutGeminiVoice()"
+                <button onclick="posConfirmerAjoutAiVoice()"
                     style="flex:2;padding:12px;background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 4px 14px rgba(139,92,246,0.3);">
                     ✅ Ajouter au panier
                 </button>
             </div>
         </div>
     `;
-
-    var resume = produits.length + ' produit' + (produits.length > 1 ? 's' : '') + ' reconnu' + (produits.length > 1 ? 's' : '') + '. ';
-    resume += 'Total ' + totalGeneral.toFixed(0) + ' dirhams.';
-    posGeminiParler(resume);
 }
 
 // ==================== 🎯 CHOISIR UNE SUGGESTION ====================
-function posGeminiChoisirSuggestion(nomProduit) {
+function posAiChoisirSuggestion(nomProduit) {
     var produit = window.posProductsList.find(function(p) {
         return (p.nom || '').toLowerCase() === nomProduit.toLowerCase();
     });
@@ -851,7 +859,7 @@ function posGeminiChoisirSuggestion(nomProduit) {
         return;
     }
 
-    posGeminiProduitsEnAttente.push({
+    posAiProduitsEnAttente.push({
         produit: produit,
         quantite: 1,
         nomOriginal: nomProduit
@@ -859,28 +867,22 @@ function posGeminiChoisirSuggestion(nomProduit) {
 
     console.log('🎯 Suggestion ajoutée :', nomProduit);
 
-    var resultBox = document.getElementById('posGeminiResult');
-    posAfficherResultatGeminiVoice(
-        posGeminiProduitsEnAttente,
+    var resultBox = document.getElementById('posAiResult');
+    posAfficherResultatAiVoice(
+        posAiProduitsEnAttente,
         resultBox,
         []
     );
-
-    posGeminiParler(nomProduit + ' ajouté.');
 }
 
 // ==================== CONFIRMATION AJOUT AU PANIER (PRODUITS UNIQUEMENT) ====================
-function posConfirmerAjoutGeminiVoice() {
-    var produits = posGeminiProduitsEnAttente;
+function posConfirmerAjoutAiVoice() {
+    var produits = posAiProduitsEnAttente;
     if (!produits || produits.length === 0) {
         alert('❌ Aucun produit à ajouter');
         return;
     }
 
-    // ============================================================
-    // ✅ Ajouter UNIQUEMENT les produits au panier
-    // ⚠️ AUCUNE gestion de client
-    // ============================================================
     if (typeof window.posAddMultipleProductsToCart !== 'function') {
         alert('❌ Erreur : fonction d\'ajout au panier non disponible.');
         return;
@@ -888,13 +890,10 @@ function posConfirmerAjoutGeminiVoice() {
 
     var result = window.posAddMultipleProductsToCart(produits);
 
-    // Fermer le modal
     closeModal();
 
-    // Vider les données en attente
-    posGeminiProduitsEnAttente = [];
+    posAiProduitsEnAttente = [];
 
-    // Rafraîchir l'affichage du panier
     if (window.isOnPOSPage && window.isOnPOSPage()) {
         if (typeof window.updateCartOnly === 'function') window.updateCartOnly();
         setTimeout(function() {
@@ -903,58 +902,62 @@ function posConfirmerAjoutGeminiVoice() {
         }, 300);
     }
 
-    // Message de confirmation
     var msg = '✅ ' + result.ajoutCount + ' article(s) ajouté(s) au panier !';
     if (result.stockAlertes && result.stockAlertes.length > 0) {
         msg += '\n\n⚠️ Stock :\n• ' + result.stockAlertes.join('\n• ');
     }
     alert(msg);
-
-    // Annonce vocale
-    posGeminiParler(result.ajoutCount + ' article' + (result.ajoutCount > 1 ? 's' : '') + ' ajouté' + (result.ajoutCount > 1 ? 's' : '') + '.');
 }
 
 // ==================== ANNULATION ====================
-function posAnnulerGeminiVoice() {
-    posGeminiProduitsEnAttente = [];
+function posAnnulerAiVoice() {
+    posAiProduitsEnAttente = [];
 
-    if (posGeminiSilenceTimer) {
-        clearTimeout(posGeminiSilenceTimer);
-        posGeminiSilenceTimer = null;
+    if (posAiSilenceTimer) {
+        clearTimeout(posAiSilenceTimer);
+        posAiSilenceTimer = null;
     }
 
-    if (posGeminiRecognition) {
-        posGeminiManuallyStopped = true;
-        try { posGeminiRecognition.stop(); } catch(e) {}
-        posGeminiRecognition = null;
+    if (posAiRecognition) {
+        posAiManuallyStopped = true;
+        try { posAiRecognition.stop(); } catch(e) {}
+        posAiRecognition = null;
     }
 
-    if (posGeminiAbortController) {
-        try { posGeminiAbortController.abort(); } catch(e) {}
-        posGeminiAbortController = null;
+    if (posAiAbortController) {
+        try { posAiAbortController.abort(); } catch(e) {}
+        posAiAbortController = null;
     }
-
-    try { window.speechSynthesis.cancel(); } catch(e) {}
 
     closeModal();
 }
 
-// ==================== EXPOSITION GLOBALE ====================
-window.posOuvrirCommandeVocaleGemini = posOuvrirCommandeVocaleGemini;
-window.posDemarrerEcouteGemini = posDemarrerEcouteGemini;
-window.posEnvoyerTexteAGemini = posEnvoyerTexteAGemini;
-window.posConfirmerAjoutGeminiVoice = posConfirmerAjoutGeminiVoice;
-window.posAnnulerGeminiVoice = posAnnulerGeminiVoice;
-window.posAfficherResultatGeminiVoice = posAfficherResultatGeminiVoice;
-window.posGeminiChoisirSuggestion = posGeminiChoisirSuggestion;
-window.posGeminiParler = posGeminiParler;
+// ==================== ALIAS DE COMPATIBILITÉ (anciens noms "Gemini") ====================
+// Ces alias permettent au reste de l'application (pos.js, etc.) de continuer
+// à fonctionner sans modification, même si on a renommé les fonctions.
+window.posOuvrirCommandeVocaleGemini = posOuvrirCommandeVocaleAi;
+window.posDemarrerEcouteGemini = posDemarrerEcouteAi;
+window.posEnvoyerTexteAGemini = posEnvoyerTexteAAi;
+window.posConfirmerAjoutGeminiVoice = posConfirmerAjoutAiVoice;
+window.posAnnulerGeminiVoice = posAnnulerAiVoice;
+window.posAfficherResultatGeminiVoice = posAfficherResultatAiVoice;
+window.posGeminiChoisirSuggestion = posAiChoisirSuggestion;
 
-console.log('🤖 POS-AI.js v5.1 chargé - 100% FRANÇAIS + Micro 1.5s');
+// ==================== EXPOSITION GLOBALE (nouveaux noms) ====================
+window.posOuvrirCommandeVocaleAi = posOuvrirCommandeVocaleAi;
+window.posDemarrerEcouteAi = posDemarrerEcouteAi;
+window.posEnvoyerTexteAAi = posEnvoyerTexteAAi;
+window.posConfirmerAjoutAiVoice = posConfirmerAjoutAiVoice;
+window.posAnnulerAiVoice = posAnnulerAiVoice;
+window.posAfficherResultatAiVoice = posAfficherResultatAiVoice;
+window.posAiChoisirSuggestion = posAiChoisirSuggestion;
+window.posAiParler = posAiParler;
+
+console.log('🤖 POS-AI.js v6 chargé - 100% FRANÇAIS + Micro 1.5s');
 console.log('   ✅ 🎯 PRODUITS UNIQUEMENT (PAS de gestion client)');
-console.log('   ✅ Aucune référence à l\'arabe/darija');
-console.log('   ✅ Détection PRODUIT (nom + description + categorie + brand + categories[])');
-console.log('   ⚡ Silence de 1.5s avant arrêt du micro (rapide)');
-console.log('   🔊 Synthèse vocale FRANÇAISE');
+console.log('   ❌ 🔊 Synthèse vocale DÉSACTIVÉE (bloquait le micro iPhone)');
+console.log('   📱 Détection PWA iPhone → message "Ouvrez dans Safari"');
+console.log('   ⚡ Silence de 1.5s avant arrêt du micro');
 console.log('   🎯 Suggestions intelligentes si produit non trouvé');
 console.log('   🎨 Alertes stock bas automatiques');
 console.log('   💾 Cache des commandes récentes');
