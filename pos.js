@@ -2630,21 +2630,16 @@ console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30
 console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (paiement), ← (panier), ↑↓←→ (navigation), Entrée (valider), Échap (retour)');
 
 // ============================================================
-// ⌨️ [PATCH KEYBOARD] : RACCOURCIS CLAVIER POUR LE POS (PC UNIQUEMENT)
-// ✅ Ctrl+K → Focus barre de recherche
-// ✅ → en panier → passe au paiement + focus Montant donné
-// ✅ ← en paiement → retour au panier
-// ✅ ↑ / ↓ / ← / → naviguent entre Client / Modes / Montant
-// ✅ ← / → naviguent entre Espèces / Partiel / Crédit
-// ✅ Entrée → valider / finaliser
-// ✅ Échap → retour au panier (en paiement)
+// ⌨️ [PATCH KEYBOARD v4] : RACCOURCIS CLAVIER EN MODE CAPTURE
+// ✅ Passe AVANT pos-audio.js et tous les autres listeners
+// ✅ Utilise capture:true + stopImmediatePropagation
 // ⚠️ Ce bloc est ISOLÉ et ne touche à AUCUNE fonction existante
 // ============================================================
 (function() {
     'use strict';
 
     var KB_FOCUS_DELAY = 250;
-    var kbPaymentFocus = 'amount'; // 'client' | 'modes' | 'amount' | 'finalize'
+    var kbPaymentFocus = 'amount';
 
     function kbIsOnPOS() {
         var pt = document.getElementById('pageTitle') ? document.getElementById('pageTitle').textContent : '';
@@ -2789,25 +2784,49 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         var alt = e.altKey;
         var step = kbGetStep();
 
-        // Ctrl+K → focus recherche
-        if (ctrl && !shift && !alt && (key === 'k' || key === 'K')) {
+        // Touches que l'on gère (pour stopImmediatePropagation)
+        var ourKeys = ['F2','F3','ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Enter','Escape'];
+        var isOurKey = ourKeys.indexOf(key) !== -1;
+        var isCtrlK = ctrl && !shift && !alt && (key === 'k' || key === 'K');
+
+        // F2 : focus recherche
+        if (key === 'F2') {
             e.preventDefault();
+            e.stopImmediatePropagation();
             kbFocusSearch();
             return;
         }
 
-        // Dans un input
+        // F3 : passer au paiement
+        if (key === 'F3') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            kbGoToPayment();
+            return;
+        }
+
+        // Ctrl+K : focus recherche
+        if (isCtrlK) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            kbFocusSearch();
+            return;
+        }
+
+        // Dans un input : laisser les flèches normales
         if (kbIsInInput()) {
             if (key === 'Enter') {
                 var el = document.activeElement;
                 if (el && el.id === 'posAmountGiven') {
                     e.preventDefault();
+                    e.stopImmediatePropagation();
                     if (typeof window.posFinalizeSale === 'function') window.posFinalizeSale();
                     return;
                 }
             }
             if (key === 'Escape' && step === 2) {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 document.activeElement.blur();
                 kbPaymentFocus = 'amount';
                 kbFocusAmount();
@@ -2820,17 +2839,20 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         if (step === 1) {
             if (key === 'ArrowRight') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 kbGoToPayment();
                 return;
             }
             if (key === 'ArrowLeft') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 var container = document.getElementById('dynamicContent');
                 if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
             if (key === 'Enter') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 kbGoToPayment();
                 return;
             }
@@ -2841,21 +2863,25 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         if (step === 2) {
             if (key === 'ArrowRight') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 kbSwitchPaymentMode('next');
                 return;
             }
             if (key === 'ArrowLeft') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 kbSwitchPaymentMode('prev');
                 return;
             }
             if (key === 'ArrowUp') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 kbFocusClient();
                 return;
             }
             if (key === 'ArrowDown') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 if (kbPaymentFocus === 'client') {
                     kbFocusPaymentModes();
                 } else if (kbPaymentFocus === 'modes') {
@@ -2871,11 +2897,13 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
             }
             if (key === 'Enter') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 if (typeof window.posFinalizeSale === 'function') window.posFinalizeSale();
                 return;
             }
             if (key === 'Escape') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 kbGoToCart();
                 return;
             }
@@ -2901,6 +2929,7 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         kbLastStep = s;
     }, 300);
 
-    document.addEventListener('keydown', kbHandleKeydown, false);
+    // 🔥 CAPTURE = true → passe AVANT pos-audio.js et tous les autres listeners
+    document.addEventListener('keydown', kbHandleKeydown, true);
 
 })();
