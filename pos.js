@@ -2630,13 +2630,16 @@ console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30
 console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (paiement), ← (panier), ↑↓←→ (navigation), Entrée (valider), Échap (retour)');
 
 // ============================================================
-// ⌨️ [PATCH KEYBOARD v4] : RACCOURCIS CLAVIER EN MODE CAPTURE
-// ✅ Passe AVANT pos-audio.js et tous les autres listeners
-// ✅ Utilise capture:true + stopImmediatePropagation
+// ⌨️ [PATCH KEYBOARD v5] : RACCOURCIS CLAVIER AVEC RÉ-ATTACHEMENT
+// ✅ Le listener est ré-attaché toutes les 100ms au cas où pos-audio.js le détache
+// ✅ Utilise capture:true pour passer AVANT les autres listeners
+// ✅ stopImmediatePropagation pour bloquer les autres scripts
 // ⚠️ Ce bloc est ISOLÉ et ne touche à AUCUNE fonction existante
 // ============================================================
 (function() {
     'use strict';
+
+    console.log('⌨️ [KEYBOARD v5] Démarrage avec ré-attachement automatique');
 
     var KB_FOCUS_DELAY = 250;
     var kbPaymentFocus = 'amount';
@@ -2784,15 +2787,11 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         var alt = e.altKey;
         var step = kbGetStep();
 
-        // Touches que l'on gère (pour stopImmediatePropagation)
-        var ourKeys = ['F2','F3','ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Enter','Escape'];
-        var isOurKey = ourKeys.indexOf(key) !== -1;
-        var isCtrlK = ctrl && !shift && !alt && (key === 'k' || key === 'K');
-
         // F2 : focus recherche
         if (key === 'F2') {
             e.preventDefault();
             e.stopImmediatePropagation();
+            console.log('⌨️ F2 → recherche');
             kbFocusSearch();
             return;
         }
@@ -2801,19 +2800,21 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         if (key === 'F3') {
             e.preventDefault();
             e.stopImmediatePropagation();
+            console.log('⌨️ F3 → paiement');
             kbGoToPayment();
             return;
         }
 
         // Ctrl+K : focus recherche
-        if (isCtrlK) {
+        if (ctrl && !shift && !alt && (key === 'k' || key === 'K')) {
             e.preventDefault();
             e.stopImmediatePropagation();
+            console.log('⌨️ Ctrl+K → recherche');
             kbFocusSearch();
             return;
         }
 
-        // Dans un input : laisser les flèches normales
+        // Dans un input
         if (kbIsInInput()) {
             if (key === 'Enter') {
                 var el = document.activeElement;
@@ -2840,6 +2841,7 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
             if (key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopImmediatePropagation();
+                console.log('⌨️ → → paiement');
                 kbGoToPayment();
                 return;
             }
@@ -2911,6 +2913,18 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         }
     }
 
+    // 🔥 FONCTION D'ATTACHEMENT (appelée plusieurs fois pour être sûr)
+    function attachKeyboardListener() {
+        document.removeEventListener('keydown', kbHandleKeydown, true);
+        document.addEventListener('keydown', kbHandleKeydown, true);
+    }
+
+    // Attachement initial
+    attachKeyboardListener();
+
+    // 🔥 Ré-attachement toutes les 100ms (au cas où pos-audio.js détacherait)
+    setInterval(attachKeyboardListener, 100);
+
     // Surveillance du changement d'étape → focus auto montant en paiement
     var kbLastStep = null;
     setInterval(function() {
@@ -2929,7 +2943,11 @@ console.log('✅ ⌨️ RACCOURCIS CLAVIER ACTIFS : Ctrl+K (recherche), → (pai
         kbLastStep = s;
     }, 300);
 
-    // 🔥 CAPTURE = true → passe AVANT pos-audio.js et tous les autres listeners
-    document.addEventListener('keydown', kbHandleKeydown, true);
+    console.log('⌨️ [KEYBOARD v5] Raccourcis actifs (ré-attachement toutes les 100ms)');
+    console.log('   F2 / Ctrl+K → focus recherche');
+    console.log('   F3 ou →     → passer au paiement');
+    console.log('   ↑ ↓ ← →     → navigation');
+    console.log('   Entrée      → valider');
+    console.log('   Échap       → retour panier');
 
 })();
