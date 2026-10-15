@@ -14,6 +14,7 @@
 // ✅ NOUVEAU : Création de facture de paiement + envoi WhatsApp après paiement
 // ✅ NOUVEAU : Récupération du numéro client depuis Firestore + envoi WhatsApp direct
 // ✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général
+// ✅ 🚫 NOUVEAU : SÉLECTION MULTI-CLIENTS INTERDITE (Option C)
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -27,6 +28,10 @@ window._posFilterClientName = null;
 window._fromPos = false;
 window.creditsDateDebut = window.creditsDateDebut || '';
 window.creditsDateFin = window.creditsDateFin || '';
+
+// ✅ NOUVEAU : Filtre multi-clients
+window.creditSelectedClientId = null;
+window.creditSelectedClientName = null;
 
 // ========== FONCTIONS UTILITAIRES ==========
 
@@ -732,6 +737,9 @@ window.creditsDateDebut = '';
 window.creditsDateFin = '';
 window.creditSelectionMode = false;
 window.creditSelectedIds = [];
+// ✅ Reset du filtre multi-clients
+window.creditSelectedClientId = null;
+window.creditSelectedClientName = null;
 
 if (!window.sortOrders.credits) window.sortOrders.credits = {};
 if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
@@ -800,13 +808,11 @@ onkeyup="handleCreditsSearch(this.value);">
 <button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;">
 <i class="fas fa-trash"></i> Supprimer
 </button>
-<!-- ✅ NOUVEAU : Bouton "Marquer payé" (apparaît avec la sélection) -->
 <button id="paySelectedBtn" class="btn-save" onclick="paySelectedCredits()" style="display:none; background:#10B981; color:#fff; font-size:18px !important;padding:10px 16px !important;">
 <i class="fas fa-check-circle"></i> Marquer payé
 </button>
 </div>
 </div>
-<!-- ✅ STATISTIQUES EN HAUT DE PAGE -->
 <div class="credits-stats-grid" id="creditsStatsGrid">
 <div class="credits-stat-card">
 <span class="stat-value blue" id="creditsStatsTotal">0.00</span>
@@ -1220,83 +1226,170 @@ document.getElementById('creditsPagination').innerHTML = getPaginationHTML('cred
 // ==================== SÉLECTION CRÉDITS ====================
 
 function toggleCreditSelectionMode() {
-window.creditSelectionMode = !window.creditSelectionMode;
-window.creditSelectedIds = [];
-var selectAllBtn = document.getElementById('selectAllBtn');
-if (selectAllBtn) {
-selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
-selectAllBtn.style.background = '#4f46e5';
-}
-window.selectAllBtnState = false;
+    window.creditSelectionMode = !window.creditSelectionMode;
+    window.creditSelectedIds = [];
+    // ✅ Reset du filtre multi-clients
+    window.creditSelectedClientId = null;
+    window.creditSelectedClientName = null;
+    var selectAllBtn = document.getElementById('selectAllBtn');
+    if (selectAllBtn) {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+        selectAllBtn.style.background = '#4f46e5';
+    }
+    window.selectAllBtnState = false;
 
-var selectBtn = document.getElementById('toggleSelectionBtn');
-var deleteBtn = document.getElementById('deleteSelectedBtn');
-var payBtn = document.getElementById('paySelectedBtn');
-if (selectBtn) {
-if (window.creditSelectionMode) {
-selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
-} else {
-selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
-}
-}
-if (selectAllBtn) {
-selectAllBtn.style.display = window.creditSelectionMode ? 'inline-block' : 'none';
-}
-if (deleteBtn) {
-deleteBtn.style.display = 'none';
-}
-if (payBtn) {
-payBtn.style.display = 'none';
-}
-renderCreditsTablePro();
+    var selectBtn = document.getElementById('toggleSelectionBtn');
+    var deleteBtn = document.getElementById('deleteSelectedBtn');
+    var payBtn = document.getElementById('paySelectedBtn');
+    if (selectBtn) {
+        if (window.creditSelectionMode) {
+            selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
+        } else {
+            selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+        }
+    }
+    if (selectAllBtn) {
+        selectAllBtn.style.display = window.creditSelectionMode ? 'inline-block' : 'none';
+    }
+    if (deleteBtn) {
+        deleteBtn.style.display = 'none';
+    }
+    if (payBtn) {
+        payBtn.style.display = 'none';
+    }
+    renderCreditsTablePro();
 }
 
+// ✅ MODIFIÉ : Refuse la sélection multi-clients
 function toggleCreditSelection(id) {
-var idx = window.creditSelectedIds.indexOf(id);
-if (idx === -1) {
-window.creditSelectedIds.push(id);
-} else {
-window.creditSelectedIds.splice(idx, 1);
-}
-updateDeleteButtonVisibility();
-renderCreditsTablePro();
+    var idx = window.creditSelectedIds.indexOf(id);
+
+    // ✅ Si on DÉCOCHE → retirer normalement
+    if (idx !== -1) {
+        window.creditSelectedIds.splice(idx, 1);
+        // Si plus aucun crédit sélectionné → reset du filtre client
+        if (window.creditSelectedIds.length === 0) {
+            window.creditSelectedClientId = null;
+            window.creditSelectedClientName = null;
+        }
+        updateDeleteButtonVisibility();
+        renderCreditsTablePro();
+        return;
+    }
+
+    // ✅ Si on COCHE → vérifier que c'est le même client
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) { return c.id === id; });
+
+    if (!credit) {
+        updateDeleteButtonVisibility();
+        renderCreditsTablePro();
+        return;
+    }
+
+    // ✅ Premier crédit sélectionné → mémoriser le client
+    if (window.creditSelectedIds.length === 0) {
+        window.creditSelectedClientId = credit.clientId || null;
+        window.creditSelectedClientName = credit.clientName || 'Client inconnu';
+        window.creditSelectedIds.push(id);
+        updateDeleteButtonVisibility();
+        renderCreditsTablePro();
+        return;
+    }
+
+    // ✅ Crédits déjà sélectionnés → vérifier que c'est le MÊME client
+    var currentClientId = window.creditSelectedClientId;
+    var currentClientName = window.creditSelectedClientName;
+
+    if (credit.clientId !== currentClientId) {
+        // ❌ Client différent → refuser
+        alert(
+            '⚠️ SÉLECTION MULTI-CLIENTS INTERDITE\n\n' +
+            'Vous avez déjà sélectionné des crédits de :\n' +
+            '👤 ' + (currentClientName || 'Client inconnu') + '\n\n' +
+            'Vous ne pouvez pas ajouter des crédits de :\n' +
+            '👤 ' + (credit.clientName || 'Client inconnu') + '\n\n' +
+            '💡 Pour changer de client, désélectionnez d\'abord tous les crédits.'
+        );
+        // ⚠️ On refuse la sélection → le checkbox reste décoché
+        renderCreditsTablePro();
+        return;
+    }
+
+    // ✅ Même client → accepter
+    window.creditSelectedIds.push(id);
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
 }
 
+// ✅ MODIFIÉ : Affiche le nom du client dans le bouton
 function updateDeleteButtonVisibility() {
-var deleteBtn = document.getElementById('deleteSelectedBtn');
-var payBtn = document.getElementById('paySelectedBtn');
+    var deleteBtn = document.getElementById('deleteSelectedBtn');
+    var payBtn = document.getElementById('paySelectedBtn');
 
-if (deleteBtn) {
-if (window.creditSelectedIds.length === 0) {
-deleteBtn.style.display = 'none';
-} else {
-deleteBtn.style.display = 'inline-block';
-}
-}
+    if (deleteBtn) {
+        if (window.creditSelectedIds.length === 0) {
+            deleteBtn.style.display = 'none';
+        } else {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Supprimer (' + window.creditSelectedIds.length + ')';
+        }
+    }
 
-if (payBtn) {
-if (window.creditSelectedIds.length === 0) {
-payBtn.style.display = 'none';
-} else {
-payBtn.style.display = 'inline-block';
-}
-}
+    if (payBtn) {
+        if (window.creditSelectedIds.length === 0) {
+            payBtn.style.display = 'none';
+        } else {
+            payBtn.style.display = 'inline-block';
+            var clientLabel = window.creditSelectedClientName ? ' - ' + window.creditSelectedClientName.substring(0, 15) : '';
+            payBtn.innerHTML = '<i class="fas fa-check-circle"></i> Marquer payé (' + window.creditSelectedIds.length + ')' + clientLabel;
+        }
+    }
 }
 
 window.selectAllBtnState = false;
 
+// ✅ MODIFIÉ : Refuse si plusieurs clients dans la page
 function selectAllVisibleCredits() {
-var data = window.filteredCredits || window.allCreditsData;
-var pageData = getPageData('credits', data);
-window.creditSelectedIds = pageData.map(function(d) { return d.id; });
-updateDeleteButtonVisibility();
-renderCreditsTablePro();
+    var data = window.filteredCredits || window.allCreditsData;
+    var pageData = getPageData('credits', data);
+    
+    // ✅ Vérifier que tous les crédits de la page appartiennent au même client
+    if (pageData.length > 0) {
+        var firstClientId = pageData[0].clientId;
+        var firstClientName = pageData[0].clientName || 'Client inconnu';
+        var hasDifferentClient = pageData.some(function(c) {
+            return c.clientId !== firstClientId;
+        });
+        
+        if (hasDifferentClient) {
+            alert(
+                '⚠️ SÉLECTION MULTI-CLIENTS INTERDITE\n\n' +
+                'Cette page contient des crédits de plusieurs clients.\n\n' +
+                '💡 Solution :\n' +
+                '• Filtrez par client (recherche) avant de cliquer sur "Tout sélectionner"\n' +
+                '• Ou sélectionnez les crédits UN PAR UN (même client uniquement)'
+            );
+            return;
+        }
+        
+        // ✅ Même client → accepter
+        window.creditSelectedClientId = firstClientId;
+        window.creditSelectedClientName = firstClientName;
+    }
+    
+    window.creditSelectedIds = pageData.map(function(d) { return d.id; });
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
 }
 
+// ✅ MODIFIÉ : Reset du filtre
 function deselectAllVisibleCredits() {
-window.creditSelectedIds = [];
-updateDeleteButtonVisibility();
-renderCreditsTablePro();
+    window.creditSelectedIds = [];
+    window.creditSelectedClientId = null;
+    window.creditSelectedClientName = null;
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
 }
 
 function toggleSelectAllVisible() {
@@ -1335,6 +1428,9 @@ Promise.all(promises).then(function() {
 alert('✅ ' + window.creditSelectedIds.length + ' crédit(s) supprimé(s).');
 window.creditSelectedIds = [];
 window.creditSelectionMode = false;
+// ✅ Reset du filtre multi-clients
+window.creditSelectedClientId = null;
+window.creditSelectedClientName = null;
 var selectBtn = document.getElementById('toggleSelectionBtn');
 var deleteBtn = document.getElementById('deleteSelectedBtn');
 var selectAllBtn = document.getElementById('selectAllBtn');
@@ -1462,6 +1558,9 @@ async function paySelectedCredits() {
         window.creditSelectedIds = [];
         window.creditSelectionMode = false;
         window.selectAllBtnState = false;
+        // ✅ Reset du filtre multi-clients
+        window.creditSelectedClientId = null;
+        window.creditSelectedClientName = null;
 
         var selectBtn = document.getElementById('toggleSelectionBtn');
         var selectAllBtn = document.getElementById('selectAllBtn');
@@ -2550,6 +2649,9 @@ function closeCreditSelection() {
     window.creditSelectedIds = [];
     window.creditSelectionMode = false;
     window.selectAllBtnState = false;
+    // ✅ Reset du filtre multi-clients
+    window.creditSelectedClientId = null;
+    window.creditSelectedClientName = null;
 
     var paymentZone = document.getElementById('creditPaymentZone');
     if (paymentZone) paymentZone.style.display = 'none';
@@ -2694,7 +2796,6 @@ window.validateCreditPayment = validateCreditPayment;
 
 window.sendCreditWhatsApp = sendCreditWhatsApp;
 
-// ✅ NOUVELLES FONCTIONS EXPOSÉES
 window.paySelectedCredits = paySelectedCredits;
 window.creerFacturePaiementCredits = creerFacturePaiementCredits;
 window.posAfficherOptionWhatsAppPaiement = posAfficherOptionWhatsAppPaiement;
@@ -2728,3 +2829,4 @@ console.log('✅ NOUVEAU : Création facture "PAI-YYYY-XXXXX" après paiement + 
 console.log('✅ NOUVEAU : Récupération automatique du numéro client depuis Firestore');
 console.log('✅ NOUVEAU : Envoi WhatsApp direct au numéro du client (comme pos.js)');
 console.log('✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
+console.log('✅ 🚫 NOUVEAU : SÉLECTION MULTI-CLIENTS INTERDITE (Option C)');
