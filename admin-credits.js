@@ -14,7 +14,8 @@
 // ✅ NOUVEAU : Création de facture de paiement + envoi WhatsApp après paiement
 // ✅ NOUVEAU : Récupération du numéro client depuis Firestore + envoi WhatsApp direct
 // ✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général
-// ✅ 🚫 NOUVEAU : SÉLECTION MULTI-CLIENTS INTERDITE (Option C)
+// ✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients
+// ✅ 👥 NOUVEAU : Affichage des 2 noms de clients dans la facture WhatsApp
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -1260,7 +1261,7 @@ function toggleCreditSelectionMode() {
     renderCreditsTablePro();
 }
 
-// ✅ MODIFIÉ : Refuse la sélection multi-clients
+// ✅ MODIFIÉ : DIALOGUE OUI/NON pour multi-clients
 function toggleCreditSelection(id) {
     var idx = window.creditSelectedIds.indexOf(id);
 
@@ -1297,32 +1298,41 @@ function toggleCreditSelection(id) {
         return;
     }
 
-    // ✅ Crédits déjà sélectionnés → vérifier que c'est le MÊME client
+    // ✅ Crédits déjà sélectionnés → vérifier le client
     var currentClientId = window.creditSelectedClientId;
     var currentClientName = window.creditSelectedClientName;
 
     if (credit.clientId !== currentClientId) {
-        // ❌ Client différent → refuser
-        alert(
-            '⚠️ SÉLECTION MULTI-CLIENTS INTERDITE\n\n' +
+        // ⚠️ Client différent → demander confirmation OUI/NON
+        var confirmer = confirm(
+            '⚠️ CLIENT DIFFÉRENT DÉTECTÉ\n\n' +
             'Vous avez déjà sélectionné des crédits de :\n' +
             '👤 ' + (currentClientName || 'Client inconnu') + '\n\n' +
-            'Vous ne pouvez pas ajouter des crédits de :\n' +
+            'Vous voulez ajouter des crédits de :\n' +
             '👤 ' + (credit.clientName || 'Client inconnu') + '\n\n' +
-            '💡 Pour changer de client, désélectionnez d\'abord tous les crédits.'
+            '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
+            '✅ OK = Oui, autoriser les 2 clients\n' +
+            '❌ Annuler = Non, refuser'
         );
-        // ⚠️ On refuse la sélection → le checkbox reste décoché
-        renderCreditsTablePro();
-        return;
+
+        if (!confirmer) {
+            // ❌ L'utilisateur refuse → on ne sélectionne pas
+            renderCreditsTablePro();
+            return;
+        }
+
+        // ✅ L'utilisateur autorise → on autorise le multi-clients
+        window.creditSelectedClientId = 'MULTI';  // Marqueur spécial "multi-clients"
+        window.creditSelectedClientName = 'Plusieurs clients';
     }
 
-    // ✅ Même client → accepter
+    // ✅ Accepter la sélection
     window.creditSelectedIds.push(id);
     updateDeleteButtonVisibility();
     renderCreditsTablePro();
 }
 
-// ✅ MODIFIÉ : Affiche le nom du client dans le bouton
+// ✅ MODIFIÉ : Affiche le nom du client OU "Multi-clients" dans le bouton
 function updateDeleteButtonVisibility() {
     var deleteBtn = document.getElementById('deleteSelectedBtn');
     var payBtn = document.getElementById('paySelectedBtn');
@@ -1341,7 +1351,12 @@ function updateDeleteButtonVisibility() {
             payBtn.style.display = 'none';
         } else {
             payBtn.style.display = 'inline-block';
-            var clientLabel = window.creditSelectedClientName ? ' - ' + window.creditSelectedClientName.substring(0, 15) : '';
+            var clientLabel = '';
+            if (window.creditSelectedClientName === 'Plusieurs clients') {
+                clientLabel = ' - Multi-clients';
+            } else if (window.creditSelectedClientName) {
+                clientLabel = ' - ' + window.creditSelectedClientName.substring(0, 15);
+            }
             payBtn.innerHTML = '<i class="fas fa-check-circle"></i> Marquer payé (' + window.creditSelectedIds.length + ')' + clientLabel;
         }
     }
@@ -1349,31 +1364,44 @@ function updateDeleteButtonVisibility() {
 
 window.selectAllBtnState = false;
 
-// ✅ MODIFIÉ : Refuse si plusieurs clients dans la page
+// ✅ MODIFIÉ : DIALOGUE OUI/NON si plusieurs clients dans la page
 function selectAllVisibleCredits() {
     var data = window.filteredCredits || window.allCreditsData;
     var pageData = getPageData('credits', data);
     
+    if (pageData.length === 0) return;
+    
     // ✅ Vérifier que tous les crédits de la page appartiennent au même client
-    if (pageData.length > 0) {
-        var firstClientId = pageData[0].clientId;
-        var firstClientName = pageData[0].clientName || 'Client inconnu';
-        var hasDifferentClient = pageData.some(function(c) {
-            return c.clientId !== firstClientId;
+    var firstClientId = pageData[0].clientId;
+    var firstClientName = pageData[0].clientName || 'Client inconnu';
+    var hasDifferentClient = pageData.some(function(c) {
+        return c.clientId !== firstClientId;
+    });
+    
+    if (hasDifferentClient) {
+        // Compter combien de clients différents
+        var uniqueClients = new Set();
+        pageData.forEach(function(c) {
+            uniqueClients.add(c.clientId || 'inconnu');
         });
         
-        if (hasDifferentClient) {
-            alert(
-                '⚠️ SÉLECTION MULTI-CLIENTS INTERDITE\n\n' +
-                'Cette page contient des crédits de plusieurs clients.\n\n' +
-                '💡 Solution :\n' +
-                '• Filtrez par client (recherche) avant de cliquer sur "Tout sélectionner"\n' +
-                '• Ou sélectionnez les crédits UN PAR UN (même client uniquement)'
-            );
+        var confirmer = confirm(
+            '⚠️ SÉLECTION MULTI-CLIENTS\n\n' +
+            'Cette page contient des crédits de ' + uniqueClients.size + ' clients différents.\n\n' +
+            '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
+            '✅ OK = Oui, sélectionner TOUS les crédits\n' +
+            '❌ Annuler = Non, annuler'
+        );
+        
+        if (!confirmer) {
             return;
         }
         
-        // ✅ Même client → accepter
+        // ✅ L'utilisateur autorise → multi-clients
+        window.creditSelectedClientId = 'MULTI';
+        window.creditSelectedClientName = 'Plusieurs clients';
+    } else {
+        // ✅ Même client → accepter directement
         window.creditSelectedClientId = firstClientId;
         window.creditSelectedClientName = firstClientName;
     }
@@ -1593,6 +1621,7 @@ window.paySelectedCredits = paySelectedCredits;
 
 // ============================================================
 // ✅ FONCTION : Créer une facture de paiement de crédits
+// ✅ MODIFIÉ : Affiche les noms des 2 clients si multi-clients
 // ============================================================
 async function creerFacturePaiementCredits(paiements, totalPaye) {
     var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
@@ -1603,7 +1632,20 @@ async function creerFacturePaiementCredits(paiements, totalPaye) {
     var clientIds = [...new Set(paiements.map(p => p.clientId).filter(Boolean))];
     var clientNames = [...new Set(paiements.map(p => p.clientName).filter(Boolean))];
     var clientId = clientIds.length === 1 ? clientIds[0] : null;
-    var clientName = clientNames.length === 1 ? clientNames[0] : (clientNames.length + ' clients');
+
+    // ✅ MODIFIÉ : Affiche les noms des 2 clients
+    var clientName = '';
+    if (clientNames.length === 1) {
+        clientName = clientNames[0];
+    } else if (clientNames.length === 2) {
+        clientName = clientNames[0] + ' & ' + clientNames[1];
+    } else if (clientNames.length > 2) {
+        var noms = clientNames.slice(0, 3).join(', ');
+        if (clientNames.length > 3) {
+            noms += ' + ' + (clientNames.length - 3) + ' autres';
+        }
+        clientName = noms;
+    }
 
     var vendeur = '';
     if (window.currentUserData) {
@@ -1731,6 +1773,10 @@ async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
                 var restant = credit.remainingAmount || 0;
 
                 messageWhatsApp += '📋 *FACTURE #' + factureNum + '*\n';
+
+                if (credit.clientName) {
+                    messageWhatsApp += '   👤 ' + credit.clientName + '\n';
+                }
 
                 if (credit.createdAt && credit.createdAt.seconds) {
                     var cDate = new Date(credit.createdAt.seconds * 1000);
@@ -2829,4 +2875,5 @@ console.log('✅ NOUVEAU : Création facture "PAI-YYYY-XXXXX" après paiement + 
 console.log('✅ NOUVEAU : Récupération automatique du numéro client depuis Firestore');
 console.log('✅ NOUVEAU : Envoi WhatsApp direct au numéro du client (comme pos.js)');
 console.log('✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
-console.log('✅ 🚫 NOUVEAU : SÉLECTION MULTI-CLIENTS INTERDITE (Option C)');
+console.log('✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients');
+console.log('✅ 👥 NOUVEAU : Affichage des 2 noms de clients dans la facture WhatsApp');
