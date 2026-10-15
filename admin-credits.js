@@ -18,6 +18,7 @@
 // ✅ 👥 NOUVEAU : Affichage des 2 noms de clients dans la facture WhatsApp
 // ✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)
 // ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
+// ✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table (comme admin-ventes)
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -460,19 +461,23 @@ transform: translateY(-2px) !important;
 box-shadow: 0 4px 12px rgba(20,184,166,0.35) !important;
 }
 
-/* ✅ Table moderne */
+/* ✅ Table moderne avec SCROLL HORIZONTAL + VERTICAL (comme admin-ventes) */
 #creditsPage .table-container {
 background: #FFFFFF !important;
 border-radius: 14px !important;
 box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
 border: 1px solid rgba(0,0,0,0.04) !important;
-overflow: hidden !important;
+overflow-x: auto !important;
+overflow-y: auto !important;
+max-height: 75vh !important;
+-webkit-overflow-scrolling: touch !important;
 }
 
 #creditsPage .data-table {
 width: 100% !important;
 border-collapse: separate !important;
 border-spacing: 0 !important;
+min-width: 1400px !important;
 }
 
 #creditsPage .data-table thead th {
@@ -485,6 +490,9 @@ text-transform: uppercase !important;
 letter-spacing: 0.6px !important;
 border-bottom: 1.5px solid #E2E8F0 !important;
 white-space: nowrap !important;
+position: sticky !important;
+top: 0 !important;
+z-index: 2 !important;
 }
 
 #creditsPage .data-table thead th i {
@@ -2972,3 +2980,4 @@ console.log('✅ ⚠️ DIALOGUE OUI/NON pour multi-clients');
 console.log('✅ 👥 Affichage des 2 noms de clients dans la facture WhatsApp');
 console.log('✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)');
 console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
+console.log('✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table');
