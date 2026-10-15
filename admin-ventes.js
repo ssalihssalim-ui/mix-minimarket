@@ -10,6 +10,7 @@
 // ✅ ARTICLES ET OPTIONS VISIBLES POUR TOUT LE MONDE (ADMIN ET CAISSIER)
 // ✅ 📴 VENTES HORS-LIGNE : affichage depuis localStorage + sync auto
 // ✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé (comme admin credits)
+// ✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -76,7 +77,7 @@ btn.style.display = count > 0 ? 'inline-block' : 'none';
 btn.textContent = '🗑️ Supprimer ' + count + ' vente(s)';
 }
 
-// ✅ NOUVEAU : Afficher le bouton "Payer tout" si des ventes IMPAYÉES sont sélectionnées
+// ✅ Afficher le bouton "Payer tout" si des ventes IMPAYÉES sont sélectionnées
 if (payerBtn) {
     var data = window.filteredVentes || window.allVentesData || [];
     var ventesImpayees = 0;
@@ -108,7 +109,6 @@ selectAllBtn.textContent = allChecked ? '❌ Désélectionner tout' : '✅ Tout 
 }
 }
 
-// ✅ FONCTION POUR ACTIVER/DÉSACTIVER LE MODE SÉLECTION (COMME DANS LES CRÉDITS)
 function toggleVenteSelectionMode() {
     window.venteSelectionMode = !window.venteSelectionMode;
     window.venteSelectedIds = [];
@@ -141,7 +141,6 @@ function toggleVenteSelectionMode() {
     renderVentesTablePro();
 }
 
-// ✅ FONCTION POUR TOUT SÉLECTIONNER LES VENTES VISIBLES
 function selectAllVisibleVentes() {
     var data = window.filteredVentes || window.allVentesData;
     var pageData = getPageData('ventes', data);
@@ -153,7 +152,6 @@ function selectAllVisibleVentes() {
     renderVentesTablePro();
 }
 
-// ✅ FONCTION POUR TOUT DÉSÉLECTIONNER
 function deselectAllVisibleVentes() {
     window.venteSelectedIds = [];
     var ids = Array.from(ventesSelectionnees);
@@ -164,7 +162,6 @@ function deselectAllVisibleVentes() {
     renderVentesTablePro();
 }
 
-// ✅ FONCTION POUR BASCULER TOUT SÉLECTIONNER/DÉSÉLECTIONNER
 function toggleSelectAllVisibleVentes() {
     if (selectAllVentesBtnState) {
         deselectAllVisibleVentes();
@@ -658,7 +655,6 @@ flex-wrap: nowrap !important;
 min-width: 160px !important;
 }
 
-/* ✅ BOUTONS AVEC TEXTE - COMME ADMIN CREDITS */
 #ventesPage .action-buttons .btn-print,
 #ventesPage .action-buttons .btn-whatsapp,
 #ventesPage .action-buttons .btn-payer,
@@ -1411,7 +1407,6 @@ onkeyup="handleVentesSearch(this.value);">
 <button id="deleteSelectedVentesBtn" class="btn-delete" onclick="deleteSelectedVentes()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;border:none;border-radius:8px;cursor:pointer;">
 <i class="fas fa-trash"></i> Supprimer
 </button>
-<!-- ✅ NOUVEAU : Bouton "Payer tout" (apparaît avec la sélection) -->
 <button id="payerSelectedVentesBtn" class="btn-save" onclick="payerVentesSelectionnees()" style="display:none; background:#10B981; color:#fff; font-size:18px !important;padding:10px 16px !important;border:none;border-radius:8px;cursor:pointer;font-weight:700;">
 <i class="fas fa-money-bill-wave"></i> 💰 Payer tout
 </button>
@@ -1532,9 +1527,6 @@ applyVentesFilters();
 return false;
 }
 
-// ============================================================
-// ✅ loadVentes — CORRIGÉE POUR AFFICHER LES VENTES HORS-LIGNE
-// ============================================================
 async function loadVentes() {
 var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
 var vendeurCaissier = '';
@@ -1545,7 +1537,6 @@ if (!isAdmin && window.currentUserData) {
 var ventesFirestore = [];
 var ventesOffline = [];
 
-// 🌐 1) Firestore (si en ligne)
 if (navigator.onLine) {
     try {
         const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').limit(2000).get();
@@ -1568,7 +1559,6 @@ if (navigator.onLine) {
     }
 }
 
-// 📴 2) Ventes hors-ligne depuis localStorage
 try {
     var ventesOfflineRaw = JSON.parse(localStorage.getItem('posVentesOffline') || '[]');
     ventesOfflineRaw.forEach(function(v) {
@@ -1593,15 +1583,12 @@ try {
     console.warn('⚠️ Erreur localStorage ventes:', e);
 }
 
-// 🔀 3) Fusion Firestore + localStorage
 window.allVentesData = ventesFirestore.concat(ventesOffline);
 
-// Filtre vendeur si caissier
 if (!isAdmin && vendeurCaissier) {
     window.allVentesData = window.allVentesData.filter(function(d) { return d.vendeur === vendeurCaissier; });
 }
 
-// Tri par date desc
 window.allVentesData.sort(function(a, b) {
     var da = a.createdAt?.seconds || 0;
     var db = b.createdAt?.seconds || 0;
@@ -2461,7 +2448,9 @@ function printFactureDetails() {
     }
 }
 
-// ==================== PAIEMENT GROUPÉ DE VENTES ====================
+// ============================================================
+// 💰 PAIEMENT GROUPÉ DE VENTES + WHATSAPP DÉTAILLÉ
+// ============================================================
 
 async function payerVentesSelectionnees() {
     if (ventesSelectionnees.size === 0) {
@@ -2472,15 +2461,11 @@ async function payerVentesSelectionnees() {
     var data = window.filteredVentes || window.allVentesData || [];
     var ventesAPayer = [];
     var totalGlobal = 0;
-    var clientsConcernees = new Set();
 
     data.forEach(function(v) {
         if (ventesSelectionnees.has(v.id) && !v.paid) {
             ventesAPayer.push(v);
             totalGlobal += v.remainingAmount || v.total || 0;
-            if (v.clientName && v.clientName !== 'Passager') {
-                clientsConcernees.add(v.clientName);
-            }
         }
     });
 
@@ -2489,17 +2474,9 @@ async function payerVentesSelectionnees() {
         return;
     }
 
-    var listeClients = Array.from(clientsConcernees).slice(0, 5).join(', ');
-    if (clientsConcernees.size > 5) {
-        listeClients += '... (+' + (clientsConcernees.size - 5) + ' autres)';
-    }
-
     var msg = '💰 CONFIRMER LE PAIEMENT GROUPÉ ?\n\n';
     msg += '📊 Nombre de ventes : ' + ventesAPayer.length + '\n';
     msg += '💵 Total à encaisser : ' + totalGlobal.toFixed(2) + ' MAD\n';
-    if (listeClients) {
-        msg += '👥 Clients : ' + listeClients + '\n';
-    }
     msg += '\n⚠️ Cette action est IRRÉVERSIBLE.\n';
     msg += 'Les ventes seront marquées comme PAYÉES.';
 
@@ -2514,8 +2491,6 @@ async function payerVentesSelectionnees() {
     try {
         var batch = db.batch();
         var batchCount = 0;
-        var totalPaye = 0;
-        var facturesPayees = [];
 
         for (var i = 0; i < ventesAPayer.length; i++) {
             var vente = ventesAPayer[i];
@@ -2533,9 +2508,6 @@ async function payerVentesSelectionnees() {
                     : 'Admin',
                 paymentMethod: 'espece'
             });
-
-            totalPaye += vente.total || 0;
-            facturesPayees.push(vente.factureNum || vente.id.substring(0, 8));
 
             batchCount++;
 
@@ -2579,11 +2551,23 @@ async function payerVentesSelectionnees() {
             v.change = 0;
         });
 
+        var paiements = ventesAPayer.map(function(v) {
+            return {
+                venteId: v.id,
+                factureNum: v.factureNum || v.id.substring(0, 8),
+                clientId: v.clientId,
+                clientName: v.clientName || 'Client inconnu',
+                montantPaye: v.remainingAmount || v.total || 0,
+                totalVente: v.total || 0,
+                items: v.items || []
+            };
+        });
+
+        var facturePaiement = await creerFacturePaiementVentes(paiements, totalGlobal);
+
         ventesSelectionnees.clear();
         window.venteSelectedIds = [];
         selectAllVentesBtnState = false;
-
-        alert('✅ ' + ventesAPayer.length + ' vente(s) payée(s) avec succès !\n\n💵 Total encaissé : ' + totalPaye.toFixed(2) + ' MAD');
 
         applyVentesFilters();
         updateVenteSelectionUI();
@@ -2593,7 +2577,9 @@ async function payerVentesSelectionnees() {
             CacheDB.saveCollection('credits');
         }
 
-        console.log('✅ Paiement groupé terminé :', ventesAPayer.length, 'vente(s),', totalPaye.toFixed(2), 'MAD');
+        console.log('✅ Paiement groupé terminé :', ventesAPayer.length, 'vente(s),', totalGlobal.toFixed(2), 'MAD');
+
+        await posAfficherOptionWhatsAppPaiementVentes(facturePaiement, ventesAPayer);
 
     } catch(e) {
         console.error('❌ Erreur paiement groupé :', e);
@@ -2606,6 +2592,299 @@ async function payerVentesSelectionnees() {
     }
 }
 window.payerVentesSelectionnees = payerVentesSelectionnees;
+
+// ============================================================
+// ✅ CRÉER UNE FACTURE DE PAIEMENT DE VENTES
+// ============================================================
+async function creerFacturePaiementVentes(paiements, totalPaye) {
+    var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
+    factureCounter++;
+    localStorage.setItem('factureCounter', factureCounter);
+    var numFacture = 'PAI-' + new Date().getFullYear() + '-' + String(factureCounter).padStart(5, '0');
+
+    var clientIds = [...new Set(paiements.map(p => p.clientId).filter(Boolean))];
+    var clientNames = [...new Set(paiements.map(p => p.clientName).filter(Boolean))];
+    var clientId = clientIds.length === 1 ? clientIds[0] : null;
+    var clientName = clientNames.length === 1 ? clientNames[0] : (clientNames.length + ' clients');
+
+    var vendeur = '';
+    if (window.currentUserData) {
+        vendeur = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    }
+
+    var items = paiements.map(function(p) {
+        return {
+            id: p.venteId,
+            nom: 'Vente #' + p.factureNum + (p.clientName ? ' - ' + p.clientName : ''),
+            quantite: 1,
+            prixVente: p.montantPaye,
+            prixAchat: 0,
+            prixPromo: 0,
+            profit: 0
+        };
+    });
+
+    var factureData = {
+        factureNum: numFacture,
+        items: items,
+        subtotal: totalPaye,
+        discountMAD: 0,
+        total: totalPaye,
+        clientId: clientId,
+        clientName: clientName,
+        table: null,
+        vendeur: vendeur,
+        paymentMethod: 'espece',
+        statutPaiement: 'payé',
+        amountGiven: totalPaye,
+        change: 0,
+        paid: true,
+        remainingAmount: 0,
+        profitTotal: 0,
+        type: 'paiement_ventes',
+        ventesPayees: paiements.map(p => ({
+            venteId: p.venteId,
+            factureNum: p.factureNum,
+            montantPaye: p.montantPaye,
+            clientName: p.clientName
+        })),
+        createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
+    };
+
+    try {
+        if (navigator.onLine) {
+            var sd = Object.assign({}, factureData, {
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            var docRef = await db.collection('factures_paiement').add(sd);
+            factureData.id = docRef.id;
+
+            if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+                await CacheDB.set('factures_paiement', docRef.id, Object.assign({id: docRef.id}, factureData));
+            }
+        } else {
+            factureData.id = 'offline_' + Date.now();
+            var facturesLS = JSON.parse(localStorage.getItem('facturesPaiementOffline') || '[]');
+            facturesLS.push(factureData);
+            localStorage.setItem('facturesPaiementOffline', JSON.stringify(facturesLS));
+        }
+    } catch(e) {
+        console.warn('⚠️ Erreur sauvegarde facture paiement:', e);
+    }
+
+    return factureData;
+}
+window.creerFacturePaiementVentes = creerFacturePaiementVentes;
+
+// ============================================================
+// 📱 AFFICHER LE MODAL WHATSAPP AVEC TOUS LES DÉTAILS
+// ✅ Contient : toutes les factures ID + produits + sous-totaux + total général
+// ============================================================
+async function posAfficherOptionWhatsAppPaiementVentes(factureData, ventesDetaillees) {
+    try {
+        var clientName = 'Client';
+        var clientId = null;
+
+        var clientsUniques = new Set();
+        ventesDetaillees.forEach(function(v) {
+            if (v.clientName && v.clientName !== 'Passager' && v.clientName !== 'Client inconnu') {
+                clientsUniques.add(v.clientName);
+            }
+        });
+
+        if (clientsUniques.size === 1) {
+            clientName = Array.from(clientsUniques)[0];
+            // Récupérer l'ID du premier client
+            for (var k = 0; k < ventesDetaillees.length; k++) {
+                if (ventesDetaillees[k].clientName === clientName && ventesDetaillees[k].clientId) {
+                    clientId = ventesDetaillees[k].clientId;
+                    break;
+                }
+            }
+        } else if (clientsUniques.size > 1) {
+            clientName = clientsUniques.size + ' clients';
+        }
+
+        var clientTel = '';
+        if (clientId) {
+            var client = (window.clientsDataForSearch || []).find(function(c) { return c.id === clientId; });
+            if (client) {
+                clientTel = client.telephone || client.whatsapp || '';
+            }
+            if (!clientTel && navigator.onLine) {
+                try {
+                    var clientDoc = await db.collection('clients').doc(clientId).get();
+                    if (clientDoc.exists) {
+                        var cData = clientDoc.data();
+                        clientTel = cData.telephone || cData.whatsapp || '';
+                    }
+                } catch(e) {}
+            }
+        }
+
+        var telDisplay = clientTel ? clientTel.replace(/\D/g, '') : '';
+        var dateStr = new Date().toLocaleDateString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        // ✅ CONSTRUIRE LE MESSAGE AVEC TOUS LES DÉTAILS
+        var messageWhatsApp = '';
+        messageWhatsApp += '✅ *REÇU DE PAIEMENT*\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += '📄 Reçu N° : ' + factureData.factureNum + '\n';
+        messageWhatsApp += '📅 Date : ' + dateStr + '\n';
+        messageWhatsApp += '👤 Client : ' + clientName + '\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n\n';
+
+        for (var i = 0; i < ventesDetaillees.length; i++) {
+            var vente = ventesDetaillees[i];
+            var factureNum = vente.factureNum || vente.id.substring(0, 8);
+            var sousTotal = vente.total || 0;
+            var restant = vente.remainingAmount || 0;
+
+            messageWhatsApp += '📋 *FACTURE #' + factureNum + '*\n';
+
+            if (vente.createdAt && vente.createdAt.seconds) {
+                var vDate = new Date(vente.createdAt.seconds * 1000);
+                messageWhatsApp += '   📅 ' + vDate.toLocaleDateString('fr-FR') + ' ' + vDate.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '\n';
+            }
+
+            if (vente.items && vente.items.length > 0) {
+                messageWhatsApp += '   *Produits :*\n';
+                vente.items.forEach(function(item) {
+                    var prix = item.prixVente || item.prixUnitaire || 0;
+                    var qte = item.quantite || 1;
+                    var totalItem = prix * qte;
+
+                    var opts = '';
+                    if (item.interdits && item.interdits.length) opts += ' 🚫' + item.interdits.join(',');
+                    if (item.epice && item.epice !== 'Normal') opts += ' 🌶️' + item.epice;
+                    if (item.sel && item.sel !== 'Normal') opts += ' 🧂' + item.sel;
+
+                    messageWhatsApp += '   • ' + qte + 'x ' + item.nom + opts + ' → ' + totalItem.toFixed(2) + ' MAD\n';
+                });
+            }
+
+            messageWhatsApp += '   💵 Sous-total : ' + sousTotal.toFixed(2) + ' MAD\n';
+
+            if (restant > 0) {
+                messageWhatsApp += '   ⏳ Restant payé : ' + restant.toFixed(2) + ' MAD\n';
+            }
+
+            messageWhatsApp += '\n';
+        }
+
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += '💵 *TOTAL GÉNÉRAL : ' + factureData.total.toFixed(2) + ' MAD*\n';
+        messageWhatsApp += '💳 Mode : Espèces\n';
+        messageWhatsApp += '📊 Nombre de factures : ' + ventesDetaillees.length + '\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += 'Merci pour votre règlement ! 🙏\n';
+        messageWhatsApp += 'E-SOLUTION POS';
+
+        window._posWhatsAppPaiementData = {
+            message: messageWhatsApp,
+            clientTel: clientTel,
+            clientName: clientName,
+            clientId: clientId,
+            factureNum: factureData.factureNum
+        };
+
+        var telInfo = telDisplay
+            ? '<strong>📞 Téléphone :</strong> ' + escapeHtml(clientTel) + ' <span style="color:#10B981;">✅</span>'
+            : '<em style="color:#92400E;">⚠️ Aucun numéro de téléphone enregistré</em>';
+
+        var confirmHtml = `
+            <div style="padding:16px;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:8px;">✅</div>
+                <h3 style="margin:0 0 4px;color:#10B981;font-size:1.3rem;font-weight:700;">Paiement enregistré !</h3>
+                <p style="color:#64748b;margin:0 0 16px;font-size:0.95rem;">
+                    Reçu <strong>${escapeHtml(factureData.factureNum)}</strong> — <strong>${factureData.total.toFixed(2)} MAD</strong>
+                </p>
+
+                <div style="padding:14px;background:#F0FDF4;border:2px solid #10B981;border-radius:10px;margin-bottom:16px;text-align:left;">
+                    <p style="margin:0;font-size:0.9rem;color:#065F46;">
+                        <strong>👤 Client :</strong> ${escapeHtml(clientName)}<br>
+                        <strong>📄 Nb factures :</strong> ${ventesDetaillees.length}<br>
+                        <strong>💰 Total :</strong> ${factureData.total.toFixed(2)} MAD<br>
+                        ${telInfo}
+                    </p>
+                </div>
+
+                <p style="color:#334155;font-weight:600;margin-bottom:12px;font-size:1rem;">
+                    📱 Voulez-vous envoyer le reçu détaillé par WhatsApp${telDisplay ? ' au ' + escapeHtml(clientTel) : ''} ?
+                </p>
+
+                <div style="display:flex;gap:8px;">
+                    <button onclick="posFermerModalWhatsAppPaiementVentes()"
+                        style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;">
+                        ❌ Non
+                    </button>
+                    <button onclick="posEnvoyerWhatsAppPaiementVentes()"
+                        style="flex:2;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(37,211,102,0.3);">
+                        <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Envoyer WhatsApp
+                    </button>
+                </div>
+            </div>
+        `;
+
+        openModal('🧾 Paiement validé', confirmHtml);
+
+    } catch(e) {
+        console.error('❌ Erreur posAfficherOptionWhatsAppPaiementVentes:', e);
+    }
+}
+window.posAfficherOptionWhatsAppPaiementVentes = posAfficherOptionWhatsAppPaiementVentes;
+
+// ============================================================
+// 📱 ENVOYER WHATSAPP POUR LE PAIEMENT
+// ============================================================
+function posEnvoyerWhatsAppPaiementVentes() {
+    try {
+        var data = window._posWhatsAppPaiementData;
+        if (!data) {
+            alert('❌ Aucune facture en mémoire.');
+            closeModal();
+            return;
+        }
+
+        var message = data.message || '';
+        var tel = (data.clientTel || '').replace(/\D/g, '');
+
+        if (tel) {
+            if (tel.startsWith('0')) {
+                tel = '212' + tel.substring(1);
+            } else if (tel.startsWith('+')) {
+                tel = tel.replace(/\D/g, '');
+            }
+        }
+
+        var url;
+        if (tel && tel.length >= 8) {
+            url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp] Envoi au numéro :', tel);
+        } else {
+            url = 'https://wa.me/?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp] Aucun numéro — WhatsApp Web sans destinataire');
+        }
+
+        window.open(url, '_blank');
+        closeModal();
+        window._posWhatsAppPaiementData = null;
+
+    } catch(e) {
+        console.error('❌ Erreur posEnvoyerWhatsAppPaiementVentes:', e);
+        alert('❌ Erreur WhatsApp : ' + e.message);
+    }
+}
+window.posEnvoyerWhatsAppPaiementVentes = posEnvoyerWhatsAppPaiementVentes;
+
+function posFermerModalWhatsAppPaiementVentes() {
+    window._posWhatsAppPaiementData = null;
+    closeModal();
+}
+window.posFermerModalWhatsAppPaiementVentes = posFermerModalWhatsAppPaiementVentes;
 
 // ==================== PAGINATION ====================
 
@@ -2711,8 +2990,12 @@ window.deselectAllVisibleVentes = deselectAllVisibleVentes;
 window.toggleSelectAllVisibleVentes = toggleSelectAllVisibleVentes;
 window.selectAllVentesBtnState = selectAllVentesBtnState;
 
-// ✅ NOUVELLE FONCTION EXPOSÉE
+// ✅ NOUVELLES FONCTIONS EXPOSÉES
 window.payerVentesSelectionnees = payerVentesSelectionnees;
+window.creerFacturePaiementVentes = creerFacturePaiementVentes;
+window.posAfficherOptionWhatsAppPaiementVentes = posAfficherOptionWhatsAppPaiementVentes;
+window.posEnvoyerWhatsAppPaiementVentes = posEnvoyerWhatsAppPaiementVentes;
+window.posFermerModalWhatsAppPaiementVentes = posFermerModalWhatsAppPaiementVentes;
 
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
@@ -2725,3 +3008,4 @@ console.log('✅ Synchronisation avec admin credits');
 console.log('✅ Sélection en masse');
 console.log('✅ Articles et Options visibles pour tout le monde');
 console.log('✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé');
+console.log('✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général');
