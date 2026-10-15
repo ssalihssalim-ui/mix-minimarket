@@ -16,6 +16,8 @@
 // ✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général
 // ✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients
 // ✅ 👥 NOUVEAU : Affichage des 2 noms de clients dans la facture WhatsApp
+// ✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)
+// ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -30,7 +32,7 @@ window._fromPos = false;
 window.creditsDateDebut = window.creditsDateDebut || '';
 window.creditsDateFin = window.creditsDateFin || '';
 
-// ✅ NOUVEAU : Filtre multi-clients
+// ✅ Filtre multi-clients
 window.creditSelectedClientId = null;
 window.creditSelectedClientName = null;
 
@@ -195,17 +197,20 @@ return `
 `;
 }
 
+// ✅ MODIFIÉ : Nom du client CLIQUABLE
 function renderCreditClientCell(credit) {
-var clientName = credit._clientDisplayName || credit.clientName || credit.table || 'Client inconnu';
-return `
-<div class="client-cell">
-<i class="fas fa-user-circle"></i>
-<span>${escapeHtml(clientName)}</span>
-</div>
-`;
+    var clientName = credit._clientDisplayName || credit.clientName || credit.table || 'Client inconnu';
+    var escapedName = escapeHtml(clientName).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    
+    return `
+        <div class="client-cell" onclick="filtrerParClient('${escapedName}', event)" title="Cliquer pour filtrer par ce client">
+            <i class="fas fa-user-circle"></i>
+            <span>${escapeHtml(clientName)}</span>
+        </div>
+    `;
 }
 
-// ✅ CSS pour boutons avec texte + stats
+// ✅ CSS MODERNE - Design PRO
 function injectCreditsStyles() {
 const styleId = 'credits-pro-styles-final';
 if (document.getElementById(styleId)) return;
@@ -214,245 +219,433 @@ const styles = `
 <style id="${styleId}">
 #creditsPage,
 #creditsPage * {
-font-size: 22px !important;
 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-#creditsPage .stat-label,
-#creditsPage .filter-group label,
-#creditsPage .total-label {
-font-size: 16px !important;
+/* ✅ Container principal */
+#creditsPage {
+background: linear-gradient(180deg, #FAFBFC 0%, #F4F6F8 100%) !important;
+padding: 20px !important;
+border-radius: 16px !important;
 }
 
-#creditsPage .btn-add,
-#creditsPage .btn-edit,
-#creditsPage .btn-delete,
-#creditsPage .btn-save,
-#creditsPage .btn-cancel {
+/* ✅ Carte header avec ombre douce */
+#creditsPage .card-header {
+background: #FFFFFF !important;
+padding: 24px !important;
+border-radius: 16px !important;
+box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.03) !important;
+border: 1px solid rgba(0,0,0,0.04) !important;
+margin-bottom: 20px !important;
+}
+
+#creditsPage .card-header h3 {
+font-size: 24px !important;
+font-weight: 800 !important;
+color: #0F172A !important;
+letter-spacing: -0.5px !important;
+display: flex !important;
+align-items: center !important;
+gap: 10px !important;
+}
+
+#creditsPage .card-header h3 i {
+background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+color: #fff !important;
+padding: 8px !important;
+border-radius: 10px !important;
 font-size: 18px !important;
+box-shadow: 0 4px 12px rgba(20,184,166,0.25) !important;
 }
 
-#creditsPage .status-success,
-#creditsPage .status-warning,
-#creditsPage .status-danger {
-font-size: 18px !important;
-padding: 6px 16px !important;
+/* ✅ Statistiques en cartes modernes */
+.credits-stats-grid {
+display: grid !important;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+gap: 16px !important;
+margin-bottom: 20px !important;
+padding: 0 !important;
+background: transparent !important;
+border: none !important;
 }
 
-.voice-display-field {
-padding: 8px 12px !important;
-border: 2px solid #14B8A6 !important;
-border-radius: 8px !important;
-width: 180px !important;
-background: #f0fdf4 !important;
-color: #0D9488 !important;
+.credits-stat-card {
+display: flex !important;
+flex-direction: row !important;
+align-items: center !important;
+justify-content: flex-start !important;
+gap: 16px !important;
+padding: 20px !important;
+background: #FFFFFF !important;
+border-radius: 14px !important;
+text-align: left !important;
+box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
+border: 1px solid rgba(0,0,0,0.04) !important;
+transition: all 0.25s ease !important;
+position: relative !important;
+overflow: hidden !important;
+}
+
+.credits-stat-card::before {
+content: '' !important;
+position: absolute !important;
+top: 0 !important;
+left: 0 !important;
+right: 0 !important;
+height: 4px !important;
+background: linear-gradient(90deg, #14B8A6, #0D9488) !important;
+opacity: 0 !important;
+transition: opacity 0.25s ease !important;
+}
+
+.credits-stat-card:hover {
+transform: translateY(-3px) !important;
+box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.06) !important;
+}
+
+.credits-stat-card:hover::before {
+opacity: 1 !important;
+}
+
+.credits-stat-card .stat-value {
+font-size: 24px !important;
+font-weight: 800 !important;
+color: #0F172A !important;
+letter-spacing: -0.5px !important;
+display: block !important;
+line-height: 1.2 !important;
+margin: 0 !important;
+}
+
+.credits-stat-card .stat-value.green { color: #10B981 !important; }
+.credits-stat-card .stat-value.blue { color: #3B82F6 !important; }
+.credits-stat-card .stat-value.orange { color: #F59E0B !important; }
+.credits-stat-card .stat-value.red { color: #EF4444 !important; }
+
+.credits-stat-card .stat-label {
+font-size: 12px !important;
 font-weight: 600 !important;
-font-size: 22px !important;
-min-height: 48px !important;
+color: #64748B !important;
+text-transform: uppercase !important;
+letter-spacing: 0.5px !important;
+margin: 4px 0 0 0 !important;
+display: block !important;
 }
 
-.facture-cell {
-display: flex;
-align-items: center;
-gap: 10px;
-font-weight: 800;
-font-size: 22px !important;
-color: var(--text-primary);
-padding: 4px 12px;
-border-radius: 8px;
-border-left: 3px solid var(--accent);
-background: var(--gray-50);
-}
-
-.facture-cell i {
-color: var(--accent);
-font-size: 20px !important;
-}
-
-.facture-cell .facture-number {
-color: var(--black);
-font-weight: 900;
-font-size: 22px !important;
-background: var(--white);
-padding: 0 10px;
-border-radius: 4px;
-}
-
-.date-cell {
-display: flex;
-flex-direction: column;
-gap: 2px;
-padding: 2px 0;
-}
-
-.date-cell .date-line,
-.date-cell .time-line {
-display: flex;
-align-items: center;
-gap: 8px;
-font-size: 20px !important;
-color: var(--text-secondary);
-font-weight: 500;
-}
-
-.date-cell .date-line i,
-.date-cell .time-line i {
-font-size: 16px !important;
-color: var(--accent);
-opacity: 0.7;
-width: 18px;
-}
-
-.client-cell {
-display: flex;
-align-items: center;
-gap: 10px;
-font-weight: 700;
-font-size: 22px !important;
-color: var(--text-primary);
-background: rgba(20, 184, 166, 0.05);
-padding: 4px 12px;
-border-radius: 8px;
-}
-
-.client-cell i {
-color: var(--accent);
-font-size: 20px !important;
-}
-
-#creditsPage .data-table {
-font-size: 22px !important;
-border-collapse: separate;
-border-spacing: 0 4px;
-width: 100%;
-}
-
-#creditsPage .data-table thead th {
-font-size: 18px !important;
-padding: 14px 18px !important;
-background: var(--gray-50) !important;
-color: var(--text-secondary) !important;
-font-weight: 700 !important;
-text-transform: uppercase;
-letter-spacing: 0.6px;
-border-bottom: 2px solid var(--border);
-position: sticky;
-top: 0;
-z-index: 2;
-white-space: nowrap;
-}
-
-#creditsPage .data-table thead th i {
-font-size: 16px !important;
-margin-right: 6px;
-}
-
-#creditsPage .data-table tbody td {
-padding: 14px 16px !important;
-font-size: 22px !important;
-vertical-align: middle;
-background: var(--white);
-border-bottom: 1px solid var(--gray-100);
-}
-
-#creditsPage .data-table tbody tr:hover td {
-background: var(--gray-50);
-}
-
-.amount-total {
-font-weight: 800 !important;
-font-size: 24px !important;
-color: var(--black) !important;
-letter-spacing: -0.3px;
-}
-
-.amount-remaining {
-font-weight: 800 !important;
-font-size: 24px !important;
-color: var(--danger) !important;
-letter-spacing: -0.3px;
-}
-
+/* ✅ Barre de recherche moderne */
 .search-bar-pro {
-display: flex;
-align-items: center;
-gap: 6px;
-background: var(--white);
-border: 2px solid var(--border);
-border-radius: 12px;
-padding: 4px 4px 4px 18px;
-transition: var(--transition);
-flex: 1;
-min-width: 220px;
-position: relative;
+display: flex !important;
+align-items: center !important;
+gap: 8px !important;
+background: #FFFFFF !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 12px !important;
+padding: 4px 4px 4px 16px !important;
+transition: all 0.2s ease !important;
+flex: 1 !important;
+min-width: 240px !important;
+position: relative !important;
+box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
 }
 
 .search-bar-pro:focus-within {
-border-color: var(--black);
-box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
+border-color: #14B8A6 !important;
+box-shadow: 0 0 0 4px rgba(20,184,166,0.1) !important;
 }
 
 .search-bar-pro i.fa-search {
-color: var(--text-muted);
-font-size: 20px !important;
+color: #94A3B8 !important;
+font-size: 16px !important;
 }
 
 .search-bar-pro input {
-flex: 1;
-border: none;
-background: transparent;
-padding: 14px 8px;
-font-size: 22px !important;
-font-family: 'Inter', sans-serif;
-outline: none;
-color: var(--text-primary);
-min-width: 100px;
+flex: 1 !important;
+border: none !important;
+background: transparent !important;
+padding: 10px 8px !important;
+font-size: 15px !important;
+font-family: 'Inter', sans-serif !important;
+outline: none !important;
+color: #0F172A !important;
+min-width: 100px !important;
 }
 
 .search-bar-pro input::placeholder {
-color: var(--text-muted);
-font-weight: 400;
-font-size: 20px !important;
+color: #94A3B8 !important;
+font-weight: 400 !important;
+font-size: 14px !important;
 }
 
 .search-clear-btn {
-width: 35px !important;
-height: 35px !important;
-min-width: 35px !important;
+width: 30px !important;
+height: 30px !important;
+min-width: 30px !important;
 border-radius: 50% !important;
 border: none !important;
-background: var(--gray-200) !important;
-color: var(--text-secondary) !important;
-font-size: 18px !important;
+background: #F1F5F9 !important;
+color: #64748B !important;
+font-size: 14px !important;
 cursor: pointer !important;
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
-transition: var(--transition) !important;
+transition: all 0.2s ease !important;
 padding: 0 !important;
 margin: 0 2px !important;
 }
 
 .search-clear-btn:hover {
-background: var(--gray-300) !important;
-color: var(--black) !important;
-transform: scale(1.05);
+background: #E2E8F0 !important;
+color: #0F172A !important;
+transform: scale(1.05) !important;
 }
 
 .search-clear-btn.hidden {
 display: none !important;
 }
 
+/* ✅ Filtres et select modernes */
+#creditsPage .filter-group label {
+font-size: 12px !important;
+font-weight: 600 !important;
+color: #64748B !important;
+text-transform: uppercase !important;
+letter-spacing: 0.5px !important;
+}
+
+#creditsPage .filter-group select {
+padding: 10px 14px !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 10px !important;
+font-size: 14px !important;
+font-family: 'Inter', sans-serif !important;
+background: #FFFFFF !important;
+color: #0F172A !important;
+transition: all 0.2s ease !important;
+min-width: 140px !important;
+font-weight: 500 !important;
+cursor: pointer !important;
+box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+}
+
+#creditsPage .filter-group select:hover {
+border-color: #CBD5E1 !important;
+}
+
+#creditsPage .filter-group select:focus {
+border-color: #14B8A6 !important;
+outline: none !important;
+box-shadow: 0 0 0 4px rgba(20,184,166,0.1) !important;
+}
+
+/* ✅ Boutons modernes */
+#creditsPage .btn-add {
+padding: 10px 18px !important;
+border: none !important;
+border-radius: 10px !important;
+font-size: 14px !important;
+font-weight: 600 !important;
+cursor: pointer !important;
+transition: all 0.2s ease !important;
+background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+color: #FFFFFF !important;
+box-shadow: 0 2px 8px rgba(20,184,166,0.25) !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 6px !important;
+}
+
+#creditsPage .btn-add:hover {
+transform: translateY(-2px) !important;
+box-shadow: 0 4px 12px rgba(20,184,166,0.35) !important;
+}
+
+/* ✅ Table moderne */
+#creditsPage .table-container {
+background: #FFFFFF !important;
+border-radius: 14px !important;
+box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
+border: 1px solid rgba(0,0,0,0.04) !important;
+overflow: hidden !important;
+}
+
+#creditsPage .data-table {
+width: 100% !important;
+border-collapse: separate !important;
+border-spacing: 0 !important;
+}
+
+#creditsPage .data-table thead th {
+font-size: 12px !important;
+padding: 16px 18px !important;
+background: #F8FAFC !important;
+color: #64748B !important;
+font-weight: 700 !important;
+text-transform: uppercase !important;
+letter-spacing: 0.6px !important;
+border-bottom: 1.5px solid #E2E8F0 !important;
+white-space: nowrap !important;
+}
+
+#creditsPage .data-table thead th i {
+font-size: 13px !important;
+margin-right: 6px !important;
+color: #94A3B8 !important;
+}
+
+#creditsPage .data-table tbody td {
+padding: 16px 18px !important;
+font-size: 14px !important;
+vertical-align: middle !important;
+background: #FFFFFF !important;
+border-bottom: 1px solid #F1F5F9 !important;
+color: #334155 !important;
+}
+
+#creditsPage .data-table tbody tr {
+transition: background 0.15s ease !important;
+}
+
+#creditsPage .data-table tbody tr:hover td {
+background: #FAFBFC !important;
+}
+
+#creditsPage .data-table tbody tr:last-child td {
+border-bottom: none !important;
+}
+
+/* ✅ Badge de facture */
+.facture-cell {
+display: inline-flex !important;
+align-items: center !important;
+gap: 8px !important;
+font-weight: 700 !important;
+font-size: 13px !important;
+color: #0F172A !important;
+padding: 6px 12px !important;
+border-radius: 8px !important;
+background: linear-gradient(135deg, #F0FDFA, #CCFBF1) !important;
+border: 1px solid #99F6E4 !important;
+transition: all 0.2s ease !important;
+}
+
+.facture-cell:hover {
+transform: translateY(-1px) !important;
+box-shadow: 0 4px 8px rgba(20,184,166,0.15) !important;
+}
+
+.facture-cell i {
+color: #0D9488 !important;
+font-size: 13px !important;
+}
+
+.facture-cell .facture-number {
+color: #0F172A !important;
+font-weight: 800 !important;
+font-size: 13px !important;
+}
+
+/* ✅ Cellule date */
+.date-cell {
+display: flex !important;
+flex-direction: column !important;
+gap: 3px !important;
+}
+
+.date-cell .date-line,
+.date-cell .time-line {
+display: flex !important;
+align-items: center !important;
+gap: 6px !important;
+font-size: 13px !important;
+color: #64748B !important;
+font-weight: 500 !important;
+}
+
+.date-cell .date-line i,
+.date-cell .time-line i {
+font-size: 11px !important;
+color: #14B8A6 !important;
+opacity: 0.8 !important;
+width: 14px !important;
+}
+
+/* ✅ ✅ ✅ Client cliquable */
+.client-cell {
+display: inline-flex !important;
+align-items: center !important;
+gap: 8px !important;
+font-weight: 600 !important;
+font-size: 13px !important;
+color: #0F172A !important;
+background: linear-gradient(135deg, #F8FAFC, #F1F5F9) !important;
+padding: 6px 12px !important;
+border-radius: 8px !important;
+border: 1px solid #E2E8F0 !important;
+cursor: pointer !important;
+transition: all 0.2s ease !important;
+user-select: none !important;
+}
+
+.client-cell:hover {
+background: linear-gradient(135deg, #EDE9FE, #DDD6FE) !important;
+border-color: #A78BFA !important;
+color: #6D28D9 !important;
+transform: translateY(-1px) !important;
+box-shadow: 0 4px 8px rgba(139,92,246,0.15) !important;
+}
+
+.client-cell:active {
+transform: translateY(0) scale(0.98) !important;
+}
+
+.client-cell i {
+color: #14B8A6 !important;
+font-size: 13px !important;
+transition: color 0.2s ease !important;
+}
+
+.client-cell:hover i {
+color: #6D28D9 !important;
+}
+
+/* ✅ Montants */
+.amount-total {
+font-weight: 700 !important;
+font-size: 14px !important;
+color: #0F172A !important;
+letter-spacing: -0.2px !important;
+}
+
+.amount-remaining {
+font-weight: 700 !important;
+font-size: 14px !important;
+color: #EF4444 !important;
+letter-spacing: -0.2px !important;
+}
+
+/* ✅ Statuts */
+#creditsPage .status-success,
+#creditsPage .status-warning,
+#creditsPage .status-danger {
+font-size: 12px !important;
+padding: 4px 10px !important;
+border-radius: 6px !important;
+font-weight: 600 !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 4px !important;
+}
+
+/* ✅ Boutons d'action compacts */
 #creditsPage .action-buttons {
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
 gap: 4px !important;
 flex-wrap: nowrap !important;
-min-width: 160px !important;
 }
 
-/* ✅ BOUTONS AVEC TEXTE - ULTRA COMPACT */
 #creditsPage .action-buttons .btn-print,
 #creditsPage .action-buttons .btn-whatsapp,
 #creditsPage .action-buttons .btn-payer,
@@ -461,249 +654,151 @@ min-width: 160px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 2px 6px !important;
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    border-radius: 4px !important;
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
     border: none !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     white-space: nowrap !important;
-    text-transform: capitalize !important;
     visibility: visible !important;
     opacity: 1 !important;
     line-height: 1.2 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
-    min-height: 22px !important;
-    width: auto !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    min-height: 26px !important;
 }
 
 #creditsPage .action-buttons .btn-print {
-    background: #6366f1 !important;
-    color: #fff !important;
+    background: #EEF2FF !important;
+    color: #4F46E5 !important;
 }
 #creditsPage .action-buttons .btn-print:hover {
-    background: #4f46e5 !important;
+    background: #4F46E5 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
 #creditsPage .action-buttons .btn-whatsapp {
-    background: #25D366 !important;
-    color: #fff !important;
+    background: #ECFDF5 !important;
+    color: #059669 !important;
 }
 #creditsPage .action-buttons .btn-whatsapp:hover {
-    background: #128C7E !important;
+    background: #25D366 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
 #creditsPage .action-buttons .btn-payer {
-    background: #10B981 !important;
-    color: #fff !important;
+    background: #F0FDF4 !important;
+    color: #16A34A !important;
 }
 #creditsPage .action-buttons .btn-payer:hover {
-    background: #059669 !important;
+    background: #10B981 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
 #creditsPage .action-buttons .btn-edit {
-    background: #f59e0b !important;
-    color: #fff !important;
+    background: #FFF7ED !important;
+    color: #EA580C !important;
 }
 #creditsPage .action-buttons .btn-edit:hover {
-    background: #d97706 !important;
+    background: #F59E0B !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
 #creditsPage .action-buttons .btn-delete {
-    background: #ef4444 !important;
-    color: #fff !important;
+    background: #FEF2F2 !important;
+    color: #DC2626 !important;
 }
 #creditsPage .action-buttons .btn-delete:hover {
-    background: #dc2626 !important;
+    background: #EF4444 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
-@media(max-width:1024px) {
-    #creditsPage .action-buttons .btn-print,
-    #creditsPage .action-buttons .btn-whatsapp,
-    #creditsPage .action-buttons .btn-payer,
-    #creditsPage .action-buttons .btn-edit,
-    #creditsPage .action-buttons .btn-delete {
-        padding: 2px 5px !important;
-        font-size: 9px !important;
-        min-height: 20px !important;
-    }
+/* ✅ Total impayés */
+.total-row-pro {
+display: flex !important;
+justify-content: flex-end !important;
+align-items: center !important;
+gap: 16px !important;
+padding: 18px 24px !important;
+background: linear-gradient(135deg, #FEF2F2, #FEE2E2) !important;
+border-radius: 12px !important;
+margin-top: 16px !important;
+border: 1px solid #FECACA !important;
 }
 
+.total-row-pro .total-label {
+font-size: 13px !important;
+font-weight: 700 !important;
+color: #991B1B !important;
+text-transform: uppercase !important;
+letter-spacing: 0.5px !important;
+}
+
+.total-row-pro .total-amount {
+font-size: 20px !important;
+font-weight: 800 !important;
+color: #DC2626 !important;
+letter-spacing: -0.5px !important;
+display: flex !important;
+align-items: center !important;
+gap: 8px !important;
+}
+
+.total-row-pro .total-amount i {
+color: #EF4444 !important;
+font-size: 16px !important;
+}
+
+/* ✅ Responsive */
 @media(max-width:768px) {
+    #creditsPage {
+        padding: 12px !important;
+    }
+    
+    #creditsPage .card-header {
+        padding: 16px !important;
+    }
+    
+    .credits-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    
+    .credits-stat-card {
+        padding: 14px !important;
+    }
+    
+    .credits-stat-card .stat-value {
+        font-size: 18px !important;
+    }
+    
+    #creditsPage .data-table thead th,
+    #creditsPage .data-table tbody td {
+        padding: 12px 10px !important;
+        font-size: 12px !important;
+    }
+    
     #creditsPage .action-buttons .btn-print,
     #creditsPage .action-buttons .btn-whatsapp,
     #creditsPage .action-buttons .btn-payer,
     #creditsPage .action-buttons .btn-edit,
     #creditsPage .action-buttons .btn-delete {
-        padding: 1px 4px !important;
-        font-size: 8px !important;
-        min-height: 18px !important;
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+        min-height: 24px !important;
     }
 }
 
 @media(max-width:500px) {
-    #creditsPage .action-buttons .btn-print,
-    #creditsPage .action-buttons .btn-whatsapp,
-    #creditsPage .action-buttons .btn-payer,
-    #creditsPage .action-buttons .btn-edit,
-    #creditsPage .action-buttons .btn-delete {
-        padding: 1px 3px !important;
-        font-size: 7px !important;
-        min-height: 16px !important;
+    .credits-stats-grid {
+        grid-template-columns: 1fr !important;
     }
-}
-
-/* ✅ STATS EN HAUT DE PAGE - COMME ADMIN VENTES */
-.credits-stats-grid {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-gap: 16px;
-margin-bottom: 20px;
-padding: 16px 20px;
-background: var(--bg-card);
-border-radius: var(--radius-xl);
-border: 1px solid var(--border);
-}
-
-.credits-stat-card {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-padding: 12px 16px;
-background: var(--bg-page);
-border-radius: var(--radius);
-text-align: center;
-}
-
-.credits-stat-card .stat-value {
-font-size: 28px !important;
-font-weight: 900 !important;
-color: var(--black);
-letter-spacing: -0.3px;
-}
-
-.credits-stat-card .stat-value.green {
-color: #14B8A6;
-}
-.credits-stat-card .stat-value.blue {
-color: #2563eb;
-}
-.credits-stat-card .stat-value.orange {
-color: #f59e0b;
-}
-.credits-stat-card .stat-value.red {
-color: #ef4444;
-}
-
-.credits-stat-card .stat-label {
-font-size: 14px !important;
-font-weight: 600;
-color: var(--text-secondary);
-text-transform: uppercase;
-letter-spacing: 0.5px;
-margin-top: 4px;
-}
-
-.date-filter-group {
-display: flex;
-align-items: center;
-gap: 8px;
-flex-wrap: wrap;
-}
-
-.date-filter-group input[type="date"] {
-padding: 10px 14px;
-border: 2px solid var(--border);
-border-radius: 10px;
-font-size: 18px !important;
-font-family: 'Inter', sans-serif;
-background: var(--white);
-color: var(--text-primary);
-min-width: 140px;
-}
-
-.date-filter-group input[type="date"]:focus {
-border-color: var(--black);
-outline: none;
-box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
-}
-
-.date-filter-group .btn-filter {
-padding: 10px 20px;
-background: #2563eb;
-color: #fff;
-border: none;
-border-radius: 10px;
-font-size: 18px !important;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.2s;
-}
-
-.date-filter-group .btn-filter:hover {
-background: #1d4ed8;
-transform: translateY(-2px);
-}
-
-.date-filter-group .btn-clear-filter {
-padding: 10px 20px;
-background: #ef4444;
-color: #fff;
-border: none;
-border-radius: 10px;
-font-size: 18px !important;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.2s;
-}
-
-.date-filter-group .btn-clear-filter:hover {
-background: #dc2626;
-transform: translateY(-2px);
-}
-
-@media(max-width:768px) {
-.credits-stats-grid {
-grid-template-columns: repeat(2, 1fr);
-gap: 10px;
-padding: 12px;
-}
-.credits-stat-card .stat-value {
-font-size: 22px !important;
-}
-.date-filter-group input[type="date"] {
-min-width: 100px;
-font-size: 16px !important;
-padding: 8px 10px;
-}
-.date-filter-group .btn-filter,
-.date-filter-group .btn-clear-filter {
-padding: 8px 14px;
-font-size: 16px !important;
-}
-}
-
-@media(max-width:500px) {
-.credits-stats-grid {
-grid-template-columns: 1fr 1fr;
-gap: 8px;
-padding: 8px;
-}
-.credits-stat-card .stat-value {
-font-size: 18px !important;
-}
-.date-filter-group input[type="date"] {
-min-width: 80px;
-font-size: 14px !important;
-padding: 6px 8px;
-}
-.date-filter-group .btn-filter,
-.date-filter-group .btn-clear-filter {
-padding: 6px 10px;
-font-size: 14px !important;
-}
 }
 </style>
 `;
@@ -738,7 +833,6 @@ window.creditsDateDebut = '';
 window.creditsDateFin = '';
 window.creditSelectionMode = false;
 window.creditSelectedIds = [];
-// ✅ Reset du filtre multi-clients
 window.creditSelectedClientId = null;
 window.creditSelectedClientName = null;
 
@@ -749,7 +843,7 @@ var searchPlaceholder = window._posFilterClientName || 'Rechercher (client, prod
 
 var showBackButton = window._fromPos ? '' : 'display:none;';
 var filterMessage = window._posFilterClientName ? 
-    `<div style="padding:8px 12px; background:#f0fdf4; border-radius:8px; margin-top:8px; border:2px solid #14B8A6; font-size:18px; font-weight:600; color:#0D9488;">
+    `<div style="padding:8px 12px; background:#f0fdf4; border-radius:8px; margin-top:8px; border:2px solid #14B8A6; font-size:14px; font-weight:600; color:#0D9488;">
         🔍 Client filtré : <strong>${escapeHtml(window._posFilterClientName)}</strong>
     </div>` : '';
 
@@ -757,16 +851,16 @@ c.innerHTML = `
 <div class="content-card" id="creditsPage">
 <div class="card-header">
 <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:8px;">
-    <h3 style="font-size:26px !important; margin:0;"><i class="fas fa-credit-card"></i> Crédits</h3>
+    <h3 style="margin:0;"><i class="fas fa-credit-card"></i> Crédits</h3>
     <button id="creditsBackToPosBtn" onclick="retournerAuPaiement()" 
             style="${showBackButton} background:#6366f1; color:#fff; border:none; border-radius:8px; 
-                   padding:8px 20px; font-size:18px; font-weight:700; cursor:pointer; 
+                   padding:8px 20px; font-size:14px; font-weight:700; cursor:pointer; 
                    display:flex; align-items:center; gap:8px;">
         <i class="fas fa-arrow-left"></i> Retour au paiement
     </button>
 </div>
 ${filterMessage}
-<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
 <div class="search-bar-pro">
 <i class="fas fa-search"></i>
 <input type="text" id="creditsSearchInput"
@@ -776,7 +870,7 @@ onkeyup="handleCreditsSearch(this.value);">
 <i class="fas fa-times"></i>
 </button>
 </div>
-<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." class="voice-display-field" readonly>
+<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." class="voice-display-field" readonly style="display:none;">
 <div class="filter-group">
 <label><i class="far fa-calendar-alt"></i> Période</label>
 <select id="creditsPeriodSelect" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">
@@ -790,26 +884,19 @@ onkeyup="handleCreditsSearch(this.value);">
 <option value="365">1 an</option>
 </select>
 </div>
-<div class="date-filter-group">
-<input type="date" id="creditsDateDebut" value="" placeholder="Date début" onchange="window.creditsDateDebut = this.value; applyCreditsFilters();">
-<span style="font-weight:600; color:var(--text-secondary);">à</span>
-<input type="date" id="creditsDateFin" value="" placeholder="Date fin" onchange="window.creditsDateFin = this.value; applyCreditsFilters();">
-<button class="btn-filter" onclick="appliquerFiltreDatePersonnaliseCredits()"><i class="fas fa-filter"></i> Filtrer</button>
-<button class="btn-clear-filter" onclick="reinitialiserFiltresCredits()"><i class="fas fa-undo"></i> Réinitialiser</button>
-</div>
-<button class="btn-add" onclick="loadCredits()" style="font-size:20px !important;padding:10px 20px !important;">
+<button class="btn-add" onclick="loadCredits()">
 <i class="fas fa-sync-alt"></i> Actualiser
 </button>
-<button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="font-size:18px !important;padding:10px 16px !important;">
+<button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="background:#6366f1; box-shadow:0 2px 8px rgba(99,102,241,0.25);">
 <i class="fas fa-check-square"></i> Sélectionner
 </button>
-<button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5; font-size:18px !important;padding:10px 16px !important;">
+<button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5;">
 <i class="fas fa-check-double"></i> Tout sélectionner
 </button>
-<button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;">
+<button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#ef4444; color:#fff; padding:10px 18px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">
 <i class="fas fa-trash"></i> Supprimer
 </button>
-<button id="paySelectedBtn" class="btn-save" onclick="paySelectedCredits()" style="display:none; background:#10B981; color:#fff; font-size:18px !important;padding:10px 16px !important;">
+<button id="paySelectedBtn" class="btn-save" onclick="paySelectedCredits()" style="display:none; background:#10B981; color:#fff; padding:10px 18px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.25);">
 <i class="fas fa-check-circle"></i> Marquer payé
 </button>
 </div>
@@ -1117,7 +1204,7 @@ if (pageData.length === 0) {
 cont.innerHTML = `
 <div style="text-align:center;padding:60px 20px;">
 <i class="fas fa-inbox" style="font-size:3rem;color:#d1d5db;"></i>
-<p style="margin-top:16px;color:#6b7280;font-size:24px !important;">Aucun crédit trouvé</p>
+<p style="margin-top:16px;color:#6b7280;font-size:18px !important;">Aucun crédit trouvé</p>
 </div>
 `;
 document.getElementById('creditsPagination').innerHTML = '';
@@ -1175,7 +1262,7 @@ var mode = d.paymentMethod || '-';
 var amountPaid = d.amountGiven || 0;
 
 var actions = `
-<div class="action-buttons" style="display:flex; gap:4px; align-items:center; justify-content:center; flex-wrap:nowrap;">
+<div class="action-buttons">
     <button class="btn-print" onclick="printFacture('${d.id}')" title="Imprimer / PDF">Imprimer</button>
     <button class="btn-whatsapp" onclick="sendCreditWhatsApp('${d.id}')" title="Envoyer WhatsApp">WhatsApp</button>
     `;
@@ -1229,7 +1316,6 @@ document.getElementById('creditsPagination').innerHTML = getPaginationHTML('cred
 function toggleCreditSelectionMode() {
     window.creditSelectionMode = !window.creditSelectionMode;
     window.creditSelectedIds = [];
-    // ✅ Reset du filtre multi-clients
     window.creditSelectedClientId = null;
     window.creditSelectedClientName = null;
     var selectAllBtn = document.getElementById('selectAllBtn');
@@ -1261,14 +1347,11 @@ function toggleCreditSelectionMode() {
     renderCreditsTablePro();
 }
 
-// ✅ MODIFIÉ : DIALOGUE OUI/NON pour multi-clients
 function toggleCreditSelection(id) {
     var idx = window.creditSelectedIds.indexOf(id);
 
-    // ✅ Si on DÉCOCHE → retirer normalement
     if (idx !== -1) {
         window.creditSelectedIds.splice(idx, 1);
-        // Si plus aucun crédit sélectionné → reset du filtre client
         if (window.creditSelectedIds.length === 0) {
             window.creditSelectedClientId = null;
             window.creditSelectedClientName = null;
@@ -1278,7 +1361,6 @@ function toggleCreditSelection(id) {
         return;
     }
 
-    // ✅ Si on COCHE → vérifier que c'est le même client
     var data = window.filteredCredits || window.allCreditsData || [];
     var credit = data.find(function(c) { return c.id === id; });
 
@@ -1288,7 +1370,6 @@ function toggleCreditSelection(id) {
         return;
     }
 
-    // ✅ Premier crédit sélectionné → mémoriser le client
     if (window.creditSelectedIds.length === 0) {
         window.creditSelectedClientId = credit.clientId || null;
         window.creditSelectedClientName = credit.clientName || 'Client inconnu';
@@ -1298,12 +1379,10 @@ function toggleCreditSelection(id) {
         return;
     }
 
-    // ✅ Crédits déjà sélectionnés → vérifier le client
     var currentClientId = window.creditSelectedClientId;
     var currentClientName = window.creditSelectedClientName;
 
     if (credit.clientId !== currentClientId) {
-        // ⚠️ Client différent → demander confirmation OUI/NON
         var confirmer = confirm(
             '⚠️ CLIENT DIFFÉRENT DÉTECTÉ\n\n' +
             'Vous avez déjà sélectionné des crédits de :\n' +
@@ -1316,23 +1395,19 @@ function toggleCreditSelection(id) {
         );
 
         if (!confirmer) {
-            // ❌ L'utilisateur refuse → on ne sélectionne pas
             renderCreditsTablePro();
             return;
         }
 
-        // ✅ L'utilisateur autorise → on autorise le multi-clients
-        window.creditSelectedClientId = 'MULTI';  // Marqueur spécial "multi-clients"
+        window.creditSelectedClientId = 'MULTI';
         window.creditSelectedClientName = 'Plusieurs clients';
     }
 
-    // ✅ Accepter la sélection
     window.creditSelectedIds.push(id);
     updateDeleteButtonVisibility();
     renderCreditsTablePro();
 }
 
-// ✅ MODIFIÉ : Affiche le nom du client OU "Multi-clients" dans le bouton
 function updateDeleteButtonVisibility() {
     var deleteBtn = document.getElementById('deleteSelectedBtn');
     var payBtn = document.getElementById('paySelectedBtn');
@@ -1364,14 +1439,12 @@ function updateDeleteButtonVisibility() {
 
 window.selectAllBtnState = false;
 
-// ✅ MODIFIÉ : DIALOGUE OUI/NON si plusieurs clients dans la page
 function selectAllVisibleCredits() {
     var data = window.filteredCredits || window.allCreditsData;
     var pageData = getPageData('credits', data);
     
     if (pageData.length === 0) return;
     
-    // ✅ Vérifier que tous les crédits de la page appartiennent au même client
     var firstClientId = pageData[0].clientId;
     var firstClientName = pageData[0].clientName || 'Client inconnu';
     var hasDifferentClient = pageData.some(function(c) {
@@ -1379,7 +1452,6 @@ function selectAllVisibleCredits() {
     });
     
     if (hasDifferentClient) {
-        // Compter combien de clients différents
         var uniqueClients = new Set();
         pageData.forEach(function(c) {
             uniqueClients.add(c.clientId || 'inconnu');
@@ -1397,11 +1469,9 @@ function selectAllVisibleCredits() {
             return;
         }
         
-        // ✅ L'utilisateur autorise → multi-clients
         window.creditSelectedClientId = 'MULTI';
         window.creditSelectedClientName = 'Plusieurs clients';
     } else {
-        // ✅ Même client → accepter directement
         window.creditSelectedClientId = firstClientId;
         window.creditSelectedClientName = firstClientName;
     }
@@ -1411,7 +1481,6 @@ function selectAllVisibleCredits() {
     renderCreditsTablePro();
 }
 
-// ✅ MODIFIÉ : Reset du filtre
 function deselectAllVisibleCredits() {
     window.creditSelectedIds = [];
     window.creditSelectedClientId = null;
@@ -1456,7 +1525,6 @@ Promise.all(promises).then(function() {
 alert('✅ ' + window.creditSelectedIds.length + ' crédit(s) supprimé(s).');
 window.creditSelectedIds = [];
 window.creditSelectionMode = false;
-// ✅ Reset du filtre multi-clients
 window.creditSelectedClientId = null;
 window.creditSelectedClientName = null;
 var selectBtn = document.getElementById('toggleSelectionBtn');
@@ -1480,7 +1548,6 @@ alert('❌ Erreur: ' + e.message);
 
 // ============================================================
 // ✅ FONCTION : Marquer payés tous les crédits sélectionnés
-// ✅ + Créer une facture de paiement + proposer WhatsApp
 // ============================================================
 async function paySelectedCredits() {
     if (!window.creditSelectedIds || window.creditSelectedIds.length === 0) {
@@ -1577,7 +1644,6 @@ async function paySelectedCredits() {
 
         await Promise.all(promises);
 
-        // ✅ Créer une facture de paiement
         var facturePaiement = await creerFacturePaiementCredits(paiements, totalImpayes);
 
         updateCreditsStats(window.filteredCredits || window.allCreditsData);
@@ -1586,7 +1652,6 @@ async function paySelectedCredits() {
         window.creditSelectedIds = [];
         window.creditSelectionMode = false;
         window.selectAllBtnState = false;
-        // ✅ Reset du filtre multi-clients
         window.creditSelectedClientId = null;
         window.creditSelectedClientName = null;
 
@@ -1609,7 +1674,6 @@ async function paySelectedCredits() {
 
         CacheDB.sync();
 
-        // ✅ Afficher le modal WhatsApp avec la facture (avec les crédits détaillés)
         await posAfficherOptionWhatsAppPaiement(facturePaiement, toPay);
 
     } catch (e) {
@@ -1621,7 +1685,6 @@ window.paySelectedCredits = paySelectedCredits;
 
 // ============================================================
 // ✅ FONCTION : Créer une facture de paiement de crédits
-// ✅ MODIFIÉ : Affiche les noms des 2 clients si multi-clients
 // ============================================================
 async function creerFacturePaiementCredits(paiements, totalPaye) {
     var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
@@ -1633,7 +1696,6 @@ async function creerFacturePaiementCredits(paiements, totalPaye) {
     var clientNames = [...new Set(paiements.map(p => p.clientName).filter(Boolean))];
     var clientId = clientIds.length === 1 ? clientIds[0] : null;
 
-    // ✅ MODIFIÉ : Affiche les noms des 2 clients
     var clientName = '';
     if (clientNames.length === 1) {
         clientName = clientNames[0];
@@ -1718,8 +1780,6 @@ window.creerFacturePaiementCredits = creerFacturePaiementCredits;
 
 // ============================================================
 // 📱 AFFICHER LE MODAL WHATSAPP AVEC TOUS LES DÉTAILS
-// ✅ Contient : toutes les factures ID + produits + sous-totaux + total général
-// ✅ NOUVEAU PARAMÈTRE : creditsDetailes (les crédits originaux avec items)
 // ============================================================
 async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
     try {
@@ -1727,14 +1787,12 @@ async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
         var clientId = factureData.clientId;
         var clientTel = '';
 
-        // ✅ 1. Chercher dans le cache local
         if (clientId) {
             var client = (window.clientsDataForSearch || []).find(function(c) { return c.id === clientId; });
             if (client) {
                 clientTel = client.telephone || client.whatsapp || '';
             }
 
-            // ✅ 2. Si pas trouvé dans le cache → chercher dans Firestore
             if (!clientTel && navigator.onLine) {
                 try {
                     var clientDoc = await db.collection('clients').doc(clientId).get();
@@ -1755,7 +1813,6 @@ async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
             hour: '2-digit', minute: '2-digit'
         });
 
-        // ✅ CONSTRUIRE LE MESSAGE AVEC TOUS LES DÉTAILS
         var messageWhatsApp = '';
         messageWhatsApp += '✅ *REÇU DE PAIEMENT*\n';
         messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
@@ -1764,7 +1821,6 @@ async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
         messageWhatsApp += '👤 Client : ' + clientName + '\n';
         messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n\n';
 
-        // ✅ Si on a les crédits détaillés → afficher TOUS les détails (facture + produits + sous-total)
         if (creditsDetailes && creditsDetailes.length > 0) {
             for (var i = 0; i < creditsDetailes.length; i++) {
                 var credit = creditsDetailes[i];
@@ -1808,7 +1864,6 @@ async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
                 messageWhatsApp += '\n';
             }
         } else {
-            // ⚠️ Fallback : si pas de détails → utiliser l'ancien format (factureNum → montant)
             var lignesCredits = factureData.creditsPayes.map(function(c) {
                 return '• Facture #' + c.factureNum + ' → ' + c.montantPaye.toFixed(2) + ' MAD';
             }).join('\n');
@@ -1891,7 +1946,6 @@ function posEnvoyerWhatsAppPaiement() {
         var message = data.message || '';
         var tel = (data.clientTel || '').replace(/\D/g, '');
 
-        // ✅ Normaliser le numéro (Maroc +212)
         if (tel) {
             if (tel.startsWith('0')) {
                 tel = '212' + tel.substring(1);
@@ -2067,7 +2121,6 @@ async function confirmerPaiementCreditZero(creditId) {
     }
 }
 
-// ✅ MODIFIÉ : Créer facture + proposer WhatsApp après paiement individuel
 async function confirmCreditPayment(creditId) {
     var amountInput = document.getElementById('creditPaymentAmount');
     if (!amountInput) {
@@ -2155,7 +2208,6 @@ async function confirmCreditPayment(creditId) {
             CacheDB.saveCollection('ventes');
         }
 
-        // ✅ Créer une facture de paiement + proposer WhatsApp
         var paiements = [{
             creditId: creditId,
             factureNum: credit.factureNum || creditId.substring(0, 8),
@@ -2167,7 +2219,6 @@ async function confirmCreditPayment(creditId) {
         }];
         var facturePaiement = await creerFacturePaiementCredits(paiements, montant);
 
-        // ✅ Passer le crédit détaillé pour le message WhatsApp complet
         await posAfficherOptionWhatsAppPaiement(facturePaiement, [updatedCredit]);
 
     } catch(e) {
@@ -2545,31 +2596,31 @@ var h = `
 <div class="form-row">
 <div class="form-group">
 <label><i class="fas fa-user"></i> Client</label>
-<input type="text" id="editCreditClient" value="${escapeHtml(d.clientName || '')}" style="font-size:22px;padding:14px;">
+<input type="text" id="editCreditClient" value="${escapeHtml(d.clientName || '')}" style="font-size:14px;padding:10px;">
 </div>
 <div class="form-group">
 <label><i class="fas fa-tag"></i> Total (MAD)</label>
-<input type="number" id="editCreditTotal" value="${(d.total || 0)}" step="0.01" style="font-size:22px;padding:14px;">
+<input type="number" id="editCreditTotal" value="${(d.total || 0)}" step="0.01" style="font-size:14px;padding:10px;">
 </div>
 </div>
 <div class="form-row">
 <div class="form-group">
 <label><i class="fas fa-hand-holding-usd"></i> Payé (MAD)</label>
-<input type="number" id="editCreditPaid" value="${(d.amountGiven || 0)}" step="0.01" style="font-size:22px;padding:14px;">
+<input type="number" id="editCreditPaid" value="${(d.amountGiven || 0)}" step="0.01" style="font-size:14px;padding:10px;">
 </div>
 <div class="form-group">
 <label><i class="fas fa-hourglass-half"></i> Restant (MAD)</label>
-<input type="number" id="editCreditRemaining" value="${(d.remainingAmount || 0)}" step="0.01" style="font-size:22px;padding:14px;">
+<input type="number" id="editCreditRemaining" value="${(d.remainingAmount || 0)}" step="0.01" style="font-size:14px;padding:10px;">
 </div>
 </div>
 <div class="form-row">
 <div class="form-group">
 <label><i class="fas fa-credit-card"></i> Mode de paiement</label>
-<input type="text" id="editCreditMode" value="${escapeHtml(d.paymentMethod || '')}" style="font-size:22px;padding:14px;">
+<input type="text" id="editCreditMode" value="${escapeHtml(d.paymentMethod || '')}" style="font-size:14px;padding:10px;">
 </div>
 <div class="form-group">
 <label><i class="fas fa-circle"></i> Statut</label>
-<select id="editCreditStatut" style="font-size:22px;padding:14px;">
+<select id="editCreditStatut" style="font-size:14px;padding:10px;">
 <option value="0" ${!d.paid ? 'selected' : ''}>Impayé</option>
 <option value="1" ${d.paid ? 'selected' : ''}>Payé</option>
 </select>
@@ -2695,7 +2746,6 @@ function closeCreditSelection() {
     window.creditSelectedIds = [];
     window.creditSelectionMode = false;
     window.selectAllBtnState = false;
-    // ✅ Reset du filtre multi-clients
     window.creditSelectedClientId = null;
     window.creditSelectedClientName = null;
 
@@ -2796,6 +2846,49 @@ window.appliquerFiltreDatePersonnaliseCredits = appliquerFiltreDatePersonnaliseC
 window.reinitialiserFiltresCredits = reinitialiserFiltresCredits;
 window.confirmerPaiementCreditZero = confirmerPaiementCreditZero;
 
+// ==================== ✅ NOUVELLE FONCTION : Filtrer par client (clic sur nom) ====================
+function filtrerParClient(clientName, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    console.log('🖱️ Clic sur client :', clientName);
+    
+    var searchInput = document.getElementById('creditsSearchInput');
+    if (!searchInput) {
+        console.warn('⚠️ Champ de recherche introuvable');
+        return;
+    }
+    
+    // ✅ Remplir la barre de recherche avec le nom complet du client
+    searchInput.value = clientName;
+    window.creditsSearch = clientName;
+    window.currentPages.credits = 1;
+    
+    // ✅ Afficher le bouton "effacer"
+    var clearBtn = document.getElementById('creditsClearBtn');
+    if (clearBtn) clearBtn.classList.remove('hidden');
+    
+    // ✅ Appliquer le filtre
+    applyCreditsFilters();
+    
+    // ✅ Scroll en haut de la table
+    var tableContainer = document.getElementById('creditsTableContainer');
+    if (tableContainer) {
+        tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // ✅ Focus sur le champ pour modification rapide
+    setTimeout(function() {
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }, 100);
+}
+window.filtrerParClient = filtrerParClient;
+
 // ==================== EXPOSITION DES FONCTIONS GLOBALES ====================
 
 window.loadCreditsPage = loadCreditsPage;
@@ -2870,10 +2963,12 @@ console.log('✅ Synchronisation avec admin ventes : Quand un crédit est payé,
 console.log('✅ Gestion des crédits à 0 MAD : Marqué comme payé automatiquement');
 console.log('✅ ALIAS renderCreditsTable = renderCreditsTablePro (compatibilité admin.js)');
 console.log('✅ changePage NON écrasée (garde la version d\'admin.js)');
-console.log('✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé');
-console.log('✅ NOUVEAU : Création facture "PAI-YYYY-XXXXX" après paiement + WhatsApp');
-console.log('✅ NOUVEAU : Récupération automatique du numéro client depuis Firestore');
-console.log('✅ NOUVEAU : Envoi WhatsApp direct au numéro du client (comme pos.js)');
-console.log('✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
-console.log('✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients');
-console.log('✅ 👥 NOUVEAU : Affichage des 2 noms de clients dans la facture WhatsApp');
+console.log('✅ Bouton "Marquer payé" pour paiement groupé');
+console.log('✅ Création facture "PAI-YYYY-XXXXX" après paiement + WhatsApp');
+console.log('✅ Récupération automatique du numéro client depuis Firestore');
+console.log('✅ Envoi WhatsApp direct au numéro du client (comme pos.js)');
+console.log('✅ 📱 WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
+console.log('✅ ⚠️ DIALOGUE OUI/NON pour multi-clients');
+console.log('✅ 👥 Affichage des 2 noms de clients dans la facture WhatsApp');
+console.log('✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)');
+console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
