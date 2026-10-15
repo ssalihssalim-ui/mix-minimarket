@@ -9,6 +9,7 @@
 // ✅ NOUVEAU CHAMP "RESTANT" DANS LES VENTES
 // ✅ ARTICLES ET OPTIONS VISIBLES POUR TOUT LE MONDE (ADMIN ET CAISSIER)
 // ✅ 📴 VENTES HORS-LIGNE : affichage depuis localStorage + sync auto
+// ✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé (comme admin credits)
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -66,6 +67,7 @@ updateVenteSelectionUI();
 function updateVenteSelectionUI() {
 var count = ventesSelectionnees.size;
 var btn = document.getElementById('deleteSelectedVentesBtn');
+var payerBtn = document.getElementById('payerSelectedVentesBtn');
 var selectAllBtn = document.getElementById('selectAllVentesBtn');
 var countDisplay = document.getElementById('selectedVentesCount');
 
@@ -73,6 +75,28 @@ if (btn) {
 btn.style.display = count > 0 ? 'inline-block' : 'none';
 btn.textContent = '🗑️ Supprimer ' + count + ' vente(s)';
 }
+
+// ✅ NOUVEAU : Afficher le bouton "Payer tout" si des ventes IMPAYÉES sont sélectionnées
+if (payerBtn) {
+    var data = window.filteredVentes || window.allVentesData || [];
+    var ventesImpayees = 0;
+    var totalImpaye = 0;
+    
+    data.forEach(function(v) {
+        if (ventesSelectionnees.has(v.id) && !v.paid) {
+            ventesImpayees++;
+            totalImpaye += v.remainingAmount || v.total || 0;
+        }
+    });
+    
+    if (count > 0 && ventesImpayees > 0) {
+        payerBtn.style.display = 'inline-block';
+        payerBtn.innerHTML = '<i class="fas fa-money-bill-wave"></i> Payer ' + ventesImpayees + ' (' + totalImpaye.toFixed(2) + ' MAD)';
+    } else {
+        payerBtn.style.display = 'none';
+    }
+}
+
 if (countDisplay) {
 countDisplay.textContent = count + ' sélectionnée(s)';
 countDisplay.style.display = count > 0 ? 'inline-block' : 'none';
@@ -97,6 +121,7 @@ function toggleVenteSelectionMode() {
 
     var selectBtn = document.getElementById('toggleVenteSelectionBtn');
     var deleteBtn = document.getElementById('deleteSelectedVentesBtn');
+    var payerBtn = document.getElementById('payerSelectedVentesBtn');
     if (selectBtn) {
         if (window.venteSelectionMode) {
             selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
@@ -109,6 +134,9 @@ function toggleVenteSelectionMode() {
     }
     if (deleteBtn) {
         deleteBtn.style.display = 'none';
+    }
+    if (payerBtn) {
+        payerBtn.style.display = 'none';
     }
     renderVentesTablePro();
 }
@@ -1383,6 +1411,10 @@ onkeyup="handleVentesSearch(this.value);">
 <button id="deleteSelectedVentesBtn" class="btn-delete" onclick="deleteSelectedVentes()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;border:none;border-radius:8px;cursor:pointer;">
 <i class="fas fa-trash"></i> Supprimer
 </button>
+<!-- ✅ NOUVEAU : Bouton "Payer tout" (apparaît avec la sélection) -->
+<button id="payerSelectedVentesBtn" class="btn-save" onclick="payerVentesSelectionnees()" style="display:none; background:#10B981; color:#fff; font-size:18px !important;padding:10px 16px !important;border:none;border-radius:8px;cursor:pointer;font-weight:700;">
+<i class="fas fa-money-bill-wave"></i> 💰 Payer tout
+</button>
 </div>
 </div>
 <div class="ventes-stats-grid" id="ventesStatsGrid">
@@ -2429,6 +2461,152 @@ function printFactureDetails() {
     }
 }
 
+// ==================== PAIEMENT GROUPÉ DE VENTES ====================
+
+async function payerVentesSelectionnees() {
+    if (ventesSelectionnees.size === 0) {
+        alert('⚠️ Aucune vente sélectionnée.');
+        return;
+    }
+
+    var data = window.filteredVentes || window.allVentesData || [];
+    var ventesAPayer = [];
+    var totalGlobal = 0;
+    var clientsConcernees = new Set();
+
+    data.forEach(function(v) {
+        if (ventesSelectionnees.has(v.id) && !v.paid) {
+            ventesAPayer.push(v);
+            totalGlobal += v.remainingAmount || v.total || 0;
+            if (v.clientName && v.clientName !== 'Passager') {
+                clientsConcernees.add(v.clientName);
+            }
+        }
+    });
+
+    if (ventesAPayer.length === 0) {
+        alert('⚠️ Aucune vente impayée dans la sélection.');
+        return;
+    }
+
+    var listeClients = Array.from(clientsConcernees).slice(0, 5).join(', ');
+    if (clientsConcernees.size > 5) {
+        listeClients += '... (+' + (clientsConcernees.size - 5) + ' autres)';
+    }
+
+    var msg = '💰 CONFIRMER LE PAIEMENT GROUPÉ ?\n\n';
+    msg += '📊 Nombre de ventes : ' + ventesAPayer.length + '\n';
+    msg += '💵 Total à encaisser : ' + totalGlobal.toFixed(2) + ' MAD\n';
+    if (listeClients) {
+        msg += '👥 Clients : ' + listeClients + '\n';
+    }
+    msg += '\n⚠️ Cette action est IRRÉVERSIBLE.\n';
+    msg += 'Les ventes seront marquées comme PAYÉES.';
+
+    if (!confirm(msg)) return;
+
+    var payerBtn = document.getElementById('payerSelectedVentesBtn');
+    if (payerBtn) {
+        payerBtn.disabled = true;
+        payerBtn.innerHTML = '⏳ Traitement...';
+    }
+
+    try {
+        var batch = db.batch();
+        var batchCount = 0;
+        var totalPaye = 0;
+        var facturesPayees = [];
+
+        for (var i = 0; i < ventesAPayer.length; i++) {
+            var vente = ventesAPayer[i];
+            var ref = db.collection('ventes').doc(vente.id);
+
+            batch.update(ref, {
+                paid: true,
+                statutPaiement: 'payé',
+                remainingAmount: 0,
+                amountGiven: vente.total || 0,
+                change: 0,
+                paidAt: firebase.firestore.FieldValue.serverTimestamp(),
+                paidBy: window.currentUserData
+                    ? (window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom)
+                    : 'Admin',
+                paymentMethod: 'espece'
+            });
+
+            totalPaye += vente.total || 0;
+            facturesPayees.push(vente.factureNum || vente.id.substring(0, 8));
+
+            batchCount++;
+
+            if (batchCount >= 450) {
+                await batch.commit();
+                batch = db.batch();
+                batchCount = 0;
+            }
+        }
+
+        if (batchCount > 0) {
+            await batch.commit();
+        }
+
+        for (var j = 0; j < ventesAPayer.length; j++) {
+            var vente2 = ventesAPayer[j];
+            try {
+                var creditsSnap = await db.collection('credits')
+                    .where('factureNum', '==', vente2.factureNum)
+                    .where('paid', '==', false)
+                    .get();
+
+                if (!creditsSnap.empty) {
+                    var batch2 = db.batch();
+                    creditsSnap.forEach(function(doc) {
+                        batch2.delete(doc.ref);
+                    });
+                    await batch2.commit();
+                    console.log('🗑️ Crédit supprimé pour facture:', vente2.factureNum);
+                }
+            } catch(e) {
+                console.warn('⚠️ Erreur suppression crédit:', e);
+            }
+        }
+
+        ventesAPayer.forEach(function(v) {
+            v.paid = true;
+            v.statutPaiement = 'payé';
+            v.remainingAmount = 0;
+            v.amountGiven = v.total || 0;
+            v.change = 0;
+        });
+
+        ventesSelectionnees.clear();
+        window.venteSelectedIds = [];
+        selectAllVentesBtnState = false;
+
+        alert('✅ ' + ventesAPayer.length + ' vente(s) payée(s) avec succès !\n\n💵 Total encaissé : ' + totalPaye.toFixed(2) + ' MAD');
+
+        applyVentesFilters();
+        updateVenteSelectionUI();
+
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('ventes');
+            CacheDB.saveCollection('credits');
+        }
+
+        console.log('✅ Paiement groupé terminé :', ventesAPayer.length, 'vente(s),', totalPaye.toFixed(2), 'MAD');
+
+    } catch(e) {
+        console.error('❌ Erreur paiement groupé :', e);
+        alert('❌ Erreur lors du paiement groupé : ' + e.message);
+    } finally {
+        if (payerBtn) {
+            payerBtn.disabled = false;
+        }
+        updateVenteSelectionUI();
+    }
+}
+window.payerVentesSelectionnees = payerVentesSelectionnees;
+
 // ==================== PAGINATION ====================
 
 function getPaginationHTML(pageType, totalItems) {
@@ -2533,6 +2711,9 @@ window.deselectAllVisibleVentes = deselectAllVisibleVentes;
 window.toggleSelectAllVisibleVentes = toggleSelectAllVisibleVentes;
 window.selectAllVentesBtnState = selectAllVentesBtnState;
 
+// ✅ NOUVELLE FONCTION EXPOSÉE
+window.payerVentesSelectionnees = payerVentesSelectionnees;
+
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
 console.log('✅ Détails facture modal ajouté - Font size agrandi');
@@ -2543,3 +2724,4 @@ console.log('✅ Boutons avec texte - Comme admin credits');
 console.log('✅ Synchronisation avec admin credits');
 console.log('✅ Sélection en masse');
 console.log('✅ Articles et Options visibles pour tout le monde');
+console.log('✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé');
