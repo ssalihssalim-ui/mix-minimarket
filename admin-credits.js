@@ -13,6 +13,7 @@
 // ✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé
 // ✅ NOUVEAU : Création de facture de paiement + envoi WhatsApp après paiement
 // ✅ NOUVEAU : Récupération du numéro client depuis Firestore + envoi WhatsApp direct
+// ✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -1481,8 +1482,8 @@ async function paySelectedCredits() {
 
         CacheDB.sync();
 
-        // ✅ Afficher le modal WhatsApp avec la facture (await car async maintenant)
-        await posAfficherOptionWhatsAppPaiement(facturePaiement);
+        // ✅ Afficher le modal WhatsApp avec la facture (avec les crédits détaillés)
+        await posAfficherOptionWhatsAppPaiement(facturePaiement, toPay);
 
     } catch (e) {
         console.error('❌ Erreur paiement groupé:', e);
@@ -1575,11 +1576,11 @@ async function creerFacturePaiementCredits(paiements, totalPaye) {
 window.creerFacturePaiementCredits = creerFacturePaiementCredits;
 
 // ============================================================
-// 📱 AFFICHER LE MODAL WHATSAPP APRÈS PAIEMENT DE CRÉDITS
-// ✅ Récupère le numéro du client depuis Firestore si absent du cache
-// ✅ ASYNC maintenant pour permettre la récupération Firestore
+// 📱 AFFICHER LE MODAL WHATSAPP AVEC TOUS LES DÉTAILS
+// ✅ Contient : toutes les factures ID + produits + sous-totaux + total général
+// ✅ NOUVEAU PARAMÈTRE : creditsDetailes (les crédits originaux avec items)
 // ============================================================
-async function posAfficherOptionWhatsAppPaiement(factureData) {
+async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
     try {
         var clientName = factureData.clientName || 'Client';
         var clientId = factureData.clientId;
@@ -1608,31 +1609,74 @@ async function posAfficherOptionWhatsAppPaiement(factureData) {
         }
 
         var telDisplay = clientTel ? clientTel.replace(/\D/g, '') : '';
-
-        var lignesCredits = factureData.creditsPayes.map(function(c) {
-            return '• Facture #' + c.factureNum + ' → ' + c.montantPaye.toFixed(2) + ' MAD';
-        }).join('\n');
-
         var dateStr = new Date().toLocaleDateString('fr-FR', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
 
-        var messageWhatsApp =
-            '✅ *REÇU DE PAIEMENT*\n' +
-            '━━━━━━━━━━━━━━━━━━━━━\n' +
-            '📄 Reçu N° : ' + factureData.factureNum + '\n' +
-            '📅 Date : ' + dateStr + '\n' +
-            '👤 Client : ' + clientName + '\n' +
-            '━━━━━━━━━━━━━━━━━━━━━\n' +
-            '*CRÉDITS RÉGLÉS :*\n' +
-            lignesCredits + '\n' +
-            '━━━━━━━━━━━━━━━━━━━━━\n' +
-            '💵 *TOTAL PAYÉ : ' + factureData.total.toFixed(2) + ' MAD*\n' +
-            '💳 Mode : Espèces\n' +
-            '━━━━━━━━━━━━━━━━━━━━━\n' +
-            'Merci pour votre règlement ! 🙏\n' +
-            'E-SOLUTION POS';
+        // ✅ CONSTRUIRE LE MESSAGE AVEC TOUS LES DÉTAILS
+        var messageWhatsApp = '';
+        messageWhatsApp += '✅ *REÇU DE PAIEMENT*\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += '📄 Reçu N° : ' + factureData.factureNum + '\n';
+        messageWhatsApp += '📅 Date : ' + dateStr + '\n';
+        messageWhatsApp += '👤 Client : ' + clientName + '\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n\n';
+
+        // ✅ Si on a les crédits détaillés → afficher TOUS les détails (facture + produits + sous-total)
+        if (creditsDetailes && creditsDetailes.length > 0) {
+            for (var i = 0; i < creditsDetailes.length; i++) {
+                var credit = creditsDetailes[i];
+                var factureNum = credit.factureNum || credit.id.substring(0, 8);
+                var sousTotal = credit.total || 0;
+                var restant = credit.remainingAmount || 0;
+
+                messageWhatsApp += '📋 *FACTURE #' + factureNum + '*\n';
+
+                if (credit.createdAt && credit.createdAt.seconds) {
+                    var cDate = new Date(credit.createdAt.seconds * 1000);
+                    messageWhatsApp += '   📅 ' + cDate.toLocaleDateString('fr-FR') + ' ' + cDate.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '\n';
+                }
+
+                if (credit.items && credit.items.length > 0) {
+                    messageWhatsApp += '   *Produits :*\n';
+                    credit.items.forEach(function(item) {
+                        var prix = item.prixVente || item.prixUnitaire || 0;
+                        var qte = item.quantite || 1;
+                        var totalItem = prix * qte;
+
+                        var opts = '';
+                        if (item.interdits && item.interdits.length) opts += ' 🚫' + item.interdits.join(',');
+                        if (item.epice && item.epice !== 'Normal') opts += ' 🌶️' + item.epice;
+                        if (item.sel && item.sel !== 'Normal') opts += ' 🧂' + item.sel;
+
+                        messageWhatsApp += '   • ' + qte + 'x ' + item.nom + opts + ' → ' + totalItem.toFixed(2) + ' MAD\n';
+                    });
+                }
+
+                messageWhatsApp += '   💵 Sous-total : ' + sousTotal.toFixed(2) + ' MAD\n';
+
+                if (restant > 0) {
+                    messageWhatsApp += '   ⏳ Restant payé : ' + restant.toFixed(2) + ' MAD\n';
+                }
+
+                messageWhatsApp += '\n';
+            }
+        } else {
+            // ⚠️ Fallback : si pas de détails → utiliser l'ancien format (factureNum → montant)
+            var lignesCredits = factureData.creditsPayes.map(function(c) {
+                return '• Facture #' + c.factureNum + ' → ' + c.montantPaye.toFixed(2) + ' MAD';
+            }).join('\n');
+            messageWhatsApp += '*CRÉDITS RÉGLÉS :*\n' + lignesCredits + '\n\n';
+        }
+
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += '💵 *TOTAL GÉNÉRAL : ' + factureData.total.toFixed(2) + ' MAD*\n';
+        messageWhatsApp += '💳 Mode : Espèces\n';
+        messageWhatsApp += '📊 Nombre de factures : ' + (creditsDetailes ? creditsDetailes.length : factureData.creditsPayes.length) + '\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += 'Merci pour votre règlement ! 🙏\n';
+        messageWhatsApp += 'E-SOLUTION POS';
 
         window._posWhatsAppPaiementData = {
             message: messageWhatsApp,
@@ -1657,13 +1701,13 @@ async function posAfficherOptionWhatsAppPaiement(factureData) {
                 <div style="padding:14px;background:#F0FDF4;border:2px solid #10B981;border-radius:10px;margin-bottom:16px;text-align:left;">
                     <p style="margin:0;font-size:0.9rem;color:#065F46;">
                         <strong>👤 Client :</strong> ${escapeHtml(clientName)}<br>
-                        <strong>📄 Nb crédits :</strong> ${factureData.creditsPayes.length}<br>
+                        <strong>📄 Nb crédits :</strong> ${creditsDetailes ? creditsDetailes.length : factureData.creditsPayes.length}<br>
                         ${telInfo}
                     </p>
                 </div>
 
                 <p style="color:#334155;font-weight:600;margin-bottom:12px;font-size:1rem;">
-                    📱 Voulez-vous envoyer le reçu par WhatsApp${telDisplay ? ' au ' + escapeHtml(clientTel) : ''} ?
+                    📱 Voulez-vous envoyer le reçu détaillé par WhatsApp${telDisplay ? ' au ' + escapeHtml(clientTel) : ''} ?
                 </p>
 
                 <div style="display:flex;gap:8px;">
@@ -1689,7 +1733,6 @@ window.posAfficherOptionWhatsAppPaiement = posAfficherOptionWhatsAppPaiement;
 
 // ============================================================
 // 📱 ENVOYER WHATSAPP POUR LE PAIEMENT
-// ✅ Envoi direct au numéro du client (comme dans pos.js)
 // ============================================================
 function posEnvoyerWhatsAppPaiement() {
     try {
@@ -1703,7 +1746,7 @@ function posEnvoyerWhatsAppPaiement() {
         var message = data.message || '';
         var tel = (data.clientTel || '').replace(/\D/g, '');
 
-        // ✅ Normaliser le numéro (Maroc +212) - IDENTIQUE À POS.JS
+        // ✅ Normaliser le numéro (Maroc +212)
         if (tel) {
             if (tel.startsWith('0')) {
                 tel = '212' + tel.substring(1);
@@ -1714,11 +1757,9 @@ function posEnvoyerWhatsAppPaiement() {
 
         var url;
         if (tel && tel.length >= 8) {
-            // ✅ Avec numéro → envoi direct au client
             url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(message);
             console.log('📱 [WhatsApp Paiement] Envoi au numéro :', tel);
         } else {
-            // ⚠️ Sans numéro → WhatsApp Web sans destinataire
             url = 'https://wa.me/?text=' + encodeURIComponent(message);
             console.log('📱 [WhatsApp Paiement] Aucun numéro — WhatsApp Web sans destinataire');
         }
@@ -1969,7 +2010,7 @@ async function confirmCreditPayment(creditId) {
             CacheDB.saveCollection('ventes');
         }
 
-        // ✅ NOUVEAU : Créer une facture de paiement + proposer WhatsApp
+        // ✅ Créer une facture de paiement + proposer WhatsApp
         var paiements = [{
             creditId: creditId,
             factureNum: credit.factureNum || creditId.substring(0, 8),
@@ -1981,8 +2022,8 @@ async function confirmCreditPayment(creditId) {
         }];
         var facturePaiement = await creerFacturePaiementCredits(paiements, montant);
 
-        // ✅ Afficher le modal WhatsApp (await car async maintenant)
-        await posAfficherOptionWhatsAppPaiement(facturePaiement);
+        // ✅ Passer le crédit détaillé pour le message WhatsApp complet
+        await posAfficherOptionWhatsAppPaiement(facturePaiement, [updatedCredit]);
 
     } catch(e) {
         console.error('Erreur paiement crédit:', e);
@@ -2686,3 +2727,4 @@ console.log('✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé');
 console.log('✅ NOUVEAU : Création facture "PAI-YYYY-XXXXX" après paiement + WhatsApp');
 console.log('✅ NOUVEAU : Récupération automatique du numéro client depuis Firestore');
 console.log('✅ NOUVEAU : Envoi WhatsApp direct au numéro du client (comme pos.js)');
+console.log('✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
