@@ -12,6 +12,7 @@
 // ✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé (comme admin credits)
 // ✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général
 // ✅ 🎨 NOUVEAU : Design MODERNE (identique à admin-credits)
+// ✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (sans redirection POS) + datePaiement
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -1862,6 +1863,7 @@ async function synchroVenteDepuisCredit(creditData) {
             
             if (estPaye) {
                 updateData.paidAt = firebase.firestore.FieldValue.serverTimestamp();
+                updateData.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
             }
 
             await db.collection('ventes').doc(vente.id).update(updateData);
@@ -2118,6 +2120,7 @@ var amountGiven = parseFloat(document.getElementById('editAmountGiven').value) |
 var change = parseFloat(document.getElementById('editChange').value) || 0;
 var remaining = parseFloat(document.getElementById('editRemaining').value) || 0;
 var paid = (statut === 'payé');
+
 var data = {
 statutPaiement: statut,
 amountGiven: amountGiven,
@@ -2126,6 +2129,13 @@ remainingAmount: paid ? 0 : remaining,
 paid: paid,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 };
+
+// ✅ Enregistrer datePaiement quand la vente passe à "payé"
+if (paid) {
+    data.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
+    data.paidAt = firebase.firestore.FieldValue.serverTimestamp();
+}
+
 saveDocument('ventes', data, function() { 
 closeModal(); 
 loadVentes(); 
@@ -2150,21 +2160,243 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
 }
 }
 
+// ✅ MODIFIÉ : Paiement DIRECT dans Admin Ventes (ne redirige plus vers le POS)
 async function payerVente(did) {
-if (!confirm('Payer cette vente ? Redirection vers le POS...')) return;
-var dc = await db.collection('ventes').doc(did).get();
-if (!dc.exists) { alert('Introuvable'); return; }
-var d = dc.data();
-localStorage.setItem('posPayerVente', JSON.stringify({
-venteId: did,
-clientId: d.clientId,
-clientName: d.clientName,
-items: d.items,
-total: d.total,
-table: d.table || ''
-}));
-navigateTo('pos');
+    var dc = await db.collection('ventes').doc(did).get();
+    if (!dc.exists) { alert('Vente introuvable'); return; }
+    var d = dc.data();
+    d.id = did;
+
+    if (d.paid) {
+        alert('✅ Cette vente est déjà payée.');
+        return;
+    }
+
+    var totalVente = d.total || 0;
+    var dejaPaye = d.amountGiven || 0;
+    var restant = (d.remainingAmount != null) ? d.remainingAmount : (totalVente - dejaPaye);
+    if (restant < 0) restant = 0;
+
+    if (restant <= 0.01) {
+        alert('✅ Cette vente est déjà entièrement payée.');
+        return;
+    }
+
+    var modalHtml = `
+        <div style="padding:10px;">
+            <h4 style="margin-bottom:16px;font-size:1.2rem;color:var(--text-primary);">
+                💰 Encaisser le paiement
+            </h4>
+            <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px;margin-bottom:16px;border:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Facture</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(d.factureNum || 'N/A')}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Client</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(d.clientName || 'Passager')}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Total</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${totalVente.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
+                    <span style="color:var(--text-secondary);">Déjà payé</span>
+                    <span style="font-weight:600;color:var(--success);">${dejaPaye.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1.1rem;font-weight:700;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
+                    <span style="color:var(--text-secondary);">Reste à payer</span>
+                    <span style="color:var(--danger);font-size:1.3rem;">${restant.toFixed(2)} MAD</span>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                    Montant à encaisser (MAD)
+                </label>
+                <input type="number" id="ventePaymentAmount" value="${restant.toFixed(2)}"
+                    step="0.01" min="0.01" max="${restant}"
+                    style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:var(--radius);font-size:1.3rem;font-weight:700;background:var(--bg-card);color:var(--text-primary);">
+                <div style="margin-top:4px;font-size:0.8rem;color:var(--text-muted);">
+                    💡 Montant maximum : ${restant.toFixed(2)} MAD
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                <button onclick="closeModal()" class="btn-cancel" style="padding:10px 24px;border-radius:var(--radius);border:none;background:var(--gray-100);color:var(--text-secondary);font-weight:600;cursor:pointer;font-size:0.9rem;">
+                    Annuler
+                </button>
+                <button onclick="confirmVentePayment('${did}')" class="btn-save" style="padding:10px 24px;border-radius:var(--radius);border:none;background:var(--success);color:white;font-weight:600;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-check"></i> Encaisser
+                </button>
+            </div>
+        </div>
+    `;
+
+    openModal('💰 Encaisser le paiement', modalHtml);
 }
+
+// ✅ NOUVELLE FONCTION : Valide le paiement d'une vente (sans créer de nouvelle vente)
+// Met à jour la MÊME vente + enregistre datePaiement + synchronise le crédit
+async function confirmVentePayment(venteId) {
+    var amountInput = document.getElementById('ventePaymentAmount');
+    if (!amountInput) {
+        alert('Erreur: champ de montant introuvable');
+        return;
+    }
+
+    var montant = parseFloat(amountInput.value);
+    if (isNaN(montant) || montant <= 0) {
+        alert('❌ Veuillez entrer un montant valide');
+        return;
+    }
+
+    // Récupérer la vente existante
+    var dc = await db.collection('ventes').doc(venteId).get();
+    if (!dc.exists) {
+        alert('Vente introuvable');
+        return;
+    }
+    var vente = dc.data();
+    vente.id = venteId;
+
+    var totalVente = vente.total || 0;
+    var ancienPaye = vente.amountGiven || 0;
+    var ancienRestant = (vente.remainingAmount != null) ? vente.remainingAmount : (totalVente - ancienPaye);
+
+    if (montant > ancienRestant + 0.01) {
+        alert('❌ Le montant ne peut pas dépasser le reste à payer (' + ancienRestant.toFixed(2) + ' MAD)');
+        return;
+    }
+
+    var nouveauPaye = ancienPaye + montant;
+    var nouveauRestant = Math.max(0, ancienRestant - montant);
+    var estPaye = nouveauRestant <= 0.01;
+
+    var now = firebase.firestore.FieldValue.serverTimestamp();
+
+    // Construire les données de mise à jour
+    var updateData = {
+        amountGiven: nouveauPaye,
+        remainingAmount: nouveauRestant,
+        paid: estPaye,
+        statutPaiement: estPaye ? 'payé' : 'partiel',
+        change: Math.max(0, nouveauPaye - totalVente),
+        updatedAt: now
+    };
+
+    // Ajouter la date de paiement UNIQUEMENT quand la vente est soldée
+    if (estPaye) {
+        updateData.datePaiement = now;
+        updateData.paidAt = now;
+    }
+
+    try {
+        // Mise à jour de la MÊME vente (pas de nouvelle vente créée)
+        await db.collection('ventes').doc(venteId).update(updateData);
+        console.log('✅ Vente mise à jour :', venteId, '→ statut:', updateData.statutPaiement);
+
+        // B1 : Synchroniser aussi le crédit correspondant (même factureNum)
+        if (vente.factureNum) {
+            var creditsSnap = await db.collection('credits')
+                .where('factureNum', '==', vente.factureNum)
+                .limit(5)
+                .get();
+
+            if (!creditsSnap.empty) {
+                for (var i = 0; i < creditsSnap.docs.length; i++) {
+                    var cDoc = creditsSnap.docs[i];
+                    var cData = cDoc.data();
+                    if (cData.paid) continue;
+
+                    var creditRestant = (cData.remainingAmount != null) ? cData.remainingAmount : (cData.total || 0);
+                    var creditAncienPaye = cData.amountGiven || 0;
+
+                    var creditNouveauPaye = creditAncienPaye + montant;
+                    var creditNouveauRestant = Math.max(0, creditRestant - montant);
+                    var creditEstPaye = creditNouveauRestant <= 0.01;
+
+                    var creditUpdate = {
+                        amountGiven: creditNouveauPaye,
+                        remainingAmount: creditNouveauRestant,
+                        paid: creditEstPaye,
+                        updatedAt: now
+                    };
+                    if (creditEstPaye) {
+                        creditUpdate.datePaiement = now;
+                        creditUpdate.paidAt = now;
+                    }
+
+                    await db.collection('credits').doc(cDoc.id).update(creditUpdate);
+                    console.log('✅ Crédit mis à jour :', cDoc.id);
+
+                    // Cache local crédits
+                    if (window.allCreditsData) {
+                        var cIdx = window.allCreditsData.findIndex(function(c) { return c.id === cDoc.id; });
+                        if (cIdx !== -1) {
+                            Object.assign(window.allCreditsData[cIdx], creditUpdate);
+                        }
+                    }
+                    if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+                        try {
+                            var updatedCredit = Object.assign({}, cData, creditUpdate);
+                            updatedCredit.id = cDoc.id;
+                            await CacheDB.set('credits', cDoc.id, updatedCredit);
+                        } catch(e) {}
+                    }
+                }
+            }
+        }
+
+        // Cache local ventes
+        if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+            try {
+                var updatedVente = Object.assign({}, vente, updateData);
+                updatedVente.id = venteId;
+                await CacheDB.set('ventes', venteId, updatedVente);
+            } catch(e) {}
+        }
+
+        // Mémoire locale
+        if (window.allVentesData) {
+            var idx = window.allVentesData.findIndex(function(v) { return v.id === venteId; });
+            if (idx !== -1) {
+                Object.assign(window.allVentesData[idx], updateData);
+            }
+        }
+
+        if (window.filteredVentes) {
+            var fIdx = window.filteredVentes.findIndex(function(v) { return v.id === venteId; });
+            if (fIdx !== -1) {
+                Object.assign(window.filteredVentes[fIdx], updateData);
+            }
+        }
+
+        closeModal();
+
+        // Rafraîchir UI
+        if (typeof updateVentesStats === 'function') {
+            updateVentesStats(window.filteredVentes || window.allVentesData);
+        }
+        if (typeof renderVentesTablePro === 'function') {
+            renderVentesTablePro();
+        }
+
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('ventes');
+            CacheDB.saveCollection('credits');
+        }
+
+        if (estPaye) {
+            alert('✅ Vente entièrement payée ! Date de paiement enregistrée.');
+        } else {
+            alert('✅ Paiement partiel enregistré. Reste à payer : ' + nouveauRestant.toFixed(2) + ' MAD');
+        }
+
+    } catch(e) {
+        console.error('❌ Erreur paiement vente:', e);
+        alert('❌ Erreur lors du paiement: ' + e.message);
+    }
+}
+window.confirmVentePayment = confirmVentePayment;
 
 function printFacture(did) {
 db.collection('ventes').doc(did).get().then(function(dc) {
@@ -2465,6 +2697,22 @@ function renderFactureDetails(data) {
     var statusBg = statutPaiement === 'payé' ? '#ECFDF5' : statutPaiement === 'crédit' ? '#FEF3C7' : '#FEE2E2';
     var statusColor = statutPaiement === 'payé' ? '#065F46' : statutPaiement === 'crédit' ? '#92400E' : '#991B1B';
     
+    // ✅ Date de paiement
+    var datePaiementHtml = '';
+    if (data.datePaiement && data.datePaiement.seconds) {
+        var dP = new Date(data.datePaiement.seconds * 1000);
+        var dPDate = dP.toLocaleDateString('fr-FR');
+        var dPTime = dP.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        datePaiementHtml = `
+            <div style="background:#ECFDF5;border-radius:var(--radius);padding:14px 18px;border:1px solid #99F6E4;margin-bottom:20px;">
+                <p style="font-size:0.8rem;font-weight:600;color:#065F46;text-transform:uppercase;margin:0 0 6px 0;">✅ Date de paiement</p>
+                <p style="font-size:1.2rem;font-weight:600;color:#0F172A;margin:0;">
+                    <i class="far fa-calendar-check"></i> ${dPDate} à ${dPTime}
+                </p>
+            </div>
+        `;
+    }
+    
     var html = `
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--border);">
             <div>
@@ -2477,6 +2725,8 @@ function renderFactureDetails(data) {
                 ${statutPaiement || 'N/A'}
             </span>
         </div>
+        
+        ${datePaiementHtml}
         
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
             <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px 18px;border:1px solid var(--border);">
@@ -2625,6 +2875,7 @@ async function payerVentesSelectionnees() {
     try {
         var batch = db.batch();
         var batchCount = 0;
+        var now = firebase.firestore.FieldValue.serverTimestamp();
 
         for (var i = 0; i < ventesAPayer.length; i++) {
             var vente = ventesAPayer[i];
@@ -2636,7 +2887,8 @@ async function payerVentesSelectionnees() {
                 remainingAmount: 0,
                 amountGiven: vente.total || 0,
                 change: 0,
-                paidAt: firebase.firestore.FieldValue.serverTimestamp(),
+                datePaiement: now,
+                paidAt: now,
                 paidBy: window.currentUserData
                     ? (window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom)
                     : 'Admin',
@@ -2667,13 +2919,20 @@ async function payerVentesSelectionnees() {
                 if (!creditsSnap.empty) {
                     var batch2 = db.batch();
                     creditsSnap.forEach(function(doc) {
-                        batch2.delete(doc.ref);
+                        batch2.update(doc.ref, {
+                            paid: true,
+                            remainingAmount: 0,
+                            amountGiven: doc.data().total || 0,
+                            datePaiement: now,
+                            paidAt: now,
+                            updatedAt: now
+                        });
                     });
                     await batch2.commit();
-                    console.log('🗑️ Crédit supprimé pour facture:', vente2.factureNum);
+                    console.log('✅ Crédit(s) marqué(s) payé(s) pour facture:', vente2.factureNum);
                 }
             } catch(e) {
-                console.warn('⚠️ Erreur suppression crédit:', e);
+                console.warn('⚠️ Erreur mise à jour crédit:', e);
             }
         }
 
@@ -2812,7 +3071,6 @@ window.creerFacturePaiementVentes = creerFacturePaiementVentes;
 
 // ============================================================
 // 📱 AFFICHER LE MODAL WHATSAPP AVEC TOUS LES DÉTAILS
-// ✅ Contient : toutes les factures ID + produits + sous-totaux + total général
 // ============================================================
 async function posAfficherOptionWhatsAppPaiementVentes(factureData, ventesDetaillees) {
     try {
@@ -3080,6 +3338,7 @@ window.editVente = editVente;
 window.saveEditVente = saveEditVente;
 window.deleteVente = deleteVente;
 window.payerVente = payerVente;
+window.confirmVentePayment = confirmVentePayment;
 window.printFacture = printFacture;
 window.imprimerFacture = imprimerFacture;
 window.sendWhatsApp = sendWhatsApp;
@@ -3141,3 +3400,6 @@ console.log('✅ Articles et Options visibles pour tout le monde');
 console.log('✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé');
 console.log('✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général');
 console.log('✅ 🎨 NOUVEAU : Design MODERNE identique à admin-credits');
+console.log('✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (pas de redirection POS)');
+console.log('✅ 📅 NOUVEAU : Enregistrement automatique de la date de paiement (datePaiement)');
+console.log('✅ 🔄 NOUVEAU : Synchronisation vente ↔ crédit (B1)');
