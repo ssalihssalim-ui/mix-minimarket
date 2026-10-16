@@ -184,12 +184,12 @@ var numberMap = {
     // ============================================================
     // 4 — Rbaa / Quatre / Four
     // ============================================================
-    'rbaa': 4, 'rba': 4, 'rebae': 4, 'rebah': 4, 'rabah': 4, 'raba': 4,
+    'rbaa': 4, 'rba': 4, 'rebae': 4, 'rebah': 4, 'rebbah': 4, 'rabah': 4, 'rabbah': 4, 'raba': 4,
     'reb3a': 4, 'rba3a': 4, 'rebaa': 4, 'rbaa': 4, 'arabe': 4,
     'quatre': 4, 'quat': 4, 'katr': 4, 'kat': 4, 'catre': 4, 'katre': 4,
     'katra': 4, 'quatre': 4, 'katt': 4,
     'arba': 4, 'abba': 4, 'alba': 4, 'abat': 4, 'arbas': 4,
-    'rabat': 4, 'rabats': 4, 'rebot': 4, 'reba': 4, 'rebat': 4,
+    'rabat': 4, 'rabats': 4, 'rebot': 4, 'reba': 4, 'rebat': 4, '@': 4,
     'four': 4, 'for': 4, 'fore': 4, 'forr': 4, 'fo': 4,
 
     // ============================================================
@@ -205,14 +205,14 @@ var numberMap = {
     // 6 — Sitta / Six / Six
     // ============================================================
     'sitta': 6, 'sita': 6, 'sitte': 6, 'setta': 6, 'sithe': 6,
-    'settah': 6, 'sittah': 6, 'setta': 6, 'sitta': 6,
+    'settah': 6, 'sittah': 6, 'setta': 6, 'sitta': 6, 'tiens': 6, 'caio': 6,
     'six': 6, 'sis': 6, 'siss': 6, 'siks': 6, 'sick': 6, 'sik': 6,
 
     // ============================================================
     // 7 — Sbaa / Sept / Seven
     // ============================================================
     'sbaa': 7, 'sba': 7, 'seba': 7, 'sebaa': 7, 'sabaa': 7, 'sb3a': 7,
-    'seb3a': 7, 'sab3a': 7, 'sba3a': 7,
+    'seb3a': 7, 'sab3a': 7, 'sba3a': 7, 'se barre': 7, 'ce bar': 7, 'barre': 7, 'c est barre': 7,   
     'sept': 7, 'sette': 7, 'set': 7, 'sebt': 7, 'say': 7, 'sette': 7,
     'seven': 7, 'sevn': 7, 'sevan': 7, 'seveun': 7, 'sevene': 7,
 
