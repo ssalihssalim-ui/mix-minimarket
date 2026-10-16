@@ -1,8 +1,6 @@
 // ==================== STATISTIQUES.JS - E-SOLUTION POS ====================
-// Version FINALE v4.0 — Filtres avancés + Analytics pro + Stats générales
-// ✅ Filtres : Date début/fin, Client, Produit, Catégorie, Vendeur
-// ✅ Analytics : RFM, Aging, DSO, Prévisions, Heatmap, Top vendeurs, Alertes
-// ✅ Statistiques générales : vue globale all-time
+// Version FINALE v5.0 — Filtres + Analytics + Stats générales + EXPORT PDF
+// ✅ Ajout : Imprimer + Export PDF + Export CSV + CSS Print
 
 var statsCharts = {};
 var statsAdvancedCharts = {};
@@ -22,7 +20,7 @@ window.statsFilters = window.statsFilters || {
 };
 
 // ============================================================
-// 🏠 PAGE PRINCIPALE AVEC FILTRES
+// 🏠 PAGE PRINCIPALE AVEC FILTRES + BOUTONS EXPORT
 // ============================================================
 function loadStatistiquesPage(c) {
     if (!window.currentUserData || window.currentUserData.userData.role !== 'admin') {
@@ -30,15 +28,27 @@ function loadStatistiquesPage(c) {
         return;
     }
 
+    statsInjectPrintStyles();
+
     var html = `
-    <div class="content-card" style="margin-bottom:15px;">
+    <div class="content-card" style="margin-bottom:15px;" id="statsHeaderCard">
         <div class="card-header" style="flex-wrap:wrap; gap:12px;">
             <h3><i class="fas fa-chart-bar"></i> Tableau de bord - Statistiques E-SOLUTION</h3>
-            <button class="btn-add" onclick="loadStatistiques()"><i class="fas fa-sync"></i> Actualiser</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-add" onclick="loadStatistiques()" style="background:#0F766E;">
+                    <i class="fas fa-sync"></i> Actualiser
+                </button>
+                <button class="btn-add" onclick="statsPrintPage()" style="background:#4F46E5;" title="Imprimer la page">
+                    <i class="fas fa-print"></i> Imprimer
+                </button>
+                <button class="btn-add" onclick="statsExportPDF()" style="background:#DC2626;" title="Télécharger un PDF">
+                    <i class="fas fa-file-pdf"></i> Exporter PDF
+                </button>
+            </div>
         </div>
 
         <!-- 🎛️ PANNEAU DE FILTRES AVANCÉS -->
-        <div style="margin-top:16px; padding:16px; background:linear-gradient(135deg,#F8FAFC,#F1F5F9); border-radius:12px; border:1px solid #E2E8F0;">
+        <div style="margin-top:16px; padding:16px; background:linear-gradient(135deg,#F8FAFC,#F1F5F9); border-radius:12px; border:1px solid #E2E8F0;" class="no-print">
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
                 <i class="fas fa-filter" style="color:#0F766E;"></i>
                 <strong style="color:#0F172A; font-size:0.95rem;">Filtres avancés</strong>
@@ -48,7 +58,6 @@ function loadStatistiquesPage(c) {
             </div>
 
             <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;">
-
                 <div>
                     <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">📅 Période</label>
                     <select id="statPeriodSelect" onchange="statsApplyPeriodFilter(this.value)" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
@@ -61,45 +70,38 @@ function loadStatistiquesPage(c) {
                         <option value="custom">📆 Personnalisé</option>
                     </select>
                 </div>
-
                 <div>
                     <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">Du</label>
                     <input type="date" id="statDateDebut" onchange="statsApplyDateRange()" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
                 </div>
-
                 <div>
                     <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">Au</label>
                     <input type="date" id="statDateFin" onchange="statsApplyDateRange()" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
                 </div>
-
                 <div>
                     <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">👤 Client</label>
                     <select id="statClientSelect" onchange="statsApplySimpleFilter('clientId', this.value, this.options[this.selectedIndex].text)" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
                         <option value="">Tous les clients</option>
                     </select>
                 </div>
-
                 <div>
                     <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">📦 Produit</label>
                     <select id="statProductSelect" onchange="statsApplySimpleFilter('productName', this.value, '')" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
                         <option value="">Tous les produits</option>
                     </select>
                 </div>
-
                 <div>
                     <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">🏷️ Catégorie</label>
                     <select id="statCategorySelect" onchange="statsApplySimpleFilter('category', this.value, '')" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
                         <option value="">Toutes les catégories</option>
                     </select>
                 </div>
-
                 <div>
                     <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">🧑‍💼 Vendeur</label>
                     <select id="statVendeurSelect" onchange="statsApplySimpleFilter('vendeur', this.value, '')" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
                         <option value="">Tous les vendeurs</option>
                     </select>
                 </div>
-
             </div>
 
             <div id="statsActiveFilters" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;"></div>
@@ -116,6 +118,199 @@ function loadStatistiquesPage(c) {
     statsLoadFilterOptions().then(function() {
         loadStatistiques();
     });
+}
+
+// ============================================================
+// 🖨️ CSS POUR IMPRESSION
+// ============================================================
+function statsInjectPrintStyles() {
+    if (document.getElementById('statsPrintStyles')) return;
+    var style = document.createElement('style');
+    style.id = 'statsPrintStyles';
+    style.textContent = `
+        @media print {
+            body * { visibility: hidden; }
+            #statsContent, #statsContent * { visibility: visible; }
+            #statsContent { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print, button, .btn-add, .btn-cancel, .btn-save { display: none !important; }
+            .content-card { box-shadow: none !important; border: 1px solid #E2E8F0 !important; page-break-inside: avoid; }
+            .stat-card { page-break-inside: avoid; }
+            canvas { max-width: 100% !important; }
+            table { page-break-inside: auto; font-size: 10px !important; }
+            tr { page-break-inside: avoid; }
+            @page { margin: 10mm; size: A4; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ============================================================
+// 🖨️ IMPRIMER
+// ============================================================
+function statsPrintPage() {
+    window.print();
+}
+
+// ============================================================
+// 📄 EXPORT PDF (avec html2pdf.js)
+// ============================================================
+async function statsExportPDF() {
+    if (typeof html2pdf === 'undefined') {
+        alert('❌ Librairie PDF non chargée. Ajoutez :\n<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"><\/script>\ndans index.html');
+        return;
+    }
+
+    var statsContent = document.getElementById('statsContent');
+    if (!statsContent) {
+        alert('❌ Contenu des statistiques introuvable.');
+        return;
+    }
+
+    // 🔄 Afficher un loader
+    var btn = event && event.target ? event.target.closest('button') : null;
+    var originalHTML = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+        btn.disabled = true;
+    }
+
+    try {
+        // 📋 Construire un conteneur propre pour le PDF
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        var userInfo = window.currentUserData ? window.currentUserData.userData : {};
+        var userName = ((userInfo.prenom || '') + ' ' + (userInfo.nom || '')).trim() || 'Administrateur';
+
+        var filters = window.statsFilters || {};
+        var filterLabels = [];
+        if (filters.period && filters.period !== '7') {
+            var labels = { '1': 'Aujourd\'hui', '30': '30 derniers jours', '90': '3 mois', '365': '1 an', 'all': 'Tout' };
+            filterLabels.push(labels[filters.period] || filters.period);
+        } else if (filters.period === '7') {
+            filterLabels.push('7 derniers jours');
+        }
+        if (filters.dateDebut || filters.dateFin) {
+            filterLabels.push('Du ' + (filters.dateDebut || '...') + ' au ' + (filters.dateFin || '...'));
+        }
+        if (filters.clientName) filterLabels.push('Client : ' + filters.clientName);
+        if (filters.productName) filterLabels.push('Produit : ' + filters.productName);
+        if (filters.category) filterLabels.push('Catégorie : ' + filters.category);
+        if (filters.vendeur) filterLabels.push('Vendeur : ' + filters.vendeur);
+
+        var filterStr = filterLabels.length > 0 ? filterLabels.join(' • ') : 'Aucun filtre';
+
+        // Clone du contenu pour ne pas affecter le DOM
+        var clone = statsContent.cloneNode(true);
+
+        // Supprimer les canvas (remplacés par des placeholders "graphique non inclus dans PDF")
+        clone.querySelectorAll('canvas').forEach(function(canvas) {
+            var placeholder = document.createElement('div');
+            placeholder.style.cssText = 'padding:20px; text-align:center; color:#94a3b8; font-size:0.85rem; background:#F8FAFC; border-radius:8px; font-style:italic;';
+            placeholder.textContent = '[ Graphique — voir l\'application en ligne ]';
+            canvas.parentNode.replaceChild(placeholder, canvas);
+        });
+
+        // Conteneur final
+        var wrapper = document.createElement('div');
+        wrapper.style.cssText = 'padding:20px; background:#fff; font-family:Inter,Arial,sans-serif; color:#0F172A; width:100%;';
+
+        // En-tête du rapport
+        var header = document.createElement('div');
+        header.style.cssText = 'border-bottom:3px solid #0F766E; padding-bottom:14px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;';
+        header.innerHTML = `
+            <div>
+                <div style="font-size:24px; font-weight:800; color:#0F766E; letter-spacing:-0.5px;">
+                    E-SOLUTION <span style="color:#14B8A6;">POS</span>
+                </div>
+                <div style="font-size:16px; font-weight:600; color:#334155; margin-top:4px;">
+                    📊 Rapport statistiques
+                </div>
+                <div style="font-size:11px; color:#64748B; margin-top:6px;">
+                    <strong>Généré par :</strong> ${userName}<br>
+                    <strong>Date :</strong> ${dateStr}<br>
+                    <strong>Filtres :</strong> ${filterStr}
+                </div>
+            </div>
+            <div style="text-align:right; font-size:10px; color:#94A3B8;">
+                Rapport confidentiel<br>
+                Document interne
+            </div>
+        `;
+        wrapper.appendChild(header);
+
+        // Contenu cloné
+        wrapper.appendChild(clone);
+
+        // Pied de page
+        var footer = document.createElement('div');
+        footer.style.cssText = 'margin-top:30px; padding-top:14px; border-top:2px solid #E2E8F0; text-align:center; font-size:10px; color:#94A3B8;';
+        footer.innerHTML = 'E-SOLUTION POS — Rapport généré automatiquement le ' + dateStr + '<br>Page <span class="pageNumber"></span> / <span class="totalPages"></span>';
+        wrapper.appendChild(footer);
+
+        // Nom du fichier
+        var fileName = 'E-SOLUTION_Rapport_Stats_' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + '_' + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + '.pdf';
+
+        // Options html2pdf
+        var opt = {
+            margin: [10, 8, 12, 8],
+            filename: fileName,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                letterRendering: true,
+                logging: false
+            },
+            jsPDF: {
+                unit: 'mm',
+                format: 'a4',
+                orientation: 'portrait'
+            },
+            pagebreak: { mode: ['css', 'legacy'], avoid: ['.stat-card', '.content-card', 'tr'] }
+        };
+
+        await html2pdf().set(opt).from(wrapper).save();
+
+    } catch (e) {
+        console.error('Erreur export PDF :', e);
+        alert('❌ Erreur lors de la génération PDF : ' + (e.message || e));
+    } finally {
+        if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+    }
+}
+
+// ============================================================
+// 📥 EXPORT CSV GÉNÉRIQUE (bonus)
+// ============================================================
+function statsExportCSV(filename, rows) {
+    if (!rows || rows.length === 0) {
+        alert('⚠️ Aucune donnée à exporter.');
+        return;
+    }
+    var csv = rows.map(function(row) {
+        return row.map(function(cell) {
+            var s = (cell === null || cell === undefined) ? '' : String(cell);
+            if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+                return '"' + s.replace(/"/g, '""') + '"';
+            }
+            return s;
+        }).join(',');
+    }).join('\n');
+
+    // BOM UTF-8 pour Excel
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 // ============================================================
@@ -149,27 +344,20 @@ function statsSafeNum(v) {
 }
 
 // ============================================================
-// 🔬 HELPERS DATA SCIENCE
+// 🔬 HELPERS DATA SCIENCE (inchangés)
 // ============================================================
 function statsLinearRegression(points) {
     if (!points || points.length < 2) return { slope: 0, intercept: 0, predict: function() { return 0; } };
-    var n = points.length;
-    var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    var n = points.length, sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
     for (var i = 0; i < n; i++) {
-        sumX += points[i].x;
-        sumY += points[i].y;
-        sumXY += points[i].x * points[i].y;
-        sumX2 += points[i].x * points[i].x;
+        sumX += points[i].x; sumY += points[i].y;
+        sumXY += points[i].x * points[i].y; sumX2 += points[i].x * points[i].x;
     }
     var denom = (n * sumX2 - sumX * sumX);
     if (denom === 0) return { slope: 0, intercept: sumY / n, predict: function() { return sumY / n; } };
     var slope = (n * sumXY - sumX * sumY) / denom;
     var intercept = (sumY - slope * sumX) / n;
-    return {
-        slope: slope,
-        intercept: intercept,
-        predict: function(x) { return slope * x + intercept; }
-    };
+    return { slope: slope, intercept: intercept, predict: function(x) { return slope * x + intercept; } };
 }
 
 function statsForecastEndOfMonth(dailySalesMap) {
@@ -181,14 +369,7 @@ function statsForecastEndOfMonth(dailySalesMap) {
     var dayOfMonth = now.getDate();
     var daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     var avgPerDay = dayOfMonth > 0 ? totalSoFar / dayOfMonth : 0;
-    return {
-        current: totalSoFar,
-        projected: avgPerDay * daysInMonth,
-        avgPerDay: avgPerDay,
-        daysLeft: daysInMonth - dayOfMonth,
-        daysInMonth: daysInMonth,
-        dayOfMonth: dayOfMonth
-    };
+    return { current: totalSoFar, projected: avgPerDay * daysInMonth, avgPerDay: avgPerDay, daysLeft: daysInMonth - dayOfMonth, daysInMonth: daysInMonth, dayOfMonth: dayOfMonth };
 }
 
 function statsCalculateRFM(ventes, credits) {
@@ -200,14 +381,7 @@ function statsCalculateRFM(ventes, credits) {
         var cid = doc.clientId || doc.clientName || null;
         if (!cid) return;
         if (!clientsMap[cid]) {
-            clientsMap[cid] = {
-                id: cid,
-                name: doc.clientName || 'Client inconnu',
-                lastPurchase: 0,
-                frequency: 0,
-                monetary: 0,
-                firstPurchase: now
-            };
+            clientsMap[cid] = { id: cid, name: doc.clientName || 'Client inconnu', lastPurchase: 0, frequency: 0, monetary: 0, firstPurchase: now };
         }
         var c = clientsMap[cid];
         var d = toDate(doc.createdAt);
@@ -217,7 +391,6 @@ function statsCalculateRFM(ventes, credits) {
         c.frequency += 1;
         c.monetary += statsSafeNum(doc.total);
     }
-
     ventes.forEach(processDoc);
     credits.forEach(processDoc);
 
@@ -226,11 +399,9 @@ function statsCalculateRFM(ventes, credits) {
         var c = clientsMap[k];
         var recencyDays = c.lastPurchase > 0 ? Math.floor((now - c.lastPurchase) / MS_DAY) : 999;
         var ageDays = Math.floor((now - c.firstPurchase) / MS_DAY);
-
         var r = recencyDays <= 7 ? 5 : recencyDays <= 30 ? 4 : recencyDays <= 60 ? 3 : recencyDays <= 120 ? 2 : 1;
         var f = c.frequency >= 20 ? 5 : c.frequency >= 10 ? 4 : c.frequency >= 5 ? 3 : c.frequency >= 2 ? 2 : 1;
         var m = c.monetary >= 5000 ? 5 : c.monetary >= 2000 ? 4 : c.monetary >= 1000 ? 3 : c.monetary >= 500 ? 2 : 1;
-
         var segment = 'Perdu';
         if (r >= 4 && f >= 4 && m >= 4) segment = 'Champion';
         else if (r >= 3 && f >= 3 && m >= 3) segment = 'Loyal';
@@ -238,36 +409,19 @@ function statsCalculateRFM(ventes, credits) {
         else if (r <= 2 && f >= 3) segment = 'Endormi';
         else if (r <= 1) segment = 'Perdu';
         else if (ageDays <= 30) segment = 'Nouveau';
-
-        clients.push({
-            id: c.id, name: c.name,
-            recency: recencyDays, frequency: c.frequency, monetary: c.monetary,
-            scoreR: r, scoreF: f, scoreM: m, segment: segment,
-            lastPurchase: c.lastPurchase
-        });
+        clients.push({ id: c.id, name: c.name, recency: recencyDays, frequency: c.frequency, monetary: c.monetary, scoreR: r, scoreF: f, scoreM: m, segment: segment, lastPurchase: c.lastPurchase });
     });
-
     clients.sort(function(a, b) { return b.monetary - a.monetary; });
-
     var segments = { 'Champion': 0, 'Loyal': 0, 'À risque': 0, 'Endormi': 0, 'Perdu': 0, 'Nouveau': 0 };
     clients.forEach(function(c) { segments[c.segment] = (segments[c.segment] || 0) + 1; });
-
     return { clients: clients, segments: segments };
 }
 
 function statsCalculateAging(credits) {
     var now = Date.now();
     var MS_DAY = 86400000;
-    var buckets = {
-        '0-30j': { count: 0, montant: 0 },
-        '31-60j': { count: 0, montant: 0 },
-        '61-90j': { count: 0, montant: 0 },
-        '90+j': { count: 0, montant: 0 }
-    };
-    var totalImpaye = 0;
-    var dsoSum = 0;
-    var dsoWeight = 0;
-
+    var buckets = { '0-30j': { count: 0, montant: 0 }, '31-60j': { count: 0, montant: 0 }, '61-90j': { count: 0, montant: 0 }, '90+j': { count: 0, montant: 0 } };
+    var totalImpaye = 0, dsoSum = 0, dsoWeight = 0;
     credits.forEach(function(c) {
         if (c.paid) return;
         var reste = statsSafeNum(c.remainingAmount || c.total);
@@ -281,24 +435,13 @@ function statsCalculateAging(credits) {
         dsoSum += age * reste;
         dsoWeight += reste;
     });
-
-    return {
-        buckets: buckets,
-        totalImpaye: totalImpaye,
-        dso: dsoWeight > 0 ? dsoSum / dsoWeight : 0
-    };
+    return { buckets: buckets, totalImpaye: totalImpaye, dso: dsoWeight > 0 ? dsoSum / dsoWeight : 0 };
 }
 
 function statsRecouvrement(credits) {
     var total = 0, paye = 0;
-    credits.forEach(function(c) {
-        total += statsSafeNum(c.total);
-        paye += statsSafeNum(c.amountGiven);
-    });
-    return {
-        total: total, paye: paye,
-        taux: total > 0 ? (paye / total * 100) : 0
-    };
+    credits.forEach(function(c) { total += statsSafeNum(c.total); paye += statsSafeNum(c.amountGiven); });
+    return { total: total, paye: paye, taux: total > 0 ? (paye / total * 100) : 0 };
 }
 
 function statsHeatmapHoraire(ventes) {
@@ -331,11 +474,8 @@ function statsBuildAlerts(stockItems, credits, produits, ventes) {
 
     stockItems.forEach(function(s) {
         var q = statsSafeNum(s.quantite);
-        if (q <= 0) {
-            alerts.push({ type: 'danger', icon: '❌', title: 'Rupture stock', text: s.nom + ' (' + (s.unite || '') + ')' });
-        } else if (q <= 5) {
-            alerts.push({ type: 'warning', icon: '⚠️', title: 'Stock faible', text: s.nom + ' : ' + q + ' ' + (s.unite || '') });
-        }
+        if (q <= 0) alerts.push({ type: 'danger', icon: '❌', title: 'Rupture stock', text: s.nom + ' (' + (s.unite || '') + ')' });
+        else if (q <= 5) alerts.push({ type: 'warning', icon: '⚠️', title: 'Stock faible', text: s.nom + ' : ' + q + ' ' + (s.unite || '') });
     });
 
     credits.forEach(function(c) {
@@ -345,12 +485,7 @@ function statsBuildAlerts(stockItems, credits, produits, ventes) {
         var age = Math.floor((now - created.getTime()) / MS_DAY);
         if (age >= 30) {
             var reste = statsSafeNum(c.remainingAmount || c.total);
-            alerts.push({
-                type: age >= 90 ? 'danger' : 'warning',
-                icon: '💳',
-                title: 'Crédit ' + age + 'j',
-                text: (c.clientName || 'Client') + ' : ' + reste.toFixed(2) + ' MAD'
-            });
+            alerts.push({ type: age >= 90 ? 'danger' : 'warning', icon: '💳', title: 'Crédit ' + age + 'j', text: (c.clientName || 'Client') + ' : ' + reste.toFixed(2) + ' MAD' });
         }
     });
 
@@ -373,14 +508,9 @@ function statsBuildAlerts(stockItems, credits, produits, ventes) {
     return alerts.slice(0, 15);
 }
 
-/**
- * 📊 Statistiques GÉNÉRALES all-time (vue globale sur toute la vie du commerce)
- */
 function statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, produits, stockItems, personnel) {
     var now = new Date();
     var MS_DAY = 86400000;
-
-    // CA total all-time
     var totalCA = allVentes.reduce(function(s, v) { return s + statsSafeNum(v.total); }, 0);
     var totalProfit = allVentes.reduce(function(s, v) {
         var p = 0;
@@ -394,11 +524,7 @@ function statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, prod
         return s + p;
     }, 0);
     var totalDepenses = allDepenses.reduce(function(s, d) { return s + statsSafeNum(d.montant); }, 0);
-
-    // Marge %
     var margePct = totalCA > 0 ? (totalProfit / totalCA * 100) : 0;
-
-    // CA par jour moyen (depuis 1ère vente)
     var premiereVente = null;
     allVentes.forEach(function(v) {
         var d = toDate(v.createdAt);
@@ -406,23 +532,11 @@ function statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, prod
     });
     var joursActivite = premiereVente ? Math.max(1, Math.floor((now - premiereVente) / MS_DAY)) : 1;
     var caParJour = totalCA / joursActivite;
-
-    // Panier moyen général
     var panierMoyen = allVentes.length > 0 ? totalCA / allVentes.length : 0;
-
-    // Coût stock / valeur
-    var valeurStock = stockItems.reduce(function(s, x) {
-        return s + statsSafeNum(x.prixAchat) * statsSafeNum(x.quantite);
-    }, 0);
-
-    // Salaires mensuels
+    var valeurStock = stockItems.reduce(function(s, x) { return s + statsSafeNum(x.prixAchat) * statsSafeNum(x.quantite); }, 0);
     var salairesMensuels = personnel.reduce(function(s, p) { return s + statsSafeNum(p.salaire); }, 0);
+    var creditsImpayes = allCredits.filter(function(c) { return !c.paid; }).reduce(function(s, c) { return s + statsSafeNum(c.remainingAmount || c.total); }, 0);
 
-    // Crédits impayés all-time
-    var creditsImpayes = allCredits.filter(function(c) { return !c.paid; })
-        .reduce(function(s, c) { return s + statsSafeNum(c.remainingAmount || c.total); }, 0);
-
-    // Meilleur jour, meilleur mois
     var parJour = {};
     allVentes.forEach(function(v) {
         var d = toDate(v.createdAt);
@@ -431,9 +545,7 @@ function statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, prod
         parJour[k] = (parJour[k] || 0) + statsSafeNum(v.total);
     });
     var meilleurJour = { date: '—', ca: 0 };
-    Object.keys(parJour).forEach(function(k) {
-        if (parJour[k] > meilleurJour.ca) meilleurJour = { date: k, ca: parJour[k] };
-    });
+    Object.keys(parJour).forEach(function(k) { if (parJour[k] > meilleurJour.ca) meilleurJour = { date: k, ca: parJour[k] }; });
 
     var parMois = {};
     allVentes.forEach(function(v) {
@@ -443,11 +555,8 @@ function statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, prod
         parMois[k] = (parMois[k] || 0) + statsSafeNum(v.total);
     });
     var meilleurMois = { mois: '—', ca: 0 };
-    Object.keys(parMois).forEach(function(k) {
-        if (parMois[k] > meilleurMois.ca) meilleurMois = { mois: k, ca: parMois[k] };
-    });
+    Object.keys(parMois).forEach(function(k) { if (parMois[k] > meilleurMois.ca) meilleurMois = { mois: k, ca: parMois[k] }; });
 
-    // Meilleur produit all-time
     var productTotals = {};
     allVentes.forEach(function(v) {
         if (!v.items) return;
@@ -457,44 +566,27 @@ function statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, prod
         });
     });
     var meilleurProduit = { nom: '—', qte: 0 };
-    Object.keys(productTotals).forEach(function(k) {
-        if (productTotals[k] > meilleurProduit.qte) meilleurProduit = { nom: k, qte: productTotals[k] };
-    });
+    Object.keys(productTotals).forEach(function(k) { if (productTotals[k] > meilleurProduit.qte) meilleurProduit = { nom: k, qte: productTotals[k] }; });
 
-    // Meilleur client all-time (par CA)
     var clientTotals = {};
     allVentes.forEach(function(v) {
         if (!v.clientName) return;
         clientTotals[v.clientName] = (clientTotals[v.clientName] || 0) + statsSafeNum(v.total);
     });
     var meilleurClient = { nom: '—', ca: 0 };
-    Object.keys(clientTotals).forEach(function(k) {
-        if (clientTotals[k] > meilleurClient.ca) meilleurClient = { nom: k, ca: clientTotals[k] };
-    });
+    Object.keys(clientTotals).forEach(function(k) { if (clientTotals[k] > meilleurClient.ca) meilleurClient = { nom: k, ca: clientTotals[k] }; });
 
     return {
-        totalCA: totalCA,
-        totalProfit: totalProfit,
-        totalDepenses: totalDepenses,
-        margePct: margePct,
-        joursActivite: joursActivite,
-        caParJour: caParJour,
-        panierMoyen: panierMoyen,
-        valeurStock: valeurStock,
-        salairesMensuels: salairesMensuels,
-        creditsImpayes: creditsImpayes,
-        nbVentes: allVentes.length,
-        nbClients: clients.length,
-        nbProduits: produits.length,
-        meilleurJour: meilleurJour,
-        meilleurMois: meilleurMois,
-        meilleurProduit: meilleurProduit,
-        meilleurClient: meilleurClient
+        totalCA: totalCA, totalProfit: totalProfit, totalDepenses: totalDepenses, margePct: margePct,
+        joursActivite: joursActivite, caParJour: caParJour, panierMoyen: panierMoyen,
+        valeurStock: valeurStock, salairesMensuels: salairesMensuels, creditsImpayes: creditsImpayes,
+        nbVentes: allVentes.length, nbClients: clients.length, nbProduits: produits.length,
+        meilleurJour: meilleurJour, meilleurMois: meilleurMois, meilleurProduit: meilleurProduit, meilleurClient: meilleurClient
     };
 }
 
 // ============================================================
-// 🎛️ GESTION DES FILTRES
+// 🎛️ GESTION DES FILTRES (inchangé)
 // ============================================================
 async function statsLoadFilterOptions() {
     try {
@@ -505,66 +597,48 @@ async function statsLoadFilterOptions() {
                 var data = d.data();
                 var nom = ((data.nom || '') + ' ' + (data.prenom || '')).trim() || data.username || 'Client';
                 var opt = document.createElement('option');
-                opt.value = d.id;
-                opt.textContent = nom;
+                opt.value = d.id; opt.textContent = nom;
                 clientSelect.appendChild(opt);
             });
         }
-
         var produitsSnap = await db.collection('products').limit(2000).get();
         var productSelect = document.getElementById('statProductSelect');
         if (productSelect) {
             var produits = [];
-            produitsSnap.forEach(function(d) {
-                var data = d.data();
-                if (data.nom) produits.push(data.nom);
-            });
+            produitsSnap.forEach(function(d) { var data = d.data(); if (data.nom) produits.push(data.nom); });
             produits.sort();
             produits.forEach(function(nom) {
                 var opt = document.createElement('option');
-                opt.value = nom;
-                opt.textContent = nom;
+                opt.value = nom; opt.textContent = nom;
                 productSelect.appendChild(opt);
             });
         }
-
         var catsSnap = await db.collection('categories').get();
         var catSelect = document.getElementById('statCategorySelect');
         if (catSelect) {
             var cats = [];
-            catsSnap.forEach(function(d) {
-                var nom = d.data().nom;
-                if (nom) cats.push(nom);
-            });
+            catsSnap.forEach(function(d) { var nom = d.data().nom; if (nom) cats.push(nom); });
             cats.sort();
             cats.forEach(function(nom) {
                 var opt = document.createElement('option');
-                opt.value = nom;
-                opt.textContent = nom;
+                opt.value = nom; opt.textContent = nom;
                 catSelect.appendChild(opt);
             });
         }
-
         var vendeurSelect = document.getElementById('statVendeurSelect');
         if (vendeurSelect) {
             var vendeurs = new Set();
             try {
                 var persSnap = await db.collection('personnel').get();
-                persSnap.forEach(function(d) {
-                    var nom = d.data().nom;
-                    if (nom) vendeurs.add(nom);
-                });
+                persSnap.forEach(function(d) { var nom = d.data().nom; if (nom) vendeurs.add(nom); });
             } catch(e) {}
             vendeurs.forEach(function(v) {
                 var opt = document.createElement('option');
-                opt.value = v;
-                opt.textContent = v;
+                opt.value = v; opt.textContent = v;
                 vendeurSelect.appendChild(opt);
             });
         }
-    } catch(e) {
-        console.error('Erreur chargement options filtres:', e);
-    }
+    } catch(e) { console.error('Erreur chargement options filtres:', e); }
 }
 
 function statsApplyPeriodFilter(value) {
@@ -602,10 +676,7 @@ function statsApplySimpleFilter(key, value, label) {
 }
 
 function statsResetFilters() {
-    window.statsFilters = {
-        period: '7', dateDebut: '', dateFin: '',
-        clientId: '', clientName: '', productName: '', category: '', vendeur: ''
-    };
+    window.statsFilters = { period: '7', dateDebut: '', dateFin: '', clientId: '', clientName: '', productName: '', category: '', vendeur: '' };
     var ids = ['statPeriodSelect', 'statDateDebut', 'statDateFin', 'statClientSelect', 'statProductSelect', 'statCategorySelect', 'statVendeurSelect'];
     ids.forEach(function(id) {
         var el = document.getElementById(id);
@@ -623,7 +694,6 @@ function statsRenderActiveFilters() {
     if (!container) return;
     var f = window.statsFilters || {};
     var badges = [];
-
     if (f.period && f.period !== '7' && f.period !== 'custom') {
         var labels = { '1':'Aujourd\'hui', '30':'30j', '90':'3 mois', '365':'1 an', 'all':'Tout' };
         badges.push('📅 ' + (labels[f.period] || f.period));
@@ -635,19 +705,17 @@ function statsRenderActiveFilters() {
     if (f.productName) badges.push('📦 ' + f.productName);
     if (f.category) badges.push('🏷️ ' + f.category);
     if (f.vendeur) badges.push('🧑‍💼 ' + f.vendeur);
-
     if (badges.length === 0) {
         container.innerHTML = '<span style="font-size:0.85rem; color:#94A3B8; font-style:italic;">Aucun filtre actif — affichage 7 derniers jours</span>';
         return;
     }
-
     container.innerHTML = badges.map(function(b) {
         return '<span style="padding:5px 12px; background:#0F766E15; color:#0F766E; border:1px solid #0F766E40; border-radius:20px; font-size:0.8rem; font-weight:600;">' + escapeHtml(b) + '</span>';
     }).join('');
 }
 
 // ============================================================
-// 🚀 FONCTION PRINCIPALE
+// 🚀 FONCTION PRINCIPALE (identique + exposition des données pour export)
 // ============================================================
 async function loadStatistiques() {
     Object.values(statsCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
@@ -675,7 +743,6 @@ async function loadStatistiques() {
             db.collection('settings').doc('fidelite').get()
         ]);
 
-        // Toutes les données (non filtrées)
         var allVentes = []; ventesSnap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allVentes.push(dd); });
         var allCredits = []; creditsSnap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allCredits.push(dd); });
         var allDepenses = []; depensesSnap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allDepenses.push(dd); });
@@ -688,14 +755,11 @@ async function loadStatistiques() {
         var personnel = []; personnelSnap.forEach(function(d) { personnel.push(Object.assign({ id: d.id }, d.data())); });
         var fideliteSettings = settingsSnap.exists ? settingsSnap.data() : { active: true, pointsParVente: 1 };
 
-        // 📊 STATISTIQUES GÉNÉRALES (all-time, indépendantes des filtres)
         var general = statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, produits, stockItems, personnel);
 
-        // 🎛️ Application des filtres
         var f = window.statsFilters || {};
         var now = new Date();
         var startDate = null, endDate = null;
-
         if (f.period === 'custom') {
             if (f.dateDebut) { startDate = new Date(f.dateDebut); startDate.setHours(0, 0, 0, 0); }
             if (f.dateFin) { endDate = new Date(f.dateFin); endDate.setHours(23, 59, 59, 999); }
@@ -712,23 +776,13 @@ async function loadStatistiques() {
             if (endDate && d > endDate) return false;
             return true;
         }
-
-        function matchesClient(doc) {
-            if (!f.clientId) return true;
-            return doc.clientId === f.clientId;
-        }
-
-        function matchesVendeur(doc) {
-            if (!f.vendeur) return true;
-            return doc.vendeur === f.vendeur;
-        }
-
+        function matchesClient(doc) { if (!f.clientId) return true; return doc.clientId === f.clientId; }
+        function matchesVendeur(doc) { if (!f.vendeur) return true; return doc.vendeur === f.vendeur; }
         function matchesProduct(doc) {
             if (!f.productName) return true;
             if (!doc.items) return false;
             return doc.items.some(function(it) { return it.nom === f.productName; });
         }
-
         function matchesCategory(doc) {
             if (!f.category) return true;
             if (!doc.items) return false;
@@ -740,21 +794,13 @@ async function loadStatistiques() {
             });
         }
 
-        var ventes = allVentes.filter(function(v) {
-            return inDateRange(v) && matchesClient(v) && matchesVendeur(v) && matchesProduct(v) && matchesCategory(v);
-        });
-
-        var credits = allCredits.filter(function(c) {
-            return inDateRange(c) && matchesClient(c);
-        });
-
+        var ventes = allVentes.filter(function(v) { return inDateRange(v) && matchesClient(v) && matchesVendeur(v) && matchesProduct(v) && matchesCategory(v); });
+        var credits = allCredits.filter(function(c) { return inDateRange(c) && matchesClient(c); });
         var depenses = allDepenses.filter(inDateRange);
-
         var commandes = allCommandes.filter(inDateRange);
 
         statsRenderActiveFilters();
 
-        // ============ KPIs FILTRÉS ============
         var totalVentes = ventes.reduce(function(s, v) { return s + statsSafeNum(v.total); }, 0);
         var totalProfit = ventes.reduce(function(s, v) {
             var profit = 0;
@@ -767,8 +813,7 @@ async function loadStatistiques() {
             return s + profit;
         }, 0);
         var totalDepenses = depenses.reduce(function(s, d) { return s + statsSafeNum(d.montant); }, 0);
-        var totalCreditsImpayes = credits.filter(function(c) { return !c.paid; })
-            .reduce(function(s, c) { return s + statsSafeNum(c.remainingAmount || c.total); }, 0);
+        var totalCreditsImpayes = credits.filter(function(c) { return !c.paid; }).reduce(function(s, c) { return s + statsSafeNum(c.remainingAmount || c.total); }, 0);
         var nbVentes = ventes.length;
         var panierMoyen = nbVentes > 0 ? totalVentes / nbVentes : 0;
         var nbClients = clients.length;
@@ -779,7 +824,6 @@ async function loadStatistiques() {
         var totalSalaires = personnel.reduce(function(s, p) { return s + statsSafeNum(p.salaire); }, 0);
         var pointsTotal = fideliteSettings.active ? clients.reduce(function(s, c) { return s + statsSafeNum(c.pointsFidelite); }, 0) : 0;
 
-        // Top produits
         var productSales = {};
         ventes.forEach(function(v) {
             if (v.items) v.items.forEach(function(it) {
@@ -789,7 +833,6 @@ async function loadStatistiques() {
         });
         var topProduits = Object.entries(productSales).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
 
-        // Top catégories
         var categoryCA = {};
         ventes.forEach(function(v) {
             if (v.items) v.items.forEach(function(it) {
@@ -800,14 +843,12 @@ async function loadStatistiques() {
         });
         var topCategories = Object.entries(categoryCA).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
 
-        // Paiements
         var paymentMethods = {};
         ventes.forEach(function(v) {
             var m = v.paymentMethod || 'espece';
             paymentMethods[m] = (paymentMethods[m] || 0) + 1;
         });
 
-        // Ventes quotidiennes
         var dailySales = {};
         var daysToShow = f.period === 'all' ? 30 : (f.period === 'custom' ? 30 : (parseInt(f.period) || 7));
         for (var i = daysToShow - 1; i >= 0; i--) {
@@ -823,21 +864,18 @@ async function loadStatistiques() {
             }
         });
 
-        // Dépenses par catégorie
         var depensesByCat = {};
         depenses.forEach(function(d) {
             var cat = d.categorie || 'Autre';
             depensesByCat[cat] = (depensesByCat[cat] || 0) + statsSafeNum(d.montant);
         });
 
-        // Crédits impayés par client
         var creditsImpayesParClient = {};
         credits.filter(function(c) { return !c.paid; }).forEach(function(c) {
             var client = c.clientName || 'Inconnu';
             creditsImpayesParClient[client] = (creditsImpayesParClient[client] || 0) + statsSafeNum(c.remainingAmount || c.total);
         });
 
-        // Modules avancés (sur données filtrées si filtre client/produit actif, sinon all)
         var useForAdvanced = (f.clientId || f.productName || f.category || f.vendeur) ? ventes : allVentes;
         var useCreditsForAdvanced = f.clientId ? credits : allCredits;
 
@@ -852,11 +890,10 @@ async function loadStatistiques() {
         // ============ RENDU HTML ============
         var statsHTML = '';
 
-        // 📊 SECTION STATISTIQUES GÉNÉRALES (toujours affichée, non filtrée)
+        // 🌍 SECTION STATISTIQUES GÉNÉRALES
         statsHTML += '<div style="margin-bottom:25px; padding:20px; background:linear-gradient(135deg,#0F766E,#14B8A6); border-radius:16px; color:#fff; box-shadow:0 8px 24px rgba(15,118,110,0.25);">';
         statsHTML += '<h3 style="margin:0 0 16px; display:flex; align-items:center; gap:10px; font-size:1.2rem;"><i class="fas fa-globe"></i> 🌍 STATISTIQUES GÉNÉRALES (All-time)</h3>';
         statsHTML += '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px;">';
-        
         var generalCards = [
             { label: 'CA total', value: general.totalCA.toFixed(2) + ' MAD', icon: '💰' },
             { label: 'Profit total', value: general.totalProfit.toFixed(2) + ' MAD', icon: '📈' },
@@ -879,7 +916,6 @@ async function loadStatistiques() {
         });
         statsHTML += '</div>';
 
-        // Records
         statsHTML += '<div style="margin-top:16px; padding:14px; background:rgba(255,255,255,0.1); border-radius:10px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; font-size:0.9rem;">';
         statsHTML += '<div>🏆 <strong>Meilleur jour :</strong> ' + escapeHtml(general.meilleurJour.date) + ' → ' + general.meilleurJour.ca.toFixed(2) + ' MAD</div>';
         statsHTML += '<div>📅 <strong>Meilleur mois :</strong> ' + escapeHtml(general.meilleurMois.mois) + ' → ' + general.meilleurMois.ca.toFixed(2) + ' MAD</div>';
@@ -905,7 +941,7 @@ async function loadStatistiques() {
         if (fideliteSettings.active) statsHTML += buildStatCard('Points fidélité', pointsTotal.toString(), 'fa-star', '#fef3c7', '#A67C52');
         statsHTML += '</div>';
 
-        // Section analytics
+        // Analytics avancés
         statsHTML += '<div style="margin:30px 0 15px; padding:12px 20px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border-radius:12px; color:#fff;">';
         statsHTML += '<h3 style="margin:0; display:flex; align-items:center; gap:10px; font-size:1.1rem;"><i class="fas fa-flask"></i> 🔬 ANALYTICS AVANCÉS (période filtrée)</h3>';
         statsHTML += '</div>';
@@ -917,7 +953,6 @@ async function loadStatistiques() {
         statsHTML += buildStatCard('Projection fin mois', forecast.projected.toFixed(2) + ' MAD', 'fa-chart-line', '#fce7f3', '#ec4899');
         statsHTML += '</div>';
 
-        // Alertes
         if (alerts.length > 0) {
             statsHTML += '<div class="content-card" style="margin-bottom:20px;">';
             statsHTML += '<h4 style="margin-bottom:12px; display:flex; align-items:center; gap:8px;"><i class="fas fa-bell" style="color:#d97706;"></i> Alertes intelligentes (' + alerts.length + ')</h4>';
@@ -974,7 +1009,6 @@ async function loadStatistiques() {
         });
         statsHTML += '</tbody></table></div>';
 
-        // Top vendeurs
         if (topVendeurs.length > 0) {
             statsHTML += '<div class="content-card" style="margin-bottom:20px;">';
             statsHTML += '<h4 style="margin-bottom:12px;"><i class="fas fa-user-tie" style="color:#0F766E;"></i> Top vendeurs</h4>';
@@ -1005,9 +1039,9 @@ async function loadStatistiques() {
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">🎯 Segments RFM</h4><canvas id="rfmChart" style="max-height:250px;"></canvas></div>';
         statsHTML += '</div>';
 
-        // Tables
+        // Tables avec boutons export CSV
         statsHTML += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">';
-        statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">🏆 Top 5 Produits (quantité vendue)</h4><table class="data-table"><thead><tr><th>Produit</th><th>Qté vendue</th></tr></thead><tbody>';
+        statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">🏆 Top 5 Produits <button onclick="statsExportCSVTopProduits()" class="no-print" style="padding:5px 12px; background:#10B981; color:#fff; border:none; border-radius:6px; font-size:0.75rem; cursor:pointer;"><i class="fas fa-download"></i> CSV</button></h4><table class="data-table"><thead><tr><th>Produit</th><th>Qté vendue</th></tr></thead><tbody>';
         if (topProduits.length > 0) {
             topProduits.forEach(function(p) { statsHTML += '<tr><td>' + escapeHtml(p[0]) + '</td><td>' + escapeHtml(p[1]) + '</td></tr>'; });
         } else {
@@ -1015,7 +1049,7 @@ async function loadStatistiques() {
         }
         statsHTML += '</tbody></table></div>';
 
-        statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">📋 Crédits impayés par client</h4><table class="data-table"><thead><tr><th>Client</th><th>Montant (MAD)</th></tr></thead><tbody>';
+        statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">📋 Crédits impayés <button onclick="statsExportCSVCredits()" class="no-print" style="padding:5px 12px; background:#10B981; color:#fff; border:none; border-radius:6px; font-size:0.75rem; cursor:pointer;"><i class="fas fa-download"></i> CSV</button></h4><table class="data-table"><thead><tr><th>Client</th><th>Montant (MAD)</th></tr></thead><tbody>';
         var creditsArray = Object.entries(creditsImpayesParClient).sort(function(a,b) { return b[1] - a[1]; });
         if (creditsArray.length > 0) {
             creditsArray.slice(0, 10).forEach(function(c) { statsHTML += '<tr><td>' + escapeHtml(c[0]) + '</td><td style="color:#ef4444;font-weight:600;">' + c[1].toFixed(2) + '</td></tr>'; });
@@ -1025,7 +1059,6 @@ async function loadStatistiques() {
         statsHTML += '</tbody></table></div>';
         statsHTML += '</div>';
 
-        // Effectif
         if (personnel.length > 0) {
             statsHTML += '<div class="content-card" style="margin-bottom:20px;"><h4 style="margin-bottom:10px;">👥 Effectif</h4><table class="data-table"><thead><tr><th>Rôle</th><th>Effectif</th><th>Total salaires</th></tr></thead><tbody>';
             var effectifParRole = {}, salaireParRole = {};
@@ -1042,7 +1075,17 @@ async function loadStatistiques() {
 
         statsContent.innerHTML = statsHTML;
 
-        // ============ RENDU DES GRAPHIQUES ============
+        // 💾 Sauvegarde des données pour export CSV
+        window._statsExportData = {
+            topProduits: topProduits,
+            creditsImpayes: creditsArray,
+            rfmClients: rfm.clients,
+            topVendeurs: topVendeurs,
+            ventes: ventes,
+            credits: credits
+        };
+
+        // Graphiques
         setTimeout(function() {
             if (typeof Chart === 'undefined') { console.warn('Chart.js non chargé'); return; }
             try {
@@ -1108,6 +1151,58 @@ async function loadStatistiques() {
     }
 }
 
+// ============================================================
+// 📥 EXPORT CSV — Fonctions spécifiques
+// ============================================================
+function statsExportCSVTopProduits() {
+    var d = window._statsExportData || {};
+    if (!d.topProduits || d.topProduits.length === 0) { alert('Aucune donnée'); return; }
+    var rows = [['Produit', 'Quantité vendue']];
+    d.topProduits.forEach(function(p) { rows.push([p[0], p[1]]); });
+    statsExportCSV('E-SOLUTION_TopProduits.csv', rows);
+}
+
+function statsExportCSVCredits() {
+    var d = window._statsExportData || {};
+    if (!d.creditsImpayes || d.creditsImpayes.length === 0) { alert('Aucune donnée'); return; }
+    var rows = [['Client', 'Montant (MAD)']];
+    d.creditsImpayes.forEach(function(c) { rows.push([c[0], c[1].toFixed(2)]); });
+    statsExportCSV('E-SOLUTION_CreditsImpayes.csv', rows);
+}
+
+function statsExportCSVRFM() {
+    var d = window._statsExportData || {};
+    if (!d.rfmClients || d.rfmClients.length === 0) { alert('Aucune donnée'); return; }
+    var rows = [['Client', 'Récence (j)', 'Fréquence', 'Montant (MAD)', 'Score R', 'Score F', 'Score M', 'Segment']];
+    d.rfmClients.forEach(function(c) {
+        rows.push([c.name, c.recency, c.frequency, c.monetary.toFixed(2), c.scoreR, c.scoreF, c.scoreM, c.segment]);
+    });
+    statsExportCSV('E-SOLUTION_RFM.csv', rows);
+}
+
+function statsExportCSVVentes() {
+    var d = window._statsExportData || {};
+    if (!d.ventes || d.ventes.length === 0) { alert('Aucune donnée'); return; }
+    var rows = [['Facture', 'Date', 'Client', 'Total (MAD)', 'Payé', 'Restant', 'Vendeur', 'Paiement']];
+    d.ventes.forEach(function(v) {
+        var dt = toDate(v.createdAt);
+        rows.push([
+            v.factureNum || v.id || '',
+            dt ? dt.toLocaleString('fr-FR') : '',
+            v.clientName || '',
+            statsSafeNum(v.total).toFixed(2),
+            statsSafeNum(v.amountGiven).toFixed(2),
+            statsSafeNum(v.remainingAmount).toFixed(2),
+            v.vendeur || '',
+            v.paymentMethod || ''
+        ]);
+    });
+    statsExportCSV('E-SOLUTION_Ventes.csv', rows);
+}
+
+// ============================================================
+// BUILD CARD
+// ============================================================
 function buildStatCard(label, value, icon, bgColor, iconColor) {
     var strVal = String(value);
     var isNegative = strVal.indexOf('-') !== -1;
@@ -1125,7 +1220,17 @@ window.statsResetFilters = statsResetFilters;
 window.statsRenderActiveFilters = statsRenderActiveFilters;
 window.statsCalculateGeneral = statsCalculateGeneral;
 
-console.log('🚀 E-SOLUTION POS — Statistiques Premium v4.0 FINALE');
+// 🖨️ / 📄 EXPORTS
+window.statsPrintPage = statsPrintPage;
+window.statsExportPDF = statsExportPDF;
+window.statsExportCSV = statsExportCSV;
+window.statsExportCSVTopProduits = statsExportCSVTopProduits;
+window.statsExportCSVCredits = statsExportCSVCredits;
+window.statsExportCSVRFM = statsExportCSVRFM;
+window.statsExportCSVVentes = statsExportCSVVentes;
+
+console.log('🚀 E-SOLUTION POS — Statistiques Premium v5.0 FINALE');
 console.log('✅ Filtres : Période + Date début/fin + Client + Produit + Catégorie + Vendeur');
 console.log('✅ Analytics : RFM + Aging + DSO + Prévisions + Heatmap + Top vendeurs + Alertes');
-console.log('✅ Statistiques GÉNÉRALES all-time (CA, profit, marge, meilleur jour/mois/produit/client)');
+console.log('✅ Statistiques GÉNÉRALES all-time');
+console.log('✅ 🆕 Export PDF + Impression + Export CSV');
