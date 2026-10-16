@@ -1,10 +1,29 @@
 // ==================== STATISTIQUES.JS - E-SOLUTION POS ====================
-// Version Premium v3.0 — KPIs avancés + RFM + Aging + Prévisions + Heatmap
-// ⚠️ Structure d'origine préservée — Ajouts purement additifs
+// Version FINALE v4.0 — Filtres avancés + Analytics pro + Stats générales
+// ✅ Filtres : Date début/fin, Client, Produit, Catégorie, Vendeur
+// ✅ Analytics : RFM, Aging, DSO, Prévisions, Heatmap, Top vendeurs, Alertes
+// ✅ Statistiques générales : vue globale all-time
 
 var statsCharts = {};
 var statsAdvancedCharts = {};
 
+// ============================================================
+// 🎛️ ÉTAT GLOBAL DES FILTRES
+// ============================================================
+window.statsFilters = window.statsFilters || {
+    period: '7',
+    dateDebut: '',
+    dateFin: '',
+    clientId: '',
+    clientName: '',
+    productName: '',
+    category: '',
+    vendeur: ''
+};
+
+// ============================================================
+// 🏠 PAGE PRINCIPALE AVEC FILTRES
+// ============================================================
 function loadStatistiquesPage(c) {
     if (!window.currentUserData || window.currentUserData.userData.role !== 'admin') {
         c.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#ef4444;"><i class="fas fa-lock" style="font-size:2rem;display:block;margin-bottom:10px;"></i>Accès réservé à l\'administrateur</p></div>';
@@ -13,30 +32,95 @@ function loadStatistiquesPage(c) {
 
     var html = `
     <div class="content-card" style="margin-bottom:15px;">
-        <div class="card-header">
+        <div class="card-header" style="flex-wrap:wrap; gap:12px;">
             <h3><i class="fas fa-chart-bar"></i> Tableau de bord - Statistiques E-SOLUTION</h3>
-            <div style="display:flex; gap:8px; align-items:center;">
-                <select id="statPeriodSelect" style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px;" onchange="loadStatistiques()">
-                    <option value="1">Aujourd'hui</option>
-                    <option value="7" selected>7 derniers jours</option>
-                    <option value="30">30 derniers jours</option>
-                    <option value="90">3 mois</option>
-                    <option value="365">1 an</option>
-                    <option value="all">Tout</option>
-                </select>
-                <button class="btn-add" onclick="loadStatistiques()"><i class="fas fa-sync"></i> Actualiser</button>
+            <button class="btn-add" onclick="loadStatistiques()"><i class="fas fa-sync"></i> Actualiser</button>
+        </div>
+
+        <!-- 🎛️ PANNEAU DE FILTRES AVANCÉS -->
+        <div style="margin-top:16px; padding:16px; background:linear-gradient(135deg,#F8FAFC,#F1F5F9); border-radius:12px; border:1px solid #E2E8F0;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                <i class="fas fa-filter" style="color:#0F766E;"></i>
+                <strong style="color:#0F172A; font-size:0.95rem;">Filtres avancés</strong>
+                <button onclick="statsResetFilters()" style="margin-left:auto; padding:6px 14px; background:#fff; border:1.5px solid #E2E8F0; border-radius:8px; font-size:0.85rem; font-weight:600; color:#64748B; cursor:pointer;">
+                    <i class="fas fa-redo"></i> Réinitialiser
+                </button>
             </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;">
+
+                <div>
+                    <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">📅 Période</label>
+                    <select id="statPeriodSelect" onchange="statsApplyPeriodFilter(this.value)" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
+                        <option value="1">Aujourd'hui</option>
+                        <option value="7" selected>7 derniers jours</option>
+                        <option value="30">30 derniers jours</option>
+                        <option value="90">3 mois</option>
+                        <option value="365">1 an</option>
+                        <option value="all">Tout</option>
+                        <option value="custom">📆 Personnalisé</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">Du</label>
+                    <input type="date" id="statDateDebut" onchange="statsApplyDateRange()" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
+                </div>
+
+                <div>
+                    <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">Au</label>
+                    <input type="date" id="statDateFin" onchange="statsApplyDateRange()" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
+                </div>
+
+                <div>
+                    <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">👤 Client</label>
+                    <select id="statClientSelect" onchange="statsApplySimpleFilter('clientId', this.value, this.options[this.selectedIndex].text)" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
+                        <option value="">Tous les clients</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">📦 Produit</label>
+                    <select id="statProductSelect" onchange="statsApplySimpleFilter('productName', this.value, '')" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
+                        <option value="">Tous les produits</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">🏷️ Catégorie</label>
+                    <select id="statCategorySelect" onchange="statsApplySimpleFilter('category', this.value, '')" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
+                        <option value="">Toutes les catégories</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size:0.75rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">🧑‍💼 Vendeur</label>
+                    <select id="statVendeurSelect" onchange="statsApplySimpleFilter('vendeur', this.value, '')" style="width:100%; padding:10px 12px; border:1.5px solid #E2E8F0; border-radius:10px; font-size:0.9rem; background:#fff;">
+                        <option value="">Tous les vendeurs</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div id="statsActiveFilters" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;"></div>
         </div>
     </div>
+
     <div id="statsContent" style="text-align:center;padding:40px;">
         <i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#A67C52;"></i>
         <p style="margin-top:10px;">Chargement des données...</p>
     </div>
     `;
     c.innerHTML = html;
-    loadStatistiques();
+
+    statsLoadFilterOptions().then(function() {
+        loadStatistiques();
+    });
 }
 
+// ============================================================
+// 🔧 HELPERS DE BASE
+// ============================================================
 function toDate(val) {
     if (!val) return null;
     if (val.toDate && typeof val.toDate === 'function') return val.toDate();
@@ -65,12 +149,8 @@ function statsSafeNum(v) {
 }
 
 // ============================================================
-// 🔬 HELPERS DATA SCIENCE — Régression, RFM, Aging, Prévisions
+// 🔬 HELPERS DATA SCIENCE
 // ============================================================
-
-/**
- * Régression linéaire simple : retourne {slope, intercept, predict(x)}
- */
 function statsLinearRegression(points) {
     if (!points || points.length < 2) return { slope: 0, intercept: 0, predict: function() { return 0; } };
     var n = points.length;
@@ -92,26 +172,18 @@ function statsLinearRegression(points) {
     };
 }
 
-/**
- * Prévision CA fin de mois (projection basée sur la moyenne des jours écoulés)
- */
 function statsForecastEndOfMonth(dailySalesMap) {
     var keys = Object.keys(dailySalesMap);
-    if (keys.length === 0) return { current: 0, projected: 0, daysLeft: 0 };
+    if (keys.length === 0) return { current: 0, projected: 0, daysLeft: 0, avgPerDay: 0 };
     var totalSoFar = 0;
-    var nonZero = 0;
-    keys.forEach(function(k) {
-        totalSoFar += dailySalesMap[k];
-        if (dailySalesMap[k] > 0) nonZero++;
-    });
+    keys.forEach(function(k) { totalSoFar += dailySalesMap[k]; });
     var now = new Date();
     var dayOfMonth = now.getDate();
     var daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     var avgPerDay = dayOfMonth > 0 ? totalSoFar / dayOfMonth : 0;
-    var projected = avgPerDay * daysInMonth;
     return {
         current: totalSoFar,
-        projected: projected,
+        projected: avgPerDay * daysInMonth,
         avgPerDay: avgPerDay,
         daysLeft: daysInMonth - dayOfMonth,
         daysInMonth: daysInMonth,
@@ -119,11 +191,6 @@ function statsForecastEndOfMonth(dailySalesMap) {
     };
 }
 
-/**
- * Segmentation RFM clients
- * Récence (jours depuis dernier achat), Fréquence (nb achats), Montant (CA total)
- * Segments : Champions, Loyaux, À risque, Endormis, Perdus, Nouveaux
- */
 function statsCalculateRFM(ventes, credits) {
     var clientsMap = {};
     var now = Date.now();
@@ -160,11 +227,8 @@ function statsCalculateRFM(ventes, credits) {
         var recencyDays = c.lastPurchase > 0 ? Math.floor((now - c.lastPurchase) / MS_DAY) : 999;
         var ageDays = Math.floor((now - c.firstPurchase) / MS_DAY);
 
-        // Score R (1-5) : plus récent = plus élevé
         var r = recencyDays <= 7 ? 5 : recencyDays <= 30 ? 4 : recencyDays <= 60 ? 3 : recencyDays <= 120 ? 2 : 1;
-        // Score F (1-5)
         var f = c.frequency >= 20 ? 5 : c.frequency >= 10 ? 4 : c.frequency >= 5 ? 3 : c.frequency >= 2 ? 2 : 1;
-        // Score M (1-5) — seuils adaptables
         var m = c.monetary >= 5000 ? 5 : c.monetary >= 2000 ? 4 : c.monetary >= 1000 ? 3 : c.monetary >= 500 ? 2 : 1;
 
         var segment = 'Perdu';
@@ -176,15 +240,9 @@ function statsCalculateRFM(ventes, credits) {
         else if (ageDays <= 30) segment = 'Nouveau';
 
         clients.push({
-            id: c.id,
-            name: c.name,
-            recency: recencyDays,
-            frequency: c.frequency,
-            monetary: c.monetary,
-            scoreR: r,
-            scoreF: f,
-            scoreM: m,
-            segment: segment,
+            id: c.id, name: c.name,
+            recency: recencyDays, frequency: c.frequency, monetary: c.monetary,
+            scoreR: r, scoreF: f, scoreM: m, segment: segment,
             lastPurchase: c.lastPurchase
         });
     });
@@ -197,9 +255,6 @@ function statsCalculateRFM(ventes, credits) {
     return { clients: clients, segments: segments };
 }
 
-/**
- * Aging des crédits (tranches 0-30 / 31-60 / 61-90 / 90+)
- */
 function statsCalculateAging(credits) {
     var now = Date.now();
     var MS_DAY = 86400000;
@@ -234,9 +289,6 @@ function statsCalculateAging(credits) {
     };
 }
 
-/**
- * Taux de recouvrement (payé / total créé)
- */
 function statsRecouvrement(credits) {
     var total = 0, paye = 0;
     credits.forEach(function(c) {
@@ -244,15 +296,11 @@ function statsRecouvrement(credits) {
         paye += statsSafeNum(c.amountGiven);
     });
     return {
-        total: total,
-        paye: paye,
+        total: total, paye: paye,
         taux: total > 0 ? (paye / total * 100) : 0
     };
 }
 
-/**
- * Heatmap horaire : répartition ventes par heure (0-23)
- */
 function statsHeatmapHoraire(ventes) {
     var hours = {};
     for (var i = 0; i < 24; i++) hours[i] = 0;
@@ -263,9 +311,6 @@ function statsHeatmapHoraire(ventes) {
     return hours;
 }
 
-/**
- * Top vendeurs (par CA)
- */
 function statsTopVendeurs(ventes) {
     var map = {};
     ventes.forEach(function(v) {
@@ -279,15 +324,11 @@ function statsTopVendeurs(ventes) {
     }).sort(function(a, b) { return b.ca - a.ca; });
 }
 
-/**
- * Alertes intelligentes
- */
 function statsBuildAlerts(stockItems, credits, produits, ventes) {
     var alerts = [];
     var now = Date.now();
     var MS_DAY = 86400000;
 
-    // 1) Ruptures stock
     stockItems.forEach(function(s) {
         var q = statsSafeNum(s.quantite);
         if (q <= 0) {
@@ -297,7 +338,6 @@ function statsBuildAlerts(stockItems, credits, produits, ventes) {
         }
     });
 
-    // 2) Crédits > 30j
     credits.forEach(function(c) {
         if (c.paid) return;
         var created = toDate(c.createdAt);
@@ -314,7 +354,6 @@ function statsBuildAlerts(stockItems, credits, produits, ventes) {
         }
     });
 
-    // 3) Produits dormants (aucune vente sur 30j)
     var salesMap = {};
     ventes.forEach(function(v) {
         var d = toDate(v.createdAt);
@@ -334,23 +373,287 @@ function statsBuildAlerts(stockItems, credits, produits, ventes) {
     return alerts.slice(0, 15);
 }
 
-// ============================================================
-// FONCTION PRINCIPALE
-// ============================================================
+/**
+ * 📊 Statistiques GÉNÉRALES all-time (vue globale sur toute la vie du commerce)
+ */
+function statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, produits, stockItems, personnel) {
+    var now = new Date();
+    var MS_DAY = 86400000;
 
+    // CA total all-time
+    var totalCA = allVentes.reduce(function(s, v) { return s + statsSafeNum(v.total); }, 0);
+    var totalProfit = allVentes.reduce(function(s, v) {
+        var p = 0;
+        if (v.items) v.items.forEach(function(it) {
+            var pa = statsSafeNum(it.prixAchat);
+            var pp = statsSafeNum(it.prixPromo);
+            var pv = statsSafeNum(it.prixVente || it.prixUnitaire);
+            var pvr = pp > 0 ? pp : pv;
+            p += (pvr - pa) * (statsSafeNum(it.quantite) || 1);
+        });
+        return s + p;
+    }, 0);
+    var totalDepenses = allDepenses.reduce(function(s, d) { return s + statsSafeNum(d.montant); }, 0);
+
+    // Marge %
+    var margePct = totalCA > 0 ? (totalProfit / totalCA * 100) : 0;
+
+    // CA par jour moyen (depuis 1ère vente)
+    var premiereVente = null;
+    allVentes.forEach(function(v) {
+        var d = toDate(v.createdAt);
+        if (d && (!premiereVente || d < premiereVente)) premiereVente = d;
+    });
+    var joursActivite = premiereVente ? Math.max(1, Math.floor((now - premiereVente) / MS_DAY)) : 1;
+    var caParJour = totalCA / joursActivite;
+
+    // Panier moyen général
+    var panierMoyen = allVentes.length > 0 ? totalCA / allVentes.length : 0;
+
+    // Coût stock / valeur
+    var valeurStock = stockItems.reduce(function(s, x) {
+        return s + statsSafeNum(x.prixAchat) * statsSafeNum(x.quantite);
+    }, 0);
+
+    // Salaires mensuels
+    var salairesMensuels = personnel.reduce(function(s, p) { return s + statsSafeNum(p.salaire); }, 0);
+
+    // Crédits impayés all-time
+    var creditsImpayes = allCredits.filter(function(c) { return !c.paid; })
+        .reduce(function(s, c) { return s + statsSafeNum(c.remainingAmount || c.total); }, 0);
+
+    // Meilleur jour, meilleur mois
+    var parJour = {};
+    allVentes.forEach(function(v) {
+        var d = toDate(v.createdAt);
+        if (!d) return;
+        var k = d.toLocaleDateString('fr-FR');
+        parJour[k] = (parJour[k] || 0) + statsSafeNum(v.total);
+    });
+    var meilleurJour = { date: '—', ca: 0 };
+    Object.keys(parJour).forEach(function(k) {
+        if (parJour[k] > meilleurJour.ca) meilleurJour = { date: k, ca: parJour[k] };
+    });
+
+    var parMois = {};
+    allVentes.forEach(function(v) {
+        var d = toDate(v.createdAt);
+        if (!d) return;
+        var k = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        parMois[k] = (parMois[k] || 0) + statsSafeNum(v.total);
+    });
+    var meilleurMois = { mois: '—', ca: 0 };
+    Object.keys(parMois).forEach(function(k) {
+        if (parMois[k] > meilleurMois.ca) meilleurMois = { mois: k, ca: parMois[k] };
+    });
+
+    // Meilleur produit all-time
+    var productTotals = {};
+    allVentes.forEach(function(v) {
+        if (!v.items) return;
+        v.items.forEach(function(it) {
+            var n = it.nom || 'Sans nom';
+            productTotals[n] = (productTotals[n] || 0) + statsSafeNum(it.quantite);
+        });
+    });
+    var meilleurProduit = { nom: '—', qte: 0 };
+    Object.keys(productTotals).forEach(function(k) {
+        if (productTotals[k] > meilleurProduit.qte) meilleurProduit = { nom: k, qte: productTotals[k] };
+    });
+
+    // Meilleur client all-time (par CA)
+    var clientTotals = {};
+    allVentes.forEach(function(v) {
+        if (!v.clientName) return;
+        clientTotals[v.clientName] = (clientTotals[v.clientName] || 0) + statsSafeNum(v.total);
+    });
+    var meilleurClient = { nom: '—', ca: 0 };
+    Object.keys(clientTotals).forEach(function(k) {
+        if (clientTotals[k] > meilleurClient.ca) meilleurClient = { nom: k, ca: clientTotals[k] };
+    });
+
+    return {
+        totalCA: totalCA,
+        totalProfit: totalProfit,
+        totalDepenses: totalDepenses,
+        margePct: margePct,
+        joursActivite: joursActivite,
+        caParJour: caParJour,
+        panierMoyen: panierMoyen,
+        valeurStock: valeurStock,
+        salairesMensuels: salairesMensuels,
+        creditsImpayes: creditsImpayes,
+        nbVentes: allVentes.length,
+        nbClients: clients.length,
+        nbProduits: produits.length,
+        meilleurJour: meilleurJour,
+        meilleurMois: meilleurMois,
+        meilleurProduit: meilleurProduit,
+        meilleurClient: meilleurClient
+    };
+}
+
+// ============================================================
+// 🎛️ GESTION DES FILTRES
+// ============================================================
+async function statsLoadFilterOptions() {
+    try {
+        var clientsSnap = await db.collection('clients').limit(2000).get();
+        var clientSelect = document.getElementById('statClientSelect');
+        if (clientSelect) {
+            clientsSnap.forEach(function(d) {
+                var data = d.data();
+                var nom = ((data.nom || '') + ' ' + (data.prenom || '')).trim() || data.username || 'Client';
+                var opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = nom;
+                clientSelect.appendChild(opt);
+            });
+        }
+
+        var produitsSnap = await db.collection('products').limit(2000).get();
+        var productSelect = document.getElementById('statProductSelect');
+        if (productSelect) {
+            var produits = [];
+            produitsSnap.forEach(function(d) {
+                var data = d.data();
+                if (data.nom) produits.push(data.nom);
+            });
+            produits.sort();
+            produits.forEach(function(nom) {
+                var opt = document.createElement('option');
+                opt.value = nom;
+                opt.textContent = nom;
+                productSelect.appendChild(opt);
+            });
+        }
+
+        var catsSnap = await db.collection('categories').get();
+        var catSelect = document.getElementById('statCategorySelect');
+        if (catSelect) {
+            var cats = [];
+            catsSnap.forEach(function(d) {
+                var nom = d.data().nom;
+                if (nom) cats.push(nom);
+            });
+            cats.sort();
+            cats.forEach(function(nom) {
+                var opt = document.createElement('option');
+                opt.value = nom;
+                opt.textContent = nom;
+                catSelect.appendChild(opt);
+            });
+        }
+
+        var vendeurSelect = document.getElementById('statVendeurSelect');
+        if (vendeurSelect) {
+            var vendeurs = new Set();
+            try {
+                var persSnap = await db.collection('personnel').get();
+                persSnap.forEach(function(d) {
+                    var nom = d.data().nom;
+                    if (nom) vendeurs.add(nom);
+                });
+            } catch(e) {}
+            vendeurs.forEach(function(v) {
+                var opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                vendeurSelect.appendChild(opt);
+            });
+        }
+    } catch(e) {
+        console.error('Erreur chargement options filtres:', e);
+    }
+}
+
+function statsApplyPeriodFilter(value) {
+    window.statsFilters.period = value;
+    if (value !== 'custom') {
+        window.statsFilters.dateDebut = '';
+        window.statsFilters.dateFin = '';
+        var dd = document.getElementById('statDateDebut');
+        var df = document.getElementById('statDateFin');
+        if (dd) dd.value = '';
+        if (df) df.value = '';
+    }
+    loadStatistiques();
+}
+
+function statsApplyDateRange() {
+    var dd = document.getElementById('statDateDebut');
+    var df = document.getElementById('statDateFin');
+    window.statsFilters.dateDebut = dd ? dd.value : '';
+    window.statsFilters.dateFin = df ? df.value : '';
+    if (window.statsFilters.dateDebut || window.statsFilters.dateFin) {
+        window.statsFilters.period = 'custom';
+        var sel = document.getElementById('statPeriodSelect');
+        if (sel) sel.value = 'custom';
+    }
+    loadStatistiques();
+}
+
+function statsApplySimpleFilter(key, value, label) {
+    window.statsFilters[key] = value;
+    if (key === 'clientId') {
+        window.statsFilters.clientName = label && label !== 'Tous les clients' ? label : '';
+    }
+    loadStatistiques();
+}
+
+function statsResetFilters() {
+    window.statsFilters = {
+        period: '7', dateDebut: '', dateFin: '',
+        clientId: '', clientName: '', productName: '', category: '', vendeur: ''
+    };
+    var ids = ['statPeriodSelect', 'statDateDebut', 'statDateFin', 'statClientSelect', 'statProductSelect', 'statCategorySelect', 'statVendeurSelect'];
+    ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+    });
+    var ps = document.getElementById('statPeriodSelect');
+    if (ps) ps.value = '7';
+    loadStatistiques();
+}
+
+function statsRenderActiveFilters() {
+    var container = document.getElementById('statsActiveFilters');
+    if (!container) return;
+    var f = window.statsFilters || {};
+    var badges = [];
+
+    if (f.period && f.period !== '7' && f.period !== 'custom') {
+        var labels = { '1':'Aujourd\'hui', '30':'30j', '90':'3 mois', '365':'1 an', 'all':'Tout' };
+        badges.push('📅 ' + (labels[f.period] || f.period));
+    }
+    if (f.period === 'custom' && (f.dateDebut || f.dateFin)) {
+        badges.push('📆 ' + (f.dateDebut || '...') + ' → ' + (f.dateFin || '...'));
+    }
+    if (f.clientName) badges.push('👤 ' + f.clientName);
+    if (f.productName) badges.push('📦 ' + f.productName);
+    if (f.category) badges.push('🏷️ ' + f.category);
+    if (f.vendeur) badges.push('🧑‍💼 ' + f.vendeur);
+
+    if (badges.length === 0) {
+        container.innerHTML = '<span style="font-size:0.85rem; color:#94A3B8; font-style:italic;">Aucun filtre actif — affichage 7 derniers jours</span>';
+        return;
+    }
+
+    container.innerHTML = badges.map(function(b) {
+        return '<span style="padding:5px 12px; background:#0F766E15; color:#0F766E; border:1px solid #0F766E40; border-radius:20px; font-size:0.8rem; font-weight:600;">' + escapeHtml(b) + '</span>';
+    }).join('');
+}
+
+// ============================================================
+// 🚀 FONCTION PRINCIPALE
+// ============================================================
 async function loadStatistiques() {
-    Object.values(statsCharts).forEach(chart => { if (chart && chart.destroy) chart.destroy(); });
-    Object.values(statsAdvancedCharts).forEach(chart => { if (chart && chart.destroy) chart.destroy(); });
+    Object.values(statsCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
+    Object.values(statsAdvancedCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
     statsCharts = {};
     statsAdvancedCharts = {};
-
-    var period = document.getElementById('statPeriodSelect')?.value || '7';
-    var now = new Date();
-    var startDate = null;
-    if (period !== 'all') {
-        var days = parseInt(period);
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
-    }
 
     var statsContent = document.getElementById('statsContent');
     if (!statsContent) return;
@@ -372,86 +675,147 @@ async function loadStatistiques() {
             db.collection('settings').doc('fidelite').get()
         ]);
 
-        // ⚠️ Pour RFM/Aging, on garde TOUTES les ventes et crédits (pas filtrées)
-        var allVentes = [], allCredits = [];
-        ventesSnap.forEach(d => { var dd = d.data(); dd.id = d.id; allVentes.push(dd); });
-        creditsSnap.forEach(d => { var dd = d.data(); dd.id = d.id; allCredits.push(dd); });
+        // Toutes les données (non filtrées)
+        var allVentes = []; ventesSnap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allVentes.push(dd); });
+        var allCredits = []; creditsSnap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allCredits.push(dd); });
+        var allDepenses = []; depensesSnap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allDepenses.push(dd); });
+        var allCommandes = []; commandesSnap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allCommandes.push(dd); });
 
-        // Filtrage par période pour les KPIs
-        var ventes = [], commandes = [], depenses = [], credits = [];
-        allVentes.forEach(function(dd) { var docDate = toDate(dd.createdAt); if (!startDate || (docDate && docDate >= startDate)) ventes.push(dd); });
-        commandesSnap.forEach(d => { var dd = d.data(); dd.id = d.id; var docDate = toDate(dd.createdAt); if (!startDate || (docDate && docDate >= startDate)) commandes.push(dd); });
-        depensesSnap.forEach(d => { var dd = d.data(); dd.id = d.id; var docDate = toDate(dd.createdAt); if (!startDate || (docDate && docDate >= startDate)) depenses.push(dd); });
-        allCredits.forEach(function(dd) { var docDate = toDate(dd.createdAt); if (!startDate || (docDate && docDate >= startDate)) credits.push(dd); });
-
-        var clients = []; clientsSnap.forEach(d => clients.push(Object.assign({ id: d.id }, d.data())));
-        var produits = []; produitsSnap.forEach(d => produits.push(Object.assign({ id: d.id }, d.data())));
-        var categories = []; categoriesSnap.forEach(d => categories.push(Object.assign({ id: d.id }, d.data())));
-        var stockItems = []; stockSnap.forEach(d => stockItems.push(Object.assign({ id: d.id }, d.data())));
-        var personnel = []; personnelSnap.forEach(d => personnel.push(Object.assign({ id: d.id }, d.data())));
+        var clients = []; clientsSnap.forEach(function(d) { clients.push(Object.assign({ id: d.id }, d.data())); });
+        var produits = []; produitsSnap.forEach(function(d) { produits.push(Object.assign({ id: d.id }, d.data())); });
+        var categories = []; categoriesSnap.forEach(function(d) { categories.push(Object.assign({ id: d.id }, d.data())); });
+        var stockItems = []; stockSnap.forEach(function(d) { stockItems.push(Object.assign({ id: d.id }, d.data())); });
+        var personnel = []; personnelSnap.forEach(function(d) { personnel.push(Object.assign({ id: d.id }, d.data())); });
         var fideliteSettings = settingsSnap.exists ? settingsSnap.data() : { active: true, pointsParVente: 1 };
 
-        // ============ KPIs STANDARD ============
-        var totalVentes = ventes.reduce((sum, v) => sum + statsSafeNum(v.total), 0);
-        var totalProfit = ventes.reduce((sum, v) => {
+        // 📊 STATISTIQUES GÉNÉRALES (all-time, indépendantes des filtres)
+        var general = statsCalculateGeneral(allVentes, allCredits, allDepenses, clients, produits, stockItems, personnel);
+
+        // 🎛️ Application des filtres
+        var f = window.statsFilters || {};
+        var now = new Date();
+        var startDate = null, endDate = null;
+
+        if (f.period === 'custom') {
+            if (f.dateDebut) { startDate = new Date(f.dateDebut); startDate.setHours(0, 0, 0, 0); }
+            if (f.dateFin) { endDate = new Date(f.dateFin); endDate.setHours(23, 59, 59, 999); }
+        } else if (f.period && f.period !== 'all') {
+            var days = parseInt(f.period);
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
+        }
+
+        function inDateRange(doc) {
+            if (!startDate && !endDate) return true;
+            var d = toDate(doc.createdAt);
+            if (!d) return false;
+            if (startDate && d < startDate) return false;
+            if (endDate && d > endDate) return false;
+            return true;
+        }
+
+        function matchesClient(doc) {
+            if (!f.clientId) return true;
+            return doc.clientId === f.clientId;
+        }
+
+        function matchesVendeur(doc) {
+            if (!f.vendeur) return true;
+            return doc.vendeur === f.vendeur;
+        }
+
+        function matchesProduct(doc) {
+            if (!f.productName) return true;
+            if (!doc.items) return false;
+            return doc.items.some(function(it) { return it.nom === f.productName; });
+        }
+
+        function matchesCategory(doc) {
+            if (!f.category) return true;
+            if (!doc.items) return false;
+            return doc.items.some(function(it) {
+                var prod = produits.find(function(p) { return p.nom === it.nom; });
+                if (!prod) return false;
+                if (prod.categories && prod.categories.indexOf(f.category) !== -1) return true;
+                return prod.categorie === f.category;
+            });
+        }
+
+        var ventes = allVentes.filter(function(v) {
+            return inDateRange(v) && matchesClient(v) && matchesVendeur(v) && matchesProduct(v) && matchesCategory(v);
+        });
+
+        var credits = allCredits.filter(function(c) {
+            return inDateRange(c) && matchesClient(c);
+        });
+
+        var depenses = allDepenses.filter(inDateRange);
+
+        var commandes = allCommandes.filter(inDateRange);
+
+        statsRenderActiveFilters();
+
+        // ============ KPIs FILTRÉS ============
+        var totalVentes = ventes.reduce(function(s, v) { return s + statsSafeNum(v.total); }, 0);
+        var totalProfit = ventes.reduce(function(s, v) {
             var profit = 0;
-            if (v.items) {
-                v.items.forEach(it => {
-                    var pa = statsSafeNum(it.prixAchat), pv = statsSafeNum(it.prixVente), pp = statsSafeNum(it.prixPromo);
-                    var pvr = (pp > 0) ? pp : pv, q = statsSafeNum(it.quantite) || 1;
-                    profit += (pvr - pa) * q;
-                });
-            }
-            return sum + profit;
+            if (v.items) v.items.forEach(function(it) {
+                var pa = statsSafeNum(it.prixAchat), pv = statsSafeNum(it.prixVente), pp = statsSafeNum(it.prixPromo);
+                var pvr = (pp > 0) ? pp : pv;
+                var q = statsSafeNum(it.quantite) || 1;
+                profit += (pvr - pa) * q;
+            });
+            return s + profit;
         }, 0);
-        var totalDepenses = depenses.reduce((sum, d) => sum + statsSafeNum(d.montant), 0);
-        var totalCreditsImpayes = credits.filter(c => !c.paid).reduce((sum, c) => sum + statsSafeNum(c.remainingAmount || c.total), 0);
+        var totalDepenses = depenses.reduce(function(s, d) { return s + statsSafeNum(d.montant); }, 0);
+        var totalCreditsImpayes = credits.filter(function(c) { return !c.paid; })
+            .reduce(function(s, c) { return s + statsSafeNum(c.remainingAmount || c.total); }, 0);
         var nbVentes = ventes.length;
         var panierMoyen = nbVentes > 0 ? totalVentes / nbVentes : 0;
         var nbClients = clients.length;
         var nbProduits = produits.length;
         var nbCommandes = commandes.length;
         var tauxConversion = nbCommandes > 0 ? (nbVentes / nbCommandes * 100) : 0;
-        var valeurStock = stockItems.reduce((sum, s) => sum + (statsSafeNum(s.prixAchat) * statsSafeNum(s.quantite)), 0);
-        var totalSalaires = personnel.reduce((sum, p) => sum + statsSafeNum(p.salaire), 0);
-        var pointsTotal = fideliteSettings.active ? clients.reduce((sum, c) => sum + statsSafeNum(c.pointsFidelite), 0) : 0;
+        var valeurStock = stockItems.reduce(function(s, x) { return s + statsSafeNum(x.prixAchat) * statsSafeNum(x.quantite); }, 0);
+        var totalSalaires = personnel.reduce(function(s, p) { return s + statsSafeNum(p.salaire); }, 0);
+        var pointsTotal = fideliteSettings.active ? clients.reduce(function(s, c) { return s + statsSafeNum(c.pointsFidelite); }, 0) : 0;
 
+        // Top produits
         var productSales = {};
-        ventes.forEach(v => {
-            if (v.items) v.items.forEach(it => {
+        ventes.forEach(function(v) {
+            if (v.items) v.items.forEach(function(it) {
                 var nom = it.nom || 'Sans nom';
-                if (!productSales[nom]) productSales[nom] = 0;
-                productSales[nom] += statsSafeNum(it.quantite);
+                productSales[nom] = (productSales[nom] || 0) + statsSafeNum(it.quantite);
             });
         });
-        var topProduits = Object.entries(productSales).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        var topProduits = Object.entries(productSales).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
 
+        // Top catégories
         var categoryCA = {};
-        ventes.forEach(v => {
-            if (v.items) v.items.forEach(it => {
-                var prod = produits.find(p => p.nom === it.nom);
+        ventes.forEach(function(v) {
+            if (v.items) v.items.forEach(function(it) {
+                var prod = produits.find(function(p) { return p.nom === it.nom; });
                 var cat = (prod && prod.categories && prod.categories[0]) || (prod && prod.categorie) || 'Sans catégorie';
-                if (!categoryCA[cat]) categoryCA[cat] = 0;
-                categoryCA[cat] += statsSafeNum(it.prixVente || it.prixUnitaire) * statsSafeNum(it.quantite);
+                categoryCA[cat] = (categoryCA[cat] || 0) + statsSafeNum(it.prixVente || it.prixUnitaire) * statsSafeNum(it.quantite);
             });
         });
-        var topCategories = Object.entries(categoryCA).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        var topCategories = Object.entries(categoryCA).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
 
+        // Paiements
         var paymentMethods = {};
-        ventes.forEach(v => {
-            var method = v.paymentMethod || 'espece';
-            if (!paymentMethods[method]) paymentMethods[method] = 0;
-            paymentMethods[method] += 1;
+        ventes.forEach(function(v) {
+            var m = v.paymentMethod || 'espece';
+            paymentMethods[m] = (paymentMethods[m] || 0) + 1;
         });
 
+        // Ventes quotidiennes
         var dailySales = {};
-        var daysToShow = period === 'all' ? 30 : parseInt(period);
+        var daysToShow = f.period === 'all' ? 30 : (f.period === 'custom' ? 30 : (parseInt(f.period) || 7));
         for (var i = daysToShow - 1; i >= 0; i--) {
             var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
             var key = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
             dailySales[key] = 0;
         }
-        ventes.forEach(v => {
+        ventes.forEach(function(v) {
             var vDate = toDate(v.createdAt);
             if (vDate) {
                 var dateKey = vDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
@@ -459,24 +823,27 @@ async function loadStatistiques() {
             }
         });
 
+        // Dépenses par catégorie
         var depensesByCat = {};
-        depenses.forEach(d => {
+        depenses.forEach(function(d) {
             var cat = d.categorie || 'Autre';
-            if (!depensesByCat[cat]) depensesByCat[cat] = 0;
-            depensesByCat[cat] += statsSafeNum(d.montant);
+            depensesByCat[cat] = (depensesByCat[cat] || 0) + statsSafeNum(d.montant);
         });
 
+        // Crédits impayés par client
         var creditsImpayesParClient = {};
-        credits.filter(c => !c.paid).forEach(c => {
+        credits.filter(function(c) { return !c.paid; }).forEach(function(c) {
             var client = c.clientName || 'Inconnu';
-            if (!creditsImpayesParClient[client]) creditsImpayesParClient[client] = 0;
-            creditsImpayesParClient[client] += statsSafeNum(c.remainingAmount || c.total);
+            creditsImpayesParClient[client] = (creditsImpayesParClient[client] || 0) + statsSafeNum(c.remainingAmount || c.total);
         });
 
-        // ============ MODULES AVANCÉS ============
-        var rfm = statsCalculateRFM(allVentes, allCredits);
-        var aging = statsCalculateAging(allCredits);
-        var recouvrement = statsRecouvrement(allCredits);
+        // Modules avancés (sur données filtrées si filtre client/produit actif, sinon all)
+        var useForAdvanced = (f.clientId || f.productName || f.category || f.vendeur) ? ventes : allVentes;
+        var useCreditsForAdvanced = f.clientId ? credits : allCredits;
+
+        var rfm = statsCalculateRFM(useForAdvanced, useCreditsForAdvanced);
+        var aging = statsCalculateAging(useCreditsForAdvanced);
+        var recouvrement = statsRecouvrement(useCreditsForAdvanced);
         var forecast = statsForecastEndOfMonth(dailySales);
         var heatmap = statsHeatmapHoraire(ventes);
         var topVendeurs = statsTopVendeurs(ventes);
@@ -485,7 +852,43 @@ async function loadStatistiques() {
         // ============ RENDU HTML ============
         var statsHTML = '';
 
-        // KPIs STANDARD
+        // 📊 SECTION STATISTIQUES GÉNÉRALES (toujours affichée, non filtrée)
+        statsHTML += '<div style="margin-bottom:25px; padding:20px; background:linear-gradient(135deg,#0F766E,#14B8A6); border-radius:16px; color:#fff; box-shadow:0 8px 24px rgba(15,118,110,0.25);">';
+        statsHTML += '<h3 style="margin:0 0 16px; display:flex; align-items:center; gap:10px; font-size:1.2rem;"><i class="fas fa-globe"></i> 🌍 STATISTIQUES GÉNÉRALES (All-time)</h3>';
+        statsHTML += '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px;">';
+        
+        var generalCards = [
+            { label: 'CA total', value: general.totalCA.toFixed(2) + ' MAD', icon: '💰' },
+            { label: 'Profit total', value: general.totalProfit.toFixed(2) + ' MAD', icon: '📈' },
+            { label: 'Marge %', value: general.margePct.toFixed(1) + '%', icon: '🎯' },
+            { label: 'Jours d\'activité', value: general.joursActivite, icon: '📅' },
+            { label: 'CA moyen/jour', value: general.caParJour.toFixed(2) + ' MAD', icon: '📊' },
+            { label: 'Panier moyen', value: general.panierMoyen.toFixed(2) + ' MAD', icon: '🛒' },
+            { label: 'Nb ventes', value: general.nbVentes, icon: '🧾' },
+            { label: 'Nb clients', value: general.nbClients, icon: '👥' },
+            { label: 'Nb produits', value: general.nbProduits, icon: '📦' },
+            { label: 'Valeur stock', value: general.valeurStock.toFixed(2) + ' MAD', icon: '🏪' },
+            { label: 'Salaires/mois', value: general.salairesMensuels.toFixed(2) + ' MAD', icon: '💼' },
+            { label: 'Crédits impayés', value: general.creditsImpayes.toFixed(2) + ' MAD', icon: '💳' }
+        ];
+        generalCards.forEach(function(g) {
+            statsHTML += '<div style="padding:12px 14px; background:rgba(255,255,255,0.15); border-radius:10px; backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.2);">';
+            statsHTML += '<div style="font-size:0.75rem; opacity:0.85; margin-bottom:4px;">' + g.icon + ' ' + g.label + '</div>';
+            statsHTML += '<div style="font-size:1.1rem; font-weight:800;">' + escapeHtml(g.value) + '</div>';
+            statsHTML += '</div>';
+        });
+        statsHTML += '</div>';
+
+        // Records
+        statsHTML += '<div style="margin-top:16px; padding:14px; background:rgba(255,255,255,0.1); border-radius:10px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; font-size:0.9rem;">';
+        statsHTML += '<div>🏆 <strong>Meilleur jour :</strong> ' + escapeHtml(general.meilleurJour.date) + ' → ' + general.meilleurJour.ca.toFixed(2) + ' MAD</div>';
+        statsHTML += '<div>📅 <strong>Meilleur mois :</strong> ' + escapeHtml(general.meilleurMois.mois) + ' → ' + general.meilleurMois.ca.toFixed(2) + ' MAD</div>';
+        statsHTML += '<div>📦 <strong>Top produit :</strong> ' + escapeHtml(general.meilleurProduit.nom) + ' (' + general.meilleurProduit.qte + ' vendus)</div>';
+        statsHTML += '<div>👑 <strong>Top client :</strong> ' + escapeHtml(general.meilleurClient.nom) + ' → ' + general.meilleurClient.ca.toFixed(2) + ' MAD</div>';
+        statsHTML += '</div>';
+        statsHTML += '</div>';
+
+        // KPIs filtrés
         statsHTML += '<div class="stats-grid" style="margin-bottom:20px;">';
         statsHTML += buildStatCard('Chiffre d\'affaires', totalVentes.toFixed(2) + ' MAD', 'fa-money-bill-wave', '#dcfce7', '#16a34a');
         statsHTML += buildStatCard('Ventes', nbVentes.toString(), 'fa-shopping-cart', '#e0e7ff', '#4f46e5');
@@ -502,12 +905,11 @@ async function loadStatistiques() {
         if (fideliteSettings.active) statsHTML += buildStatCard('Points fidélité', pointsTotal.toString(), 'fa-star', '#fef3c7', '#A67C52');
         statsHTML += '</div>';
 
-        // ============ SECTION ANALYTICS AVANCÉS ============
-        statsHTML += '<div style="margin:30px 0 15px; padding:12px 20px; background:linear-gradient(135deg,#0F766E,#14B8A6); border-radius:12px; color:#fff;">';
-        statsHTML += '<h3 style="margin:0; display:flex; align-items:center; gap:10px; font-size:1.1rem;"><i class="fas fa-flask"></i> 🔬 ANALYTICS AVANCÉS</h3>';
+        // Section analytics
+        statsHTML += '<div style="margin:30px 0 15px; padding:12px 20px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border-radius:12px; color:#fff;">';
+        statsHTML += '<h3 style="margin:0; display:flex; align-items:center; gap:10px; font-size:1.1rem;"><i class="fas fa-flask"></i> 🔬 ANALYTICS AVANCÉS (période filtrée)</h3>';
         statsHTML += '</div>';
 
-        // KPIs avancés
         statsHTML += '<div class="stats-grid" style="margin-bottom:20px;">';
         statsHTML += buildStatCard('DSO (jours)', aging.dso.toFixed(1) + ' j', 'fa-hourglass-half', '#fef3c7', '#d97706');
         statsHTML += buildStatCard('Taux recouvrement', recouvrement.taux.toFixed(1) + '%', 'fa-percent', '#dcfce7', '#16a34a');
@@ -515,13 +917,13 @@ async function loadStatistiques() {
         statsHTML += buildStatCard('Projection fin mois', forecast.projected.toFixed(2) + ' MAD', 'fa-chart-line', '#fce7f3', '#ec4899');
         statsHTML += '</div>';
 
-        // Alertes intelligentes
+        // Alertes
         if (alerts.length > 0) {
             statsHTML += '<div class="content-card" style="margin-bottom:20px;">';
             statsHTML += '<h4 style="margin-bottom:12px; display:flex; align-items:center; gap:8px;"><i class="fas fa-bell" style="color:#d97706;"></i> Alertes intelligentes (' + alerts.length + ')</h4>';
             statsHTML += '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:8px;">';
             alerts.forEach(function(a) {
-                var colors = a.type === 'danger' ? ['#fef2f2','#dc2626','#fecaca'] : a.type === 'warning' ? ['#fffbeb','#d97706','#fde68a'] : ['#eff6ff','#2563eb','#bfdbfe'];
+                var colors = a.type === 'danger' ? ['#fef2f2','#dc2626'] : a.type === 'warning' ? ['#fffbeb','#d97706'] : ['#eff6ff','#2563eb'];
                 statsHTML += '<div style="padding:10px 14px; border-left:4px solid ' + colors[1] + '; background:' + colors[0] + '; border-radius:8px;">';
                 statsHTML += '<strong style="font-size:0.9rem;">' + a.icon + ' ' + escapeHtml(a.title) + '</strong><br>';
                 statsHTML += '<span style="font-size:0.85rem; color:#64748b;">' + escapeHtml(a.text) + '</span>';
@@ -530,7 +932,7 @@ async function loadStatistiques() {
             statsHTML += '</div></div>';
         }
 
-        // ============ AGING CRÉDITS ============
+        // Aging
         statsHTML += '<div class="content-card" style="margin-bottom:20px;">';
         statsHTML += '<h4 style="margin-bottom:12px;"><i class="fas fa-layer-group" style="color:#6366F1;"></i> Aging des crédits impayés</h4>';
         statsHTML += '<table class="data-table"><thead><tr><th>Tranche</th><th>Nb crédits</th><th>Montant (MAD)</th><th>% du total</th></tr></thead><tbody>';
@@ -542,7 +944,7 @@ async function loadStatistiques() {
         });
         statsHTML += '</tbody></table></div>';
 
-        // ============ RFM CLIENTS ============
+        // RFM
         statsHTML += '<div class="content-card" style="margin-bottom:20px;">';
         statsHTML += '<h4 style="margin-bottom:12px;"><i class="fas fa-users-cog" style="color:#EC4899;"></i> Segmentation RFM clients</h4>';
         var segmentColors = { 'Champion':'#16a34a', 'Loyal':'#0EA5E9', 'À risque':'#d97706', 'Endormi':'#6366F1', 'Perdu':'#dc2626', 'Nouveau':'#10B981' };
@@ -557,7 +959,6 @@ async function loadStatistiques() {
         });
         statsHTML += '</div>';
 
-        // Top 10 clients RFM
         statsHTML += '<table class="data-table"><thead><tr><th>#</th><th>Client</th><th>Récence</th><th>Fréq.</th><th>Montant</th><th>Score</th><th>Segment</th></tr></thead><tbody>';
         rfm.clients.slice(0, 10).forEach(function(c, i) {
             var color = segmentColors[c.segment] || '#64748b';
@@ -573,7 +974,7 @@ async function loadStatistiques() {
         });
         statsHTML += '</tbody></table></div>';
 
-        // ============ TOP VENDEURS ============
+        // Top vendeurs
         if (topVendeurs.length > 0) {
             statsHTML += '<div class="content-card" style="margin-bottom:20px;">';
             statsHTML += '<h4 style="margin-bottom:12px;"><i class="fas fa-user-tie" style="color:#0F766E;"></i> Top vendeurs</h4>';
@@ -584,7 +985,7 @@ async function loadStatistiques() {
             statsHTML += '</tbody></table></div>';
         }
 
-        // ============ GRAPHIQUES STANDARD ============
+        // Graphiques
         statsHTML += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">';
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">📈 Évolution du CA</h4><canvas id="salesChart" style="max-height:250px;"></canvas></div>';
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">💳 Méthodes de paiement</h4><canvas id="paymentChart" style="max-height:250px;"></canvas></div>';
@@ -594,31 +995,30 @@ async function loadStatistiques() {
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">💸 Dépenses par catégorie</h4><canvas id="depensesChart" style="max-height:250px;"></canvas></div>';
         statsHTML += '</div>';
 
-        // Graphe heatmap horaire
         statsHTML += '<div class="content-card" style="margin-bottom:20px;">';
         statsHTML += '<h4 style="margin-bottom:10px;">⏰ Répartition horaire du CA</h4>';
         statsHTML += '<canvas id="heatmapChart" style="max-height:200px;"></canvas>';
         statsHTML += '</div>';
 
-        // Graphe aging (doughnut)
         statsHTML += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">';
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">🥧 Aging crédits</h4><canvas id="agingChart" style="max-height:250px;"></canvas></div>';
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">🎯 Segments RFM</h4><canvas id="rfmChart" style="max-height:250px;"></canvas></div>';
         statsHTML += '</div>';
 
-        // ============ TABLES STANDARD ============
+        // Tables
         statsHTML += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">';
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">🏆 Top 5 Produits (quantité vendue)</h4><table class="data-table"><thead><tr><th>Produit</th><th>Qté vendue</th></tr></thead><tbody>';
         if (topProduits.length > 0) {
-            topProduits.forEach(p => { statsHTML += '<tr><td>' + escapeHtml(p[0]) + '</td><td>' + escapeHtml(p[1]) + '</td></tr>'; });
+            topProduits.forEach(function(p) { statsHTML += '<tr><td>' + escapeHtml(p[0]) + '</td><td>' + escapeHtml(p[1]) + '</td></tr>'; });
         } else {
             statsHTML += '<tr><td colspan="2" style="text-align:center; color:#94a3b8;">Aucune vente</td></tr>';
         }
         statsHTML += '</tbody></table></div>';
+
         statsHTML += '<div class="content-card"><h4 style="margin-bottom:10px;">📋 Crédits impayés par client</h4><table class="data-table"><thead><tr><th>Client</th><th>Montant (MAD)</th></tr></thead><tbody>';
-        var creditsArray = Object.entries(creditsImpayesParClient).sort((a,b) => b[1] - a[1]);
+        var creditsArray = Object.entries(creditsImpayesParClient).sort(function(a,b) { return b[1] - a[1]; });
         if (creditsArray.length > 0) {
-            creditsArray.slice(0, 10).forEach(c => { statsHTML += '<tr><td>' + escapeHtml(c[0]) + '</td><td style="color:#ef4444;font-weight:600;">' + c[1].toFixed(2) + '</td></tr>'; });
+            creditsArray.slice(0, 10).forEach(function(c) { statsHTML += '<tr><td>' + escapeHtml(c[0]) + '</td><td style="color:#ef4444;font-weight:600;">' + c[1].toFixed(2) + '</td></tr>'; });
         } else {
             statsHTML += '<tr><td colspan="2" style="text-align:center; color:#94a3b8;">Aucun crédit impayé</td></tr>';
         }
@@ -629,12 +1029,12 @@ async function loadStatistiques() {
         if (personnel.length > 0) {
             statsHTML += '<div class="content-card" style="margin-bottom:20px;"><h4 style="margin-bottom:10px;">👥 Effectif</h4><table class="data-table"><thead><tr><th>Rôle</th><th>Effectif</th><th>Total salaires</th></tr></thead><tbody>';
             var effectifParRole = {}, salaireParRole = {};
-            personnel.forEach(p => {
+            personnel.forEach(function(p) {
                 var role = p.role || 'Non défini';
                 effectifParRole[role] = (effectifParRole[role] || 0) + 1;
                 salaireParRole[role] = (salaireParRole[role] || 0) + statsSafeNum(p.salaire);
             });
-            Object.keys(effectifParRole).forEach(role => {
+            Object.keys(effectifParRole).forEach(function(role) {
                 statsHTML += '<tr><td>' + escapeHtml(role) + '</td><td>' + effectifParRole[role] + '</td><td>' + salaireParRole[role].toFixed(2) + ' MAD</td></tr>';
             });
             statsHTML += '</tbody></table></div>';
@@ -643,75 +1043,68 @@ async function loadStatistiques() {
         statsContent.innerHTML = statsHTML;
 
         // ============ RENDU DES GRAPHIQUES ============
-        setTimeout(() => {
+        setTimeout(function() {
             if (typeof Chart === 'undefined') { console.warn('Chart.js non chargé'); return; }
             try {
                 var ctx1 = document.getElementById('salesChart')?.getContext('2d');
-                if (ctx1) statsCharts.sales = new Chart(ctx1, { type: 'line', data: { labels: Object.keys(dailySales), datasets: [{ label: 'CA (MAD)', data: Object.values(dailySales), borderColor: '#A67C52', backgroundColor: 'rgba(166,124,82,0.1)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#A67C52' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + ' MAD' } } } } });
+                if (ctx1) statsCharts.sales = new Chart(ctx1, { type: 'line', data: { labels: Object.keys(dailySales), datasets: [{ label: 'CA (MAD)', data: Object.values(dailySales), borderColor: '#A67C52', backgroundColor: 'rgba(166,124,82,0.1)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#A67C52' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return v + ' MAD'; } } } } } });
 
                 var ctx2 = document.getElementById('paymentChart')?.getContext('2d');
                 if (ctx2) statsCharts.payment = new Chart(ctx2, { type: 'doughnut', data: { labels: Object.keys(paymentMethods), datasets: [{ data: Object.values(paymentMethods), backgroundColor: ['#A67C52', '#4f46e5', '#16a34a', '#ef4444', '#d97706'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
 
                 var ctx3 = document.getElementById('categoryChart')?.getContext('2d');
-                if (ctx3) statsCharts.category = new Chart(ctx3, { type: 'bar', data: { labels: topCategories.map(c => c[0]), datasets: [{ label: 'CA (MAD)', data: topCategories.map(c => c[1]), backgroundColor: '#A67C52', borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + ' MAD' } } } } });
+                if (ctx3) statsCharts.category = new Chart(ctx3, { type: 'bar', data: { labels: topCategories.map(function(c) { return c[0]; }), datasets: [{ label: 'CA (MAD)', data: topCategories.map(function(c) { return c[1]; }), backgroundColor: '#A67C52', borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return v + ' MAD'; } } } } } });
 
                 var ctx4 = document.getElementById('depensesChart')?.getContext('2d');
-                if (ctx4) statsCharts.depenses = new Chart(ctx4, { type: 'bar', data: { labels: Object.keys(depensesByCat), datasets: [{ label: 'Dépenses (MAD)', data: Object.values(depensesByCat), backgroundColor: '#ef4444', borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + ' MAD' } } } } });
+                if (ctx4) statsCharts.depenses = new Chart(ctx4, { type: 'bar', data: { labels: Object.keys(depensesByCat), datasets: [{ label: 'Dépenses (MAD)', data: Object.values(depensesByCat), backgroundColor: '#ef4444', borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return v + ' MAD'; } } } } } });
 
-                // Heatmap horaire
                 var ctxH = document.getElementById('heatmapChart')?.getContext('2d');
                 if (ctxH) {
-                    var hours = Object.keys(heatmap).map(h => h + 'h');
+                    var hours = Object.keys(heatmap).map(function(h) { return h + 'h'; });
                     var hourData = Object.values(heatmap);
                     statsAdvancedCharts.heatmap = new Chart(ctxH, {
                         type: 'bar',
-                        data: {
-                            labels: hours,
-                            datasets: [{ label: 'CA par heure', data: hourData, backgroundColor: hourData.map(v => v > 0 ? '#0F766E' : '#e2e8f0'), borderRadius: 4 }]
-                        },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: { y: { beginAtZero: true, ticks: { callback: v => v + ' MAD' } } }
-                        }
+                        data: { labels: hours, datasets: [{ label: 'CA par heure', data: hourData, backgroundColor: hourData.map(function(v) { return v > 0 ? '#0F766E' : '#e2e8f0'; }), borderRadius: 4 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return v + ' MAD'; } } } } }
                     });
                 }
 
-                // Aging doughnut
                 var ctxA = document.getElementById('agingChart')?.getContext('2d');
                 if (ctxA) {
-                    var agingLabels = Object.keys(aging.buckets).filter(k => aging.buckets[k].montant > 0);
-                    var agingData = agingLabels.map(k => aging.buckets[k].montant);
-                    statsAdvancedCharts.aging = new Chart(ctxA, {
-                        type: 'doughnut',
-                        data: {
-                            labels: agingLabels,
-                            datasets: [{ data: agingData, backgroundColor: ['#16a34a', '#d97706', '#ea580c', '#dc2626'] }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-                    });
+                    var agingLabels = Object.keys(aging.buckets).filter(function(k) { return aging.buckets[k].montant > 0; });
+                    var agingData = agingLabels.map(function(k) { return aging.buckets[k].montant; });
+                    if (agingData.length > 0) {
+                        statsAdvancedCharts.aging = new Chart(ctxA, {
+                            type: 'doughnut',
+                            data: { labels: agingLabels, datasets: [{ data: agingData, backgroundColor: ['#16a34a', '#d97706', '#ea580c', '#dc2626'] }] },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                        });
+                    }
                 }
 
-                // RFM doughnut
                 var ctxR = document.getElementById('rfmChart')?.getContext('2d');
                 if (ctxR) {
-                    var rfmLabels = Object.keys(rfm.segments).filter(k => rfm.segments[k] > 0);
-                    var rfmData = rfmLabels.map(k => rfm.segments[k]);
-                    var rfmColors = rfmLabels.map(k => ({
-                        'Champion':'#16a34a', 'Loyal':'#0EA5E9', 'À risque':'#d97706', 'Endormi':'#6366F1', 'Perdu':'#dc2626', 'Nouveau':'#10B981'
-                    })[k] || '#64748b');
-                    statsAdvancedCharts.rfm = new Chart(ctxR, {
-                        type: 'doughnut',
-                        data: { labels: rfmLabels, datasets: [{ data: rfmData, backgroundColor: rfmColors }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                    var rfmLabels = Object.keys(rfm.segments).filter(function(k) { return rfm.segments[k] > 0; });
+                    var rfmData = rfmLabels.map(function(k) { return rfm.segments[k]; });
+                    var rfmColors = rfmLabels.map(function(k) {
+                        return ({ 'Champion':'#16a34a', 'Loyal':'#0EA5E9', 'À risque':'#d97706', 'Endormi':'#6366F1', 'Perdu':'#dc2626', 'Nouveau':'#10B981' })[k] || '#64748b';
                     });
+                    if (rfmData.length > 0) {
+                        statsAdvancedCharts.rfm = new Chart(ctxR, {
+                            type: 'doughnut',
+                            data: { labels: rfmLabels, datasets: [{ data: rfmData, backgroundColor: rfmColors }] },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                        });
+                    }
                 }
             } catch(chartError) { console.error('Erreur Chart.js :', chartError); }
         }, 200);
 
     } catch(e) {
         console.error('Erreur statistiques :', e);
-        statsContent.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-exclamation-triangle" style="font-size:2rem; color:#ef4444;"></i><p style="color:#ef4444; margin-top:10px;">Erreur lors du chargement des statistiques</p><p style="color:#64748b; font-size:0.85rem;">' + escapeHtml(e.message || e) + '</p></div>';
+        if (statsContent) {
+            statsContent.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-exclamation-triangle" style="font-size:2rem; color:#ef4444;"></i><p style="color:#ef4444; margin-top:10px;">Erreur lors du chargement des statistiques</p><p style="color:#64748b; font-size:0.85rem;">' + escapeHtml(e.message || e) + '</p></div>';
+        }
     }
 }
 
@@ -721,5 +1114,18 @@ function buildStatCard(label, value, icon, bgColor, iconColor) {
     return '<div class="stat-card"><div class="stat-icon" style="background:' + bgColor + ';"><i class="fas ' + icon + '" style="color:' + iconColor + ';"></i></div><div class="stat-info"><span class="stat-label">' + escapeHtml(label) + '</span><span class="stat-value" style="color:' + (isNegative ? '#ef4444' : '#1e293b') + ';">' + escapeHtml(strVal) + '</span></div></div>';
 }
 
-console.log('🚀 E-SOLUTION POS — Statistiques Premium v3.0 chargé');
-console.log('✅ KPIs standard + RFM + Aging + DSO + Prévisions + Heatmap + Top vendeurs + Alertes');
+// ============================================================
+// EXPOSITION GLOBALE
+// ============================================================
+window.statsLoadFilterOptions = statsLoadFilterOptions;
+window.statsApplyPeriodFilter = statsApplyPeriodFilter;
+window.statsApplyDateRange = statsApplyDateRange;
+window.statsApplySimpleFilter = statsApplySimpleFilter;
+window.statsResetFilters = statsResetFilters;
+window.statsRenderActiveFilters = statsRenderActiveFilters;
+window.statsCalculateGeneral = statsCalculateGeneral;
+
+console.log('🚀 E-SOLUTION POS — Statistiques Premium v4.0 FINALE');
+console.log('✅ Filtres : Période + Date début/fin + Client + Produit + Catégorie + Vendeur');
+console.log('✅ Analytics : RFM + Aging + DSO + Prévisions + Heatmap + Top vendeurs + Alertes');
+console.log('✅ Statistiques GÉNÉRALES all-time (CA, profit, marge, meilleur jour/mois/produit/client)');
