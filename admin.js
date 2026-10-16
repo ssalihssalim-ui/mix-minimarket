@@ -43,14 +43,19 @@ window.filteredUsers = window.filteredUsers || null;
 
 // ==================== FONCTIONS UTILITAIRES ====================
 function escapeHtml(str) {
-if (!str) return '';
-return str.replace(/[&<>]/g, function(m) {
+if (str === null || str === undefined) return '';
+if (typeof str !== 'string') str = String(str);
+return str.replace(/[&<>"']/g, function(m) {
 if (m === '&') return '&amp;';
 if (m === '<') return '&lt;';
 if (m === '>') return '&gt;';
+if (m === '"') return '&quot;';
+if (m === "'") return '&#39;';
 return m;
 });
 }
+// ✅ Forcer la version globale pour éviter l'écrasement par d'autres fichiers
+window.escapeHtml = escapeHtml;
 
 function toDate(val) {
 if (!val) return null;
