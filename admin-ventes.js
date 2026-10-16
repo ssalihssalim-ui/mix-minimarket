@@ -13,6 +13,7 @@
 // ✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général
 // ✅ 🎨 NOUVEAU : Design MODERNE (identique à admin-credits)
 // ✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (sans redirection POS) + datePaiement
+// ✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -384,6 +385,27 @@ return `
 </div>
 `;
 }
+
+// ✅ NOUVELLE FONCTION : Affiche la date de paiement (date + heure)
+function renderDatePaiementCell(vente) {
+    if (vente.datePaiement && vente.datePaiement.seconds) {
+        const dt = formatDateHeure(vente.datePaiement.seconds);
+        return `
+<div class="date-cell" style="background:#ECFDF5;border-radius:6px;padding:4px 8px;border:1px solid #99F6E4;">
+<div class="date-line" style="color:#065F46;">
+<i class="fas fa-calendar-check" style="color:#10B981;"></i>
+<span style="font-weight:700;">${dt.date}</span>
+</div>
+<div class="time-line" style="color:#065F46;">
+<i class="far fa-clock" style="color:#10B981;"></i>
+<span style="font-weight:600;">${dt.time}</span>
+</div>
+</div>
+`;
+    }
+    return `<span style="color:#9ca3af;font-size:13px;">—</span>`;
+}
+window.renderDatePaiementCell = renderDatePaiementCell;
 
 function renderClientCell(vente) {
 var clientName = vente._clientDisplayName || vente.clientName || vente.table || 'Client inconnu';
@@ -1954,6 +1976,7 @@ ${window.venteSelectionMode ? '<input type="checkbox" id="ventesSelectAllCheckbo
 </th>
 <th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
 <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
+<th style="min-width:150px;"><i class="fas fa-calendar-check"></i> Date paiement</th>
 <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
 <th><i class="fas fa-box"></i> Articles</th>
 <th><i class="fas fa-cog"></i> Options</th>
@@ -1982,6 +2005,7 @@ const factureHtml = `
 </div>
 `;
 const dateHtml = renderDateCell(d);
+const datePaiementHtml = renderDatePaiementCell(d);
 const clientHtml = renderClientCell(d);
 
 var arts = d.items ? d.items.map(function(it) {
@@ -2047,6 +2071,7 @@ ${window.venteSelectionMode ? '<input type="checkbox" class="vente-checkbox" dat
 ${factureHtml}
 </td>
 <td>${dateHtml}</td>
+<td>${datePaiementHtml}</td>
 <td>${clientHtml}</td>
 <td>${arts}</td>
 <td>${opts}</td>
@@ -2249,7 +2274,6 @@ async function confirmVentePayment(venteId) {
         return;
     }
 
-    // Récupérer la vente existante
     var dc = await db.collection('ventes').doc(venteId).get();
     if (!dc.exists) {
         alert('Vente introuvable');
@@ -2273,7 +2297,6 @@ async function confirmVentePayment(venteId) {
 
     var now = firebase.firestore.FieldValue.serverTimestamp();
 
-    // Construire les données de mise à jour
     var updateData = {
         amountGiven: nouveauPaye,
         remainingAmount: nouveauRestant,
@@ -2283,18 +2306,15 @@ async function confirmVentePayment(venteId) {
         updatedAt: now
     };
 
-    // Ajouter la date de paiement UNIQUEMENT quand la vente est soldée
     if (estPaye) {
         updateData.datePaiement = now;
         updateData.paidAt = now;
     }
 
     try {
-        // Mise à jour de la MÊME vente (pas de nouvelle vente créée)
         await db.collection('ventes').doc(venteId).update(updateData);
         console.log('✅ Vente mise à jour :', venteId, '→ statut:', updateData.statutPaiement);
 
-        // B1 : Synchroniser aussi le crédit correspondant (même factureNum)
         if (vente.factureNum) {
             var creditsSnap = await db.collection('credits')
                 .where('factureNum', '==', vente.factureNum)
@@ -2328,7 +2348,6 @@ async function confirmVentePayment(venteId) {
                     await db.collection('credits').doc(cDoc.id).update(creditUpdate);
                     console.log('✅ Crédit mis à jour :', cDoc.id);
 
-                    // Cache local crédits
                     if (window.allCreditsData) {
                         var cIdx = window.allCreditsData.findIndex(function(c) { return c.id === cDoc.id; });
                         if (cIdx !== -1) {
@@ -2346,7 +2365,6 @@ async function confirmVentePayment(venteId) {
             }
         }
 
-        // Cache local ventes
         if (typeof CacheDB !== 'undefined' && CacheDB.set) {
             try {
                 var updatedVente = Object.assign({}, vente, updateData);
@@ -2355,7 +2373,6 @@ async function confirmVentePayment(venteId) {
             } catch(e) {}
         }
 
-        // Mémoire locale
         if (window.allVentesData) {
             var idx = window.allVentesData.findIndex(function(v) { return v.id === venteId; });
             if (idx !== -1) {
@@ -2372,7 +2389,6 @@ async function confirmVentePayment(venteId) {
 
         closeModal();
 
-        // Rafraîchir UI
         if (typeof updateVentesStats === 'function') {
             updateVentesStats(window.filteredVentes || window.allVentesData);
         }
@@ -3387,6 +3403,8 @@ window.posAfficherOptionWhatsAppPaiementVentes = posAfficherOptionWhatsAppPaieme
 window.posEnvoyerWhatsAppPaiementVentes = posEnvoyerWhatsAppPaiementVentes;
 window.posFermerModalWhatsAppPaiementVentes = posFermerModalWhatsAppPaiementVentes;
 
+window.renderDatePaiementCell = renderDatePaiementCell;
+
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
 console.log('✅ Détails facture modal ajouté - Font size agrandi');
@@ -3403,3 +3421,4 @@ console.log('✅ 🎨 NOUVEAU : Design MODERNE identique à admin-credits');
 console.log('✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (pas de redirection POS)');
 console.log('✅ 📅 NOUVEAU : Enregistrement automatique de la date de paiement (datePaiement)');
 console.log('✅ 🔄 NOUVEAU : Synchronisation vente ↔ crédit (B1)');
+console.log('✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes');
