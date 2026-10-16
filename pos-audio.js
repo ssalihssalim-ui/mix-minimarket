@@ -1,4 +1,4 @@
-// ==================== POS-AUDIO.JS v29 – MICRO CORRIGÉ (DÉLAI LIBÉRATION) ====================
+// ==================== POS-AUDIO.JS v28 – VERROUILLAGE TOGGLEVOICESEARCH ====================
 // ✅ Le texte s'écrit dans la barre SANS icône ✍️
 // ✅ Recherche lancée automatiquement à chaque mot dicté (interim)
 // ✅ Produit dicté → affiché dans la barre ET recherche lancée
@@ -11,7 +11,6 @@
 // 🔥 AJOUT : Recherche vocale sur pages Produits, Ventes, Crédits
 // 🔥 CORRECTION MICRO : verrouillage window.toggleVoiceSearch pour empêcher pos.js de l'écraser
 // 🔥 CORRECTION closeCreditSelection : protégé par try/catch
-// 🆕 v29 : FIX MICRO — délai de libération getUserMedia (500ms) + délai start() (300ms) + onerror détaillé
 
 console.log('🚀 [pos-audio] Début du chargement...');
 
@@ -125,38 +124,7 @@ function showProcessingIndicator() {}
 function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
 function isIOSStandalone() { return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream && (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches); }
 function checkVoiceSupport() { var i = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (i && isIOSStandalone()) return { supported: false, reason: 'Ouvrez dans Safari' }; if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return { supported: false, reason: 'Non supporté' }; return { supported: true }; }
-
-// ============================================================
-// 🆕 v29 : FONCTION CORRIGÉE — Délai de libération du micro
-// ============================================================
-async function requestMicrophonePermission() {
-    if (micPermissionGranted) return true;
-    try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            // Pas de getUserMedia → on laisse SpeechRecognition gérer
-            micPermissionGranted = true;
-            return true;
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // 🔑 CORRECTION v29 : laisser le micro ouvert 500ms
-        // Le temps que Chrome libère bien le périphérique avant SpeechRecognition.start()
-        await new Promise(function(resolve) {
-            setTimeout(function() {
-                stream.getTracks().forEach(function(t) { t.stop(); });
-                resolve();
-            }, 500);
-        });
-        
-        micPermissionGranted = true;
-        return true;
-    } catch (e) {
-        console.warn('⚠️ [MICRO] getUserMedia échoué, on tente SpeechRecognition direct:', e);
-        // 🔑 CORRECTION v29 : même si getUserMedia échoue, on laisse SpeechRecognition tenter
-        micPermissionGranted = true;
-        return true;
-    }
-}
+async function requestMicrophonePermission() { if (micPermissionGranted) return true; try { if (!navigator.mediaDevices?.getUserMedia) return false; const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach(t => t.stop()); micPermissionGranted = true; return true; } catch (e) { return false; } }
 
 // ========== INDEX CLIENT (AVEC DESCRIPTION) ==========
 function buildClientIndex() {
@@ -1215,66 +1183,27 @@ function posStartVoiceRecording() {
             }, 8);
         }
     };
-
-    // ============================================================
-    // 🆕 v29 : onerror DÉTAILLÉ — voir la vraie erreur
-    // ============================================================
     voiceRecognition.onerror = function(e) {
-        console.error('❌ [MICRO] Erreur reconnaissance:', e.error, e);
-        
-        var messages = {
-            'no-speech':       '🎤 Aucune parole détectée',
-            'audio-capture':   '🎤 Aucun micro détecté',
-            'not-allowed':     '🎤 Permission refusée — autorisez le micro',
-            'service-not-allowed': '🎤 Service refusé — HTTPS requis',
-            'network':         '🎤 Problème réseau',
-            'aborted':         '🎤 Écoute annulée',
-            'bad-grammar':     '🎤 Erreur de grammaire',
-            'language-not-supported': '🎤 Langue non supportée'
-        };
-        
-        var msg = messages[e.error] || ('❌ Erreur : ' + e.error);
-        
-        if (e.error === 'no-speech' || e.error === 'aborted') {
-            // Erreurs normales — on ne fait rien
-            return;
-        }
-        
-        if (e.error === 'network') {
-            showVoiceResult('❌ Réseau — vérifiez votre connexion');
-        } else if (e.error === 'not-allowed') {
-            showVoiceResult('🚫 Permission micro refusée');
-            alert('🚫 Permission micro refusée.\n\nCliquez sur le cadenas 🔒 dans la barre d\'adresse et autorisez le micro.');
-        } else if (e.error === 'audio-capture') {
-            showVoiceResult('🎤 Aucun micro détecté');
-        } else {
-            showVoiceResult(msg);
-        }
-        
+        console.error('❌ Erreur reconnaissance:', e.error);
+        if (e.error === 'aborted' || e.error === 'no-speech') return;
+        if (e.error === 'network') showVoiceResult('❌ Réseau');
         posStopVoiceSearch();
     };
 
-    // ============================================================
-    // 🆕 v29 : DÉLAI DE 300MS AVANT start() — laisser Chrome libérer le micro
-    // ============================================================
-    setTimeout(function() {
-        try {
-            voiceRecognition.start();
-            isRecording = true;
-            showVoiceModeIndicator();
-            showVoiceResult('🎤 Écoute...');
-            console.log('🎤 [MICRO] SpeechRecognition.start() OK');
-        } catch (err) {
-            console.error('❌ [MICRO] Erreur au démarrage:', err);
-            isRecording = false;
-            if (mb) {
-                mb.innerHTML = '<i class="fas fa-microphone"></i>';
-                mb.style.background = '#dcfce7';
-                mb.style.borderColor = '#16a34a';
-            }
-            alert('❌ Impossible de démarrer le micro : ' + err.message);
+    try {
+        voiceRecognition.start();
+        isRecording = true;
+        showVoiceModeIndicator();
+        showVoiceResult('🎤 Écoute...');
+    } catch (e) {
+        console.error('❌ Erreur démarrage:', e);
+        isRecording = false;
+        if (mb) {
+            mb.innerHTML = '<i class="fas fa-microphone"></i>';
+            mb.style.background = '#dcfce7';
+            mb.style.borderColor = '#16a34a';
         }
-    }, 300);
+    }
 }
 
 function posStopVoiceSearch() {
@@ -1358,12 +1287,11 @@ try {
     console.warn('⚠️ pos-audio: impossible de définir closeCreditSelection (fin):', e);
 }
 
-console.log('🎤 Module vocal v29 – QUANTITÉ PRIORITAIRE + VERROUILLAGE toggleVoiceSearch + FIX MICRO');
+console.log('🎤 Module vocal v28 – QUANTITÉ PRIORITAIRE + VERROUILLAGE toggleVoiceSearch');
 console.log('✅ Recherche vocale sur POS (produits + quantité)');
 console.log('✅ Recherche vocale sur page Produits (nom + catégorie)');
 console.log('✅ Recherche vocale sur page Ventes (client + période)');
 console.log('✅ Recherche vocale sur page Crédits (client + période)');
 console.log('✅ Navigation utilise les noms ANGLAIS pour matcher admin.js');
 console.log('🔒 window.toggleVoiceSearch VERROUILLÉ — pos.js ne peut plus l\'écraser');
-console.log('🆕 v29 : FIX MICRO — délai libération getUserMedia (500ms) + délai start() (300ms) + onerror détaillé');
 console.log('🏁 [pos-audio] FIN — toggleVoiceSearch:', typeof window.toggleVoiceSearch);
