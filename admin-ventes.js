@@ -11,6 +11,7 @@
 // ✅ 📴 VENTES HORS-LIGNE : affichage depuis localStorage + sync auto
 // ✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé (comme admin credits)
 // ✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général
+// ✅ 🎨 NOUVEAU : Design MODERNE (identique à admin-credits)
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -403,6 +404,7 @@ return `
 `;
 }
 
+// ✅ CSS MODERNE - Design PRO (identique à admin-credits)
 function injectVentesStyles() {
 const styleId = 'ventes-pro-styles-final';
 if (document.getElementById(styleId)) return;
@@ -411,240 +413,434 @@ const styles = `
 <style id="${styleId}">
 #ventesPage, #commandesPage,
 #ventesPage *, #commandesPage * {
-font-size: 22px !important;
 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-#ventesPage .stat-label, #commandesPage .stat-label,
-#ventesPage .filter-group label, #commandesPage .filter-group label,
-#ventesPage .total-label, #commandesPage .total-label {
-font-size: 16px !important;
+/* ✅ Container principal */
+#ventesPage, #commandesPage {
+background: linear-gradient(180deg, #FAFBFC 0%, #F4F6F8 100%) !important;
+padding: 20px !important;
+border-radius: 16px !important;
 }
 
-#ventesPage .btn-add, #commandesPage .btn-add,
-#ventesPage .btn-edit, #commandesPage .btn-edit,
-#ventesPage .btn-delete, #commandesPage .btn-delete,
-#ventesPage .btn-save, #commandesPage .btn-save,
-#ventesPage .btn-cancel, #commandesPage .btn-cancel {
+/* ✅ Carte header */
+#ventesPage .card-header,
+#commandesPage .card-header {
+background: #FFFFFF !important;
+padding: 24px !important;
+border-radius: 16px !important;
+box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.03) !important;
+border: 1px solid rgba(0,0,0,0.04) !important;
+margin-bottom: 20px !important;
+}
+
+#ventesPage .card-header h3,
+#commandesPage .card-header h3 {
+font-size: 24px !important;
+font-weight: 800 !important;
+color: #0F172A !important;
+letter-spacing: -0.5px !important;
+display: flex !important;
+align-items: center !important;
+gap: 10px !important;
+margin: 0 !important;
+}
+
+#ventesPage .card-header h3 i,
+#commandesPage .card-header h3 i {
+background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+color: #fff !important;
+padding: 8px !important;
+border-radius: 10px !important;
 font-size: 18px !important;
+box-shadow: 0 4px 12px rgba(20,184,166,0.25) !important;
 }
 
-#ventesPage .status-success, #commandesPage .status-success,
-#ventesPage .status-warning, #commandesPage .status-warning,
-#ventesPage .status-danger, #commandesPage .status-danger {
-font-size: 18px !important;
-padding: 6px 16px !important;
+/* ✅ Statistiques en cartes modernes */
+.ventes-stats-grid {
+display: grid !important;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+gap: 16px !important;
+margin-bottom: 20px !important;
+padding: 0 !important;
+background: transparent !important;
+border: none !important;
 }
 
-.voice-display-field {
-padding: 8px 12px !important;
-border: 2px solid #14B8A6 !important;
-border-radius: 8px !important;
-width: 180px !important;
-background: #f0fdf4 !important;
-color: #0D9488 !important;
+.ventes-stat-card {
+display: flex !important;
+flex-direction: row !important;
+align-items: center !important;
+justify-content: flex-start !important;
+gap: 16px !important;
+padding: 20px !important;
+background: #FFFFFF !important;
+border-radius: 14px !important;
+text-align: left !important;
+box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
+border: 1px solid rgba(0,0,0,0.04) !important;
+transition: all 0.25s ease !important;
+position: relative !important;
+overflow: hidden !important;
+}
+
+.ventes-stat-card::before {
+content: '' !important;
+position: absolute !important;
+top: 0 !important;
+left: 0 !important;
+right: 0 !important;
+height: 4px !important;
+background: linear-gradient(90deg, #14B8A6, #0D9488) !important;
+opacity: 0 !important;
+transition: opacity 0.25s ease !important;
+}
+
+.ventes-stat-card:hover {
+transform: translateY(-3px) !important;
+box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.06) !important;
+}
+
+.ventes-stat-card:hover::before {
+opacity: 1 !important;
+}
+
+.ventes-stat-card .stat-value {
+font-size: 24px !important;
+font-weight: 800 !important;
+color: #0F172A !important;
+letter-spacing: -0.5px !important;
+display: block !important;
+line-height: 1.2 !important;
+margin: 0 !important;
+}
+
+.ventes-stat-card .stat-value.green { color: #10B981 !important; }
+.ventes-stat-card .stat-value.blue { color: #3B82F6 !important; }
+.ventes-stat-card .stat-value.orange { color: #F59E0B !important; }
+.ventes-stat-card .stat-value.red { color: #EF4444 !important; }
+
+.ventes-stat-card .stat-label {
+font-size: 12px !important;
 font-weight: 600 !important;
-font-size: 22px !important;
-min-height: 48px !important;
+color: #64748B !important;
+text-transform: uppercase !important;
+letter-spacing: 0.5px !important;
+margin: 4px 0 0 0 !important;
+display: block !important;
 }
 
-.facture-cell {
-display: flex;
-align-items: center;
-gap: 10px;
-font-weight: 800;
-font-size: 22px !important;
-color: var(--text-primary);
-padding: 4px 12px;
-border-radius: 8px;
-border-left: 3px solid var(--accent);
-background: var(--gray-50);
-}
-
-.facture-cell i {
-color: var(--accent);
-font-size: 20px !important;
-}
-
-.facture-cell .facture-number {
-color: var(--black);
-font-weight: 900;
-font-size: 22px !important;
-background: var(--white);
-padding: 0 10px;
-border-radius: 4px;
-}
-
-.date-cell {
-display: flex;
-flex-direction: column;
-gap: 2px;
-padding: 2px 0;
-}
-
-.date-cell .date-line,
-.date-cell .time-line {
-display: flex;
-align-items: center;
-gap: 8px;
-font-size: 20px !important;
-color: var(--text-secondary);
-font-weight: 500;
-}
-
-.date-cell .date-line i,
-.date-cell .time-line i {
-font-size: 16px !important;
-color: var(--accent);
-opacity: 0.7;
-width: 18px;
-}
-
-.client-cell {
-display: flex;
-align-items: center;
-gap: 10px;
-font-weight: 700;
-font-size: 22px !important;
-color: var(--text-primary);
-background: rgba(20, 184, 166, 0.05);
-padding: 4px 12px;
-border-radius: 8px;
-}
-
-.client-cell i {
-color: var(--accent);
-font-size: 20px !important;
-}
-
-#ventesPage .data-table,
-#commandesPage .data-table {
-font-size: 22px !important;
-border-collapse: separate;
-border-spacing: 0 4px;
-width: 100%;
-}
-
-#ventesPage .data-table thead th,
-#commandesPage .data-table thead th {
-font-size: 18px !important;
-padding: 14px 18px !important;
-background: var(--gray-50) !important;
-color: var(--text-secondary) !important;
-font-weight: 700 !important;
-text-transform: uppercase;
-letter-spacing: 0.6px;
-border-bottom: 2px solid var(--border);
-position: sticky;
-top: 0;
-z-index: 2;
-white-space: nowrap;
-}
-
-#ventesPage .data-table thead th i,
-#commandesPage .data-table thead th i {
-font-size: 16px !important;
-margin-right: 6px;
-}
-
-#ventesPage .data-table tbody td,
-#commandesPage .data-table tbody td {
-padding: 14px 16px !important;
-font-size: 22px !important;
-vertical-align: middle;
-background: var(--white);
-border-bottom: 1px solid var(--gray-100);
-}
-
-#ventesPage .data-table tbody tr:hover td,
-#commandesPage .data-table tbody tr:hover td {
-background: var(--gray-50);
-}
-
-.amount-total {
-font-weight: 800 !important;
-font-size: 24px !important;
-color: var(--black) !important;
-letter-spacing: -0.3px;
-}
-
-.amount-remaining {
-font-weight: 800 !important;
-font-size: 24px !important;
-color: var(--danger) !important;
-letter-spacing: -0.3px;
-}
-
+/* ✅ Barre de recherche moderne */
 .search-bar-pro {
-display: flex;
-align-items: center;
-gap: 6px;
-background: var(--white);
-border: 2px solid var(--border);
-border-radius: 12px;
-padding: 4px 4px 4px 18px;
-transition: var(--transition);
-flex: 1;
-min-width: 220px;
-position: relative;
+display: flex !important;
+align-items: center !important;
+gap: 8px !important;
+background: #FFFFFF !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 12px !important;
+padding: 4px 4px 4px 16px !important;
+transition: all 0.2s ease !important;
+flex: 1 !important;
+min-width: 240px !important;
+position: relative !important;
+box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
 }
 
 .search-bar-pro:focus-within {
-border-color: var(--black);
-box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
+border-color: #14B8A6 !important;
+box-shadow: 0 0 0 4px rgba(20,184,166,0.1) !important;
 }
 
 .search-bar-pro i.fa-search {
-color: var(--text-muted);
-font-size: 20px !important;
+color: #94A3B8 !important;
+font-size: 16px !important;
 }
 
 .search-bar-pro input {
-flex: 1;
-border: none;
-background: transparent;
-padding: 14px 8px;
-font-size: 22px !important;
-font-family: 'Inter', sans-serif;
-outline: none;
-color: var(--text-primary);
-min-width: 100px;
+flex: 1 !important;
+border: none !important;
+background: transparent !important;
+padding: 10px 8px !important;
+font-size: 15px !important;
+font-family: 'Inter', sans-serif !important;
+outline: none !important;
+color: #0F172A !important;
+min-width: 100px !important;
 }
 
 .search-bar-pro input::placeholder {
-color: var(--text-muted);
-font-weight: 400;
-font-size: 20px !important;
+color: #94A3B8 !important;
+font-weight: 400 !important;
+font-size: 14px !important;
 }
 
 .search-clear-btn {
-width: 35px !important;
-height: 35px !important;
-min-width: 35px !important;
+width: 30px !important;
+height: 30px !important;
+min-width: 30px !important;
 border-radius: 50% !important;
 border: none !important;
-background: var(--gray-200) !important;
-color: var(--text-secondary) !important;
-font-size: 18px !important;
+background: #F1F5F9 !important;
+color: #64748B !important;
+font-size: 14px !important;
 cursor: pointer !important;
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
-transition: var(--transition) !important;
+transition: all 0.2s ease !important;
 padding: 0 !important;
 margin: 0 2px !important;
 }
 
 .search-clear-btn:hover {
-background: var(--gray-300) !important;
-color: var(--black) !important;
-transform: scale(1.05);
+background: #E2E8F0 !important;
+color: #0F172A !important;
+transform: scale(1.05) !important;
 }
 
 .search-clear-btn.hidden {
 display: none !important;
 }
 
+/* ✅ Filtres et select modernes */
+#ventesPage .filter-group label,
+#commandesPage .filter-group label {
+font-size: 12px !important;
+font-weight: 600 !important;
+color: #64748B !important;
+text-transform: uppercase !important;
+letter-spacing: 0.5px !important;
+}
+
+#ventesPage .filter-group select,
+#commandesPage .filter-group select {
+padding: 10px 14px !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 10px !important;
+font-size: 14px !important;
+font-family: 'Inter', sans-serif !important;
+background: #FFFFFF !important;
+color: #0F172A !important;
+transition: all 0.2s ease !important;
+min-width: 140px !important;
+font-weight: 500 !important;
+cursor: pointer !important;
+box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+}
+
+#ventesPage .filter-group select:hover,
+#commandesPage .filter-group select:hover {
+border-color: #CBD5E1 !important;
+}
+
+#ventesPage .filter-group select:focus,
+#commandesPage .filter-group select:focus {
+border-color: #14B8A6 !important;
+outline: none !important;
+box-shadow: 0 0 0 4px rgba(20,184,166,0.1) !important;
+}
+
+/* ✅ Boutons principaux */
+#ventesPage .btn-add,
+#commandesPage .btn-add {
+padding: 10px 18px !important;
+border: none !important;
+border-radius: 10px !important;
+font-size: 14px !important;
+font-weight: 600 !important;
+cursor: pointer !important;
+transition: all 0.2s ease !important;
+background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+color: #FFFFFF !important;
+box-shadow: 0 2px 8px rgba(20,184,166,0.25) !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 6px !important;
+}
+
+#ventesPage .btn-add:hover,
+#commandesPage .btn-add:hover {
+transform: translateY(-2px) !important;
+box-shadow: 0 4px 12px rgba(20,184,166,0.35) !important;
+}
+
+/* ✅ Table moderne */
+#ventesPage .table-container,
+#commandesPage .table-container {
+background: #FFFFFF !important;
+border-radius: 14px !important;
+box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
+border: 1px solid rgba(0,0,0,0.04) !important;
+overflow-x: auto !important;
+overflow-y: auto !important;
+max-height: 75vh !important;
+-webkit-overflow-scrolling: touch !important;
+}
+
+#ventesPage .data-table,
+#commandesPage .data-table {
+width: 100% !important;
+border-collapse: separate !important;
+border-spacing: 0 !important;
+min-width: 1400px !important;
+font-size: 14px !important;
+}
+
+#ventesPage .data-table thead th,
+#commandesPage .data-table thead th {
+font-size: 12px !important;
+padding: 16px 18px !important;
+background: #F8FAFC !important;
+color: #64748B !important;
+font-weight: 700 !important;
+text-transform: uppercase !important;
+letter-spacing: 0.6px !important;
+border-bottom: 1.5px solid #E2E8F0 !important;
+white-space: nowrap !important;
+position: sticky !important;
+top: 0 !important;
+z-index: 2 !important;
+}
+
+#ventesPage .data-table thead th i,
+#commandesPage .data-table thead th i {
+font-size: 13px !important;
+margin-right: 6px !important;
+color: #94A3B8 !important;
+}
+
+#ventesPage .data-table tbody td,
+#commandesPage .data-table tbody td {
+padding: 16px 18px !important;
+font-size: 14px !important;
+vertical-align: middle !important;
+background: #FFFFFF !important;
+border-bottom: 1px solid #F1F5F9 !important;
+color: #334155 !important;
+}
+
+#ventesPage .data-table tbody tr,
+#commandesPage .data-table tbody tr {
+transition: background 0.15s ease !important;
+}
+
+#ventesPage .data-table tbody tr:hover td,
+#commandesPage .data-table tbody tr:hover td {
+background: #FAFBFC !important;
+}
+
+#ventesPage .data-table tbody tr:last-child td,
+#commandesPage .data-table tbody tr:last-child td {
+border-bottom: none !important;
+}
+
+/* ✅ Badge de facture */
+.facture-cell {
+display: inline-flex !important;
+align-items: center !important;
+gap: 8px !important;
+font-weight: 700 !important;
+font-size: 13px !important;
+color: #0F172A !important;
+padding: 6px 12px !important;
+border-radius: 8px !important;
+background: linear-gradient(135deg, #F0FDFA, #CCFBF1) !important;
+border: 1px solid #99F6E4 !important;
+transition: all 0.2s ease !important;
+}
+
+.facture-cell:hover {
+transform: translateY(-1px) !important;
+box-shadow: 0 4px 8px rgba(20,184,166,0.15) !important;
+}
+
+.facture-cell i {
+color: #0D9488 !important;
+font-size: 13px !important;
+}
+
+.facture-cell .facture-number {
+color: #0F172A !important;
+font-weight: 800 !important;
+font-size: 13px !important;
+}
+
+/* ✅ Cellule date */
+.date-cell {
+display: flex !important;
+flex-direction: column !important;
+gap: 3px !important;
+}
+
+.date-cell .date-line,
+.date-cell .time-line {
+display: flex !important;
+align-items: center !important;
+gap: 6px !important;
+font-size: 13px !important;
+color: #64748B !important;
+font-weight: 500 !important;
+}
+
+.date-cell .date-line i,
+.date-cell .time-line i {
+font-size: 11px !important;
+color: #14B8A6 !important;
+opacity: 0.8 !important;
+width: 14px !important;
+}
+
+/* ✅ Cellule client */
+.client-cell {
+display: inline-flex !important;
+align-items: center !important;
+gap: 8px !important;
+font-weight: 600 !important;
+font-size: 13px !important;
+color: #0F172A !important;
+background: linear-gradient(135deg, #F8FAFC, #F1F5F9) !important;
+padding: 6px 12px !important;
+border-radius: 8px !important;
+border: 1px solid #E2E8F0 !important;
+}
+
+.client-cell i {
+color: #14B8A6 !important;
+font-size: 13px !important;
+}
+
+/* ✅ Montants */
+.amount-total {
+font-weight: 700 !important;
+font-size: 14px !important;
+color: #0F172A !important;
+letter-spacing: -0.2px !important;
+}
+
+.amount-remaining {
+font-weight: 700 !important;
+font-size: 14px !important;
+color: #EF4444 !important;
+letter-spacing: -0.2px !important;
+}
+
+/* ✅ Statuts */
+#ventesPage .status-success,
+#ventesPage .status-warning,
+#ventesPage .status-danger,
+#commandesPage .status-success,
+#commandesPage .status-warning,
+#commandesPage .status-danger {
+font-size: 12px !important;
+padding: 4px 10px !important;
+border-radius: 6px !important;
+font-weight: 600 !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 4px !important;
+}
+
+/* ✅ Boutons d'action (design moderne identique admin-credits) */
 #ventesPage .action-buttons,
 #commandesPage .action-buttons {
 display: flex !important;
@@ -668,414 +864,352 @@ min-width: 160px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 2px 6px !important;
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    border-radius: 4px !important;
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
     border: none !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     white-space: nowrap !important;
-    text-transform: capitalize !important;
     visibility: visible !important;
     opacity: 1 !important;
     line-height: 1.2 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
-    min-height: 22px !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    min-height: 26px !important;
     width: auto !important;
 }
 
+/* 🖨️ Imprimer — Indigo doux */
 #ventesPage .action-buttons .btn-print,
 #commandesPage .action-buttons .btn-print {
-    background: #6366f1 !important;
-    color: #fff !important;
+    background: #EEF2FF !important;
+    color: #4F46E5 !important;
 }
 #ventesPage .action-buttons .btn-print:hover,
 #commandesPage .action-buttons .btn-print:hover {
-    background: #4f46e5 !important;
+    background: #4F46E5 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
+/* 📱 WhatsApp — Vert clair */
 #ventesPage .action-buttons .btn-whatsapp,
 #commandesPage .action-buttons .btn-whatsapp {
-    background: #25D366 !important;
-    color: #fff !important;
+    background: #ECFDF5 !important;
+    color: #059669 !important;
 }
 #ventesPage .action-buttons .btn-whatsapp:hover,
 #commandesPage .action-buttons .btn-whatsapp:hover {
-    background: #128C7E !important;
+    background: #25D366 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
+/* 💰 Payer — Vert doux */
 #ventesPage .action-buttons .btn-payer,
 #commandesPage .action-buttons .btn-payer {
-    background: #10B981 !important;
-    color: #fff !important;
+    background: #F0FDF4 !important;
+    color: #16A34A !important;
 }
 #ventesPage .action-buttons .btn-payer:hover,
 #commandesPage .action-buttons .btn-payer:hover {
-    background: #059669 !important;
+    background: #10B981 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
+/* ✏️ Modifier — Orange doux */
 #ventesPage .action-buttons .btn-edit,
 #commandesPage .action-buttons .btn-edit {
-    background: #f59e0b !important;
-    color: #fff !important;
+    background: #FFF7ED !important;
+    color: #EA580C !important;
 }
 #ventesPage .action-buttons .btn-edit:hover,
 #commandesPage .action-buttons .btn-edit:hover {
-    background: #d97706 !important;
+    background: #F59E0B !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
+/* 🗑️ Supprimer — Rouge doux */
 #ventesPage .action-buttons .btn-delete,
 #commandesPage .action-buttons .btn-delete {
-    background: #ef4444 !important;
-    color: #fff !important;
+    background: #FEF2F2 !important;
+    color: #DC2626 !important;
 }
 #ventesPage .action-buttons .btn-delete:hover,
 #commandesPage .action-buttons .btn-delete:hover {
-    background: #dc2626 !important;
+    background: #EF4444 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
 }
 
+/* ✅ Boutons spéciaux commandes */
 #commandesPage .action-buttons .btn-add.validate-btn {
-    background: #2563eb !important;
-    color: #fff !important;
+    background: #EEF2FF !important;
+    color: #4F46E5 !important;
 }
 #commandesPage .action-buttons .btn-add.validate-btn:hover {
-    background: #1d4ed8 !important;
+    background: #4F46E5 !important;
+    color: #fff !important;
 }
 
 #commandesPage .action-buttons .btn-delete.cancel-btn {
-    background: #ef4444 !important;
-    color: #fff !important;
+    background: #FEF2F2 !important;
+    color: #DC2626 !important;
 }
 #commandesPage .action-buttons .btn-delete.cancel-btn:hover {
-    background: #dc2626 !important;
+    background: #EF4444 !important;
+    color: #fff !important;
 }
 
-@media(max-width:1024px) {
-    #ventesPage .action-buttons .btn-print,
-    #ventesPage .action-buttons .btn-whatsapp,
-    #ventesPage .action-buttons .btn-payer,
-    #ventesPage .action-buttons .btn-edit,
-    #ventesPage .action-buttons .btn-delete,
-    #commandesPage .action-buttons .btn-print,
-    #commandesPage .action-buttons .btn-whatsapp,
-    #commandesPage .action-buttons .btn-payer,
-    #commandesPage .action-buttons .btn-edit,
-    #commandesPage .action-buttons .btn-delete {
-        padding: 2px 5px !important;
-        font-size: 9px !important;
-        min-height: 20px !important;
-    }
-}
-
-@media(max-width:768px) {
-    #ventesPage .action-buttons .btn-print,
-    #ventesPage .action-buttons .btn-whatsapp,
-    #ventesPage .action-buttons .btn-payer,
-    #ventesPage .action-buttons .btn-edit,
-    #ventesPage .action-buttons .btn-delete,
-    #commandesPage .action-buttons .btn-print,
-    #commandesPage .action-buttons .btn-whatsapp,
-    #commandesPage .action-buttons .btn-payer,
-    #commandesPage .action-buttons .btn-edit,
-    #commandesPage .action-buttons .btn-delete {
-        padding: 1px 4px !important;
-        font-size: 8px !important;
-        min-height: 18px !important;
-    }
-}
-
-@media(max-width:500px) {
-    #ventesPage .action-buttons .btn-print,
-    #ventesPage .action-buttons .btn-whatsapp,
-    #ventesPage .action-buttons .btn-payer,
-    #ventesPage .action-buttons .btn-edit,
-    #ventesPage .action-buttons .btn-delete,
-    #commandesPage .action-buttons .btn-print,
-    #commandesPage .action-buttons .btn-whatsapp,
-    #commandesPage .action-buttons .btn-payer,
-    #commandesPage .action-buttons .btn-edit,
-    #commandesPage .action-buttons .btn-delete {
-        padding: 1px 3px !important;
-        font-size: 7px !important;
-        min-height: 16px !important;
-    }
-}
-
-#ventesPage .filter-group,
-#commandesPage .filter-group {
-display: flex;
-align-items: center;
-gap: 10px;
-}
-
-#ventesPage .filter-group label,
-#commandesPage .filter-group label {
-font-size: 16px !important;
-font-weight: 600;
-color: var(--text-secondary);
-text-transform: uppercase;
-letter-spacing: 0.5px;
-}
-
-#ventesPage .filter-group select,
-#commandesPage .filter-group select {
-padding: 10px 16px;
-border: 2px solid var(--border);
-border-radius: 10px;
-font-size: 20px !important;
-font-family: 'Inter', sans-serif;
-background: var(--white);
-color: var(--text-primary);
-transition: var(--transition);
-min-width: 140px;
-}
-
-#ventesPage .filter-group select:focus,
-#commandesPage .filter-group select:focus {
-border-color: var(--black);
-outline: none;
-box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
-}
-
+/* ✅ Total des ventes/commandes */
 #ventesPage .total-row-pro,
 #commandesPage .total-row-pro {
-display: flex;
-justify-content: flex-end;
-align-items: center;
-gap: 32px;
-padding: 18px 24px;
-background: var(--gray-50);
-border-radius: 14px;
-margin-top: 18px;
-border: 1px solid var(--border);
-flex-wrap: wrap;
+display: flex !important;
+justify-content: flex-end !important;
+align-items: center !important;
+gap: 16px !important;
+padding: 18px 24px !important;
+background: linear-gradient(135deg, #F0FDFA, #CCFBF1) !important;
+border-radius: 12px !important;
+margin-top: 16px !important;
+border: 1px solid #99F6E4 !important;
+flex-wrap: wrap !important;
 }
 
 #ventesPage .total-row-pro .total-label,
 #commandesPage .total-row-pro .total-label {
-font-size: 16px !important;
-font-weight: 700;
-color: var(--text-secondary);
-text-transform: uppercase;
-letter-spacing: 0.5px;
+font-size: 13px !important;
+font-weight: 700 !important;
+color: #0F766E !important;
+text-transform: uppercase !important;
+letter-spacing: 0.5px !important;
 }
 
 #ventesPage .total-row-pro .total-amount,
 #commandesPage .total-row-pro .total-amount {
-font-size: 28px !important;
-font-weight: 900;
-color: var(--black);
-letter-spacing: -0.5px;
+font-size: 20px !important;
+font-weight: 800 !important;
+color: #0D9488 !important;
+letter-spacing: -0.5px !important;
+display: flex !important;
+align-items: center !important;
+gap: 8px !important;
 }
 
 #ventesPage .total-row-pro .total-amount i,
 #commandesPage .total-row-pro .total-amount i {
-color: var(--accent);
-font-size: 22px !important;
-margin-right: 6px;
+color: #14B8A6 !important;
+font-size: 16px !important;
 }
 
-.ventes-select-buttons {
-display: flex;
-gap: 8px;
-align-items: center;
-flex-wrap: wrap;
-}
-
+/* ✅ Boutons sélection en masse */
 #selectedVentesCount {
-font-size: 16px;
-color: #64748b;
+font-size: 12px !important;
+color: #64748b !important;
 display: none;
-font-weight: 600;
-padding: 4px 12px;
-background: #f1f5f9;
-border-radius: 20px;
+font-weight: 600 !important;
+padding: 4px 12px !important;
+background: #f1f5f9 !important;
+border-radius: 20px !important;
 }
 
 #selectAllVentesBtn {
-font-size: 16px;
-padding: 8px 16px;
-background: #4f46e5;
-color: #fff;
-border: none;
-border-radius: 8px;
-cursor: pointer;
+font-size: 14px !important;
+padding: 10px 18px !important;
+background: #4f46e5 !important;
+color: #fff !important;
+border: none !important;
+border-radius: 10px !important;
+cursor: pointer !important;
 display: none;
-transition: all 0.2s;
+transition: all 0.2s !important;
+font-weight: 600 !important;
 }
 
 #selectAllVentesBtn:hover {
-background: #4338ca;
-transform: scale(1.02);
+background: #4338ca !important;
+transform: translateY(-2px) !important;
 }
 
 #deleteSelectedVentesBtn {
-font-size: 16px;
-padding: 8px 16px;
-background: #ef4444;
-color: #fff;
-border: none;
-border-radius: 8px;
-cursor: pointer;
+font-size: 14px !important;
+padding: 10px 18px !important;
+background: #FEF2F2 !important;
+color: #DC2626 !important;
+border: none !important;
+border-radius: 10px !important;
+cursor: pointer !important;
 display: none;
-transition: all 0.2s;
+transition: all 0.2s !important;
+font-weight: 600 !important;
 }
 
 #deleteSelectedVentesBtn:hover {
-background: #dc2626;
-transform: scale(1.02);
+background: #EF4444 !important;
+color: #fff !important;
+transform: translateY(-2px) !important;
 }
 
-.ventes-stats-grid {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-gap: 16px;
-margin-bottom: 20px;
-padding: 16px 20px;
-background: var(--bg-card);
-border-radius: var(--radius-xl);
-border: 1px solid var(--border);
-}
-
-.ventes-stat-card {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-padding: 12px 16px;
-background: var(--bg-page);
-border-radius: var(--radius);
-text-align: center;
-}
-
-.ventes-stat-card .stat-value {
-font-size: 28px !important;
-font-weight: 900 !important;
-color: var(--black);
-letter-spacing: -0.3px;
-}
-
-.ventes-stat-card .stat-value.green {
-color: #14B8A6;
-}
-.ventes-stat-card .stat-value.blue {
-color: #2563eb;
-}
-.ventes-stat-card .stat-value.orange {
-color: #f59e0b;
-}
-.ventes-stat-card .stat-value.red {
-color: #ef4444;
-}
-
-.ventes-stat-card .stat-label {
-font-size: 14px !important;
-font-weight: 600;
-color: var(--text-secondary);
-text-transform: uppercase;
-letter-spacing: 0.5px;
-margin-top: 4px;
-}
-
+/* ✅ Filtres de date personnalisés */
 .date-filter-group {
-display: flex;
-align-items: center;
-gap: 8px;
-flex-wrap: wrap;
+display: flex !important;
+align-items: center !important;
+gap: 8px !important;
+flex-wrap: wrap !important;
 }
 
 .date-filter-group input[type="date"] {
-padding: 10px 14px;
-border: 2px solid var(--border);
-border-radius: 10px;
-font-size: 18px !important;
-font-family: 'Inter', sans-serif;
-background: var(--white);
-color: var(--text-primary);
-min-width: 140px;
+padding: 10px 14px !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 10px !important;
+font-size: 14px !important;
+font-family: 'Inter', sans-serif !important;
+background: #FFFFFF !important;
+color: #0F172A !important;
+min-width: 140px !important;
+transition: all 0.2s ease !important;
 }
 
 .date-filter-group input[type="date"]:focus {
-border-color: var(--black);
-outline: none;
-box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+border-color: #14B8A6 !important;
+outline: none !important;
+box-shadow: 0 0 0 4px rgba(20,184,166,0.1) !important;
 }
 
 .date-filter-group .btn-filter {
-padding: 10px 20px;
-background: #2563eb;
-color: #fff;
-border: none;
-border-radius: 10px;
-font-size: 18px !important;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.2s;
+padding: 10px 18px !important;
+background: #3B82F6 !important;
+color: #fff !important;
+border: none !important;
+border-radius: 10px !important;
+font-size: 14px !important;
+font-weight: 600 !important;
+cursor: pointer !important;
+transition: all 0.2s !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 6px !important;
 }
 
 .date-filter-group .btn-filter:hover {
-background: #1d4ed8;
-transform: translateY(-2px);
+background: #2563EB !important;
+transform: translateY(-2px) !important;
 }
 
 .date-filter-group .btn-clear-filter {
-padding: 10px 20px;
-background: #ef4444;
-color: #fff;
-border: none;
-border-radius: 10px;
-font-size: 18px !important;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.2s;
+padding: 10px 18px !important;
+background: #FEF2F2 !important;
+color: #DC2626 !important;
+border: none !important;
+border-radius: 10px !important;
+font-size: 14px !important;
+font-weight: 600 !important;
+cursor: pointer !important;
+transition: all 0.2s !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 6px !important;
 }
 
 .date-filter-group .btn-clear-filter:hover {
-background: #dc2626;
-transform: translateY(-2px);
+background: #EF4444 !important;
+color: #fff !important;
+transform: translateY(-2px) !important;
 }
 
+/* ✅ Champ voix */
+.voice-display-field {
+padding: 10px 14px !important;
+border: 1.5px solid #14B8A6 !important;
+border-radius: 10px !important;
+width: 180px !important;
+background: #f0fdf4 !important;
+color: #0D9488 !important;
+font-weight: 600 !important;
+font-size: 14px !important;
+min-height: 42px !important;
+outline: none !important;
+}
+
+/* ✅ Responsive */
 @media(max-width:768px) {
-.ventes-stats-grid {
-grid-template-columns: repeat(2, 1fr);
-gap: 10px;
-padding: 12px;
-}
-.ventes-stat-card .stat-value {
-font-size: 22px !important;
-}
-.date-filter-group input[type="date"] {
-min-width: 100px;
-font-size: 16px !important;
-padding: 8px 10px;
-}
-.date-filter-group .btn-filter,
-.date-filter-group .btn-clear-filter {
-padding: 8px 14px;
-font-size: 16px !important;
-}
+    #ventesPage, #commandesPage {
+        padding: 12px !important;
+    }
+    
+    #ventesPage .card-header,
+    #commandesPage .card-header {
+        padding: 16px !important;
+    }
+    
+    .ventes-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    
+    .ventes-stat-card {
+        padding: 14px !important;
+    }
+    
+    .ventes-stat-card .stat-value {
+        font-size: 18px !important;
+    }
+    
+    #ventesPage .data-table thead th,
+    #ventesPage .data-table tbody td,
+    #commandesPage .data-table thead th,
+    #commandesPage .data-table tbody td {
+        padding: 12px 10px !important;
+        font-size: 12px !important;
+    }
+    
+    #ventesPage .action-buttons .btn-print,
+    #ventesPage .action-buttons .btn-whatsapp,
+    #ventesPage .action-buttons .btn-payer,
+    #ventesPage .action-buttons .btn-edit,
+    #ventesPage .action-buttons .btn-delete,
+    #commandesPage .action-buttons .btn-print,
+    #commandesPage .action-buttons .btn-whatsapp,
+    #commandesPage .action-buttons .btn-payer,
+    #commandesPage .action-buttons .btn-edit,
+    #commandesPage .action-buttons .btn-delete {
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+        min-height: 24px !important;
+    }
+    
+    .date-filter-group input[type="date"] {
+        min-width: 100px !important;
+        font-size: 13px !important;
+        padding: 8px 10px !important;
+    }
+    
+    .date-filter-group .btn-filter,
+    .date-filter-group .btn-clear-filter {
+        padding: 8px 14px !important;
+        font-size: 13px !important;
+    }
 }
 
 @media(max-width:500px) {
-.ventes-stats-grid {
-grid-template-columns: 1fr 1fr;
-gap: 8px;
-padding: 8px;
-}
-.ventes-stat-card .stat-value {
-font-size: 18px !important;
-}
-.date-filter-group input[type="date"] {
-min-width: 80px;
-font-size: 14px !important;
-padding: 6px 8px;
-}
-.date-filter-group .btn-filter,
-.date-filter-group .btn-clear-filter {
-padding: 6px 10px;
-font-size: 14px !important;
-}
+    .ventes-stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .date-filter-group input[type="date"] {
+        min-width: 80px !important;
+        font-size: 12px !important;
+        padding: 6px 8px !important;
+    }
+    
+    .date-filter-group .btn-filter,
+    .date-filter-group .btn-clear-filter {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+    }
 }
 </style>
 `;
@@ -1090,8 +1224,8 @@ injectVentesStyles();
 c.innerHTML = `
 <div class="content-card" id="commandesPage">
 <div class="card-header">
-<h3 style="font-size:26px !important;"><i class="fas fa-shopping-basket"></i> Commandes en ligne</h3>
-<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+<h3><i class="fas fa-shopping-basket"></i> Commandes en ligne</h3>
+<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
 <div class="search-bar-pro">
 <i class="fas fa-search"></i>
 <input type="text" id="commandesSearchInput"
@@ -1107,7 +1241,7 @@ onkeyup="window.commandesSearch = this.value; window.currentPages.commandes=1; h
 ${getPeriodOptions('all')}
 </select>
 </div>
-<button class="btn-add" onclick="loadCommandes()" style="font-size:20px !important;padding:10px 20px !important;">
+<button class="btn-add" onclick="loadCommandes()">
 <i class="fas fa-sync-alt"></i> Actualiser
 </button>
 </div>
@@ -1175,7 +1309,7 @@ if (pageData.length === 0) {
 cont.innerHTML = `
 <div style="text-align:center;padding:60px 20px;">
 <i class="fas fa-inbox" style="font-size:3rem;color:#d1d5db;"></i>
-<p style="margin-top:16px;color:#6b7280;font-size:24px !important;">Aucune commande trouvée</p>
+<p style="margin-top:16px;color:#6b7280;font-size:18px !important;">Aucune commande trouvée</p>
 </div>
 `;
 document.getElementById('commandesPagination').innerHTML = '';
@@ -1253,7 +1387,7 @@ act = `
 </div>
 `;
 } else if (d.statut === 'payé') {
-act = `<span style="color:#10B981;font-weight:600;font-size:20px !important;"><i class="fas fa-check-circle"></i> Payée</span>`;
+act = `<span style="color:#10B981;font-weight:600;font-size:13px !important;"><i class="fas fa-check-circle"></i> Payée</span>`;
 } else {
 act = `<span style="color:#9ca3af;">${d.statut || '-'}</span>`;
 }
@@ -1353,8 +1487,8 @@ var today = new Date().toISOString().split('T')[0];
 c.innerHTML = `
 <div class="content-card" id="ventesPage">
 <div class="card-header">
-<h3 style="font-size:26px !important;"><i class="fas fa-shopping-cart"></i> Ventes</h3>
-<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+<h3><i class="fas fa-shopping-cart"></i> Ventes</h3>
+<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
 <div class="search-bar-pro">
 <i class="fas fa-search"></i>
 <input type="text" id="ventesSearchInput"
@@ -1380,7 +1514,7 @@ onkeyup="handleVentesSearch(this.value);">
 </div>
 <div class="date-filter-group">
 <input type="date" id="ventesDateDebut" value="" placeholder="Date début" onchange="window.ventesDateDebut = this.value; applyVentesFilters();">
-<span style="font-weight:600; color:var(--text-secondary);">à</span>
+<span style="font-weight:600; color:#64748B;">à</span>
 <input type="date" id="ventesDateFin" value="" placeholder="Date fin" onchange="window.ventesDateFin = this.value; applyVentesFilters();">
 <button class="btn-filter" onclick="appliquerFiltreDatePersonnalise()"><i class="fas fa-filter"></i> Filtrer</button>
 <button class="btn-clear-filter" onclick="reinitialiserFiltres()"><i class="fas fa-undo"></i> Réinitialiser</button>
@@ -1395,20 +1529,20 @@ onkeyup="handleVentesSearch(this.value);">
 <option value="en_attente">En attente</option>
 </select>
 </div>
-<button class="btn-add" onclick="loadVentes()" style="font-size:20px !important;padding:10px 20px !important;">
+<button class="btn-add" onclick="loadVentes()">
 <i class="fas fa-sync-alt"></i> Actualiser
 </button>
-<button id="toggleVenteSelectionBtn" class="btn-add" onclick="toggleVenteSelectionMode()" style="font-size:18px !important;padding:10px 16px !important;background:#14B8A6;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+<button id="toggleVenteSelectionBtn" class="btn-add" onclick="toggleVenteSelectionMode()" style="background:#6366f1; box-shadow:0 2px 8px rgba(99,102,241,0.25);">
 <i class="fas fa-check-square"></i> Sélectionner
 </button>
-<button id="selectAllVentesBtn" class="btn-add" onclick="toggleSelectAllVisibleVentes()" style="display:none; background:#4f46e5; font-size:18px !important;padding:10px 16px !important;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+<button id="selectAllVentesBtn" class="btn-add" onclick="toggleSelectAllVisibleVentes()" style="display:none; background:#4f46e5;">
 <i class="fas fa-check-double"></i> Tout sélectionner
 </button>
-<button id="deleteSelectedVentesBtn" class="btn-delete" onclick="deleteSelectedVentes()" style="display:none; background:#fee2e2; color:#b91c1c; font-size:18px !important;padding:10px 16px !important;border:none;border-radius:8px;cursor:pointer;">
+<button id="deleteSelectedVentesBtn" class="btn-delete" onclick="deleteSelectedVentes()" style="display:none; background:#FEF2F2; color:#DC2626;">
 <i class="fas fa-trash"></i> Supprimer
 </button>
-<button id="payerSelectedVentesBtn" class="btn-save" onclick="payerVentesSelectionnees()" style="display:none; background:#10B981; color:#fff; font-size:18px !important;padding:10px 16px !important;border:none;border-radius:8px;cursor:pointer;font-weight:700;">
-<i class="fas fa-money-bill-wave"></i> 💰 Payer tout
+<button id="payerSelectedVentesBtn" class="btn-save" onclick="payerVentesSelectionnees()" style="display:none; background:#10B981; color:#fff; box-shadow:0 2px 8px rgba(16,185,129,0.25);">
+<i class="fas fa-money-bill-wave"></i> Payer tout
 </button>
 </div>
 </div>
@@ -1799,7 +1933,7 @@ if (pageData.length === 0) {
 cont.innerHTML = `
 <div style="text-align:center;padding:60px 20px;">
 <i class="fas fa-inbox" style="font-size:3rem;color:#d1d5db;"></i>
-<p style="margin-top:16px;color:#6b7280;font-size:24px !important;">Aucune vente trouvée</p>
+<p style="margin-top:16px;color:#6b7280;font-size:18px !important;">Aucune vente trouvée</p>
 </div>
 `;
 document.getElementById('ventesPagination').innerHTML = '';
@@ -1885,7 +2019,7 @@ var st = statutMap[statutPaiement] || { class: 'status-warning', label: statutPa
 var paymentMethod = d.paymentMethod || 'crédit';
 
 var actions = `
-<div class="action-buttons" style="display:flex; gap:4px; align-items:center; justify-content:center; flex-wrap:nowrap;">
+<div class="action-buttons">
     <button class="btn-print" onclick="printFacture('${d.id}')" title="Imprimer / PDF">Imprimer</button>
     <button class="btn-whatsapp" onclick="sendWhatsApp('${d.id}')" title="Envoyer WhatsApp">WhatsApp</button>
     `;
@@ -2694,7 +2828,6 @@ async function posAfficherOptionWhatsAppPaiementVentes(factureData, ventesDetail
 
         if (clientsUniques.size === 1) {
             clientName = Array.from(clientsUniques)[0];
-            // Récupérer l'ID du premier client
             for (var k = 0; k < ventesDetaillees.length; k++) {
                 if (ventesDetaillees[k].clientName === clientName && ventesDetaillees[k].clientId) {
                     clientId = ventesDetaillees[k].clientId;
@@ -2728,7 +2861,6 @@ async function posAfficherOptionWhatsAppPaiementVentes(factureData, ventesDetail
             hour: '2-digit', minute: '2-digit'
         });
 
-        // ✅ CONSTRUIRE LE MESSAGE AVEC TOUS LES DÉTAILS
         var messageWhatsApp = '';
         messageWhatsApp += '✅ *REÇU DE PAIEMENT*\n';
         messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
@@ -2990,7 +3122,6 @@ window.deselectAllVisibleVentes = deselectAllVisibleVentes;
 window.toggleSelectAllVisibleVentes = toggleSelectAllVisibleVentes;
 window.selectAllVentesBtnState = selectAllVentesBtnState;
 
-// ✅ NOUVELLES FONCTIONS EXPOSÉES
 window.payerVentesSelectionnees = payerVentesSelectionnees;
 window.creerFacturePaiementVentes = creerFacturePaiementVentes;
 window.posAfficherOptionWhatsAppPaiementVentes = posAfficherOptionWhatsAppPaiementVentes;
@@ -3003,9 +3134,10 @@ console.log('✅ Détails facture modal ajouté - Font size agrandi');
 console.log('✅ Pagination corrigée - Utilise window.itemsPerPage');
 console.log('✅ Statistiques en haut de page avec filtres de date');
 console.log('✅ Filtres rapides : Aujourd\'hui, 3j, 7j, 15j, 30j, 90j, 365j');
-console.log('✅ Boutons avec texte - Comme admin credits');
+console.log('✅ Boutons avec texte - Style moderne comme admin credits');
 console.log('✅ Synchronisation avec admin credits');
 console.log('✅ Sélection en masse');
 console.log('✅ Articles et Options visibles pour tout le monde');
 console.log('✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé');
 console.log('✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général');
+console.log('✅ 🎨 NOUVEAU : Design MODERNE identique à admin-credits');
