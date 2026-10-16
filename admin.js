@@ -846,3 +846,247 @@ window.navigateTo = navigateTo;
 //  sont définies dans admin-credits.js pour éviter les conflits)
 
 console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window. + temps réel)');
+
+// ============================================================
+// 🎨 INJECTION STYLE DESIGN SYSTEM E-SOLUTION — SANS MODIFIER LE CODE
+// ============================================================
+// ✅ Force l'application du Design System sur toutes les pages admin
+// ✅ Ne touche à AUCUNE fonction existante
+// ✅ S'ajoute uniquement à la fin, de façon isolée
+// ============================================================
+
+(function injectAdminDesignSystem() {
+    var STYLE_ID = 'admin-design-system-v1';
+    if (document.getElementById(STYLE_ID)) return;
+
+    var styles = document.createElement('style');
+    styles.id = STYLE_ID;
+    styles.textContent = `
+    /* ==================== FORCE FONT VERDANA ==================== */
+    body,
+    #dynamicContent,
+    #dynamicContent *,
+    #clientDynamicContent,
+    #clientDynamicContent * {
+        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+    }
+
+    /* ==================== FORCE ICÔNES FONT AWESOME ==================== */
+    .fas, .far, .fab, .fa, .fa-solid, .fa-regular, .fa-brands {
+        font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free', 'Font Awesome 5 Brands', 'Font Awesome 6 Brands' !important;
+        font-weight: 900 !important;
+        font-style: normal !important;
+        line-height: 1 !important;
+        display: inline-block !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        vertical-align: middle !important;
+        text-rendering: auto !important;
+    }
+
+    /* ==================== FORCE POLICES DES BOUTONS ==================== */
+    button, input, select, textarea {
+        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+    }
+
+    /* ==================== FORCE STAT CARDS DESIGN SYSTEM ==================== */
+    .stat-card {
+        background: var(--bg-card, #FFFFFF) !important;
+        border-radius: var(--radius-lg, 14px) !important;
+        padding: 16px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
+        box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.05)) !important;
+        border: 1px solid var(--border, #E5E7EB) !important;
+    }
+
+    /* ==================== FORCE CONTENT CARD DESIGN SYSTEM ==================== */
+    .content-card {
+        background: var(--bg-card, #FFFFFF) !important;
+        border-radius: var(--radius-xl, 20px) !important;
+        padding: 20px !important;
+        box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.05)) !important;
+        margin-bottom: 18px !important;
+        border: 1px solid var(--border, #E5E7EB) !important;
+    }
+
+    /* ==================== FORCE TABLE DESIGN SYSTEM ==================== */
+    .data-table th {
+        background: var(--bg-page, #F9FAFB) !important;
+        font-weight: 700 !important;
+        color: var(--text-secondary, #6B7280) !important;
+        text-transform: uppercase !important;
+        font-size: 0.7rem !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    .data-table th, .data-table td {
+        padding: 10px 14px !important;
+        border-bottom: 1px solid var(--border, #E5E7EB) !important;
+    }
+
+    /* ==================== FORCE BOUTON BTN-ADD DESIGN SYSTEM ==================== */
+    .btn-add {
+        background: var(--black, #0A0D12) !important;
+        border: none !important;
+        padding: 9px 16px !important;
+        border-radius: var(--radius, 10px) !important;
+        color: var(--white, #FFFFFF) !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        transition: var(--transition, all 0.2s cubic-bezier(0.4, 0, 0.2, 1)) !important;
+    }
+    .btn-add:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    }
+
+    /* ==================== FORCE BADGES STATUS DESIGN SYSTEM ==================== */
+    .status-success {
+        background: #ECFDF5 !important;
+        color: #065F46 !important;
+        padding: 3px 10px !important;
+        border-radius: 9999px !important;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
+    }
+    .status-warning {
+        background: #FEF3C7 !important;
+        color: #92400E !important;
+        padding: 3px 10px !important;
+        border-radius: 9999px !important;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
+    }
+    .status-danger {
+        background: #FEE2E2 !important;
+        color: #991B1B !important;
+        padding: 3px 10px !important;
+        border-radius: 9999px !important;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
+    }
+
+    /* ==================== FORCE MODAL DESIGN SYSTEM ==================== */
+    .modal-content {
+        background: var(--bg-card, #FFFFFF) !important;
+        border-radius: var(--radius-xl, 20px) !important;
+        padding: 24px !important;
+        box-shadow: var(--shadow-lg, 0 20px 40px rgba(0,0,0,0.10)) !important;
+    }
+
+    /* ==================== FORCE FORM INPUT DESIGN SYSTEM ==================== */
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100% !important;
+        padding: 10px 14px !important;
+        border: 2px solid var(--border, #E5E7EB) !important;
+        border-radius: var(--radius, 10px) !important;
+        font-size: 0.9rem !important;
+        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+        background: var(--white, #FFFFFF) !important;
+        color: var(--text-primary, #111827) !important;
+        transition: var(--transition, all 0.2s cubic-bezier(0.4, 0, 0.2, 1)) !important;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none !important;
+        border-color: var(--black, #0A0D12) !important;
+        box-shadow: 0 0 0 3px rgba(0,0,0,0.04) !important;
+    }
+
+    /* ==================== FORCE BTN-SAVE / BTN-CANCEL ==================== */
+    .btn-save {
+        background: var(--black, #0A0D12) !important;
+        border: none !important;
+        padding: 10px 22px !important;
+        border-radius: var(--radius, 10px) !important;
+        color: var(--white, #FFFFFF) !important;
+        font-weight: 600 !important;
+        cursor: pointer !important;
+        font-size: 0.9rem !important;
+        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+    }
+    .btn-cancel {
+        background: var(--gray-100, #F3F4F6) !important;
+        border: none !important;
+        padding: 10px 22px !important;
+        border-radius: var(--radius, 10px) !important;
+        color: var(--text-secondary, #6B7280) !important;
+        font-weight: 600 !important;
+        cursor: pointer !important;
+        font-size: 0.9rem !important;
+        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+    }
+
+    /* ==================== FORCE CARD HEADER ==================== */
+    .card-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 16px !important;
+        padding-bottom: 12px !important;
+        border-bottom: 1px solid var(--border, #E5E7EB) !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+    .card-header h3 {
+        font-size: 1.05rem !important;
+        font-weight: 600 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        color: var(--text-primary, #111827) !important;
+    }
+
+    /* ==================== FORCE NAV ITEMS (SIDEBAR) ==================== */
+    .nav-item {
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
+        padding: 13px 16px !important;
+        border-radius: var(--radius, 10px) !important;
+        cursor: pointer !important;
+        color: rgba(255,255,255,0.45) !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+        transition: var(--transition, all 0.2s cubic-bezier(0.4, 0, 0.2, 1)) !important;
+    }
+    .nav-item:hover {
+        background: rgba(255,255,255,0.04) !important;
+        color: rgba(255,255,255,0.7) !important;
+    }
+    .nav-item.active {
+        background: rgba(255,255,255,0.06) !important;
+        color: var(--white, #FFFFFF) !important;
+        font-weight: 600 !important;
+    }
+
+    /* ==================== FORCE PAGE HEADER ==================== */
+    .page-header .header-title h2 {
+        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+    }
+
+    /* ==================== FORCE SCROLLBAR ==================== */
+    ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--gray-300, #D1D5DB);
+        border-radius: 9999px;
+    }
+    `;
+
+    document.head.appendChild(styles);
+    console.log('🎨 [ADMIN] Design System E-SOLUTION injecté — aucune fonction modifiée');
+})();
