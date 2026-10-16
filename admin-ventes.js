@@ -14,6 +14,8 @@
 // ✅ 🎨 NOUVEAU : Design MODERNE (identique à admin-credits)
 // ✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (sans redirection POS) + datePaiement
 // ✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes
+// ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
+// ✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -30,6 +32,10 @@ window.venteSelectionMode = window.venteSelectionMode || false;
 window.venteSelectedIndex = window.venteSelectedIndex || -1;
 window.clientsDataForSearch = window.clientsDataForSearch || [];
 
+// ✅ NOUVEAU : Client verrouillé en mode sélection (pour multi-clients)
+window.venteSelectedClientId = window.venteSelectedClientId || null;
+window.venteSelectedClientName = window.venteSelectedClientName || null;
+
 // ✅ INITIALISATION DE currentPages
 window.currentPages = window.currentPages || {};
 window.currentPages.ventes = window.currentPages.ventes || 1;
@@ -40,81 +46,183 @@ window.currentPages.credits = window.currentPages.credits || 1;
 var ventesSelectionnees = new Set();
 var selectAllVentesBtnState = false;
 
+// ✅ MODIFIÉ : Détection multi-clients avec confirmation OUI/NON
 function toggleVenteSelection(id) {
-if (ventesSelectionnees.has(id)) {
-ventesSelectionnees.delete(id);
-} else {
-ventesSelectionnees.add(id);
-}
-updateVenteSelectionUI();
+    // Si déjà sélectionné → retirer simplement
+    if (ventesSelectionnees.has(id)) {
+        ventesSelectionnees.delete(id);
+        
+        if (ventesSelectionnees.size === 0) {
+            window.venteSelectedClientId = null;
+            window.venteSelectedClientName = null;
+        }
+        updateVenteSelectionUI();
+        renderVentesTablePro();
+        return;
+    }
+    
+    var data = window.filteredVentes || window.allVentesData || [];
+    var vente = data.find(function(v) { return v.id === id; });
+    
+    if (!vente) {
+        updateVenteSelectionUI();
+        renderVentesTablePro();
+        return;
+    }
+    
+    // 1ère sélection → mémoriser le client
+    if (ventesSelectionnees.size === 0) {
+        window.venteSelectedClientId = vente.clientId || vente.clientName || null;
+        window.venteSelectedClientName = vente.clientName || 'Client inconnu';
+        ventesSelectionnees.add(id);
+        updateVenteSelectionUI();
+        renderVentesTablePro();
+        return;
+    }
+    
+    // Vérifier si c'est le même client
+    var currentClientId = window.venteSelectedClientId;
+    var currentClientName = window.venteSelectedClientName;
+    var newClientId = vente.clientId || vente.clientName || null;
+    
+    if (newClientId !== currentClientId) {
+        var confirmer = confirm(
+            '⚠️ CLIENT DIFFÉRENT DÉTECTÉ\n\n' +
+            'Vous avez déjà sélectionné des ventes de :\n' +
+            '👤 ' + (currentClientName || 'Client inconnu') + '\n\n' +
+            'Vous voulez ajouter des ventes de :\n' +
+            '👤 ' + (vente.clientName || 'Client inconnu') + '\n\n' +
+            '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
+            '✅ OK = Oui, autoriser les 2 clients\n' +
+            '❌ Annuler = Non, refuser'
+        );
+        
+        if (!confirmer) {
+            // Refus → décocher la case
+            var cb = document.querySelector('.vente-checkbox[data-id="' + id + '"]');
+            if (cb) cb.checked = false;
+            return;
+        }
+        
+        window.venteSelectedClientId = 'MULTI';
+        window.venteSelectedClientName = 'Plusieurs clients';
+    }
+    
+    ventesSelectionnees.add(id);
+    updateVenteSelectionUI();
+    renderVentesTablePro();
 }
 
 function toggleAllVentesSelection() {
-var checkboxes = document.querySelectorAll('.vente-checkbox');
-var allChecked = true;
-checkboxes.forEach(function(cb) {
-if (!cb.checked) allChecked = false;
-});
-
-checkboxes.forEach(function(cb) {
-cb.checked = !allChecked;
-var id = cb.getAttribute('data-id');
-if (cb.checked) {
-ventesSelectionnees.add(id);
-} else {
-ventesSelectionnees.delete(id);
-}
-});
-updateVenteSelectionUI();
+    var checkboxes = document.querySelectorAll('.vente-checkbox');
+    var allChecked = true;
+    checkboxes.forEach(function(cb) {
+        if (!cb.checked) allChecked = false;
+    });
+    
+    // Si on va tout cocher → vérifier multi-clients
+    if (!allChecked) {
+        var data = window.filteredVentes || window.allVentesData || [];
+        var pageData = getPageData('ventes', data);
+        
+        var clientsUniques = new Set();
+        pageData.forEach(function(v) {
+            clientsUniques.add(v.clientId || v.clientName || 'inconnu');
+        });
+        
+        if (clientsUniques.size > 1) {
+            var confirmer = confirm(
+                '⚠️ SÉLECTION MULTI-CLIENTS\n\n' +
+                'Cette page contient ' + clientsUniques.size + ' clients différents.\n\n' +
+                '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
+                '✅ OK = Oui, sélectionner TOUTES les ventes\n' +
+                '❌ Annuler = Non, annuler'
+            );
+            
+            if (!confirmer) return;
+            
+            window.venteSelectedClientId = 'MULTI';
+            window.venteSelectedClientName = 'Plusieurs clients';
+        } else if (pageData.length > 0) {
+            window.venteSelectedClientId = pageData[0].clientId || pageData[0].clientName || null;
+            window.venteSelectedClientName = pageData[0].clientName || 'Client inconnu';
+        }
+    } else {
+        window.venteSelectedClientId = null;
+        window.venteSelectedClientName = null;
+    }
+    
+    checkboxes.forEach(function(cb) {
+        cb.checked = !allChecked;
+        var id = cb.getAttribute('data-id');
+        if (cb.checked) {
+            ventesSelectionnees.add(id);
+        } else {
+            ventesSelectionnees.delete(id);
+        }
+    });
+    updateVenteSelectionUI();
 }
 
 function updateVenteSelectionUI() {
-var count = ventesSelectionnees.size;
-var btn = document.getElementById('deleteSelectedVentesBtn');
-var payerBtn = document.getElementById('payerSelectedVentesBtn');
-var selectAllBtn = document.getElementById('selectAllVentesBtn');
-var countDisplay = document.getElementById('selectedVentesCount');
+    var count = ventesSelectionnees.size;
+    var btn = document.getElementById('deleteSelectedVentesBtn');
+    var payerBtn = document.getElementById('payerSelectedVentesBtn');
+    var selectAllBtn = document.getElementById('selectAllVentesBtn');
+    var countDisplay = document.getElementById('selectedVentesCount');
 
-if (btn) {
-btn.style.display = count > 0 ? 'inline-block' : 'none';
-btn.textContent = '🗑️ Supprimer ' + count + ' vente(s)';
-}
-
-// ✅ Afficher le bouton "Payer tout" si des ventes IMPAYÉES sont sélectionnées
-if (payerBtn) {
-    var data = window.filteredVentes || window.allVentesData || [];
-    var ventesImpayees = 0;
-    var totalImpaye = 0;
-    
-    data.forEach(function(v) {
-        if (ventesSelectionnees.has(v.id) && !v.paid) {
-            ventesImpayees++;
-            totalImpaye += v.remainingAmount || v.total || 0;
-        }
-    });
-    
-    if (count > 0 && ventesImpayees > 0) {
-        payerBtn.style.display = 'inline-block';
-        payerBtn.innerHTML = '<i class="fas fa-money-bill-wave"></i> Payer ' + ventesImpayees + ' (' + totalImpaye.toFixed(2) + ' MAD)';
-    } else {
-        payerBtn.style.display = 'none';
+    if (btn) {
+        btn.style.display = count > 0 ? 'inline-block' : 'none';
+        btn.textContent = '🗑️ Supprimer ' + count + ' vente(s)';
     }
-}
 
-if (countDisplay) {
-countDisplay.textContent = count + ' sélectionnée(s)';
-countDisplay.style.display = count > 0 ? 'inline-block' : 'none';
-}
-if (selectAllBtn) {
-var checkboxes = document.querySelectorAll('.vente-checkbox');
-var allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
-selectAllBtn.textContent = allChecked ? '❌ Désélectionner tout' : '✅ Tout sélectionner';
-}
+    if (payerBtn) {
+        var data = window.filteredVentes || window.allVentesData || [];
+        var ventesImpayees = 0;
+        var totalImpaye = 0;
+        
+        data.forEach(function(v) {
+            if (ventesSelectionnees.has(v.id) && !v.paid) {
+                ventesImpayees++;
+                totalImpaye += v.remainingAmount || v.total || 0;
+            }
+        });
+        
+        if (count > 0 && ventesImpayees > 0) {
+            payerBtn.style.display = 'inline-block';
+            payerBtn.innerHTML = '<i class="fas fa-money-bill-wave"></i> Payer ' + ventesImpayees + ' (' + totalImpaye.toFixed(2) + ' MAD)';
+        } else {
+            payerBtn.style.display = 'none';
+        }
+    }
+
+    // ✅ MODIFIÉ : Afficher aussi le nom du client sélectionné
+    if (countDisplay) {
+        var clientLabel = '';
+        if (window.venteSelectedClientName === 'Plusieurs clients') {
+            clientLabel = ' - Multi-clients';
+        } else if (window.venteSelectedClientName) {
+            clientLabel = ' - ' + window.venteSelectedClientName.substring(0, 20);
+        }
+        countDisplay.textContent = count + ' sélectionnée(s)' + clientLabel;
+        countDisplay.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+    if (selectAllBtn) {
+        var checkboxes = document.querySelectorAll('.vente-checkbox');
+        var allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+        selectAllBtn.textContent = allChecked ? '❌ Désélectionner tout' : '✅ Tout sélectionner';
+    }
 }
 
 function toggleVenteSelectionMode() {
     window.venteSelectionMode = !window.venteSelectionMode;
     window.venteSelectedIds = [];
+    
+    // ✅ NOUVEAU : Réinitialiser le client verrouillé
+    window.venteSelectedClientId = null;
+    window.venteSelectedClientName = null;
+    ventesSelectionnees.clear();
+    
     var selectAllBtn = document.getElementById('selectAllVentesBtn');
     if (selectAllBtn) {
         selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
@@ -161,6 +269,8 @@ function deselectAllVisibleVentes() {
     ids.forEach(function(id) {
         ventesSelectionnees.delete(id);
     });
+    window.venteSelectedClientId = null;
+    window.venteSelectedClientName = null;
     updateVenteSelectionUI();
     renderVentesTablePro();
 }
@@ -217,6 +327,8 @@ await batch.commit();
 }
 
 ventesSelectionnees.clear();
+window.venteSelectedClientId = null;
+window.venteSelectedClientName = null;
 alert(`✅ ${totalDeleted} vente(s) supprimée(s) !`);
 loadVentes();
 
@@ -386,7 +498,7 @@ return `
 `;
 }
 
-// ✅ NOUVELLE FONCTION : Affiche la date de paiement (date + heure)
+// ✅ Affiche la date de paiement (date + heure)
 function renderDatePaiementCell(vente) {
     if (vente.datePaiement && vente.datePaiement.seconds) {
         const dt = formatDateHeure(vente.datePaiement.seconds);
@@ -407,10 +519,13 @@ function renderDatePaiementCell(vente) {
 }
 window.renderDatePaiementCell = renderDatePaiementCell;
 
+// ✅ MODIFIÉ : Nom du client CLIQUABLE → filtre automatique
 function renderClientCell(vente) {
-var clientName = vente._clientDisplayName || vente.clientName || vente.table || 'Client inconnu';
-return `
-<div class="client-cell">
+    var clientName = vente._clientDisplayName || vente.clientName || vente.table || 'Client inconnu';
+    var escapedName = escapeHtml(clientName).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    
+    return `
+<div class="client-cell" onclick="filtrerVentesParClient('${escapedName}', event)" title="Cliquer pour filtrer par ce client" style="cursor:pointer;transition:all 0.2s ease;">
 <i class="fas fa-user-circle"></i>
 <span>${escapeHtml(clientName)}</span>
 </div>
@@ -825,11 +940,28 @@ background: linear-gradient(135deg, #F8FAFC, #F1F5F9) !important;
 padding: 6px 12px !important;
 border-radius: 8px !important;
 border: 1px solid #E2E8F0 !important;
+transition: all 0.2s ease !important;
 }
 
 .client-cell i {
 color: #14B8A6 !important;
 font-size: 13px !important;
+transition: color 0.2s ease !important;
+}
+
+/* ✅ ✅ ✅ Client cliquable - HOVER VIOLET */
+.client-cell:hover {
+    background: linear-gradient(135deg, #EDE9FE, #DDD6FE) !important;
+    border-color: #A78BFA !important;
+    color: #6D28D9 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(139,92,246,0.15) !important;
+}
+.client-cell:active {
+    transform: translateY(0) scale(0.98) !important;
+}
+.client-cell:hover i {
+    color: #6D28D9 !important;
 }
 
 /* ✅ Montants */
@@ -1502,6 +1634,9 @@ window.ventesDateDebut = '';
 window.ventesDateFin = '';
 window.venteSelectionMode = false;
 window.venteSelectedIndex = -1;
+window.venteSelectedClientId = null;
+window.venteSelectedClientName = null;
+ventesSelectionnees.clear();
 if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
 if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
 
@@ -2155,7 +2290,6 @@ paid: paid,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 };
 
-// ✅ Enregistrer datePaiement quand la vente passe à "payé"
 if (paid) {
     data.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
     data.paidAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -2185,7 +2319,6 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
 }
 }
 
-// ✅ MODIFIÉ : Paiement DIRECT dans Admin Ventes (ne redirige plus vers le POS)
 async function payerVente(did) {
     var dc = await db.collection('ventes').doc(did).get();
     if (!dc.exists) { alert('Vente introuvable'); return; }
@@ -2259,8 +2392,6 @@ async function payerVente(did) {
     openModal('💰 Encaisser le paiement', modalHtml);
 }
 
-// ✅ NOUVELLE FONCTION : Valide le paiement d'une vente (sans créer de nouvelle vente)
-// Met à jour la MÊME vente + enregistre datePaiement + synchronise le crédit
 async function confirmVentePayment(venteId) {
     var amountInput = document.getElementById('ventePaymentAmount');
     if (!amountInput) {
@@ -2604,6 +2735,44 @@ clearBtn.classList.add('hidden');
 }
 }
 
+// ✅ NOUVELLE FONCTION : Filtrer par clic sur le nom du client
+function filtrerVentesParClient(clientName, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    console.log('🖱️ Clic sur client :', clientName);
+    
+    var searchInput = document.getElementById('ventesSearchInput');
+    if (!searchInput) {
+        console.warn('⚠️ Champ de recherche introuvable');
+        return;
+    }
+    
+    searchInput.value = clientName;
+    window.ventesSearch = clientName;
+    window.currentPages.ventes = 1;
+    
+    var clearBtn = document.getElementById('ventesClearBtn');
+    if (clearBtn) clearBtn.classList.remove('hidden');
+    
+    applyVentesFilters();
+    
+    var tableContainer = document.getElementById('ventesTableContainer');
+    if (tableContainer) {
+        tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    setTimeout(function() {
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }, 100);
+}
+window.filtrerVentesParClient = filtrerVentesParClient;
+
 // ==================== MODAL DÉTAILS FACTURE ====================
 var currentFactureId = null;
 
@@ -2713,7 +2882,6 @@ function renderFactureDetails(data) {
     var statusBg = statutPaiement === 'payé' ? '#ECFDF5' : statutPaiement === 'crédit' ? '#FEF3C7' : '#FEE2E2';
     var statusColor = statutPaiement === 'payé' ? '#065F46' : statutPaiement === 'crédit' ? '#92400E' : '#991B1B';
     
-    // ✅ Date de paiement
     var datePaiementHtml = '';
     if (data.datePaiement && data.datePaiement.seconds) {
         var dP = new Date(data.datePaiement.seconds * 1000);
@@ -2976,6 +3144,8 @@ async function payerVentesSelectionnees() {
 
         ventesSelectionnees.clear();
         window.venteSelectedIds = [];
+        window.venteSelectedClientId = null;
+        window.venteSelectedClientName = null;
         selectAllVentesBtnState = false;
 
         applyVentesFilters();
@@ -3405,6 +3575,9 @@ window.posFermerModalWhatsAppPaiementVentes = posFermerModalWhatsAppPaiementVent
 
 window.renderDatePaiementCell = renderDatePaiementCell;
 
+// ✅ NOUVELLE FONCTION EXPOSÉE
+window.filtrerVentesParClient = filtrerVentesParClient;
+
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
 console.log('✅ Détails facture modal ajouté - Font size agrandi');
@@ -3422,3 +3595,5 @@ console.log('✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (pas de redire
 console.log('✅ 📅 NOUVEAU : Enregistrement automatique de la date de paiement (datePaiement)');
 console.log('✅ 🔄 NOUVEAU : Synchronisation vente ↔ crédit (B1)');
 console.log('✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes');
+console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
+console.log('✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients');
