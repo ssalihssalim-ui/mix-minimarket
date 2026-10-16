@@ -19,6 +19,7 @@
 // ✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)
 // ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
 // ✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table (comme admin-ventes)
+// ✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -896,8 +897,7 @@ onkeyup="handleCreditsSearch(this.value);">
 <i class="fas fa-sync-alt"></i> Actualiser
 </button>
 <button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="background:#6366f1; box-shadow:0 2px 8px rgba(99,102,241,0.25);">
-<i class="fas fa-check-square"></i> Sélectionner
-</button>
+<i class="fas fa-check-square"></i> Sélectionner</button>
 <button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5;">
 <i class="fas fa-check-double"></i> Tout sélectionner
 </button>
@@ -1595,6 +1595,8 @@ async function paySelectedCredits() {
 
     try {
         var paiements = [];
+        var now = firebase.firestore.FieldValue.serverTimestamp();
+
         var promises = toPay.map(function(credit) {
             var restant = credit.remainingAmount || credit.total || 0;
             var nouveauPaye = (credit.amountGiven || 0) + restant;
@@ -1609,12 +1611,15 @@ async function paySelectedCredits() {
                 items: credit.items || []
             });
 
+            // ✅ AJOUT : datePaiement + paidAt quand le crédit est soldé
             return db.collection('credits').doc(credit.id).update({
                 amountGiven: nouveauPaye,
                 remainingAmount: 0,
                 paid: true,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastPaymentAt: firebase.firestore.FieldValue.serverTimestamp(),
+                datePaiement: now,
+                paidAt: now,
+                updatedAt: now,
+                lastPaymentAt: now,
                 lastPaymentAmount: restant
             }).then(function() {
                 var updatedCredit = {
@@ -2077,11 +2082,16 @@ async function confirmerPaiementCreditZero(creditId) {
             return;
         }
 
+        var now = firebase.firestore.FieldValue.serverTimestamp();
+
+        // ✅ AJOUT : datePaiement + paidAt
         await db.collection('credits').doc(creditId).update({
             paid: true,
             remainingAmount: 0,
             amountGiven: credit.amountGiven || 0,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            datePaiement: now,
+            paidAt: now,
+            updatedAt: now
         });
 
         var updatedCredit = {
@@ -2160,15 +2170,24 @@ async function confirmCreditPayment(creditId) {
         var nouveauPaye = (credit.amountGiven || 0) + montant;
         var nouveauRestant = Math.max(0, restant - montant);
         var estPaye = nouveauRestant <= 0.01;
-        
-        await db.collection('credits').doc(creditId).update({
+
+        var now = firebase.firestore.FieldValue.serverTimestamp();
+
+        // ✅ AJOUT : datePaiement + paidAt si le crédit est soldé
+        var updateData = {
             amountGiven: nouveauPaye,
             remainingAmount: nouveauRestant,
             paid: estPaye,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastPaymentAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: now,
+            lastPaymentAt: now,
             lastPaymentAmount: montant
-        });
+        };
+        if (estPaye) {
+            updateData.datePaiement = now;
+            updateData.paidAt = now;
+        }
+
+        await db.collection('credits').doc(creditId).update(updateData);
 
         var updatedCredit = {
             ...credit,
@@ -2340,6 +2359,22 @@ function renderCreditFactureDetails(data) {
     var statusBg = data.paid ? '#ECFDF5' : '#FEF3C7';
     var statusColor = data.paid ? '#065F46' : '#92400E';
     
+    // ✅ AJOUT : Affichage de la date de paiement si le crédit est payé
+    var datePaiementHtml = '';
+    if (data.datePaiement && data.datePaiement.seconds) {
+        var dP = new Date(data.datePaiement.seconds * 1000);
+        var dPDate = dP.toLocaleDateString('fr-FR');
+        var dPTime = dP.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        datePaiementHtml = `
+            <div style="background:#ECFDF5;border-radius:var(--radius);padding:14px 18px;border:1px solid #99F6E4;margin-bottom:20px;">
+                <p style="font-size:0.8rem;font-weight:600;color:#065F46;text-transform:uppercase;margin:0 0 6px 0;">✅ Date de paiement</p>
+                <p style="font-size:1.2rem;font-weight:600;color:#0F172A;margin:0;">
+                    <i class="far fa-calendar-check"></i> ${dPDate} à ${dPTime}
+                </p>
+            </div>
+        `;
+    }
+    
     var html = `
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--border);">
             <div>
@@ -2352,6 +2387,8 @@ function renderCreditFactureDetails(data) {
                 ${data.paid ? 'Payé' : 'Impayé'}
             </span>
         </div>
+        
+        ${datePaiementHtml}
         
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
             <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px 18px;border:1px solid var(--border);">
@@ -2662,6 +2699,12 @@ paymentMethod: paymentMethod,
 paid: paid,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 };
+
+// ✅ AJOUT : datePaiement si le crédit passe à "payé"
+if (paid) {
+    data.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
+    data.paidAt = firebase.firestore.FieldValue.serverTimestamp();
+}
 
 try {
 await CacheDB.write('credits', window.editingId, data, 'update');
@@ -2981,3 +3024,4 @@ console.log('✅ 👥 Affichage des 2 noms de clients dans la facture WhatsApp')
 console.log('✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)');
 console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
 console.log('✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table');
+console.log('✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)');
