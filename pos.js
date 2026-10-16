@@ -25,6 +25,7 @@
 // ✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
 // 🎨 STYLE "RESTOE POS" — Design SaaS moderne (Stripe/Square style) — bleu #2563EB + fond gris #F7F8FA
+// 🎨 AJUSTEMENTS V2 : cartes +10px hauteur + prix plus grand + suppression gradient
 
 var posCart = [];
 var posStep = 1;
@@ -1032,35 +1033,37 @@ dn = dn.replace(new RegExp('(' + posSearchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\
 
 var isMobile = window.innerWidth < 700;
 
+// 🎨 AJUSTEMENTS V2 : cartes +10px hauteur, image +10px, prix plus grand
 var cardStyle = isMobile ?
-'padding:4px 2px;min-height:110px;max-height:140px;aspect-ratio:1/1;border-radius:6px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
-'padding:6px 8px;min-height:150px;max-height:190px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
+'padding:6px 4px;min-height:120px;max-height:150px;aspect-ratio:1/1;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
+'padding:10px 8px;min-height:160px;max-height:200px;aspect-ratio:1/1;border-radius:12px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
 
 var imgStyle = isMobile ?
-'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;' :
-'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
+'height:62px;width:62px;margin-bottom:5px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;' :
+'height:85px;width:85px;margin-bottom:8px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
 
 var nameStyle = isMobile ?
-'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:1px 0;' :
-'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:2px 0;';
+'font-size:10px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:1px 0;' :
+'font-size:0.85rem !important;font-weight:700 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:3px 0;';
 
+// 🎨 Prix plus grand
 var priceStyle = isMobile ?
-'font-size:10px !important;font-weight:700 !important;color:var(--text-primary);' :
-'font-size:0.8rem !important;font-weight:700 !important;color:var(--text-primary);';
+'font-size:12px !important;font-weight:800 !important;color:var(--text-primary);' :
+'font-size:0.95rem !important;font-weight:800 !important;color:var(--text-primary);letter-spacing:-0.3px;';
 
 var imgContent = '';
 if (p.imageBase64) {
-imgContent = '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">';
+imgContent = '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">';
 } else {
-imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;color:var(--text-muted);' : 'font-size:26px;color:var(--text-muted);') + '"></i>';
+imgContent = '<i class="fas fa-box" style="' + (isMobile ? 'font-size:22px;color:var(--text-muted);' : 'font-size:30px;color:var(--text-muted);') + '"></i>';
 }
 
-html += '<div class="pos-product-card ' + sc + '" style="' + cardStyle + 'content-visibility:auto;contain-intrinsic-size:150px 150px;" onclick="posAddToCartOrOpenOptions(\'' + p.id + '\')">' +
+html += '<div class="pos-product-card ' + sc + '" style="' + cardStyle + 'content-visibility:auto;contain-intrinsic-size:160px 160px;" onclick="posAddToCartOrOpenOptions(\'' + p.id + '\')">' +
 '<div class="pos-product-img" style="' + imgStyle + '">' + imgContent + '</div>' +
 '<div class="pos-product-info" style="display:flex;flex-direction:column;align-items:center;width:100%;flex:1;justify-content:center;overflow:hidden;min-height:0;">' +
 '<span class="pos-product-name" style="' + nameStyle + '">' + dn + stt + '</span>' +
 '<span class="pos-product-price" style="' + priceStyle + '">' +
-(hp ? '<span class="pos-old-price" style="' + (isMobile ? 'font-size:7px;' : 'font-size:0.6rem;') + 'text-decoration:line-through;color:var(--text-muted);">' + p.prixVente.toFixed(2) + '</span> <span class="pos-promo-price" style="' + (isMobile ? 'font-size:10px;color:var(--danger);' : 'font-size:0.8rem;color:var(--danger);') + '">' + pr.toFixed(2) + ' MAD</span>' : pr.toFixed(2) + ' MAD') +
+(hp ? '<span class="pos-old-price" style="' + (isMobile ? 'font-size:9px;' : 'font-size:0.7rem;') + 'text-decoration:line-through;color:var(--text-muted);">' + p.prixVente.toFixed(2) + '</span> <span class="pos-promo-price" style="' + (isMobile ? 'font-size:12px;color:var(--danger);' : 'font-size:0.95rem;color:var(--danger);') + '">' + pr.toFixed(2) + ' MAD</span>' : pr.toFixed(2) + ' MAD') +
 '</span>' +
 '</div>' +
 '</div>';
@@ -1111,22 +1114,22 @@ var imgSize, cardMinHeight, cardMaxHeight, folderSize, nameSize, countSize;
 
 if (isPC) {
 imgSize = '140px';
-cardMinHeight = '160px';
-cardMaxHeight = '200px';
+cardMinHeight = '170px';
+cardMaxHeight = '210px';
 folderSize = '65px';
 nameSize = '16px';
 countSize = '12px';
 } else if (isTablette) {
 imgSize = '130px';
-cardMinHeight = '150px';
-cardMaxHeight = '180px';
+cardMinHeight = '160px';
+cardMaxHeight = '190px';
 folderSize = '60px';
 nameSize = '13px';
 countSize = '10px';
 } else {
 imgSize = '45px';
-cardMinHeight = '65px';
-cardMaxHeight = '80px';
+cardMinHeight = '75px';
+cardMaxHeight = '90px';
 folderSize = '20px';
 nameSize = '8px';
 countSize = '7px';
@@ -1134,8 +1137,8 @@ countSize = '7px';
 
 if (window.innerWidth < 400) {
 imgSize = '35px';
-cardMinHeight = '50px';
-cardMaxHeight = '65px';
+cardMinHeight = '60px';
+cardMaxHeight = '75px';
 folderSize = '16px';
 nameSize = '7px';
 countSize = '6px';
@@ -1761,9 +1764,9 @@ mobileCartStyle = 'width:100% !important;max-height:35vh !important;min-height:1
 var productsPanelMaxHeight = 'none';
 
 var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(110px, 1fr))';
-var gridGap = isMobile ? '4px' : '8px';
-var gridPadding = isMobile ? '2px' : '4px';
-var panelPadding = isMobile ? '8px' : '12px';
+var gridGap = isMobile ? '6px' : '14px';
+var gridPadding = isMobile ? '2px' : '0';
+var panelPadding = isMobile ? '8px' : '16px';
 
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:6px;height:auto;padding-bottom:30px;">' +
 stepIndicator +
@@ -2612,6 +2615,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 // ============================================================
 // 🎨 STYLE "RESTOE POS" — Design SaaS moderne (Stripe/Square style)
 // Fond gris clair + cartes blanches + bleu primaire #2563EB
+// 🎨 AJUSTEMENTS V2 : suppression gradient + cartes +10px + prix plus grand
 // ============================================================
 (function injectRestoeStyle() {
     var STYLE_ID = 'pos-restoe-styles-v1';
@@ -2652,12 +2656,22 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     /* ==================== CONTAINER PRINCIPAL ==================== */
     .pos-container {
-        background: var(--r-bg) !important;
+        background: #F7F8FA !important;
+        background-image: none !important;
         padding: 16px !important;
         border-radius: 0 !important;
         min-height: calc(100vh - 60px) !important;
         font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif !important;
         color: var(--r-text) !important;
+    }
+
+    /* Supprimer tout gradient sur les panels */
+    .pos-products-panel,
+    .pos-cart-panel,
+    .pos-multi-carts-bar,
+    .pos-steps-nav,
+    .pos-cart-header {
+        background-image: none !important;
     }
 
     /* ==================== INDICATEUR ÉTAPES ==================== */
@@ -2814,11 +2828,12 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     .pos-product-price {
         color: var(--r-text) !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
     }
 
     .pos-promo-price {
         color: var(--r-red) !important;
+        font-weight: 800 !important;
     }
 
     /* ==================== BOUTON RETOUR CATÉGORIES ==================== */
@@ -3393,10 +3408,54 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         .pos-step span:not(.step-number) { font-size: 0.8rem !important; }
         .pos-cart-header h3 { font-size: 1rem !important; }
     }
+
+    /* ==================== 🆕 AJUSTEMENTS V2 ==================== */
+    /* Cartes produits +10px hauteur */
+    .pos-product-card {
+        min-height: 160px !important;
+        max-height: 200px !important;
+    }
+
+    /* Image produit +10px */
+    .pos-product-img {
+        height: 85px !important;
+        width: 85px !important;
+    }
+
+    /* Prix plus grand et plus gras */
+    .pos-product-price {
+        font-size: 0.95rem !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.3px !important;
+    }
+
+    /* Prix promo plus grand */
+    .pos-promo-price {
+        font-size: 0.95rem !important;
+        font-weight: 800 !important;
+    }
+
+    /* Ancien prix plus visible */
+    .pos-old-price {
+        font-size: 0.7rem !important;
+    }
+
+    /* Nom produit plus lisible */
+    .pos-product-name {
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* Cartes catégories +10px */
+    .pos-category-card {
+        min-height: 170px !important;
+        max-height: 210px !important;
+    }
     `;
 
     document.head.appendChild(styles);
     console.log('🎨 [POS] Style "Restoe POS" injecté (SaaS moderne — bleu #2563EB)');
+    console.log('🎨 [POS] AJUSTEMENTS V2 : cartes +10px + prix plus grand + aucun gradient');
 })();
 
 console.log('🚀 E-SOLUTION - POS chargé avec corrections');
@@ -3417,4 +3476,5 @@ console.log('✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemin
 console.log('✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier');
 console.log('✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES');
 console.log('⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms');
-console.log('🎨 STYLE "RESTOE POS" : fond gris #F7F8FA + cartes blanches + bleu #2563EB');
+console.log('🎨 STYLE "RESTOE POS" : fond gris plat #F7F8FA + cartes blanches + bleu #2563EB');
+console.log('🎨 AJUSTEMENTS V2 : cartes +10px + image +10px + prix plus grand + aucun gradient');
