@@ -328,37 +328,14 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
 }
 }
 
-// 🔥 CORRECTION 3 : Statistiques en TEMPS RÉEL
 function loadDashboardStats() {
-    // Nettoyer les anciens listeners
-    if (window._dashStatsUnsub) {
-        window._dashStatsUnsub.forEach(function(u) { if (typeof u === 'function') u(); });
-    }
-    window._dashStatsUnsub = [];
-
-    window._dashStatsUnsub.push(db.collection('products').onSnapshot(function(s) {
-        var e = document.getElementById('productsCount');
-        if (e) e.textContent = s.size;
-    }));
-
-    window._dashStatsUnsub.push(db.collection('clients').onSnapshot(function(s) {
-        var e = document.getElementById('clientsCount');
-        if (e) e.textContent = s.size;
-    }));
-
-    window._dashStatsUnsub.push(db.collection('categories').onSnapshot(function(s) {
-        var e = document.getElementById('categoriesCount');
-        if (e) e.textContent = s.size;
-    }));
-
-    window._dashStatsUnsub.push(db.collection('ventes').onSnapshot(function(s) {
-        var e = document.getElementById('ventesCount');
-        if (e) e.textContent = s.size;
-    }));
+db.collection('products').get().then(function(s) { var e = document.getElementById('productsCount'); if (e) e.textContent = s.size; });
+db.collection('clients').get().then(function(s) { var e = document.getElementById('clientsCount'); if (e) e.textContent = s.size; });
+db.collection('categories').get().then(function(s) { var e = document.getElementById('categoriesCount'); if (e) e.textContent = s.size; });
+db.collection('ventes').get().then(function(s) { var e = document.getElementById('ventesCount'); if (e) e.textContent = s.size; });
 }
 
-// ==================== INSCRIPTIONS EN ATTENTE (TEMPS RÉEL) ====================
-// 🔥 CORRECTION 1 : Utiliser onSnapshot au lieu de get() pour temps réel
+// ==================== INSCRIPTIONS EN ATTENTE (CORRIGÉ) ====================
 function loadPendingRegistrations() {
 var d = document.getElementById('pendingRegistrations');
 if (!d) return;
@@ -380,39 +357,39 @@ d.innerHTML = `
 </div>
 `;
 
-// 🔥 Nettoyer l'ancien listener
-if (window._pendingUsersUnsubscribe) {
-    window._pendingUsersUnsubscribe();
+// 🔥 CORRECTION : Suppression de la requête avec index (filtrage en mémoire)
+db.collection('users')
+.get()
+.then(function(snapshot) {
+window.pendingUsersData = [];
+snapshot.forEach(function(dc) {
+var u = dc.data();
+// Filtrer en mémoire les utilisateurs non autorisés
+if (u.authorized === 'no') {
+window.pendingUsersData.push({
+id: dc.id,
+prenom: (u.prenom || '') + ' ' + (u.nom || ''),
+email: u.email || '',
+role: u.role || 'client',
+createdAt: u.createdAt,
+data: u
+});
 }
+});
 
-// 🔥 Écouter en TEMPS RÉEL
-window._pendingUsersUnsubscribe = db.collection('users').onSnapshot(function(snapshot) {
-    window.pendingUsersData = [];
-    snapshot.forEach(function(dc) {
-        var u = dc.data();
-        if (u.authorized === 'no') {
-            window.pendingUsersData.push({
-                id: dc.id,
-                prenom: (u.prenom || '') + ' ' + (u.nom || ''),
-                email: u.email || '',
-                role: u.role || 'client',
-                createdAt: u.createdAt,
-                data: u
-            });
-        }
-    });
+// Trier par date de création (la plus récente en premier)
+window.pendingUsersData.sort(function(a, b) {
+var dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000).getTime() : 0;
+var dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000).getTime() : 0;
+return dateB - dateA;
+});
 
-    window.pendingUsersData.sort(function(a, b) {
-        var dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000).getTime() : 0;
-        var dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000).getTime() : 0;
-        return dateB - dateA;
-    });
-
-    renderPendingTable();
-}, function(err) {
-    console.error('❌ Erreur listener pending users:', err);
-    window.pendingUsersData = [];
-    renderPendingTable();
+renderPendingTable();
+})
+.catch(function(err) {
+console.error('❌ Erreur chargement pending:', err);
+window.pendingUsersData = [];
+renderPendingTable();
 });
 }
 
@@ -524,7 +501,13 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
 
 alert('✅ Utilisateur accepté avec succès !');
 
-// 7. Rafraîchir les listes (le listener temps réel les mettra à jour automatiquement)
+// 7. Rafraîchir les listes
+if (typeof loadPendingRegistrations === 'function') {
+loadPendingRegistrations();
+}
+if (typeof loadUsersList === 'function') {
+loadUsersList();
+}
 if (typeof loadClients === 'function') {
 loadClients();
 }
@@ -565,6 +548,12 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
 alert('✅ Utilisateur supprimé');
 
 // 5. Rafraîchir
+if (typeof loadPendingRegistrations === 'function') {
+loadPendingRegistrations();
+}
+if (typeof loadUsersList === 'function') {
+loadUsersList();
+}
 if (typeof loadClients === 'function') {
 loadClients();
 }
@@ -600,36 +589,17 @@ if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
 }
 }
 
-// 🔥 CORRECTION 2 : Liste des utilisateurs en TEMPS RÉEL
 function loadUsersList() {
-    // Nettoyer l'ancien listener
-    if (window._usersListUnsubscribe) {
-        window._usersListUnsubscribe();
-    }
-
-    window._usersListUnsubscribe = db.collection('users').onSnapshot(function(sn) {
-        window.allUsersData = [];
-        sn.forEach(function(dc) {
-            var d = dc.data();
-            d.id = dc.id;
-            d.fullName = (d.prenom + ' ' + d.nom).toLowerCase();
-            window.allUsersData.push(d);
-        });
-
-        var p = window.allUsersData.filter(function(u) { return u.authorized === 'no'; }).length;
-        var a = window.allUsersData.filter(function(u) { return u.authorized === 'yes'; }).length;
-
-        var pendingEl = document.getElementById('pendingCount');
-        if (pendingEl) pendingEl.textContent = p;
-        var authEl = document.getElementById('authorizedCount');
-        if (authEl) authEl.textContent = a;
-        var totalEl = document.getElementById('totalUsers');
-        if (totalEl) totalEl.textContent = window.allUsersData.length;
-
-        renderUsersTable();
-    }, function(err) {
-        console.error('❌ Erreur listener users list:', err);
-    });
+db.collection('users').get().then(function(sn) {
+window.allUsersData = [];
+sn.forEach(function(dc) { var d = dc.data(); d.id = dc.id; d.fullName = (d.prenom + ' ' + d.nom).toLowerCase(); window.allUsersData.push(d); });
+var p = window.allUsersData.filter(function(u) { return u.authorized === 'no'; }).length;
+var a = window.allUsersData.filter(function(u) { return u.authorized === 'yes'; }).length;
+document.getElementById('pendingCount').textContent = p;
+document.getElementById('authorizedCount').textContent = a;
+document.getElementById('totalUsers').textContent = window.allUsersData.length;
+renderUsersTable();
+});
 }
 
 function renderUsersTable() {
@@ -648,8 +618,8 @@ tb.innerHTML += '<tr><td><strong>@' + escapeHtml(u.username || '') + '</strong><
 });
 }
 
-function blockUser(uid) { if (confirm('Bloquer ?')) { CacheDB.write('users', uid, { authorized: 'no' }, 'update').then(function() { CacheDB.sync(); }); } }
-function deleteUserPermanently(uid) { if (confirm('Supprimer ?')) { CacheDB.write('users', uid, null, 'delete').then(function() { CacheDB.sync(); }); } }
+function blockUser(uid) { if (confirm('Bloquer ?')) { CacheDB.write('users', uid, { authorized: 'no' }, 'update').then(function() { loadUsersList(); loadPendingRegistrations(); CacheDB.sync(); }); } }
+function deleteUserPermanently(uid) { if (confirm('Supprimer ?')) { CacheDB.write('users', uid, null, 'delete').then(function() { loadUsersList(); loadPendingRegistrations(); CacheDB.sync(); }); } }
 
 function toggleChangePasswordForm() { document.getElementById('changePasswordForm').classList.toggle('hidden'); }
 
@@ -845,248 +815,4 @@ window.navigateTo = navigateTo;
 // (Les fonctions loadCreditsPage, loadCreditsData et applyCreditsFilters
 //  sont définies dans admin-credits.js pour éviter les conflits)
 
-console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window. + temps réel)');
-
-// ============================================================
-// 🎨 INJECTION STYLE DESIGN SYSTEM E-SOLUTION — SANS MODIFIER LE CODE
-// ============================================================
-// ✅ Force l'application du Design System sur toutes les pages admin
-// ✅ Ne touche à AUCUNE fonction existante
-// ✅ S'ajoute uniquement à la fin, de façon isolée
-// ============================================================
-
-(function injectAdminDesignSystem() {
-    var STYLE_ID = 'admin-design-system-v1';
-    if (document.getElementById(STYLE_ID)) return;
-
-    var styles = document.createElement('style');
-    styles.id = STYLE_ID;
-    styles.textContent = `
-    /* ==================== FORCE FONT VERDANA ==================== */
-    body,
-    #dynamicContent,
-    #dynamicContent *,
-    #clientDynamicContent,
-    #clientDynamicContent * {
-        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
-    }
-
-    /* ==================== FORCE ICÔNES FONT AWESOME ==================== */
-    .fas, .far, .fab, .fa, .fa-solid, .fa-regular, .fa-brands {
-        font-family: 'Font Awesome 5 Free', 'Font Awesome 6 Free', 'Font Awesome 5 Brands', 'Font Awesome 6 Brands' !important;
-        font-weight: 900 !important;
-        font-style: normal !important;
-        line-height: 1 !important;
-        display: inline-block !important;
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-        vertical-align: middle !important;
-        text-rendering: auto !important;
-    }
-
-    /* ==================== FORCE POLICES DES BOUTONS ==================== */
-    button, input, select, textarea {
-        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
-    }
-
-    /* ==================== FORCE STAT CARDS DESIGN SYSTEM ==================== */
-    .stat-card {
-        background: var(--bg-card, #FFFFFF) !important;
-        border-radius: var(--radius-lg, 14px) !important;
-        padding: 16px !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 14px !important;
-        box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.05)) !important;
-        border: 1px solid var(--border, #E5E7EB) !important;
-    }
-
-    /* ==================== FORCE CONTENT CARD DESIGN SYSTEM ==================== */
-    .content-card {
-        background: var(--bg-card, #FFFFFF) !important;
-        border-radius: var(--radius-xl, 20px) !important;
-        padding: 20px !important;
-        box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.05)) !important;
-        margin-bottom: 18px !important;
-        border: 1px solid var(--border, #E5E7EB) !important;
-    }
-
-    /* ==================== FORCE TABLE DESIGN SYSTEM ==================== */
-    .data-table th {
-        background: var(--bg-page, #F9FAFB) !important;
-        font-weight: 700 !important;
-        color: var(--text-secondary, #6B7280) !important;
-        text-transform: uppercase !important;
-        font-size: 0.7rem !important;
-        letter-spacing: 0.5px !important;
-    }
-
-    .data-table th, .data-table td {
-        padding: 10px 14px !important;
-        border-bottom: 1px solid var(--border, #E5E7EB) !important;
-    }
-
-    /* ==================== FORCE BOUTON BTN-ADD DESIGN SYSTEM ==================== */
-    .btn-add {
-        background: var(--black, #0A0D12) !important;
-        border: none !important;
-        padding: 9px 16px !important;
-        border-radius: var(--radius, 10px) !important;
-        color: var(--white, #FFFFFF) !important;
-        cursor: pointer !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        font-size: 0.82rem !important;
-        font-weight: 600 !important;
-        white-space: nowrap !important;
-        transition: var(--transition, all 0.2s cubic-bezier(0.4, 0, 0.2, 1)) !important;
-    }
-    .btn-add:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-    }
-
-    /* ==================== FORCE BADGES STATUS DESIGN SYSTEM ==================== */
-    .status-success {
-        background: #ECFDF5 !important;
-        color: #065F46 !important;
-        padding: 3px 10px !important;
-        border-radius: 9999px !important;
-        font-size: 0.7rem !important;
-        font-weight: 600 !important;
-    }
-    .status-warning {
-        background: #FEF3C7 !important;
-        color: #92400E !important;
-        padding: 3px 10px !important;
-        border-radius: 9999px !important;
-        font-size: 0.7rem !important;
-        font-weight: 600 !important;
-    }
-    .status-danger {
-        background: #FEE2E2 !important;
-        color: #991B1B !important;
-        padding: 3px 10px !important;
-        border-radius: 9999px !important;
-        font-size: 0.7rem !important;
-        font-weight: 600 !important;
-    }
-
-    /* ==================== FORCE MODAL DESIGN SYSTEM ==================== */
-    .modal-content {
-        background: var(--bg-card, #FFFFFF) !important;
-        border-radius: var(--radius-xl, 20px) !important;
-        padding: 24px !important;
-        box-shadow: var(--shadow-lg, 0 20px 40px rgba(0,0,0,0.10)) !important;
-    }
-
-    /* ==================== FORCE FORM INPUT DESIGN SYSTEM ==================== */
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        width: 100% !important;
-        padding: 10px 14px !important;
-        border: 2px solid var(--border, #E5E7EB) !important;
-        border-radius: var(--radius, 10px) !important;
-        font-size: 0.9rem !important;
-        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
-        background: var(--white, #FFFFFF) !important;
-        color: var(--text-primary, #111827) !important;
-        transition: var(--transition, all 0.2s cubic-bezier(0.4, 0, 0.2, 1)) !important;
-    }
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-        outline: none !important;
-        border-color: var(--black, #0A0D12) !important;
-        box-shadow: 0 0 0 3px rgba(0,0,0,0.04) !important;
-    }
-
-    /* ==================== FORCE BTN-SAVE / BTN-CANCEL ==================== */
-    .btn-save {
-        background: var(--black, #0A0D12) !important;
-        border: none !important;
-        padding: 10px 22px !important;
-        border-radius: var(--radius, 10px) !important;
-        color: var(--white, #FFFFFF) !important;
-        font-weight: 600 !important;
-        cursor: pointer !important;
-        font-size: 0.9rem !important;
-        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
-    }
-    .btn-cancel {
-        background: var(--gray-100, #F3F4F6) !important;
-        border: none !important;
-        padding: 10px 22px !important;
-        border-radius: var(--radius, 10px) !important;
-        color: var(--text-secondary, #6B7280) !important;
-        font-weight: 600 !important;
-        cursor: pointer !important;
-        font-size: 0.9rem !important;
-        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
-    }
-
-    /* ==================== FORCE CARD HEADER ==================== */
-    .card-header {
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        margin-bottom: 16px !important;
-        padding-bottom: 12px !important;
-        border-bottom: 1px solid var(--border, #E5E7EB) !important;
-        flex-wrap: wrap !important;
-        gap: 10px !important;
-    }
-    .card-header h3 {
-        font-size: 1.05rem !important;
-        font-weight: 600 !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 10px !important;
-        color: var(--text-primary, #111827) !important;
-    }
-
-    /* ==================== FORCE NAV ITEMS (SIDEBAR) ==================== */
-    .nav-item {
-        display: flex !important;
-        align-items: center !important;
-        gap: 14px !important;
-        padding: 13px 16px !important;
-        border-radius: var(--radius, 10px) !important;
-        cursor: pointer !important;
-        color: rgba(255,255,255,0.45) !important;
-        font-size: 0.9rem !important;
-        font-weight: 500 !important;
-        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
-        transition: var(--transition, all 0.2s cubic-bezier(0.4, 0, 0.2, 1)) !important;
-    }
-    .nav-item:hover {
-        background: rgba(255,255,255,0.04) !important;
-        color: rgba(255,255,255,0.7) !important;
-    }
-    .nav-item.active {
-        background: rgba(255,255,255,0.06) !important;
-        color: var(--white, #FFFFFF) !important;
-        font-weight: 600 !important;
-    }
-
-    /* ==================== FORCE PAGE HEADER ==================== */
-    .page-header .header-title h2 {
-        font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
-    }
-
-    /* ==================== FORCE SCROLLBAR ==================== */
-    ::-webkit-scrollbar {
-        width: 4px;
-        height: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: var(--gray-300, #D1D5DB);
-        border-radius: 9999px;
-    }
-    `;
-
-    document.head.appendChild(styles);
-    console.log('🎨 [ADMIN] Design System E-SOLUTION injecté — aucune fonction modifiée');
-})();
+console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
