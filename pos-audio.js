@@ -146,16 +146,286 @@ var paymentKeywords = {
     'partiel': ['partiel', 'partielle', 'acompte', 'moitié', 'partial', 'part', 'partiel']
 };
 
+// ============================================================
+// 🆕 numberMap ENRICHIE — Darija + Français + Anglais (sans caractères arabes)
+// Reconnaît les chiffres dictés phonétiquement
+// Google Speech (fr-FR) transcrit toujours en caractères latins
+// ============================================================
 var numberMap = {
-    'wahed': 1, 'ouais': 1, 'wad': 1, 'un': 1, 'une': 1,
-    'juge': 2, 'joue': 2, 'george': 2, 'souche': 2, 'deux': 2,
-    'claud': 3, 'cl': 3, 'trois': 3, 'clé': 3, 'clea': 3, 'play': 3,
-    'rabah': 4, 'quatre': 4, 'arba': 4, 'abba': 4, 'rabat': 4, 'rabats': 4, 'alba': 4,
-    'cinq': 5, 'hamza': 5, 'rama': 5, 'comme ça': 5,
-    'six': 6, 'sept': 7, 'huit': 8, 'neuf': 9, 'dix': 10,
-    'onze': 11, 'douze': 12, 'douz': 12, 'treize': 13, 'quatorze': 14,
-    'quinze': 15, 'seize': 16, 'vingt': 20, 'trente': 30, 'quarante': 40,
-    'cinquante': 50, 'soixante': 60, 'cent': 100
+    // ============================================================
+    // 1 — Wahid / Un / One
+    // ============================================================
+    'wahed': 1, 'wahd': 1, 'wahid': 1, 'wahad': 1, 'wahet': 1, 'waht': 1,
+    'ouais': 1, 'wad': 1, 'wade': 1, 'watt': 1, 'what': 1, 'watt': 1,
+    'whed': 1, 'wahedd': 1, 'wahada': 1,
+    'un': 1, 'une': 1, 'hein': 1, 'ein': 1, 'ain': 1, 'in': 1, 'oeun': 1, 'euh': 1, 'an': 1,
+    'one': 1, 'wan': 1, 'wane': 1, 'ouane': 1, 'ouann': 1,
+
+    // ============================================================
+    // 2 — Juj / Deux / Two
+    // ============================================================
+    'juje': 2, 'juge': 2, 'juj': 2, 'joudj': 2, 'jouj': 2, 'joue': 2, 'jog': 2,
+    'zouj': 2, 'zuje': 2, 'zuj': 2, 'juj': 2, 'jude': 2,
+    'george': 2, 'souche': 2, 'joss': 2, 'jausse': 2, 'chouj': 2, 'chouje': 2,
+    'deux': 2, 'deu': 2, 'deuh': 2, 'deusse': 2, 'dœ': 2, 'doe': 2, 'dough': 2,
+    'deux': 2, 'des': 2, 'dais': 2, 'dait': 2,
+    'two': 2, 'tou': 2, 'too': 2, 'touh': 2, 'tou': 2,
+
+    // ============================================================
+    // 3 — Tlata / Trois / Three
+    // ============================================================
+    'tlata': 3, 'tleta': 3, 'tlate': 3, 'tlta': 3, 'talata': 3, 'talate': 3,
+    'tléta': 3, 'tlatta': 3, 'tlaata': 3, 'tlatte': 3,
+    'claud': 3, 'cl': 3, 'clé': 3, 'clea': 3, 'clay': 3, 'cle': 3, 'clee': 3,
+    'play': 3, 'plet': 3, 'pley': 3, 'clode': 3, 'claude': 3,
+    'trois': 3, 'troi': 3, 'troix': 3, 'troie': 3, 'trwa': 3, 'trwat': 3,
+    'three': 3, 'tri': 3, 'thri': 3, 'sri': 3, 'sree': 3,
+
+    // ============================================================
+    // 4 — Rbaa / Quatre / Four
+    // ============================================================
+    'rbaa': 4, 'rba': 4, 'rebae': 4, 'rebah': 4, 'rabah': 4, 'raba': 4,
+    'reb3a': 4, 'rba3a': 4, 'rebaa': 4, 'rbaa': 4, 'arabe': 4,
+    'quatre': 4, 'quat': 4, 'katr': 4, 'kat': 4, 'catre': 4, 'katre': 4,
+    'katra': 4, 'quatre': 4, 'katt': 4,
+    'arba': 4, 'abba': 4, 'alba': 4, 'abat': 4, 'arbas': 4,
+    'rabat': 4, 'rabats': 4, 'rebot': 4, 'reba': 4, 'rebat': 4,
+    'four': 4, 'for': 4, 'fore': 4, 'forr': 4, 'fo': 4,
+
+    // ============================================================
+    // 5 — Khamsa / Cinq / Five
+    // ============================================================
+    'khamsa': 5, 'khemsa': 5, 'khmsa': 5, 'khamssa': 5, 'khamesa': 5,
+    'kamsa': 5, 'kamsah': 5, 'khamssa': 5, 'khmissa': 5, 'khmousa': 5,
+    'cinq': 5, 'sin': 5, 'sink': 5, 'seink': 5, 'sinc': 5, 'saink': 5,
+    'hamza': 5, 'rama': 5, 'comme ça': 5, 'comme sa': 5, 'comsa': 5,
+    'five': 5, 'faiv': 5, 'fayv': 5, 'faive': 5,
+
+    // ============================================================
+    // 6 — Sitta / Six / Six
+    // ============================================================
+    'sitta': 6, 'sita': 6, 'sitte': 6, 'setta': 6, 'sithe': 6,
+    'settah': 6, 'sittah': 6, 'setta': 6, 'sitta': 6,
+    'six': 6, 'sis': 6, 'siss': 6, 'siks': 6, 'sick': 6, 'sik': 6,
+
+    // ============================================================
+    // 7 — Sbaa / Sept / Seven
+    // ============================================================
+    'sbaa': 7, 'sba': 7, 'seba': 7, 'sebaa': 7, 'sabaa': 7, 'sb3a': 7,
+    'seb3a': 7, 'sab3a': 7, 'sba3a': 7,
+    'sept': 7, 'sette': 7, 'set': 7, 'sebt': 7, 'say': 7, 'sette': 7,
+    'seven': 7, 'sevn': 7, 'sevan': 7, 'seveun': 7, 'sevene': 7,
+
+    // ============================================================
+    // 8 — Tmanya / Huit / Eight
+    // ============================================================
+    'tmanya': 8, 'tmnyia': 8, 'temenya': 8, 'tmanye': 8, 'tmenya': 8,
+    'tmenea': 8, 'tmania': 8, 'tmenia': 8, 'tmnaya': 8,
+    'huit': 8, 'wit': 8, 'huitte': 8, 'uit': 8, 'huite': 8, 'huitte': 8,
+    'eight': 8, 'eit': 8, 'ate': 8, 'eyt': 8, 'eite': 8, 'eigth': 8,
+
+    // ============================================================
+    // 9 — Tsaa / Neuf / Nine
+    // ============================================================
+    'tsaa': 9, 'tsa': 9, 'tesa': 9, 'tisaa': 9, 'tisea': 9, 'tissaa': 9,
+    'tis3a': 9, 'tes3a': 9, 'tsa3a': 9, 'tisaa': 9,
+    'neuf': 9, 'nef': 9, 'noeuf': 9, 'neuffe': 9, 'neufe': 9,
+    'nine': 9, 'nain': 9, 'nayn': 9, 'naine': 9,
+
+    // ============================================================
+    // 10 — Achra / Dix / Ten
+    // ============================================================
+    'achra': 10, 'ashra': 10, 'aachra': 10, 'achara': 10, 'acharat': 10,
+    'achr': 10, 'achre': 10, 'aachra': 10, 'hachra': 10,
+    'dix': 10, 'diss': 10, 'dis': 10, 'dixe': 10, 'deece': 10, 'diss': 10,
+    'ten': 10, 'tain': 10, 'teun': 10, 'tan': 10, 'tène': 10,
+
+    // ============================================================
+    // 11 — Hdach / Onze / Eleven
+    // ============================================================
+    'hdach': 11, 'hedach': 11, 'hddach': 11, 'haddach': 11, 'ihdach': 11,
+    'hdach': 11, 'hdache': 11, 'hedach': 11,
+    'onze': 11, 'onz': 11, 'once': 11, 'onse': 11,
+    'eleven': 11, 'ileven': 11, 'elevein': 11, 'elevn': 11,
+
+    // ============================================================
+    // 12 — Tnach / Douze / Twelve
+    // ============================================================
+    'tnach': 12, 'tnache': 12, 'tenache': 12, 'etnache': 12, 'tnach': 12,
+    'tnach': 12, 'tnache': 12, 'tnash': 12, 'tnashe': 12,
+    'douze': 12, 'douz': 12, 'douzze': 12, 'duz': 12, 'douze': 12,
+    'twelve': 12, 'twelv': 12, 'twelf': 12, 'twelv': 12,
+
+    // ============================================================
+    // 13 — Tlettach / Treize / Thirteen
+    // ============================================================
+    'tlettach': 13, 'tletach': 13, 'tlattach': 13, 'talatach': 13, 'tletaach': 13,
+    'tlettach': 13, 'tlettache': 13, 'tletache': 13,
+    'treize': 13, 'trez': 13, 'treize': 13, 'treise': 13,
+    'thirteen': 13, 'thirtin': 13, 'surtin': 13, 'thirteun': 13,
+
+    // ============================================================
+    // 14 — Rbatach / Quatorze / Fourteen
+    // ============================================================
+    'rbatach': 14, 'rebatach': 14, 'rabatach': 14, 'rbattach': 14,
+    'rbatache': 14, 'rbatache': 14, 'rebatache': 14,
+    'quatorze': 14, 'katorz': 14, 'katourze': 14, 'catorze': 14,
+    'fourteen': 14, 'fortin': 14, 'fortine': 14, 'forteun': 14,
+
+    // ============================================================
+    // 15 — Khmestach / Quinze / Fifteen
+    // ============================================================
+    'khmestach': 15, 'khamestach': 15, 'khmostach': 15, 'khmestache': 15, 'khamstach': 15,
+    'khmestache': 15, 'khamstache': 15, 'khmestach': 15,
+    'quinze': 15, 'kinz': 15, 'kins': 15, 'kinze': 15, 'quinze': 15,
+    'fifteen': 15, 'fiftin': 15, 'fiftine': 15, 'fifteun': 15,
+
+    // ============================================================
+    // 16 — Settach / Seize / Sixteen
+    // ============================================================
+    'settach': 16, 'setach': 16, 'sittach': 16, 'settache': 16, 'settaach': 16,
+    'settache': 16, 'sittache': 16, 'settach': 16,
+    'seize': 16, 'sez': 16, 'seize': 16, 'seise': 16,
+    'sixteen': 16, 'sixtin': 16, 'sikstin': 16, 'sixteun': 16,
+
+    // ============================================================
+    // 17 — Sbatach / Dix-sept / Seventeen
+    // ============================================================
+    'sbatach': 17, 'sbetach': 17, 'sebatach': 17, 'sabatach': 17, 'sbattach': 17,
+    'sbatache': 17, 'sebatache': 17, 'sbattach': 17,
+    'dix-sept': 17, 'diset': 17, 'disett': 17, 'disette': 17, 'disset': 17,
+    'seventeen': 17, 'seventin': 17, 'sevntin': 17, 'seventeun': 17,
+
+    // ============================================================
+    // 18 — Tmentach / Dix-huit / Eighteen
+    // ============================================================
+    'tmentach': 18, 'tmantach': 18, 'tmentache': 18, 'tmantache': 18, 'temnatach': 18,
+    'tmentache': 18, 'tmantache': 18, 'tmentach': 18,
+    'dix-huit': 18, 'dizuit': 18, 'dizwit': 18, 'dizuite': 18, 'dizuit': 18,
+    'eighteen': 18, 'eigtin': 18, 'eitine': 18, 'eighteun': 18,
+
+    // ============================================================
+    // 19 — Tseâtach / Dix-neuf / Nineteen
+    // ============================================================
+    'tseâtach': 19, 'tsatach': 19, 'tesatach': 19, 'tisatach': 19, 'tsattach': 19,
+    'tseâtache': 19, 'tsatache': 19, 'tisatache': 19,
+    'dix-neuf': 19, 'diznef': 19, 'diznoeuf': 19, 'dizneufe': 19,
+    'nineteen': 19, 'naintin': 19, 'nayntin': 19, 'nineteun': 19,
+
+    // ============================================================
+    // 20 — Achrin / Vingt / Twenty
+    // ============================================================
+    'achrin': 20, 'achrine': 20, 'ashrin': 20, 'aachrin': 20, 'achroun': 20,
+    'achrinne': 20, 'achrin': 20,
+    'vingt': 20, 'vin': 20, 'vain': 20, 'vink': 20, 'ving': 20, 'vingte': 20,
+    'twenty': 20, 'twenti': 20, 'twent': 20, 'twente': 20,
+
+    // ============================================================
+    // 25 — Khamsa w Achrin
+    // ============================================================
+    'khamsa w achrin': 25, 'khamsa w achrine': 25, 'khamsa wa achrin': 25,
+    'vingt-cinq': 25, 'vinsink': 25, 'vintsin': 25, 'vingtsink': 25,
+    'twenty-five': 25, 'twentyfive': 25, 'twenntifaiv': 25,
+
+    // ============================================================
+    // 30 — Tlatin / Trente / Thirty
+    // ============================================================
+    'tlatin': 30, 'tlatine': 30, 'talatin': 30, 'talatine': 30,
+    'tlatinne': 30, 'tlatine': 30,
+    'trente': 30, 'trent': 30, 'trant': 30, 'trente': 30, 'trentte': 30,
+    'thirty': 30, 'thirti': 30, 'surti': 30, 'thirte': 30,
+
+    // ============================================================
+    // 40 — Rbaâin / Quarante / Forty
+    // ============================================================
+    'rbaâin': 40, 'rbain': 40, 'rbaîne': 40, 'reba3ine': 40, 'arba3in': 40,
+    'rbaine': 40, 'rbaine': 40, 'rebaine': 40,
+    'quarante': 40, 'karant': 40, 'karante': 40, 'quarant': 40, 'karantte': 40,
+    'forty': 40, 'forti': 40, 'foti': 40, 'forte': 40,
+
+    // ============================================================
+    // 50 — Khamsin / Cinquante / Fifty
+    // ============================================================
+    'khamsin': 50, 'khamsine': 50, 'khemsin': 50, 'khamssine': 50,
+    'khamsinne': 50, 'khamsine': 50,
+    'cinquante': 50, 'sinkant': 50, 'sinkante': 50, 'cincant': 50, 'sinkantte': 50,
+    'fifty': 50, 'fifti': 50, 'fift': 50, 'fifte': 50,
+
+    // ============================================================
+    // 60 — Sittin / Soixante / Sixty
+    // ============================================================
+    'sittin': 60, 'sittine': 60, 'sitine': 60, 'settin': 60, 'setine': 60,
+    'sittinne': 60, 'sittine': 60,
+    'soixante': 60, 'soisant': 60, 'soissante': 60, 'swasant': 60, 'soixantte': 60,
+    'sixty': 60, 'siksti': 60, 'sikst': 60, 'sikste': 60,
+
+    // ============================================================
+    // 70 — Sbaâin / Soixante-dix / Seventy
+    // ============================================================
+    'sbaâin': 70, 'sbain': 70, 'seba3ine': 70, 'sebain': 70, 'sab3in': 70,
+    'sbaine': 70, 'sbainne': 70, 'sebaine': 70,
+    'soixante-dix': 70, 'soisantdis': 70, 'soixantedis': 70,
+    'seventy': 70, 'seventi': 70, 'sevnti': 70, 'sevente': 70,
+
+    // ============================================================
+    // 80 — Tmanin / Quatre-vingts / Eighty
+    // ============================================================
+    'tmanin': 80, 'tmanine': 80, 'tmenin': 80, 'tmanyin': 80,
+    'tmaninne': 80, 'tmanine': 80,
+    'quatre-vingts': 80, 'katrvin': 80, 'katrvin': 80, 'catrevin': 80, 'katrvingt': 80,
+    'eighty': 80, 'eiti': 80, 'eit': 80, 'eigte': 80,
+
+    // ============================================================
+    // 90 — Tsâin / Quatre-vingt-dix / Ninety
+    // ============================================================
+    'tsâin': 90, 'tsain': 90, 'tes3ine': 90, 'tissain': 90, 'tisa3ine': 90,
+    'tsaine': 90, 'tsainne': 90, 'tesaine': 90,
+    'quatre-vingt-dix': 90, 'katrvindis': 90, 'quatrevingtdis': 90,
+    'ninety': 90, 'nainti': 90, 'naynnti': 90, 'nainte': 90,
+
+    // ============================================================
+    // 100 — Mïa / Cent / Hundred
+    // ============================================================
+    'mia': 100, 'meya': 100, 'miya': 100, 'miat': 100, 'miyat': 100,
+    'miaa': 100, 'meyya': 100, 'miyya': 100, 'miya': 100,
+    'cent': 100, 'san': 100, 'sant': 100, 'sente': 100, 'sente': 100,
+    'hundred': 100, 'handred': 100, 'hundred': 100, 'handrede': 100,
+
+    // ============================================================
+    // 200 — Mïatayn / Deux cents
+    // ============================================================
+    'miatayn': 200, 'meyatayn': 200, 'miyatayn': 200, 'miataine': 200,
+    'deux cents': 200, 'deusan': 200, 'deuxsan': 200, 'deusente': 200,
+    'two hundred': 200, 'touhandred': 200,
+
+    // ============================================================
+    // 500 — Khams mïa / Cinq cents
+    // ============================================================
+    'khams mia': 500, 'khamsa mia': 500, 'khamsamiya': 500,
+    'cinq cents': 500, 'sinksan': 500, 'sinksente': 500,
+    'five hundred': 500, 'faivhandred': 500,
+
+    // ============================================================
+    // 1000 — Alf / Mille / Thousand
+    // ============================================================
+    'alf': 1000, 'alef': 1000, 'alffe': 1000, 'aalf': 1000,
+    'alfa': 1000, 'alfe': 1000,
+    'mille': 1000, 'mil': 1000, 'mille': 1000, 'mille': 1000,
+    'thousand': 1000, 'tauzand': 1000, 'thauzend': 1000, 'tauzande': 1000,
+
+    // ============================================================
+    // Ordinaux (utiles pour dialogues)
+    // ============================================================
+    'premier': 1, 'première': 1, 'first': 1, 'premie': 1,
+    'deuxième': 2, 'second': 2, 'seconde': 2, 'deuxieme': 2,
+    'troisième': 3, 'third': 3, 'troisieme': 3,
+    'quatrième': 4, 'fourth': 4, 'quatrieme': 4,
+    'cinquième': 5, 'fifth': 5, 'cinquieme': 5,
+    'sixième': 6, 'sixth': 6, 'sixieme': 6,
+    'septième': 7, 'seventh': 7, 'septieme': 7,
+    'huitième': 8, 'eighth': 8, 'huitieme': 8,
+    'neuvième': 9, 'ninth': 9, 'neuvieme': 9,
+    'dixième': 10, 'tenth': 10, 'dixieme': 10
 };
 
 // ========== FONCTIONS D'AFFICHAGE VOCAL ==========
