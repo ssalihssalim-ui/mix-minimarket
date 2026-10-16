@@ -1,4 +1,4 @@
-// ==================== POS-AUDIO.JS v28 – VERROUILLAGE TOGGLEVOICESEARCH ====================
+// ==================== POS-AUDIO.JS v30 – RECHERCHE INTELLIGENTE + CACHE + DEBOUNCE ====================
 // ✅ Le texte s'écrit dans la barre SANS icône ✍️
 // ✅ Recherche lancée automatiquement à chaque mot dicté (interim)
 // ✅ Produit dicté → affiché dans la barre ET recherche lancée
@@ -11,6 +11,7 @@
 // 🔥 AJOUT : Recherche vocale sur pages Produits, Ventes, Crédits
 // 🔥 CORRECTION MICRO : verrouillage window.toggleVoiceSearch pour empêcher pos.js de l'écraser
 // 🔥 CORRECTION closeCreditSelection : protégé par try/catch
+// 🆕 v30 : RECHERCHE FUZZY (fautes, accents) + CACHE MÉMOIRE + DEBOUNCE INTERIM
 
 console.log('🚀 [pos-audio] Début du chargement...');
 
@@ -42,6 +43,83 @@ var clientIndexBuilt = false;
 // ========== INDEX PRODUIT ==========
 var productNameIndex = {};
 var productIndexBuilt = false;
+
+// ============================================================
+// 🆕 v30 : CACHE MÉMOIRE DE RECHERCHE
+// ============================================================
+var _searchCache = {
+    products: new Map(),
+    clients: new Map(),
+    MAX_SIZE: 200
+};
+
+function cacheGet(type, query) {
+    var cache = _searchCache[type];
+    if (!cache) return null;
+    return cache.get(query) || null;
+}
+
+function cacheSet(type, query, result) {
+    var cache = _searchCache[type];
+    if (!cache) return;
+    if (cache.size >= _searchCache.MAX_SIZE) {
+        var firstKey = cache.keys().next().value;
+        cache.delete(firstKey);
+    }
+    cache.set(query, result);
+}
+
+function cacheClear(type) {
+    if (type && _searchCache[type]) {
+        _searchCache[type].clear();
+    } else {
+        _searchCache.products.clear();
+        _searchCache.clients.clear();
+    }
+    console.log('🗑️ [CACHE] Vidé:', type || 'tout');
+}
+
+// ============================================================
+// 🆕 v30 : DISTANCE DE LEVENSHTEIN (fuzzy matching)
+// ============================================================
+function levenshteinDistance(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    
+    var matrix = [];
+    for (var i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (var j = 0; j <= a.length; j++) matrix[0][j] = j;
+    
+    for (i = 1; i <= b.length; i++) {
+        for (j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+// ============================================================
+// 🆕 v30 : DEBOUNCE (anti-spam recherche vocale)
+// ============================================================
+function debounce(fn, delay) {
+    var timer = null;
+    return function() {
+        var args = arguments;
+        var context = this;
+        clearTimeout(timer);
+        timer = setTimeout(function() {
+            fn.apply(context, args);
+        }, delay);
+    };
+}
 
 // ========== PAYMENT STATE MACHINE ==========
 window.voicePaymentState = 0;
@@ -142,25 +220,80 @@ function buildClientIndex() {
         });
     });
     clientIndexBuilt = true;
+    cacheClear('clients');   // 🆕 v30
     console.log('📇 Index client construit avec ' + window.posAllClients.length + ' clients');
 }
 
+// ============================================================
+// 🆕 v30 : RECHERCHE INTELLIGENTE DE CLIENTS
+// ============================================================
 function fastFindClient(query) {
     buildClientIndex();
-    const q = (query || '').toLowerCase().trim();
-    if (!q) return window.posAllClients?.slice() || [];
-    const normalized = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const mots = normalized.split(/[\s,;.]+/);
-    const seen = {}, results = [];
-    mots.forEach(mot => {
-        mot = mot.trim();
-        if (!mot) return;
-        (clientSearchIndex[mot] || []).forEach(c => { if (!seen[c.id]) { seen[c.id] = true; results.push(c); } });
+    if (!query) return window.posAllClients?.slice() || [];
+    
+    // 🆕 v30 : Vérifier le cache
+    var cached = cacheGet('clients', query);
+    if (cached) {
+        console.log('⚡ [CACHE] Clients trouvés instantanément:', query);
+        return cached;
+    }
+    
+    var cleaned = query.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .trim();
+    
+    if (!cleaned) return [];
+    
+    var mots = cleaned.split(/[\s,;.]+/).filter(function(m) { return m.length >= 2; });
+    if (mots.length === 0) return [];
+    
+    var scores = {};
+    
+    (window.posAllClients || []).forEach(function(c) {
+        if (!c || !c.id) return;
+        var nomComplet = ((c.nom || '') + ' ' + (c.prenom || '')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var tel = (c.telephone || '').replace(/\D/g, '');
+        var desc = (c.description || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var score = 0;
+        
+        mots.forEach(function(mot) {
+            // 1. Nom commence par le mot (+100)
+            if (nomComplet.startsWith(mot)) score += 100;
+            // 2. Mot entier dans le nom (+80)
+            else if (new RegExp('\\b' + mot + '\\b').test(nomComplet)) score += 80;
+            // 3. Contient (+50)
+            else if (nomComplet.indexOf(mot) !== -1) score += 50;
+            // 4. Fuzzy sur nom/prénom
+            else {
+                var parts = nomComplet.split(/\s+/);
+                parts.forEach(function(part) {
+                    var d = levenshteinDistance(mot, part);
+                    if (d <= 2) score += (30 - d * 10);
+                });
+            }
+            // 5. Téléphone
+            if (/^\d+$/.test(mot) && tel.indexOf(mot) !== -1) score += 90;
+            // 6. Description (+30)
+            if (desc.indexOf(mot) !== -1) score += 30;
+        });
+        
+        if (score > 0) scores[c.id] = { client: c, score: score };
     });
+    
+    var results = Object.values(scores)
+        .sort(function(a, b) { return b.score - a.score; })
+        .map(function(s) { return s.client; });
+    
+    // 🆕 v30 : Mettre en cache
+    cacheSet('clients', query, results);
     return results;
 }
 
-function invalidateClientIndex() { clientIndexBuilt = false; clientSearchIndex = {}; }
+function invalidateClientIndex() {
+    clientIndexBuilt = false;
+    clientSearchIndex = {};
+    cacheClear('clients');   // 🆕 v30
+}
 
 // ========== INDEX PRODUIT ==========
 function buildProductIndex() {
@@ -177,22 +310,80 @@ function buildProductIndex() {
         });
     });
     productIndexBuilt = true;
+    cacheClear('products');   // 🆕 v30
 }
 
+// ============================================================
+// 🆕 v30 : RECHERCHE INTELLIGENTE DE PRODUITS
+// ============================================================
 function fastFindProduct(query) {
     buildProductIndex();
-    if (!query) return [];
-    var cleaned = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (!query || query.length < 2) return [];
+    
+    // 🆕 v30 : Vérifier le cache
+    var cached = cacheGet('products', query);
+    if (cached) {
+        console.log('⚡ [CACHE] Produits trouvés instantanément:', query);
+        return cached;
+    }
+    
+    var cleaned = query.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .trim();
+    
     if (!cleaned) return [];
-    var mots = cleaned.split(/[\s,;.]+/);
-    var results = [], seen = {};
-    mots.forEach(function(mot) {
-        mot = mot.trim();
-        if (mot.length < 2) return;
-        (productNameIndex[mot] || []).forEach(function(p) {
-            if (!seen[p.id]) { seen[p.id] = true; results.push(p); }
+    
+    var mots = cleaned.split(/[\s,;.]+/).filter(function(m) { return m.length >= 2; });
+    if (mots.length === 0) return [];
+    
+    var scores = {};
+    
+    (window.posProductsList || []).forEach(function(p) {
+        if (!p.nom) return;
+        var nomNorm = p.nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var score = 0;
+        
+        mots.forEach(function(mot) {
+            // 1. Match exact au début du nom (+100)
+            if (nomNorm.startsWith(mot)) score += 100;
+            // 2. Mot entier trouvé (+80)
+            else if (new RegExp('\\b' + mot + '\\b').test(nomNorm)) score += 80;
+            // 3. Contient le mot (+50)
+            else if (nomNorm.indexOf(mot) !== -1) score += 50;
+            // 4. Fuzzy (fautes de frappe)
+            else {
+                var distance = levenshteinDistance(mot, nomNorm.substring(0, mot.length + 3));
+                if (distance <= 2) score += (30 - distance * 10);
+            }
+            
+            // Bonus catégorie
+            if (p.categories && p.categories.some(function(c) {
+                return c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').indexOf(mot) !== -1;
+            })) {
+                score += 30;
+            }
+            
+            // Bonus description
+            if (p.description && p.description.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').indexOf(mot) !== -1) {
+                score += 15;
+            }
         });
+        
+        // Bonus produit disponible
+        if (p.disponible !== false) score += 5;
+        
+        // Malus si stock épuisé
+        if (p.stock !== undefined && p.stock <= 0) score -= 20;
+        
+        if (score > 0) scores[p.id] = { product: p, score: score };
     });
+    
+    var results = Object.values(scores)
+        .sort(function(a, b) { return b.score - a.score; })
+        .map(function(s) { return s.product; });
+    
+    // 🆕 v30 : Mettre en cache
+    cacheSet('products', query, results);
     return results;
 }
 
@@ -980,6 +1171,27 @@ function posStartVoiceRecording() {
     var lastFinal = '';
     var lastCommandTime = 0;
 
+    // 🆕 v30 : Debounce pour l'interim
+    var debouncedInterimSearch = debounce(function(txt, si) {
+        try {
+            var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
+            si.dispatchEvent(inputEvent);
+        } catch(e) {
+            var event = new Event('input', { bubbles: true });
+            si.dispatchEvent(event);
+        }
+        
+        if (typeof window.posSearchProducts === 'function') {
+            window.posSearchProducts(txt);
+        } else if (typeof window.filterProductGrid === 'function') {
+            window.filterProductGrid();
+        }
+        
+        if (typeof window.updateClearButtonVisibility === 'function') {
+            window.updateClearButtonVisibility();
+        }
+    }, 150);
+
     voiceRecognition.onresult = function(e) {
         var interim = '', final = '';
         for (var i = e.resultIndex; i < e.results.length; i++) {
@@ -1154,23 +1366,8 @@ function posStartVoiceRecording() {
                 
                 window.posSearchQuery = interim.toLowerCase().trim();
                 
-                try {
-                    var inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
-                    si.dispatchEvent(inputEvent);
-                } catch(e) {
-                    var event = new Event('input', { bubbles: true });
-                    si.dispatchEvent(event);
-                }
-                
-                if (typeof window.posSearchProducts === 'function') {
-                    window.posSearchProducts(interim);
-                } else if (typeof window.filterProductGrid === 'function') {
-                    window.filterProductGrid();
-                }
-                
-                if (typeof window.updateClearButtonVisibility === 'function') {
-                    window.updateClearButtonVisibility();
-                }
+                // 🆕 v30 : Debounce pour éviter la surcharge
+                debouncedInterimSearch(interim, si);
             }
         }
     };
@@ -1263,6 +1460,10 @@ window.buildProductIndex = buildProductIndex;
 window.fastFindProduct = fastFindProduct;
 window.posStopVoiceSearch = posStopVoiceSearch;
 
+// 🆕 v30 : Exposer les utilitaires de cache et debounce
+window.cacheClear = cacheClear;
+window.levenshteinDistance = levenshteinDistance;
+
 // 🔥 CORRECTION : Fonction pour réinitialiser le mode quantité depuis pos.js
 window.resetVoiceQuantityMode = function() {
     waitingForQuantity = false;
@@ -1287,11 +1488,12 @@ try {
     console.warn('⚠️ pos-audio: impossible de définir closeCreditSelection (fin):', e);
 }
 
-console.log('🎤 Module vocal v28 – QUANTITÉ PRIORITAIRE + VERROUILLAGE toggleVoiceSearch');
+console.log('🎤 Module vocal v30 – QUANTITÉ PRIORITAIRE + VERROUILLAGE + RECHERCHE INTELLIGENTE');
 console.log('✅ Recherche vocale sur POS (produits + quantité)');
 console.log('✅ Recherche vocale sur page Produits (nom + catégorie)');
 console.log('✅ Recherche vocale sur page Ventes (client + période)');
 console.log('✅ Recherche vocale sur page Crédits (client + période)');
 console.log('✅ Navigation utilise les noms ANGLAIS pour matcher admin.js');
 console.log('🔒 window.toggleVoiceSearch VERROUILLÉ — pos.js ne peut plus l\'écraser');
+console.log('🆕 v30 : RECHERCHE FUZZY (cafe→Café Express) + CACHE MÉMOIRE + DEBOUNCE INTERIM');
 console.log('🏁 [pos-audio] FIN — toggleVoiceSearch:', typeof window.toggleVoiceSearch);
