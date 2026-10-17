@@ -20,7 +20,9 @@
 // ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
 // ✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table (comme admin-ventes)
 // ✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)
-// 🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité
+// 🔧 CORRECTION CRITIQUE : Admin-Credits lit désormais depuis la collection 'ventes' (filtrée crédit/partiel)
+//    → Mêmes colonnes que Admin-Ventes (Date paiement, Options, Achat, Profit, Remise, Donné, Restant, Rendu, Statut, Vendeur, Paiement)
+//    → La collection 'credits' reste mise à jour en parallèle pour compatibilité POS
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -199,6 +201,27 @@ return `
 </div>
 `;
 }
+
+// ✅ Date de paiement (comme admin-ventes)
+function renderCreditDatePaiementCell(credit) {
+    if (credit.datePaiement && credit.datePaiement.seconds) {
+        const dt = formatDateHeure(credit.datePaiement.seconds);
+        return `
+<div class="date-cell" style="background:#ECFDF5;border-radius:6px;padding:4px 8px;border:1px solid #99F6E4;">
+<div class="date-line" style="color:#065F46;">
+<i class="fas fa-calendar-check" style="color:#10B981;"></i>
+<span style="font-weight:700;">${dt.date}</span>
+</div>
+<div class="time-line" style="color:#065F46;">
+<i class="far fa-clock" style="color:#10B981;"></i>
+<span style="font-weight:600;">${dt.time}</span>
+</div>
+</div>
+`;
+    }
+    return `<span style="color:#9ca3af;font-size:13px;">—</span>`;
+}
+window.renderCreditDatePaiementCell = renderCreditDatePaiementCell;
 
 // ✅ MODIFIÉ : Nom du client CLIQUABLE
 function renderCreditClientCell(credit) {
@@ -654,6 +677,7 @@ align-items: center !important;
 justify-content: center !important;
 gap: 4px !important;
 flex-wrap: nowrap !important;
+min-width: 160px !important;
 }
 
 #creditsPage .action-buttons .btn-print,
@@ -1057,7 +1081,7 @@ clearBtn.classList.add('hidden');
 }
 }
 
-// 🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité
+// 🔧 CHARGEMENT DEPUIS 'ventes' (filtré crédit / partiel) - Même source que Admin-Ventes
 async function loadCredits() {
     var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
     var vendeurCaissier = '';
@@ -1065,38 +1089,59 @@ async function loadCredits() {
         vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
     }
 
-    // 🔥 ÉTAPE 1 : Charger TOUS les crédits depuis Firestore (SANS LIMITE) - Source de vérité
+    // 🔥 ÉTAPE 1 : Charger TOUTES les ventes depuis Firestore (SANS LIMITE)
     if (navigator.onLine) {
         try {
-            const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').get();
+            const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').get();
             window.allCreditsData = [];
             snapshot.forEach(function(dc) {
                 var d = dc.data();
                 d.id = dc.id;
+                // ✅ FILTRE : garder uniquement crédit / partiel (non payées)
+                var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
+                var isCredit = (statut === 'crédit' || statut === 'partiel') && !d.paid;
+                if (!isCredit) return;
+
+                // ✅ Calcul achat / profit (comme admin-ventes)
+                var achat = 0, profit = 0;
+                if (d.items) {
+                    d.items.forEach(function(it) {
+                        var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
+                            pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
+                        achat += pa * q;
+                        profit += (pvr - pa) * q;
+                    });
+                }
+                d.achat = achat;
+                d.profit = profit;
                 window.allCreditsData.push(d);
             });
-            console.log('📥 Total crédits chargés depuis Firestore :', window.allCreditsData.length);
+            console.log('📥 Total crédits/partiels chargés depuis ventes :', window.allCreditsData.length);
 
-            // 🔥 ÉTAPE 2 : Mettre TOUS les crédits en cache
+            // 🔥 ÉTAPE 2 : Mettre en cache
             for (let doc of window.allCreditsData) {
                 await CacheDB.set('credits', doc.id, doc);
             }
             console.log('💾 Cache mis à jour avec', window.allCreditsData.length, 'crédits');
         } catch (e) {
-            console.error('❌ Erreur chargement crédits Firestore:', e);
-            // Fallback sur le cache en cas d'erreur réseau
+            console.error('❌ Erreur chargement ventes Firestore:', e);
             const cached = await CacheDB.getAll('credits');
-            window.allCreditsData = cached;
+            window.allCreditsData = cached.filter(function(d) {
+                var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
+                return (statut === 'crédit' || statut === 'partiel') && !d.paid;
+            });
             console.log('📴 Fallback cache:', window.allCreditsData.length, 'crédits');
         }
     } else {
-        // Mode hors-ligne : utiliser le cache
         const cached = await CacheDB.getAll('credits');
-        window.allCreditsData = cached;
-        console.log('📴 Hors-ligne:', cached.length, 'crédits depuis le cache');
+        window.allCreditsData = cached.filter(function(d) {
+            var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
+            return (statut === 'crédit' || statut === 'partiel') && !d.paid;
+        });
+        console.log('📴 Hors-ligne:', window.allCreditsData.length, 'crédits depuis le cache');
     }
 
-    // 🔥 ÉTAPE 3 : Appliquer le filtre vendeur UNIQUEMENT pour l'affichage
+    // 🔥 ÉTAPE 3 : Filtre vendeur pour caissier
     if (!isAdmin && vendeurCaissier) {
         window.allCreditsData = window.allCreditsData.filter(function(d) {
             return d.vendeur === vendeurCaissier;
@@ -1104,7 +1149,7 @@ async function loadCredits() {
         console.log('👤 Crédits filtrés pour le caissier :', window.allCreditsData.length);
     }
 
-    // 🔥 ÉTAPE 4 : Initialiser le tri et afficher
+    // 🔥 ÉTAPE 4 : Tri + affichage
     if (!window.sortOrders.credits) window.sortOrders.credits = {};
     if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
 
@@ -1191,6 +1236,7 @@ document.getElementById('creditsStatsPaye').textContent = totalPaye.toFixed(2);
 }
 
 // ==================== RENDER CREDITS TABLE PRO ====================
+// ✅ Mêmes colonnes que Admin-Ventes
 function renderCreditsTablePro() {
 var cont = document.getElementById('creditsTableContainer');
 if (!cont) return;
@@ -1231,15 +1277,21 @@ var h = `
 <table class="data-table">
 <thead>
 <tr>
-<th style="min-width:160px;"><i class="fas fa-file-invoice"></i> Facture</th>
+<th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
 <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
+<th style="min-width:150px;"><i class="fas fa-calendar-check"></i> Date paiement</th>
 <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
 <th><i class="fas fa-box"></i> Articles</th>
+<th><i class="fas fa-cog"></i> Options</th>
+${isAdmin ? `<th><i class="fas fa-coins"></i> Achat</th><th><i class="fas fa-chart-line"></i> Profit</th>` : ''}
 <th><i class="fas fa-tag"></i> Total</th>
-<th><i class="fas fa-hand-holding-usd"></i> Payé</th>
+<th><i class="fas fa-percent"></i> Remise</th>
+<th><i class="fas fa-hand-holding-usd"></i> Donné</th>
 <th><i class="fas fa-hourglass-half"></i> Restant</th>
-<th><i class="fas fa-credit-card"></i> Mode</th>
+<th><i class="fas fa-undo-alt"></i> Rendu</th>
 ${isAdmin ? `<th><i class="fas fa-user-tie"></i> Vendeur</th>` : ''}
+<th><i class="fas fa-credit-card"></i> Paiement</th>
+<th><i class="fas fa-circle"></i> Statut</th>
 <th style="min-width:200px;"><i class="fas fa-tools"></i> Actions</th>
 ${window.creditSelectionMode ? '<th style="width:40px;">☑️</th>' : ''}
 </tr>
@@ -1254,11 +1306,12 @@ if (!d.paid) tc += reste;
 const factureNum = d.factureNum || d.id?.substring(0, 8) || '---';
 const factureHtml = `
 <div class="facture-cell">
-<i class="fas fa-file-invoice"></i>
+<i class="fas fa-receipt"></i>
 <span class="facture-number">#${factureNum}</span>
 </div>
 `;
 const dateHtml = renderCreditDateCell(d);
+const datePaiementHtml = renderCreditDatePaiementCell(d);
 const clientHtml = renderCreditClientCell(d);
 
 var articlesHtml = '';
@@ -1270,8 +1323,32 @@ return '<strong>' + (it.quantite || 1) + 'x</strong> ' + escapeHtml(it.nom || ''
 articlesHtml = '-';
 }
 
-var mode = d.paymentMethod || '-';
+// ✅ Options (comme admin-ventes)
+var opts = d.items ? d.items.map(function(it) {
+var o = [];
+if (it.sauces && it.sauces.length) o.push('<span style="color:#14B8A6;">🥫' + escapeHtml(it.sauces.join(',')) + '</span>');
+if (it.interdits && it.interdits.length) o.push('<span style="color:#ef4444;">🚫' + escapeHtml(it.interdits.join(',')) + '</span>');
+if (it.epice && it.epice !== 'Normal') o.push('<span style="color:#d97706;">🌶️' + escapeHtml(it.epice) + '</span>');
+if (it.sel && it.sel !== 'Normal') o.push('<span style="color:#4f46e5;">🧂' + escapeHtml(it.sel) + '</span>');
+return o.length ? o.join(' | ') : '<span style="color:#9ca3af;">Aucune option</span>';
+}).join('<br>') : '-';
+
+var paymentMethod = d.paymentMethod || 'crédit';
 var amountPaid = d.amountGiven || 0;
+
+// ✅ Statut (comme admin-ventes)
+var statutPaiement = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
+if (d.paid && statutPaiement !== 'payé') statutPaiement = 'payé';
+if (d.amountGiven > 0 && d.remainingAmount > 0 && statutPaiement !== 'partiel') statutPaiement = 'partiel';
+
+var statutMap = {
+'payé': { class: 'status-success', label: 'Payé', icon: 'fa-check-circle' },
+'crédit': { class: 'status-warning', label: 'Crédit', icon: 'fa-hand-holding-usd' },
+'partiel': { class: 'status-warning', label: 'Partiel', icon: 'fa-clock' },
+'en_attente': { class: 'status-danger', label: 'En attente', icon: 'fa-hourglass-half' },
+'impayé': { class: 'status-danger', label: 'Impayé', icon: 'fa-times-circle' }
+};
+var st = statutMap[statutPaiement] || { class: 'status-warning', label: statutPaiement || 'Inconnu', icon: 'fa-question-circle' };
 
 var actions = `
 <div class="action-buttons">
@@ -1297,13 +1374,19 @@ h += `<tr${rowClass}>
 ${factureHtml}
 </td>
 <td>${dateHtml}</td>
+<td>${datePaiementHtml}</td>
 <td>${clientHtml}</td>
 <td>${articlesHtml}</td>
-<td><span class="amount-total">${d.total.toFixed(2)} MAD</span></td>
-<td>${amountPaid.toFixed(2)} MAD</td>
+<td>${opts}</td>
+${isAdmin ? `<td>${(d.achat || 0).toFixed(2)}</td><td style="color:#14B8A6;font-weight:700;">${(d.profit || 0).toFixed(2)}</td>` : ''}
+<td><span class="amount-total">${(d.total || 0).toFixed(2)} MAD</span></td>
+<td>${(d.discountMAD || 0).toFixed(2)}</td>
+<td><span style="font-weight:700;color:#2563eb;">${(d.amountGiven || 0).toFixed(2)}</span></td>
 <td><span class="amount-remaining">${reste.toFixed(2)} MAD</span></td>
-<td>${escapeHtml(mode)}</td>
+<td>${(d.change || 0).toFixed(2)}</td>
 ${isAdmin ? `<td>${escapeHtml(d.vendeur || '-')}</td>` : ''}
+<td>${escapeHtml(paymentMethod)}</td>
+<td><span class="${st.class}"><i class="fas ${st.icon}"></i> ${st.label}</span></td>
 <td>${actions}</td>
 ${window.creditSelectionMode ? `<td style="text-align:center;"><input type="checkbox" class="credit-select-check" data-id="${d.id}" ${isSelected ? 'checked' : ''} onchange="toggleCreditSelection('${d.id}')" style="transform:scale(1.5);width:24px;height:24px;"></td>` : ''}
 </tr>`;
@@ -1528,8 +1611,10 @@ return;
 if (!confirm('Supprimer définitivement les ' + window.creditSelectedIds.length + ' crédits sélectionnés ?')) return;
 
 var promises = window.creditSelectedIds.map(function(id) {
-return db.collection('credits').doc(id).delete().then(function() {
+return db.collection('ventes').doc(id).delete().then(function() {
 window.allCreditsData = window.allCreditsData.filter(function(c) { return c.id !== id; });
+// Supprimer aussi le doc credits correspondant si présent
+return db.collection('credits').doc(id).delete().catch(function() {});
 });
 });
 
@@ -1552,6 +1637,7 @@ CacheDB.sync();
 
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('credits');
+    CacheDB.saveCollection('ventes');
 }
 }).catch(function(e) {
 alert('❌ Erreur: ' + e.message);
@@ -1615,22 +1701,40 @@ async function paySelectedCredits() {
                 items: credit.items || []
             });
 
-            // ✅ AJOUT : datePaiement + paidAt quand le crédit est soldé
-            return db.collection('credits').doc(credit.id).update({
+            // ✅ Mise à jour VENTE (source de vérité)
+            var venteUpdate = {
                 amountGiven: nouveauPaye,
                 remainingAmount: 0,
                 paid: true,
+                statutPaiement: 'payé',
+                change: Math.max(0, nouveauPaye - (credit.total || 0)),
                 datePaiement: now,
                 paidAt: now,
                 updatedAt: now,
                 lastPaymentAt: now,
                 lastPaymentAmount: restant
+            };
+
+            return db.collection('ventes').doc(credit.id).update(venteUpdate).catch(function() {
+                console.warn('⚠️ vente doc non trouvée:', credit.id);
+            }).then(function() {
+                // ✅ Mise à jour CREDITS (compatibilité POS) - silencieux si absent
+                return db.collection('credits').doc(credit.id).update({
+                    amountGiven: nouveauPaye,
+                    remainingAmount: 0,
+                    paid: true,
+                    datePaiement: now,
+                    paidAt: now,
+                    updatedAt: now
+                }).catch(function() {});
             }).then(function() {
                 var updatedCredit = {
                     ...credit,
                     amountGiven: nouveauPaye,
                     remainingAmount: 0,
-                    paid: true
+                    paid: true,
+                    statutPaiement: 'payé',
+                    datePaiement: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 }
                 };
                 return CacheDB.set('credits', credit.id, updatedCredit).then(function() {
                     var idx = window.allCreditsData.findIndex(function(c) { return c.id === credit.id; });
@@ -1639,20 +1743,6 @@ async function paySelectedCredits() {
                     if (window.filteredCredits) {
                         var fidx = window.filteredCredits.findIndex(function(c) { return c.id === credit.id; });
                         if (fidx !== -1) window.filteredCredits[fidx] = updatedCredit;
-                    }
-
-                    if (typeof window.synchroVenteDepuisCredit === 'function') {
-                        var creditData = {
-                            id: credit.id,
-                            factureNum: credit.factureNum,
-                            amountGiven: nouveauPaye,
-                            total: credit.total,
-                            paid: true,
-                            remainingAmount: 0,
-                            clientId: credit.clientId,
-                            clientName: credit.clientName
-                        };
-                        return window.synchroVenteDepuisCredit(creditData);
                     }
                     return Promise.resolve();
                 });
@@ -1690,6 +1780,9 @@ async function paySelectedCredits() {
         }
 
         CacheDB.sync();
+
+        // Recharger pour retirer les crédits désormais payés de la liste
+        setTimeout(function() { loadCredits(); }, 400);
 
         await posAfficherOptionWhatsAppPaiement(facturePaiement, toPay);
 
@@ -2088,7 +2181,17 @@ async function confirmerPaiementCreditZero(creditId) {
 
         var now = firebase.firestore.FieldValue.serverTimestamp();
 
-        // ✅ AJOUT : datePaiement + paidAt
+        // ✅ Mise à jour VENTE (source de vérité)
+        await db.collection('ventes').doc(creditId).update({
+            paid: true,
+            remainingAmount: 0,
+            statutPaiement: 'payé',
+            datePaiement: now,
+            paidAt: now,
+            updatedAt: now
+        }).catch(function() {});
+
+        // ✅ Mise à jour CREDITS (compatibilité POS)
         await db.collection('credits').doc(creditId).update({
             paid: true,
             remainingAmount: 0,
@@ -2096,12 +2199,14 @@ async function confirmerPaiementCreditZero(creditId) {
             datePaiement: now,
             paidAt: now,
             updatedAt: now
-        });
+        }).catch(function() {});
 
         var updatedCredit = {
             ...credit,
             paid: true,
-            remainingAmount: 0
+            remainingAmount: 0,
+            statutPaiement: 'payé',
+            datePaiement: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 }
         };
         await CacheDB.set('credits', creditId, updatedCredit);
         
@@ -2111,20 +2216,6 @@ async function confirmerPaiementCreditZero(creditId) {
         var fIndex = (window.filteredCredits || []).findIndex(function(c) { return c.id === creditId; });
         if (fIndex !== -1) window.filteredCredits[fIndex] = updatedCredit;
 
-        if (typeof window.synchroVenteDepuisCredit === 'function') {
-            var creditData = {
-                id: creditId,
-                factureNum: credit.factureNum,
-                amountGiven: credit.amountGiven || 0,
-                total: credit.total || 0,
-                paid: true,
-                remainingAmount: 0,
-                clientId: credit.clientId,
-                clientName: credit.clientName
-            };
-            await window.synchroVenteDepuisCredit(creditData);
-        }
-        
         closeModal();
         updateCreditsStats(window.filteredCredits || window.allCreditsData);
         renderCreditsTablePro();
@@ -2136,6 +2227,7 @@ async function confirmerPaiementCreditZero(creditId) {
         }
         
         alert('✅ Ce crédit a été marqué comme payé (total à 0).');
+        setTimeout(function() { loadCredits(); }, 400);
         return;
     } catch(e) {
         console.error('Erreur paiement crédit à 0:', e);
@@ -2177,8 +2269,28 @@ async function confirmCreditPayment(creditId) {
 
         var now = firebase.firestore.FieldValue.serverTimestamp();
 
-        // ✅ AJOUT : datePaiement + paidAt si le crédit est soldé
-        var updateData = {
+        // ✅ Mise à jour VENTE (source de vérité)
+        var venteUpdate = {
+            amountGiven: nouveauPaye,
+            remainingAmount: nouveauRestant,
+            paid: estPaye,
+            statutPaiement: estPaye ? 'payé' : 'partiel',
+            change: Math.max(0, nouveauPaye - (credit.total || 0)),
+            updatedAt: now,
+            lastPaymentAt: now,
+            lastPaymentAmount: montant
+        };
+        if (estPaye) {
+            venteUpdate.datePaiement = now;
+            venteUpdate.paidAt = now;
+        }
+
+        await db.collection('ventes').doc(creditId).update(venteUpdate).catch(function() {
+            console.warn('⚠️ vente doc non trouvée:', creditId);
+        });
+
+        // ✅ Mise à jour CREDITS (compatibilité POS)
+        var creditUpdate = {
             amountGiven: nouveauPaye,
             remainingAmount: nouveauRestant,
             paid: estPaye,
@@ -2187,17 +2299,18 @@ async function confirmCreditPayment(creditId) {
             lastPaymentAmount: montant
         };
         if (estPaye) {
-            updateData.datePaiement = now;
-            updateData.paidAt = now;
+            creditUpdate.datePaiement = now;
+            creditUpdate.paidAt = now;
         }
-
-        await db.collection('credits').doc(creditId).update(updateData);
+        await db.collection('credits').doc(creditId).update(creditUpdate).catch(function() {});
 
         var updatedCredit = {
             ...credit,
             amountGiven: nouveauPaye,
             remainingAmount: nouveauRestant,
-            paid: estPaye
+            paid: estPaye,
+            statutPaiement: estPaye ? 'payé' : 'partiel',
+            datePaiement: estPaye ? { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 } : (credit.datePaiement || null)
         };
         await CacheDB.set('credits', creditId, updatedCredit);
         
@@ -2209,23 +2322,6 @@ async function confirmCreditPayment(creditId) {
         var fIndex = (window.filteredCredits || []).findIndex(function(c) { return c.id === creditId; });
         if (fIndex !== -1) {
             window.filteredCredits[fIndex] = updatedCredit;
-        }
-        
-        if (typeof window.synchroVenteDepuisCredit === 'function') {
-            var creditData = {
-                id: creditId,
-                factureNum: credit.factureNum,
-                amountGiven: nouveauPaye,
-                total: credit.total,
-                paid: estPaye,
-                remainingAmount: nouveauRestant,
-                clientId: credit.clientId,
-                clientName: credit.clientName
-            };
-            await window.synchroVenteDepuisCredit(creditData);
-            console.log('✅ Vente synchronisée avec le crédit');
-        } else {
-            console.warn('⚠️ fonction synchroVenteDepuisCredit non disponible');
         }
         
         closeModal();
@@ -2249,6 +2345,9 @@ async function confirmCreditPayment(creditId) {
             items: credit.items || []
         }];
         var facturePaiement = await creerFacturePaiementCredits(paiements, montant);
+
+        // Si soldé, recharger la liste pour retirer de la vue
+        if (estPaye) setTimeout(function() { loadCredits(); }, 600);
 
         await posAfficherOptionWhatsAppPaiement(facturePaiement, [updatedCredit]);
 
@@ -2326,7 +2425,7 @@ async function loadCreditFactureDetails(creditId) {
     if (!body) return;
     
     try {
-        var doc = await db.collection('credits').doc(creditId).get();
+        var doc = await db.collection('ventes').doc(creditId).get();
         
         if (!doc.exists) {
             body.innerHTML = `
@@ -2363,7 +2462,6 @@ function renderCreditFactureDetails(data) {
     var statusBg = data.paid ? '#ECFDF5' : '#FEF3C7';
     var statusColor = data.paid ? '#065F46' : '#92400E';
     
-    // ✅ AJOUT : Affichage de la date de paiement si le crédit est payé
     var datePaiementHtml = '';
     if (data.datePaiement && data.datePaiement.seconds) {
         var dP = new Date(data.datePaiement.seconds * 1000);
@@ -2493,7 +2591,7 @@ function printCreditFactureDetails() {
 // ==================== ENVOYER WHATSAPP POUR UN CRÉDIT ====================
 async function sendCreditWhatsApp(creditId) {
     try {
-        const doc = await db.collection('credits').doc(creditId).get();
+        const doc = await db.collection('ventes').doc(creditId).get();
         if (!doc.exists) {
             alert('❌ Crédit introuvable');
             return;
@@ -2536,7 +2634,7 @@ async function sendCreditWhatsApp(creditId) {
         }
         
         msg += '━━━━━━━━━━━━━━━━━━\n';
-        msg += '*💰 TOTAL: ' + credit.total.toFixed(2) + ' MAD*\n';
+        msg += '*💰 TOTAL: ' + (credit.total || 0).toFixed(2) + ' MAD*\n';
         msg += '💳 Déjà payé: ' + (credit.amountGiven || 0).toFixed(2) + ' MAD\n';
         msg += '⏳ Reste à payer: ' + (credit.remainingAmount || credit.total || 0).toFixed(2) + ' MAD\n';
         msg += '━━━━━━━━━━━━━━━━━━\n';
@@ -2574,8 +2672,15 @@ async function payerCredit(creditId) {
 }
 
 function printFacture(did) {
-db.collection('credits').doc(did).get().then(function(dc) {
-if (dc.exists) imprimerFactureCredit(dc.data(), dc.id);
+db.collection('ventes').doc(did).get().then(function(dc) {
+if (dc.exists) {
+imprimerFactureCredit(dc.data(), dc.id);
+} else {
+// Fallback credits
+db.collection('credits').doc(did).get().then(function(cc) {
+if (cc.exists) imprimerFactureCredit(cc.data(), cc.id);
+});
+}
 });
 }
 
@@ -2620,7 +2725,7 @@ td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:0.85rem;}
 ${ih}
 </table>
 ${d.discountMAD > 0 ? `<p><strong>Remise:</strong> -${d.discountMAD.toFixed(2)} MAD</p>` : ''}
-<div class="total">Total: ${d.total.toFixed(2)} MAD</div>
+<div class="total">Total: ${(d.total || 0).toFixed(2)} MAD</div>
 <div class="remaining">💰 Restant: ${(d.remainingAmount || d.total || 0).toFixed(2)} MAD</div>
 <div class="footer">Merci de votre visite ! 🌟</div>
 </div>
@@ -2632,14 +2737,18 @@ setTimeout(function() { w.print(); }, 500);
 
 async function editCredit(id) {
 try {
-var doc = await db.collection('credits').doc(id).get();
+var doc = await db.collection('ventes').doc(id).get();
+if (!doc.exists) {
+// fallback credits
+doc = await db.collection('credits').doc(id).get();
+}
 if (!doc.exists) {
 alert('Crédit introuvable');
 return;
 }
 var d = doc.data();
 window.editingId = id;
-window.currentCollection = 'credits';
+window.currentCollection = 'ventes';
 
 var h = `
 <div class="form-row">
@@ -2701,17 +2810,28 @@ amountGiven: amountGiven,
 remainingAmount: paid ? 0 : remainingAmount,
 paymentMethod: paymentMethod,
 paid: paid,
+statutPaiement: paid ? 'payé' : (amountGiven > 0 ? 'partiel' : 'crédit'),
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 };
 
-// ✅ AJOUT : datePaiement si le crédit passe à "payé"
 if (paid) {
     data.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
     data.paidAt = firebase.firestore.FieldValue.serverTimestamp();
 }
 
 try {
-await CacheDB.write('credits', window.editingId, data, 'update');
+// ✅ Écrire dans ventes (source de vérité)
+await db.collection('ventes').doc(window.editingId).update(data).catch(function() {});
+// ✅ Écrire aussi dans credits (compatibilité POS)
+await db.collection('credits').doc(window.editingId).update(data).catch(function() {});
+
+// Cache local
+var localData = Object.assign({}, data);
+if (paid) {
+    localData.datePaiement = { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 };
+}
+await CacheDB.set('credits', window.editingId, Object.assign({id: window.editingId}, localData));
+
 closeModal();
 loadCredits();
 CacheDB.sync();
@@ -2719,6 +2839,7 @@ alert('✅ Crédit mis à jour');
 
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('credits');
+    CacheDB.saveCollection('ventes');
 }
 } catch (e) {
 alert('❌ Erreur: ' + e.message);
@@ -2727,13 +2848,17 @@ alert('❌ Erreur: ' + e.message);
 
 async function deleteCredit(id) {
 try {
-await db.collection('credits').doc(id).delete();
+// ✅ Supprimer dans ventes
+await db.collection('ventes').doc(id).delete().catch(function() {});
+// ✅ Supprimer dans credits
+await db.collection('credits').doc(id).delete().catch(function() {});
 window.allCreditsData = (window.allCreditsData || []).filter(function(c) { return c.id !== id; });
 if (typeof loadCredits === 'function') loadCredits();
 CacheDB.sync();
 
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
     CacheDB.saveCollection('credits');
+    CacheDB.saveCollection('ventes');
 }
 } catch (e) {
 console.error('Erreur deleteCredit:', e);
@@ -2858,17 +2983,27 @@ function validateCreditPayment() {
         var newPaid = total - amount;
         var isFullyPaid = newPaid <= 0.01;
 
-        return db.collection('credits').doc(id).update({
+        var update = {
             amountGiven: (credit.amountGiven || 0) + amount,
             remainingAmount: Math.max(0, newPaid),
             paid: isFullyPaid,
+            statutPaiement: isFullyPaid ? 'payé' : 'partiel',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if (isFullyPaid) {
+            update.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
+            update.paidAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+
+        return db.collection('ventes').doc(id).update(update).catch(function() {}).then(function() {
+            return db.collection('credits').doc(id).update(update).catch(function() {});
         }).then(function() {
             var updatedCredit = {
                 ...credit,
                 amountGiven: (credit.amountGiven || 0) + amount,
                 remainingAmount: Math.max(0, newPaid),
-                paid: isFullyPaid
+                paid: isFullyPaid,
+                statutPaiement: isFullyPaid ? 'payé' : 'partiel'
             };
             return CacheDB.set('credits', id, updatedCredit);
         });
@@ -2901,7 +3036,7 @@ window.appliquerFiltreDatePersonnaliseCredits = appliquerFiltreDatePersonnaliseC
 window.reinitialiserFiltresCredits = reinitialiserFiltresCredits;
 window.confirmerPaiementCreditZero = confirmerPaiementCreditZero;
 
-// ==================== ✅ NOUVELLE FONCTION : Filtrer par client (clic sur nom) ====================
+// ==================== ✅ FONCTION : Filtrer par client (clic sur nom) ====================
 function filtrerParClient(clientName, event) {
     if (event) {
         event.stopPropagation();
@@ -2916,25 +3051,20 @@ function filtrerParClient(clientName, event) {
         return;
     }
     
-    // ✅ Remplir la barre de recherche avec le nom complet du client
     searchInput.value = clientName;
     window.creditsSearch = clientName;
     window.currentPages.credits = 1;
     
-    // ✅ Afficher le bouton "effacer"
     var clearBtn = document.getElementById('creditsClearBtn');
     if (clearBtn) clearBtn.classList.remove('hidden');
     
-    // ✅ Appliquer le filtre
     applyCreditsFilters();
     
-    // ✅ Scroll en haut de la table
     var tableContainer = document.getElementById('creditsTableContainer');
     if (tableContainer) {
         tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
-    // ✅ Focus sur le champ pour modification rapide
     setTimeout(function() {
         if (searchInput) {
             searchInput.focus();
@@ -2977,6 +3107,7 @@ window.injectCreditsStyles = injectCreditsStyles;
 window.renderCreditFactureCell = renderCreditFactureCell;
 window.renderCreditDateCell = renderCreditDateCell;
 window.renderCreditClientCell = renderCreditClientCell;
+window.renderCreditDatePaiementCell = renderCreditDatePaiementCell;
 
 window.openCreditFactureDetails = openCreditFactureDetails;
 window.closeCreditFactureDetails = closeCreditFactureDetails;
@@ -3003,30 +3134,22 @@ window.changePage = window.changePage || changePage;
 window.getPageData = window.getPageData || getPageData;
 
 console.log('🚀 E-SOLUTION - Admin Credits PRO chargé');
-console.log('✅ Détails facture crédit modal ajouté - Font size agrandi');
-console.log('✅ Paiement crédit avec modal - Mise à jour du crédit existant');
+console.log('✅ Admin-Credits lit désormais depuis la collection VENTES (filtrée crédit/partiel)');
+console.log('✅ Mêmes colonnes que Admin-Ventes : Date paiement, Options, Achat, Profit, Remise, Donné, Restant, Rendu, Statut, Vendeur, Paiement');
+console.log('✅ Paiement / Édition / Suppression → mettent à jour VENTES + CREDITS (compatibilité POS)');
+console.log('✅ Liste rechargée automatiquement après paiement → les crédits soldés disparaissent');
+console.log('✅ Détails facture crédit modal - Font size agrandi');
 console.log('✅ Pagination corrigée - Utilise window.itemsPerPage');
-console.log('✅ Caissier peut : Marquer payé, Modifier, Envoyer WhatsApp');
-console.log('✅ SEUL L\'ADMIN PEUT SUPPRIMER - Le caissier n\'a PAS le bouton Supprimer');
-console.log('✅ Boutons avec texte - Ultra compacts (10px)');
+console.log('✅ Caissier : Marquer payé, Modifier, Envoyer WhatsApp');
+console.log('✅ SEUL L\'ADMIN PEUT SUPPRIMER');
 console.log('✅ Retour au paiement depuis le POS (uniquement si venu du POS)');
 console.log('✅ Pré-sélection du client avec recherche auto');
 console.log('✅ Statistiques en haut de page avec filtres de date');
-console.log('✅ Filtres rapides : Aujourd\'hui, 3j, 7j, 15j, 30j, 90j, 365j');
-console.log('✅ Paiement crédit : Le champ "Reste à payer" diminue correctement');
-console.log('✅ Synchronisation avec admin ventes : Quand un crédit est payé, la vente se met à jour');
-console.log('✅ Gestion des crédits à 0 MAD : Marqué comme payé automatiquement');
-console.log('✅ ALIAS renderCreditsTable = renderCreditsTablePro (compatibilité admin.js)');
-console.log('✅ changePage NON écrasée (garde la version d\'admin.js)');
 console.log('✅ Bouton "Marquer payé" pour paiement groupé');
 console.log('✅ Création facture "PAI-YYYY-XXXXX" après paiement + WhatsApp');
-console.log('✅ Récupération automatique du numéro client depuis Firestore');
-console.log('✅ Envoi WhatsApp direct au numéro du client (comme pos.js)');
-console.log('✅ 📱 WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
-console.log('✅ ⚠️ DIALOGUE OUI/NON pour multi-clients');
-console.log('✅ 👥 Affichage des 2 noms de clients dans la facture WhatsApp');
-console.log('✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)');
-console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
-console.log('✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table');
-console.log('✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)');
-console.log('🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité');
+console.log('✅ WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
+console.log('✅ DIALOGUE OUI/NON pour multi-clients');
+console.log('✅ Design MODERNE (cartes stats, table épurée, badges, boutons colorés)');
+console.log('✅ Nom du client CLIQUABLE → filtre automatique');
+console.log('✅ SCROLL HORIZONTAL + VERTICAL sur la table');
+console.log('✅ Enregistrement + affichage de la date de paiement (datePaiement)');
