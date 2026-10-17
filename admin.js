@@ -41,6 +41,10 @@ window.filteredCredits = window.filteredCredits || null;
 window.filteredCommandes = window.filteredCommandes || null;
 window.filteredUsers = window.filteredUsers || null;
 
+// 🆕 QR Codes : état local
+window.allQrCodesData = window.allQrCodesData || [];
+window.qrSearchQuery = window.qrSearchQuery || '';
+
 // ==================== FONCTIONS UTILITAIRES ====================
 function escapeHtml(str) {
 if (str === null || str === undefined) return '';
@@ -670,9 +674,29 @@ c.innerHTML = '<div class="stats-grid">' +
 '</div>' +
 '<div class="content-card"><div class="card-header"><h3><i class="fas fa-lock"></i> Sécurité</h3><button class="btn-add" onclick="toggleChangePasswordForm()"><i class="fas fa-key"></i> Changer le mot de passe</button></div><div id="changePasswordForm" class="hidden" style="margin-top:15px;"><div class="form-row"><div class="form-group"><label>Mot de passe actuel</label><input type="password" id="currentPassword"></div></div><div class="form-row"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="newPassword"></div><div class="form-group"><label>Confirmer</label><input type="password" id="confirmPassword"></div></div><button class="btn-save" onclick="changeAdminPassword()">Changer le mot de passe</button></div></div>' +
 '<div class="content-card"><div class="card-header"><h3><i class="fas fa-bullhorn"></i> Fidélité</h3><button class="btn-add" onclick="toggleMarketingProgram()"><i class="fas fa-cog"></i> Gérer</button></div><div id="marketingProgramContent" class="hidden" style="margin-top:15px;"><div style="display:flex;align-items:flex-end;gap:20px;"><div class="form-group"><label>Activer</label><select id="fideliteActifSelect"><option value="1">✅ Actif</option><option value="0">❌ Inactif</option></select></div><div class="form-group"><label>Points/vente</label><input type="number" id="fidelitePointsInput" value="1" min="1" style="width:80px;"></div><button class="btn-save" onclick="saveFideliteSettings()">Enregistrer</button></div></div></div>' +
+// 🆕 CARTE GÉNÉRATEUR DE QR CODES
+'<div class="content-card">' +
+    '<div class="card-header">' +
+        '<h3><i class="fas fa-qrcode"></i> Générateur de QR Codes</h3>' +
+        '<span style="font-size:0.8rem;color:#6F767E;">Les QR codes restent valables indéfiniment</span>' +
+    '</div>' +
+    '<div style="padding:16px 0;border-bottom:1px solid #EAECEF;margin-bottom:16px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">' +
+            '<div><label style="font-weight:600;font-size:0.8rem;color:#6F767E;display:block;margin-bottom:4px;">Titre (optionnel)</label><input type="text" id="qrTitreInput" placeholder="Ex: Menu restaurant" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.9rem;"></div>' +
+            '<div><label style="font-weight:600;font-size:0.8rem;color:#6F767E;display:block;margin-bottom:4px;">Lien / URL *</label><input type="url" id="qrUrlInput" placeholder="https://exemple.com" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.9rem;"></div>' +
+        '</div>' +
+        '<button onclick="qrAdd()" class="btn-add" style="margin-top:12px;padding:10px 24px;font-size:0.9rem;"><i class="fas fa-plus"></i> Générer et ajouter un QR Code</button>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">' +
+        '<strong style="font-size:0.95rem;color:#1A1D1F;">Mes QR Codes (<span id="qrCount">0</span>)</strong>' +
+        '<input type="text" id="qrSearchInput" placeholder="🔍 Rechercher..." onkeyup="window.qrSearchQuery=this.value.trim().toLowerCase();qrRender();" style="padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;width:200px;font-size:0.85rem;">' +
+    '</div>' +
+    '<div id="qrListContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;"></div>' +
+'</div>' +
 '<div class="content-card"><div class="card-header"><h3><i class="fas fa-users"></i> Utilisateurs</h3><div style="display:flex;gap:10px;"><input type="text" id="usersSearchInput" placeholder="🔍 Rechercher..." style="padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;width:220px;" onkeyup="window.usersSearchQuery=this.value.trim().toLowerCase();renderUsersTable();"><button class="btn-add" onclick="loadUsersList()">Actualiser</button></div></div><div class="table-container"><table class="data-table" id="usersTable"><thead><tr><th>Username</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>';
 loadUsersList();
 loadFideliteSettings();
+qrLoadAll(); // 🆕 charger les QR codes
 
 // ✅ AJOUT : Sauvegarde systématique
 if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
@@ -754,6 +778,177 @@ var p = parseInt(document.getElementById('fidelitePointsInput').value) || 1;
 try { await db.collection('settings').doc('fidelite').set({ active: a, pointsParVente: p }, { merge: true }); } catch (e) {}
 localStorage.setItem('fidelite_active', a); localStorage.setItem('fidelite_points', p);
 alert('✅ Enregistré');
+}
+
+// ==================== 🆕 GÉNÉRATEUR DE QR CODES ====================
+function qrGenerateUniqueId() {
+    return 'qr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+}
+
+async function qrLoadAll() {
+    try {
+        var doc = await db.collection('settings').doc('qrcodes').get();
+        if (doc.exists && Array.isArray(doc.data().items)) {
+            window.allQrCodesData = doc.data().items;
+        } else {
+            window.allQrCodesData = [];
+        }
+    } catch(e) {
+        console.warn('⚠️ Erreur chargement QR:', e);
+        window.allQrCodesData = [];
+    }
+    qrRender();
+}
+
+async function qrSaveAll() {
+    try {
+        await db.collection('settings').doc('qrcodes').set({ items: window.allQrCodesData }, { merge: true });
+        if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+            CacheDB.set('settings', 'qrcodes', { items: window.allQrCodesData });
+        }
+    } catch(e) {
+        console.warn('⚠️ Erreur sauvegarde QR:', e);
+    }
+}
+
+function qrAdd() {
+    var titreInput = document.getElementById('qrTitreInput');
+    var urlInput = document.getElementById('qrUrlInput');
+    if (!urlInput) return;
+
+    var titre = (titreInput && titreInput.value) ? titreInput.value.trim() : '';
+    var url = urlInput.value.trim();
+
+    if (!url) { alert('❌ Veuillez saisir un lien / URL.'); urlInput.focus(); return; }
+    if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
+        url = 'https://' + url;
+    }
+
+    if (typeof QRCode === 'undefined') {
+        alert('❌ Bibliothèque QRCode.js non chargée. Ajoutez dans index.html :\n<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
+        return;
+    }
+
+    var newQr = {
+        id: qrGenerateUniqueId(),
+        titre: titre || ('QR Code ' + (window.allQrCodesData.length + 1)),
+        url: url,
+        createdAt: new Date().toISOString()
+    };
+
+    window.allQrCodesData.unshift(newQr);
+    qrSaveAll();
+    qrRender();
+
+    if (titreInput) titreInput.value = '';
+    if (urlInput) urlInput.value = '';
+    alert('✅ QR Code ajouté avec succès !');
+}
+
+function qrRender() {
+    var container = document.getElementById('qrListContainer');
+    if (!container) return;
+
+    var countEl = document.getElementById('qrCount');
+    var data = window.allQrCodesData || [];
+
+    if (window.qrSearchQuery) {
+        var q = window.qrSearchQuery;
+        data = data.filter(function(item) {
+            return (item.titre || '').toLowerCase().indexOf(q) !== -1 || (item.url || '').toLowerCase().indexOf(q) !== -1;
+        });
+    }
+
+    if (countEl) countEl.textContent = (window.allQrCodesData || []).length;
+
+    if (data.length === 0) {
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9A9FA5;"><i class="fas fa-qrcode" style="font-size:2.5rem;display:block;margin-bottom:10px;"></i>Aucun QR code. Ajoutez-en un ci-dessus.</div>';
+        return;
+    }
+
+    var html = '';
+    data.forEach(function(item) {
+        var dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString('fr-FR') : '';
+        html += '<div style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">' +
+            '<div style="font-weight:700;font-size:0.95rem;color:#1A1D1F;word-break:break-word;">' + escapeHtml(item.titre) + '</div>' +
+            '<div id="qr_' + item.id + '" style="display:flex;align-items:center;justify-content:center;padding:8px;background:#FFFFFF;border-radius:10px;border:1px solid #EAECEF;"></div>' +
+            '<div style="font-size:0.75rem;color:#6F767E;word-break:break-all;max-width:100%;">' + escapeHtml(item.url) + '</div>' +
+            '<div style="font-size:0.7rem;color:#9A9FA5;">' + dateStr + '</div>' +
+            '<div style="display:flex;gap:6px;margin-top:4px;">' +
+                '<button onclick="qrDownload(\'' + item.id + '\')" title="Télécharger PNG" style="background:#2563EB;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-download"></i></button>' +
+                '<button onclick="qrCopy(\'' + item.id + '\')" title="Copier le lien" style="background:#8B5CF6;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-copy"></i></button>' +
+                '<button onclick="qrDelete(\'' + item.id + '\')" title="Supprimer" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-trash"></i></button>' +
+            '</div>' +
+        '</div>';
+    });
+    container.innerHTML = html;
+
+    // Générer les QR codes après le rendu HTML
+    setTimeout(function() {
+        data.forEach(function(item) {
+            var el = document.getElementById('qr_' + item.id);
+            if (!el) return;
+            el.innerHTML = '';
+            try {
+                new QRCode(el, {
+                    text: item.url,
+                    width: 180,
+                    height: 180,
+                    colorDark: '#1A1D1F',
+                    colorLight: '#FFFFFF',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch(e) {
+                console.warn('Erreur génération QR:', e);
+                el.innerHTML = '<span style="color:#ef4444;font-size:0.75rem;">Erreur QR</span>';
+            }
+        });
+    }, 50);
+}
+
+function qrDownload(id) {
+    var item = (window.allQrCodesData || []).find(function(x) { return x.id === id; });
+    if (!item) return;
+    var el = document.getElementById('qr_' + id);
+    if (!el) return;
+    var canvas = el.querySelector('canvas');
+    var img = el.querySelector('img');
+    var dataUrl = null;
+    if (canvas) dataUrl = canvas.toDataURL('image/png');
+    else if (img) dataUrl = img.src;
+    if (!dataUrl) { alert('❌ Impossible de télécharger le QR code.'); return; }
+
+    var safeTitre = (item.titre || 'qrcode').replace(/[^a-z0-9]/gi, '_').substring(0, 40);
+    var filename = 'QR_' + safeTitre + '_' + item.id + '.png';
+
+    var link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function qrCopy(id) {
+    var item = (window.allQrCodesData || []).find(function(x) { return x.id === id; });
+    if (!item) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(item.url).then(function() {
+            alert('✅ Lien copié dans le presse-papier !');
+        }).catch(function() {
+            prompt('Copiez manuellement :', item.url);
+        });
+    } else {
+        prompt('Copiez manuellement :', item.url);
+    }
+}
+
+async function qrDelete(id) {
+    if (!confirm('Supprimer ce QR code ?')) return;
+    window.allQrCodesData = (window.allQrCodesData || []).filter(function(x) { return x.id !== id; });
+    await qrSaveAll();
+    qrRender();
+    alert('✅ QR code supprimé');
 }
 
 // ==================== NAVIGATION (AVEC GESTION CAISSIER) ====================
@@ -903,6 +1098,15 @@ window.toggleMarketingProgram = toggleMarketingProgram;
 window.loadFideliteSettings = loadFideliteSettings;
 window.saveFideliteSettings = saveFideliteSettings;
 window.navigateTo = navigateTo;
+
+// 🆕 QR CODES : exposition globale
+window.qrLoadAll = qrLoadAll;
+window.qrAdd = qrAdd;
+window.qrRender = qrRender;
+window.qrDownload = qrDownload;
+window.qrCopy = qrCopy;
+window.qrDelete = qrDelete;
+window.qrSaveAll = qrSaveAll;
 
 // ✅ FONCTIONS CRÉDITS DÉLÉGUÉES À ADMIN-CREDITS.JS
 // (Les fonctions loadCreditsPage, loadCreditsData et applyCreditsFilters
