@@ -27,6 +27,7 @@
 // 🎨 STYLE "RESTOE POS" — Design SaaS moderne — bleu #2563EB + fond gris #F7F8FA
 // 🎨 AJUSTEMENTS V3 : cartes 190px + images 85px + prix 0.90rem + AUCUN gradient
 // 🎨 PANIER V2 : nom produit en haut + boutons à droite + sous-total à droite
+// 🆕 AJUSTEMENTS MOBILE : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px
 
 var posCart = [];
 var posStep = 1;
@@ -631,12 +632,14 @@ if(posSearchQuery) dn = dn.replace(new RegExp('(' + posSearchQuery.replace(/[.*+
 var isMobile = window.innerWidth < 700;
 
 // 🎨 AJUSTEMENTS V3 : cartes 190px, images 85px, prix 0.90rem
+// 🆕 MODIFIÉ (mobile) : carte 145-170px au lieu de 120-150px
 var cardStyle = isMobile ?
-'padding:6px 4px;min-height:120px;max-height:150px;aspect-ratio:1/1;border-radius:10px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
+'padding:6px 4px;min-height:145px;max-height:170px;aspect-ratio:1/1;border-radius:10px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
 'padding:12px 10px;min-height:190px;max-height:200px;aspect-ratio:1/1;border-radius:14px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
 
+// 🆕 MODIFIÉ (mobile) : image produit 70px au lieu de 62px
 var imgStyle = isMobile ?
-'height:62px;width:62px;margin-bottom:5px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;' :
+'height:70px;width:70px;margin-bottom:5px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;' :
 'height:85px;width:85px;margin-bottom:8px;border-radius:10px;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;';
 
 var nameStyle = isMobile ?
@@ -695,9 +698,11 @@ var imgSize, cardMinHeight, cardMaxHeight, folderSize, nameSize, countSize;
 
 if (isPC) { imgSize='140px'; cardMinHeight='170px'; cardMaxHeight='210px'; folderSize='65px'; nameSize='16px'; countSize='12px'; }
 else if (isTablette) { imgSize='130px'; cardMinHeight='160px'; cardMaxHeight='190px'; folderSize='60px'; nameSize='13px'; countSize='10px'; }
-else { imgSize='45px'; cardMinHeight='75px'; cardMaxHeight='90px'; folderSize='20px'; nameSize='8px'; countSize='7px'; }
+// 🆕 MODIFIÉ (mobile) : imgSize 65px (au lieu de 45px), cardMinHeight 90px (au lieu de 75px), cardMaxHeight 100px (au lieu de 90px), folderSize 30px (au lieu de 20px)
+else { imgSize='65px'; cardMinHeight='90px'; cardMaxHeight='100px'; folderSize='30px'; nameSize='8px'; countSize='7px'; }
 
-if (window.innerWidth < 400) { imgSize='35px'; cardMinHeight='60px'; cardMaxHeight='75px'; folderSize='16px'; nameSize='7px'; countSize='6px'; }
+// 🆕 MODIFIÉ : très petit écran légèrement augmenté aussi
+if (window.innerWidth < 400) { imgSize='50px'; cardMinHeight='75px'; cardMaxHeight='90px'; folderSize='24px'; nameSize='7px'; countSize='6px'; }
 
 for (var i = 0; i < sortedCategories.length; i++) {
 var cat = sortedCategories[i];
@@ -2280,15 +2285,15 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         .pos-cart-header h3 { font-size: 1rem !important; }
     }
 
-    /* 🆕 V3 MOBILE */
+    /* 🆕 V3 MOBILE — MODIFIÉ : cartes 145-170px + image produit 70px */
     @media (max-width: 700px) {
         .pos-product-card {
-            min-height: 120px !important;
-            max-height: 150px !important;
+            min-height: 145px !important;
+            max-height: 170px !important;
         }
         .pos-product-img {
-            height: 62px !important;
-            width: 62px !important;
+            height: 70px !important;
+            width: 70px !important;
         }
         .pos-product-price,
         .pos-promo-price {
@@ -2305,3 +2310,4 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 console.log('🚀 E-SOLUTION - POS chargé avec corrections');
 console.log('🎨 STYLE "RESTOE POS" V3 : fond gris plat + cartes 190px + prix 0.90rem + AUCUN gradient');
 console.log('🎨 PANIER V2 : nom en haut + boutons à droite + sous-total à droite');
+console.log('🆕 MOBILE V4 : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px');
