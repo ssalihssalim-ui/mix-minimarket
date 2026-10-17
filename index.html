@@ -167,6 +167,24 @@ Contenu du modal
 <script src="caissier.js"></script>
 <script src="pos-audio.js"></script>
 
+<!-- ✅ CORRECTION escapeHtml - INSTALLÉE APRÈS TOUS LES SCRIPTS -->
+<script>
+window.escapeHtml = function(str) {
+    if (str === null || str === undefined) return '';
+    if (typeof str !== 'string') str = String(str);
+    return str.replace(/[&<>"']/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        if (m === '"') return '&quot;';
+        if (m === "'") return '&#39;';
+        return m;
+    });
+};
+try { escapeHtml = window.escapeHtml; } catch(e) {}
+console.log('✅ escapeHtml blindée installée');
+</script>
+
 <script>
 if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)).catch(err => console.error('SW ✗', err));
