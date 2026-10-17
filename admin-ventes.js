@@ -16,6 +16,8 @@
 // ✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes
 // ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
 // ✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients
+// 🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option unique "Crédit + Partiel"
+// 🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s'adapte aux filtres (heure/jour/mois)
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -41,6 +43,9 @@ window.currentPages = window.currentPages || {};
 window.currentPages.ventes = window.currentPages.ventes || 1;
 window.currentPages.commandes = window.currentPages.commandes || 1;
 window.currentPages.credits = window.currentPages.credits || 1;
+
+// 🆕 Graphique : instance globale
+window._ventesChart = window._ventesChart || null;
 
 // ========== SELECTION EN MASSE ==========
 var ventesSelectionnees = new Set();
@@ -666,6 +671,34 @@ text-transform: uppercase !important;
 letter-spacing: 0.5px !important;
 margin: 4px 0 0 0 !important;
 display: block !important;
+}
+
+/* 🆕 Graphique container */
+#ventesChartContainer {
+background: #FFFFFF !important;
+border-radius: 14px !important;
+padding: 20px !important;
+margin-bottom: 20px !important;
+box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
+border: 1px solid rgba(0,0,0,0.04) !important;
+}
+
+#ventesChartContainer h4 {
+font-size: 16px !important;
+font-weight: 700 !important;
+color: #0F172A !important;
+margin: 0 0 16px 0 !important;
+display: flex !important;
+align-items: center !important;
+gap: 8px !important;
+}
+
+#ventesChartContainer h4 i {
+color: #14B8A6 !important;
+}
+
+#ventesChartCanvas {
+max-height: 320px !important;
 }
 
 /* ✅ Barre de recherche moderne */
@@ -1312,6 +1345,13 @@ outline: none !important;
     .ventes-stat-card .stat-value {
         font-size: 18px !important;
     }
+
+    #ventesChartContainer {
+        padding: 14px !important;
+    }
+    #ventesChartCanvas {
+        max-height: 250px !important;
+    }
     
     #ventesPage .data-table thead th,
     #ventesPage .data-table tbody td,
@@ -1353,6 +1393,10 @@ outline: none !important;
     .ventes-stats-grid {
         grid-template-columns: 1fr !important;
     }
+
+    #ventesChartCanvas {
+        max-height: 200px !important;
+    }
     
     .date-filter-group input[type="date"] {
         min-width: 80px !important;
@@ -1371,6 +1415,230 @@ outline: none !important;
 
 document.head.insertAdjacentHTML('beforeend', styles);
 }
+
+// 🆕 ==================== GRAPHIQUE DES VENTES ====================
+function renderVentesChart(data) {
+    var canvas = document.getElementById('ventesChartCanvas');
+    if (!canvas) return;
+    
+    if (typeof Chart === 'undefined') {
+        console.warn('⚠️ Chart.js non chargé');
+        return;
+    }
+    
+    // Détruire l'ancien graphique
+    if (window._ventesChart) {
+        try { window._ventesChart.destroy(); } catch(e) {}
+        window._ventesChart = null;
+    }
+    
+    // Déterminer la granularité selon la période
+    var period = window.ventesPeriod || 'all';
+    var dateDebut = window.ventesDateDebut;
+    var dateFin = window.ventesDateFin;
+    var granularity = 'day'; // hour, day, month
+    
+    var nbJours = 0;
+    if (dateDebut && dateFin) {
+        nbJours = Math.ceil((new Date(dateFin) - new Date(dateDebut)) / 86400000) + 1;
+    } else if (period === 'today') {
+        nbJours = 1;
+    } else if (period === '3' || period === '7' || period === '15') {
+        nbJours = parseInt(period);
+    } else if (period === '30') {
+        nbJours = 30;
+    } else if (period === '90') {
+        nbJours = 90;
+    } else if (period === '365') {
+        nbJours = 365;
+    } else {
+        nbJours = 30; // par défaut
+    }
+    
+    if (nbJours <= 1) {
+        granularity = 'hour';
+    } else if (nbJours <= 31) {
+        granularity = 'day';
+    } else {
+        granularity = 'month';
+    }
+    
+    // Construire les buckets
+    var buckets = {}; // key -> {ca, profit, credits, label}
+    var sortedKeys = [];
+    
+    function getKeyAndLabel(dateObj) {
+        if (granularity === 'hour') {
+            var h = dateObj.getHours();
+            var key = 'h' + h;
+            return { key: key, label: String(h).padStart(2, '0') + 'h' };
+        } else if (granularity === 'day') {
+            var key = dateObj.getFullYear() + '-' + String(dateObj.getMonth()+1).padStart(2,'0') + '-' + String(dateObj.getDate()).padStart(2,'0');
+            var label = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+            return { key: key, label: label };
+        } else {
+            var key = dateObj.getFullYear() + '-' + String(dateObj.getMonth()+1).padStart(2,'0');
+            var label = dateObj.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+            return { key: key, label: label };
+        }
+    }
+    
+    // Initialiser les buckets (pour afficher tous les points même vides)
+    var now = new Date();
+    if (granularity === 'hour') {
+        for (var h = 0; h < 24; h++) {
+            var key = 'h' + h;
+            buckets[key] = { ca: 0, profit: 0, credits: 0, label: String(h).padStart(2,'0') + 'h' };
+            sortedKeys.push(key);
+        }
+    } else if (granularity === 'day') {
+        var start, end;
+        if (dateDebut && dateFin) {
+            start = new Date(dateDebut); end = new Date(dateFin);
+        } else if (period === 'today') {
+            start = new Date(); end = new Date();
+        } else {
+            var days = parseInt(period) || 30;
+            if (isNaN(days) || days < 1) days = 30;
+            end = new Date();
+            start = new Date(now.getTime() - (days - 1) * 86400000);
+        }
+        start.setHours(0,0,0,0);
+        end.setHours(23,59,59,999);
+        var cur = new Date(start);
+        while (cur <= end) {
+            var kl = getKeyAndLabel(cur);
+            buckets[kl.key] = { ca: 0, profit: 0, credits: 0, label: kl.label };
+            sortedKeys.push(kl.key);
+            cur.setDate(cur.getDate() + 1);
+        }
+    } else {
+        var startM, endM;
+        if (dateDebut && dateFin) {
+            startM = new Date(dateDebut); endM = new Date(dateFin);
+        } else {
+            var days2 = parseInt(period) || 365;
+            if (isNaN(days2) || days2 < 1) days2 = 365;
+            endM = new Date();
+            startM = new Date(now.getTime() - (days2 - 1) * 86400000);
+        }
+        var curM = new Date(startM.getFullYear(), startM.getMonth(), 1);
+        var lastM = new Date(endM.getFullYear(), endM.getMonth(), 1);
+        while (curM <= lastM) {
+            var klm = getKeyAndLabel(curM);
+            buckets[klm.key] = { ca: 0, profit: 0, credits: 0, label: klm.label };
+            sortedKeys.push(klm.key);
+            curM.setMonth(curM.getMonth() + 1);
+        }
+    }
+    
+    // Remplir les données
+    (data || []).forEach(function(v) {
+        if (!v.createdAt || !v.createdAt.seconds) return;
+        var d = new Date(v.createdAt.seconds * 1000);
+        var kl = getKeyAndLabel(d);
+        if (!buckets[kl.key]) return;
+        buckets[kl.key].ca += (v.total || 0);
+        buckets[kl.key].profit += (v.profit || 0);
+        if (!v.paid) {
+            buckets[kl.key].credits += (v.remainingAmount || v.total || 0);
+        }
+    });
+    
+    // Préparer les séries
+    var labels = sortedKeys.map(function(k) { return buckets[k].label; });
+    var caData = sortedKeys.map(function(k) { return parseFloat(buckets[k].ca.toFixed(2)); });
+    var profitData = sortedKeys.map(function(k) { return parseFloat(buckets[k].profit.toFixed(2)); });
+    var creditsData = sortedKeys.map(function(k) { return parseFloat(buckets[k].credits.toFixed(2)); });
+    
+    // Créer le graphique
+    var ctx = canvas.getContext('2d');
+    window._ventesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '💰 CA',
+                    data: caData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                    borderColor: '#3B82F6',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: '📈 Profit',
+                    data: profitData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                    borderColor: '#10B981',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: '💳 Crédits impayés',
+                    data: creditsData,
+                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                    borderColor: '#EF4444',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: { family: 'Inter', size: 13, weight: '600' },
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        padding: 16
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleFont: { family: 'Inter', size: 13, weight: '700' },
+                    bodyFont: { family: 'Inter', size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.dataset.label || '';
+                            var val = context.parsed.y || 0;
+                            return label + ' : ' + val.toFixed(2) + ' MAD';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: 'Inter', size: 11 },
+                        color: '#64748B',
+                        maxRotation: 45,
+                        minRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: granularity === 'hour' ? 24 : 20
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(226, 232, 240, 0.5)' },
+                    ticks: {
+                        font: { family: 'Inter', size: 11 },
+                        color: '#64748B',
+                        callback: function(val) { return val + ' MAD'; }
+                    }
+                }
+            }
+        }
+    });
+}
+window.renderVentesChart = renderVentesChart;
 
 // ==================== COMMANDES EN LIGNE ====================
 function loadCommandesPage(c) {
@@ -1682,8 +1950,7 @@ onkeyup="handleVentesSearch(this.value);">
 <select id="ventesStatusFilter" onchange="applyVentesFilters();">
 <option value="all">Tous</option>
 <option value="payé">Payé</option>
-<option value="crédit">Crédit</option>
-<option value="partiel">Partiel</option>
+<option value="credit_partiel">Crédit + Partiel</option>
 <option value="en_attente">En attente</option>
 </select>
 </div>
@@ -1702,6 +1969,12 @@ onkeyup="handleVentesSearch(this.value);">
 <button id="payerSelectedVentesBtn" class="btn-save" onclick="payerVentesSelectionnees()" style="display:none; background:#10B981; color:#fff; box-shadow:0 2px 8px rgba(16,185,129,0.25);">
 <i class="fas fa-money-bill-wave"></i> Payer tout
 </button>
+</div>
+</div>
+<div id="ventesChartContainer">
+<h4><i class="fas fa-chart-bar"></i> Aperçu graphique (CA / Profit / Crédits)</h4>
+<div style="position:relative;height:320px;">
+<canvas id="ventesChartCanvas"></canvas>
 </div>
 </div>
 <div class="ventes-stats-grid" id="ventesStatsGrid">
@@ -1919,9 +2192,14 @@ delete d._clientDisplayName;
 
 var statusFilter = document.getElementById('ventesStatusFilter');
 if (statusFilter && statusFilter.value !== 'all') {
-filtered = filtered.filter(function(d) {
-return (d.statutPaiement || (d.paid ? 'payé' : 'impayé')) === statusFilter.value;
-});
+    var sv = statusFilter.value;
+    filtered = filtered.filter(function(d) {
+        var st = d.statutPaiement || (d.paid ? 'payé' : 'impayé');
+        if (sv === 'credit_partiel') {
+            return (st === 'crédit' || st === 'partiel') && !d.paid;
+        }
+        return st === sv;
+    });
 }
 
 if (!window.sortOrders.ventes || !window.sortOrders.ventes.createdAt) {
@@ -1936,6 +2214,9 @@ filtered = applySort('ventes', filtered, 'createdAt');
 window.filteredVentes = filtered;
 
 updateVentesStats(filtered);
+
+// 🆕 Mise à jour du graphique
+try { renderVentesChart(filtered); } catch(e) { console.warn('Erreur graphique:', e); }
 
 renderVentesTablePro();
 }
@@ -2526,6 +2807,7 @@ async function confirmVentePayment(venteId) {
         if (typeof renderVentesTablePro === 'function') {
             renderVentesTablePro();
         }
+        try { renderVentesChart(window.filteredVentes || window.allVentesData); } catch(e) {}
 
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('ventes');
@@ -3578,6 +3860,9 @@ window.renderDatePaiementCell = renderDatePaiementCell;
 // ✅ NOUVELLE FONCTION EXPOSÉE
 window.filtrerVentesParClient = filtrerVentesParClient;
 
+// 🆕 Graphique
+window.renderVentesChart = renderVentesChart;
+
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
 console.log('✅ Détails facture modal ajouté - Font size agrandi');
@@ -3597,3 +3882,5 @@ console.log('✅ 🔄 NOUVEAU : Synchronisation vente ↔ crédit (B1)');
 console.log('✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes');
 console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
 console.log('✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients');
+console.log('🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option "Crédit + Partiel"');
+console.log('🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s\'adapte aux filtres (heure/jour/mois)');
