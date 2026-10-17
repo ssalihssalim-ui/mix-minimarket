@@ -21,6 +21,7 @@
 // ✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table (comme admin-ventes)
 // ✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)
 // 🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité
+// 🔧 CORRECTION FILTRE CLIENT : filtrerParClient utilise maintenant clientId (cohérence avec admin-ventes)
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -2901,7 +2902,9 @@ window.appliquerFiltreDatePersonnaliseCredits = appliquerFiltreDatePersonnaliseC
 window.reinitialiserFiltresCredits = reinitialiserFiltresCredits;
 window.confirmerPaiementCreditZero = confirmerPaiementCreditZero;
 
-// ==================== ✅ NOUVELLE FONCTION : Filtrer par client (clic sur nom) ====================
+// ==================== ✅ CORRIGÉ : Filtrer par clientId (clic sur nom) ====================
+// 🔧 CORRECTION : Utilise clientId au lieu du nom pour cohérence avec admin-ventes
+// ✅ Si pas de clientId trouvé, fallback sur recherche textuelle par nom
 function filtrerParClient(clientName, event) {
     if (event) {
         event.stopPropagation();
@@ -2910,37 +2913,50 @@ function filtrerParClient(clientName, event) {
     
     console.log('🖱️ Clic sur client :', clientName);
     
+    // ✅ ÉTAPE 1 : Trouver le crédit correspondant pour récupérer son clientId
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) {
+        var cName = c._clientDisplayName || c.clientName || c.table || 'Client inconnu';
+        return cName === clientName;
+    });
+    
     var searchInput = document.getElementById('creditsSearchInput');
-    if (!searchInput) {
-        console.warn('⚠️ Champ de recherche introuvable');
+    var clearBtn = document.getElementById('creditsClearBtn');
+    
+    // ✅ ÉTAPE 2 : Si pas de clientId trouvé → fallback recherche textuelle par nom
+    if (!credit || !credit.clientId) {
+        console.warn('⚠️ clientId introuvable, fallback recherche textuelle par nom');
+        if (searchInput) {
+            searchInput.value = clientName;
+            window.creditsSearch = clientName;
+            window.currentPages.credits = 1;
+            if (clearBtn) clearBtn.classList.remove('hidden');
+            applyCreditsFilters();
+        }
+        var tableContainer = document.getElementById('creditsTableContainer');
+        if (tableContainer) {
+            tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         return;
     }
     
-    // ✅ Remplir la barre de recherche avec le nom complet du client
-    searchInput.value = clientName;
-    window.creditsSearch = clientName;
+    // ✅ ÉTAPE 3 : Filtrer par clientId (cohérence avec admin-ventes)
+    window._posFilterClientId = credit.clientId;
+    window._posFilterClientName = clientName;
+    window.creditsSearch = '';
     window.currentPages.credits = 1;
     
-    // ✅ Afficher le bouton "effacer"
-    var clearBtn = document.getElementById('creditsClearBtn');
-    if (clearBtn) clearBtn.classList.remove('hidden');
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.classList.add('hidden');
     
-    // ✅ Appliquer le filtre
     applyCreditsFilters();
     
-    // ✅ Scroll en haut de la table
-    var tableContainer = document.getElementById('creditsTableContainer');
-    if (tableContainer) {
-        tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    var tableContainer2 = document.getElementById('creditsTableContainer');
+    if (tableContainer2) {
+        tableContainer2.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
-    // ✅ Focus sur le champ pour modification rapide
-    setTimeout(function() {
-        if (searchInput) {
-            searchInput.focus();
-            searchInput.select();
-        }
-    }, 100);
+    console.log('✅ Filtre par clientId :', credit.clientId, '(' + clientName + ')');
 }
 window.filtrerParClient = filtrerParClient;
 
@@ -3030,3 +3046,4 @@ console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatiqu
 console.log('✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table');
 console.log('✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)');
 console.log('🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité');
+console.log('🔧 CORRECTION FILTRE CLIENT : filtrerParClient utilise maintenant clientId (cohérence avec admin-ventes)');
