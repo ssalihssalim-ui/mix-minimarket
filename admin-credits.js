@@ -23,6 +23,7 @@
 // 🔧 CORRECTION CRITIQUE : Admin-Credits lit désormais depuis la collection 'ventes' (filtrée crédit/partiel)
 //    → Mêmes colonnes que Admin-Ventes (Date paiement, Options, Achat, Profit, Remise, Donné, Restant, Rendu, Statut, Vendeur, Paiement)
 //    → La collection 'credits' reste mise à jour en parallèle pour compatibilité POS
+//    → ✅ Un crédit TOTALEMENT PAYÉ disparaît d'Admin-Credits (mais reste visible dans Admin-Ventes avec statut "Payé")
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -1082,6 +1083,7 @@ clearBtn.classList.add('hidden');
 }
 
 // 🔧 CHARGEMENT DEPUIS 'ventes' (filtré crédit / partiel) - Même source que Admin-Ventes
+// ✅ EXCLUSION STRICTE de TOUT crédit totalement payé (paid === true, statut === 'payé', remainingAmount <= 0.01)
 async function loadCredits() {
     var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
     var vendeurCaissier = '';
@@ -1097,10 +1099,22 @@ async function loadCredits() {
             snapshot.forEach(function(dc) {
                 var d = dc.data();
                 d.id = dc.id;
-                // ✅ FILTRE : garder uniquement crédit / partiel (non payées)
+
+                // ✅ FILTRE STRICT : ne garder QUE les ventes réellement en crédit/partiel (NON payées)
                 var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
-                var isCredit = (statut === 'crédit' || statut === 'partiel') && !d.paid;
-                if (!isCredit) return;
+                var remaining = (d.remainingAmount != null) ? d.remainingAmount : (d.total || 0);
+
+                // ❌ Exclure si :
+                //    - déjà totalement payé (paid = true)
+                //    - statut = 'payé'
+                //    - reste à payer <= 0.01
+                //    - total <= 0 (crédit vide)
+                //    - statut différent de 'crédit' ou 'partiel'
+                if (d.paid === true) return;
+                if (statut === 'payé') return;
+                if (remaining <= 0.01) return;
+                if ((d.total || 0) <= 0) return;
+                if (statut !== 'crédit' && statut !== 'partiel') return;
 
                 // ✅ Calcul achat / profit (comme admin-ventes)
                 var achat = 0, profit = 0;
@@ -1116,9 +1130,9 @@ async function loadCredits() {
                 d.profit = profit;
                 window.allCreditsData.push(d);
             });
-            console.log('📥 Total crédits/partiels chargés depuis ventes :', window.allCreditsData.length);
+            console.log('📥 Total crédits/partiels (NON payés) chargés depuis ventes :', window.allCreditsData.length);
 
-            // 🔥 ÉTAPE 2 : Mettre en cache
+            // 🔥 ÉTAPE 2 : Mettre en cache (uniquement les crédits non payés)
             for (let doc of window.allCreditsData) {
                 await CacheDB.set('credits', doc.id, doc);
             }
@@ -1127,16 +1141,26 @@ async function loadCredits() {
             console.error('❌ Erreur chargement ventes Firestore:', e);
             const cached = await CacheDB.getAll('credits');
             window.allCreditsData = cached.filter(function(d) {
-                var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
-                return (statut === 'crédit' || statut === 'partiel') && !d.paid;
+                if (d.paid === true) return false;
+                var statut = d.statutPaiement || 'crédit';
+                if (statut === 'payé') return false;
+                var remaining = (d.remainingAmount != null) ? d.remainingAmount : (d.total || 0);
+                if (remaining <= 0.01) return false;
+                if ((d.total || 0) <= 0) return false;
+                return (statut === 'crédit' || statut === 'partiel');
             });
             console.log('📴 Fallback cache:', window.allCreditsData.length, 'crédits');
         }
     } else {
         const cached = await CacheDB.getAll('credits');
         window.allCreditsData = cached.filter(function(d) {
-            var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
-            return (statut === 'crédit' || statut === 'partiel') && !d.paid;
+            if (d.paid === true) return false;
+            var statut = d.statutPaiement || 'crédit';
+            if (statut === 'payé') return false;
+            var remaining = (d.remainingAmount != null) ? d.remainingAmount : (d.total || 0);
+            if (remaining <= 0.01) return false;
+            if ((d.total || 0) <= 0) return false;
+            return (statut === 'crédit' || statut === 'partiel');
         });
         console.log('📴 Hors-ligne:', window.allCreditsData.length, 'crédits depuis le cache');
     }
@@ -1781,7 +1805,7 @@ async function paySelectedCredits() {
 
         CacheDB.sync();
 
-        // Recharger pour retirer les crédits désormais payés de la liste
+        // ✅ Recharger pour retirer les crédits désormais payés de la liste
         setTimeout(function() { loadCredits(); }, 400);
 
         await posAfficherOptionWhatsAppPaiement(facturePaiement, toPay);
@@ -2227,6 +2251,7 @@ async function confirmerPaiementCreditZero(creditId) {
         }
         
         alert('✅ Ce crédit a été marqué comme payé (total à 0).');
+        // ✅ Recharger pour retirer ce crédit de la vue (il est payé)
         setTimeout(function() { loadCredits(); }, 400);
         return;
     } catch(e) {
@@ -2346,7 +2371,7 @@ async function confirmCreditPayment(creditId) {
         }];
         var facturePaiement = await creerFacturePaiementCredits(paiements, montant);
 
-        // Si soldé, recharger la liste pour retirer de la vue
+        // ✅ Si soldé, recharger la liste pour retirer le crédit de la vue
         if (estPaye) setTimeout(function() { loadCredits(); }, 600);
 
         await posAfficherOptionWhatsAppPaiement(facturePaiement, [updatedCredit]);
@@ -3137,6 +3162,7 @@ console.log('🚀 E-SOLUTION - Admin Credits PRO chargé');
 console.log('✅ Admin-Credits lit désormais depuis la collection VENTES (filtrée crédit/partiel)');
 console.log('✅ Mêmes colonnes que Admin-Ventes : Date paiement, Options, Achat, Profit, Remise, Donné, Restant, Rendu, Statut, Vendeur, Paiement');
 console.log('✅ Paiement / Édition / Suppression → mettent à jour VENTES + CREDITS (compatibilité POS)');
+console.log('✅ ⚡ Un crédit TOTALEMENT PAYÉ disparaît d\'Admin-Credits (mais reste dans Admin-Ventes avec statut "Payé")');
 console.log('✅ Liste rechargée automatiquement après paiement → les crédits soldés disparaissent');
 console.log('✅ Détails facture crédit modal - Font size agrandi');
 console.log('✅ Pagination corrigée - Utilise window.itemsPerPage');
