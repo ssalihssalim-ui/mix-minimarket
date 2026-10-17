@@ -1057,7 +1057,7 @@ clearBtn.classList.add('hidden');
 }
 }
 
-// 🔧 CORRECTION : Chargement de TOUS les crédits (sans limite 2000)
+// 🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (suppression limite 2000 + suppression écrasement cache)
 async function loadCredits() {
     var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
     var vendeurCaissier = '';
@@ -1065,7 +1065,7 @@ async function loadCredits() {
         vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
     }
 
-    // 1. Charger TOUS les crédits depuis Firestore (SANS LIMITE)
+    // 1. Charger TOUS les crédits depuis Firestore (SANS LIMITE) - Firestore est la source de vérité
     if (navigator.onLine) {
         try {
             const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').get();
@@ -1081,16 +1081,19 @@ async function loadCredits() {
             for (let doc of window.allCreditsData) {
                 await CacheDB.set('credits', doc.id, doc);
             }
+            console.log('💾 Cache mis à jour avec', window.allCreditsData.length, 'crédits');
         } catch (e) {
             console.error('Erreur chargement crédits Firestore:', e);
             // Fallback sur le cache en cas d'erreur réseau
             const cached = await CacheDB.getAll('credits');
             window.allCreditsData = cached;
+            console.log('📴 Fallback cache:', window.allCreditsData.length, 'crédits');
         }
     } else {
         // Mode hors-ligne : utiliser le cache
         const cached = await CacheDB.getAll('credits');
         window.allCreditsData = cached;
+        console.log('📴 Hors-ligne: ', cached.length, 'crédits depuis le cache');
     }
 
     // 3. Appliquer le filtre vendeur UNIQUEMENT pour l'affichage (pas pour le cache)
@@ -3026,4 +3029,4 @@ console.log('✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, ba
 console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
 console.log('✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table');
 console.log('✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)');
-console.log('🔧 CORRECTION : Chargement de TOUS les crédits (sans limite) pour synchronisation avec Ventes');
+console.log('🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite, Firestore source de vérité)');
