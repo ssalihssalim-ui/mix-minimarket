@@ -28,6 +28,7 @@
 // 🎨 AJUSTEMENTS V3 : cartes 190px + images 85px + prix 0.90rem + AUCUN gradient
 // 🎨 PANIER V2 : nom produit en haut + boutons à droite + sous-total à droite
 // 🆕 AJUSTEMENTS MOBILE : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px
+// ✅ 💳 CRÉDIT CLIENT : loadClientCredits lit désormais VENTES + CREDITS (crédits + partiels non soldés)
 
 var posCart = [];
 var posStep = 1;
@@ -387,16 +388,61 @@ container.style.position = 'relative';
 }
 }
 
+// ✅ CORRIGÉ : Lit les crédits depuis VENTES (crédit + partiel) + CREDITS (compatibilité POS)
+// → Affiche le restant total réel (crédits ET partiels non soldés)
 async function loadClientCredits(clientId) {
-if (!clientId) return 0;
-if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
-try {
-const snapshot = await db.collection('credits').where('clientId', '==', clientId).where('paid', '==', false).get();
-let total = 0;
-snapshot.forEach(doc => { const data = doc.data(); total += data.remainingAmount || data.total || 0; });
-clientCreditsCache[clientId] = total;
-return total;
-} catch(e) { return 0; }
+    if (!clientId) return 0;
+    if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
+
+    var total = 0;
+    var seenIds = {}; // éviter les doublons (un crédit peut exister dans les 2 collections)
+
+    // ✅ Source 1 : VENTES (source de vérité — crédits + partiels non payés)
+    try {
+        var ventesSnap = await db.collection('ventes')
+            .where('clientId', '==', clientId)
+            .get();
+
+        ventesSnap.forEach(function(doc) {
+            var d = doc.data();
+            var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
+            if (d.paid === true) return;
+            if (statut !== 'crédit' && statut !== 'partiel') return;
+            var reste = (d.remainingAmount != null)
+                ? d.remainingAmount
+                : ((d.total || 0) - (d.amountGiven || 0));
+            if (reste > 0.01) {
+                total += reste;
+                seenIds[doc.id] = true;
+            }
+        });
+    } catch(e) {
+        console.warn('⚠️ Erreur lecture ventes pour crédit client:', e);
+    }
+
+    // ✅ Source 2 : CREDITS (compatibilité POS — crédits créés avant la refonte)
+    try {
+        var creditsSnap = await db.collection('credits')
+            .where('clientId', '==', clientId)
+            .where('paid', '==', false)
+            .get();
+
+        creditsSnap.forEach(function(doc) {
+            if (seenIds[doc.id]) return; // déjà compté via ventes
+            var d = doc.data();
+            var reste = (d.remainingAmount != null)
+                ? d.remainingAmount
+                : ((d.total || 0) - (d.amountGiven || 0));
+            if (reste > 0.01) {
+                total += reste;
+            }
+        });
+    } catch(e) {
+        console.warn('⚠️ Erreur lecture credits pour crédit client:', e);
+    }
+
+    clientCreditsCache[clientId] = total;
+    return total;
 }
 
 async function updateClientCreditDisplay(clientId) {
@@ -2311,3 +2357,4 @@ console.log('🚀 E-SOLUTION - POS chargé avec corrections');
 console.log('🎨 STYLE "RESTOE POS" V3 : fond gris plat + cartes 190px + prix 0.90rem + AUCUN gradient');
 console.log('🎨 PANIER V2 : nom en haut + boutons à droite + sous-total à droite');
 console.log('🆕 MOBILE V4 : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px');
+console.log('✅ 💳 CRÉDIT CLIENT : lit désormais VENTES + CREDITS (crédits + partiels non soldés)');
