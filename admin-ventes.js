@@ -19,6 +19,7 @@
 // 🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option unique "Crédit + Partiel"
 // 🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s'adapte aux filtres (heure/jour/mois)
 // 🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)
+// 🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -2182,6 +2183,7 @@ applyVentesFilters();
 return false;
 }
 
+// 🔧 CORRECTION CRITIQUE : Suppression de .limit(2000) pour charger TOUTES les ventes
 async function loadVentes() {
 var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
 var vendeurCaissier = '';
@@ -2194,7 +2196,8 @@ var ventesOffline = [];
 
 if (navigator.onLine) {
     try {
-        const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').limit(2000).get();
+        // 🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes
+        const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').get();
         snapshot.forEach(dc => {
             var d = dc.data(); d.id = dc.id;
             var achat = 0, profit = 0;
@@ -2209,6 +2212,7 @@ if (navigator.onLine) {
             d.achat = achat; d.profit = profit;
             ventesFirestore.push(d);
         });
+        console.log('📥 Total ventes chargées depuis Firestore :', ventesFirestore.length);
     } catch (e) {
         console.warn('⚠️ Erreur Firestore ventes:', e);
     }
@@ -3980,3 +3984,4 @@ console.log('✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients');
 console.log('🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option "Crédit + Partiel"');
 console.log('🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s\'adapte aux filtres (heure/jour/mois)');
 console.log('🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)');
+console.log('🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes');
