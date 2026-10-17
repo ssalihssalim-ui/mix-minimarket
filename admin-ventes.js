@@ -18,6 +18,7 @@
 // ✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients
 // 🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option unique "Crédit + Partiel"
 // 🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s'adapte aux filtres (heure/jour/mois)
+// 🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -46,6 +47,9 @@ window.currentPages.credits = window.currentPages.credits || 1;
 
 // 🆕 Graphique : instance globale
 window._ventesChart = window._ventesChart || null;
+
+// 🆕 Graphique : état visible/masqué (par défaut : masqué)
+window._ventesChartVisible = (localStorage.getItem('ventesChartVisible') === 'true');
 
 // ========== SELECTION EN MASSE ==========
 var ventesSelectionnees = new Set();
@@ -683,18 +687,56 @@ box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
 border: 1px solid rgba(0,0,0,0.04) !important;
 }
 
-#ventesChartContainer h4 {
+#ventesChartHeader {
+display: flex !important;
+justify-content: space-between !important;
+align-items: center !important;
+gap: 12px !important;
+margin-bottom: 16px !important;
+flex-wrap: wrap !important;
+}
+
+#ventesChartHeader h4 {
 font-size: 16px !important;
 font-weight: 700 !important;
 color: #0F172A !important;
-margin: 0 0 16px 0 !important;
+margin: 0 !important;
 display: flex !important;
 align-items: center !important;
 gap: 8px !important;
 }
 
-#ventesChartContainer h4 i {
+#ventesChartHeader h4 i {
 color: #14B8A6 !important;
+}
+
+#toggleVentesChartBtn {
+background: #F1F5F9 !important;
+color: #475569 !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 10px !important;
+padding: 8px 16px !important;
+font-size: 13px !important;
+font-weight: 600 !important;
+cursor: pointer !important;
+transition: all 0.2s ease !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 6px !important;
+}
+
+#toggleVentesChartBtn:hover {
+background: #E2E8F0 !important;
+border-color: #CBD5E1 !important;
+transform: translateY(-1px) !important;
+}
+
+#ventesChartBody {
+transition: all 0.3s ease !important;
+}
+
+#ventesChartBody.hidden {
+display: none !important;
 }
 
 #ventesChartCanvas {
@@ -1409,6 +1451,15 @@ outline: none !important;
         padding: 6px 10px !important;
         font-size: 12px !important;
     }
+
+    #ventesChartHeader {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    #toggleVentesChartBtn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
 }
 </style>
 `;
@@ -1420,6 +1471,9 @@ document.head.insertAdjacentHTML('beforeend', styles);
 function renderVentesChart(data) {
     var canvas = document.getElementById('ventesChartCanvas');
     if (!canvas) return;
+    
+    // 🆕 Ne pas générer si masqué
+    if (!window._ventesChartVisible) return;
     
     if (typeof Chart === 'undefined') {
         console.warn('⚠️ Chart.js non chargé');
@@ -1639,6 +1693,32 @@ function renderVentesChart(data) {
     });
 }
 window.renderVentesChart = renderVentesChart;
+
+// 🆕 ==================== BOUTON AFFICHER/MASQUER LE GRAPHIQUE ====================
+function toggleVentesChart() {
+    var body = document.getElementById('ventesChartBody');
+    var btn = document.getElementById('toggleVentesChartBtn');
+    if (!body || !btn) return;
+    
+    if (window._ventesChartVisible) {
+        // Masquer
+        body.classList.add('hidden');
+        btn.innerHTML = '<i class="fas fa-eye"></i> Afficher';
+        window._ventesChartVisible = false;
+        localStorage.setItem('ventesChartVisible', 'false');
+    } else {
+        // Afficher
+        body.classList.remove('hidden');
+        btn.innerHTML = '<i class="fas fa-eye-slash"></i> Masquer';
+        window._ventesChartVisible = true;
+        localStorage.setItem('ventesChartVisible', 'true');
+        // Regénérer le graphique à l'affichage
+        setTimeout(function() {
+            try { renderVentesChart(window.filteredVentes || window.allVentesData || []); } catch(e) { console.warn(e); }
+        }, 50);
+    }
+}
+window.toggleVentesChart = toggleVentesChart;
 
 // ==================== COMMANDES EN LIGNE ====================
 function loadCommandesPage(c) {
@@ -1910,6 +1990,11 @@ if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 
 
 var today = new Date().toISOString().split('T')[0];
 
+// 🆕 Récupérer l'état du graphique
+var chartVisible = window._ventesChartVisible;
+var chartBodyClass = chartVisible ? '' : 'hidden';
+var chartBtnLabel = chartVisible ? '<i class="fas fa-eye-slash"></i> Masquer' : '<i class="fas fa-eye"></i> Afficher';
+
 c.innerHTML = `
 <div class="content-card" id="ventesPage">
 <div class="card-header">
@@ -1972,9 +2057,14 @@ onkeyup="handleVentesSearch(this.value);">
 </div>
 </div>
 <div id="ventesChartContainer">
+<div id="ventesChartHeader">
 <h4><i class="fas fa-chart-bar"></i> Aperçu graphique (CA / Profit / Crédits)</h4>
+<button id="toggleVentesChartBtn" onclick="toggleVentesChart()">${chartBtnLabel}</button>
+</div>
+<div id="ventesChartBody" class="${chartBodyClass}">
 <div style="position:relative;height:320px;">
 <canvas id="ventesChartCanvas"></canvas>
+</div>
 </div>
 </div>
 <div class="ventes-stats-grid" id="ventesStatsGrid">
@@ -2215,8 +2305,10 @@ window.filteredVentes = filtered;
 
 updateVentesStats(filtered);
 
-// 🆕 Mise à jour du graphique
-try { renderVentesChart(filtered); } catch(e) { console.warn('Erreur graphique:', e); }
+// 🆕 Mise à jour du graphique (uniquement si visible)
+if (window._ventesChartVisible) {
+    try { renderVentesChart(filtered); } catch(e) { console.warn('Erreur graphique:', e); }
+}
 
 renderVentesTablePro();
 }
@@ -2807,7 +2899,9 @@ async function confirmVentePayment(venteId) {
         if (typeof renderVentesTablePro === 'function') {
             renderVentesTablePro();
         }
-        try { renderVentesChart(window.filteredVentes || window.allVentesData); } catch(e) {}
+        if (window._ventesChartVisible) {
+            try { renderVentesChart(window.filteredVentes || window.allVentesData); } catch(e) {}
+        }
 
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('ventes');
@@ -3862,6 +3956,7 @@ window.filtrerVentesParClient = filtrerVentesParClient;
 
 // 🆕 Graphique
 window.renderVentesChart = renderVentesChart;
+window.toggleVentesChart = toggleVentesChart;
 
 console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
 console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
@@ -3884,3 +3979,4 @@ console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatiqu
 console.log('✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients');
 console.log('🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option "Crédit + Partiel"');
 console.log('🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s\'adapte aux filtres (heure/jour/mois)');
+console.log('🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)');
