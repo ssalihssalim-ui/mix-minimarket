@@ -1,359 +1,46 @@
-// ==================== ADMIN-VENTES.JS - E-SOLUTION ====================
+// ==================== ADMIN-CREDITS.JS - E-SOLUTION ====================
 // Version : Design PRO - Facture/Date/Client en colonnes séparées
-// ✅ BOUTONS AVEC TEXTE - COMME ADMIN CREDITS
-// ✅ SÉLECTION EN MASSE
-// ✅ DÉTAILS FACTURE MODAL AVEC X POUR FERMER - FONT SIZE AGRANDI
-// ✅ PAGINATION CORRIGÉE - SANS ICÔNES
+// BOUTONS AVEC TEXTE - PAS D'ICÔNES (pour garantir l'affichage)
+// Version FINALE - AVEC MODAL DÉTAILS FACTURE ET PAIEMENT CRÉDIT
+// ✅ PAGINATION CORRIGÉE
+// ✅ CAISSIER PEUT : MARQUER PAYÉ, MODIFIER, ENVOYER WHATSAPP
+// ✅ RETOUR AU PAIEMENT DEPUIS LE POS (UNIQUEMENT SI VENU DU POS)
+// ✅ PRÉ-SÉLECTION DU CLIENT AVEC RECHERCHE AUTO
 // ✅ STATISTIQUES EN HAUT DE PAGE AVEC FILTRES DE DATE
-// ✅ SYNCHRONISATION AVEC ADMIN CREDITS : Quand un crédit est payé, la vente devient "Payé"
-// ✅ NOUVEAU CHAMP "RESTANT" DANS LES VENTES
-// ✅ ARTICLES ET OPTIONS VISIBLES POUR TOUT LE MONDE (ADMIN ET CAISSIER)
-// ✅ 📴 VENTES HORS-LIGNE : affichage depuis localStorage + sync auto
-// ✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé (comme admin credits)
-// ✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général
-// ✅ 🎨 NOUVEAU : Design MODERNE (identique à admin-credits)
-// ✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (sans redirection POS) + datePaiement
-// ✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes
-// ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
+// ✅ SYNCHRONISATION AVEC ADMIN VENTES : Quand un crédit est payé, la vente se met à jour
+// ✅ SEUL L'ADMIN PEUT SUPPRIMER - LE CAISSIER N'A PAS LE BOUTON SUPPRIMER
+// ✅ GESTION DES CRÉDITS À 0 MAD : Marqué comme payé automatiquement
+// ✅ NOUVEAU : Bouton "Marquer payé" pour paiement groupé
+// ✅ NOUVEAU : Création de facture de paiement + envoi WhatsApp après paiement
+// ✅ NOUVEAU : Récupération du numéro client depuis Firestore + envoi WhatsApp direct
+// ✅ 📱 NOUVEAU : WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général
 // ✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients
-// 🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option unique "Crédit + Partiel"
-// 🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s'adapte aux filtres (heure/jour/mois)
-// 🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)
-// 🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes
-// 🔧 CORRECTION FILTRE CLIENT : filtrerVentesParClient utilise maintenant clientId (cohérence avec admin-credits)
+// ✅ 👥 NOUVEAU : Affichage des 2 noms de clients dans la facture WhatsApp
+// ✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)
+// ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
+// ✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table (comme admin-ventes)
+// ✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)
+// 🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité
 
 // ========== VARIABLES GLOBALES ==========
-window.commandesSearch = window.commandesSearch || '';
-window.commandesPeriod = window.commandesPeriod || 'all';
-window.ventesSearch = window.ventesSearch || '';
-window.ventesPeriod = window.ventesPeriod || 'all';
-window.ventesDateDebut = window.ventesDateDebut || '';
-window.ventesDateFin = window.ventesDateFin || '';
-window.allVentesData = window.allVentesData || [];
-window.allCommandesData = window.allCommandesData || [];
-window.filteredVentes = window.filteredVentes || null;
-window.filteredCommandes = window.filteredCommandes || null;
-window.venteSelectionMode = window.venteSelectionMode || false;
-window.venteSelectedIndex = window.venteSelectedIndex || -1;
+window.creditsPeriod = window.creditsPeriod || 'all';
+window.creditsSearch = window.creditsSearch || '';
+window.creditSelectionMode = false;
+window.creditSelectedIds = [];
+window.allCreditsData = window.allCreditsData || [];
 window.clientsDataForSearch = window.clientsDataForSearch || [];
+window._posFilterClientId = null;
+window._posFilterClientName = null;
+window._fromPos = false;
+window.creditsDateDebut = window.creditsDateDebut || '';
+window.creditsDateFin = window.creditsDateFin || '';
 
-// ✅ NOUVEAU : Client verrouillé en mode sélection (pour multi-clients)
-window.venteSelectedClientId = window.venteSelectedClientId || null;
-window.venteSelectedClientName = window.venteSelectedClientName || null;
-
-// ✅ INITIALISATION DE currentPages
-window.currentPages = window.currentPages || {};
-window.currentPages.ventes = window.currentPages.ventes || 1;
-window.currentPages.commandes = window.currentPages.commandes || 1;
-window.currentPages.credits = window.currentPages.credits || 1;
-
-// 🆕 Graphique : instance globale
-window._ventesChart = window._ventesChart || null;
-
-// 🆕 Graphique : état visible/masqué (par défaut : masqué)
-window._ventesChartVisible = (localStorage.getItem('ventesChartVisible') === 'true');
-
-// ========== SELECTION EN MASSE ==========
-var ventesSelectionnees = new Set();
-var selectAllVentesBtnState = false;
-
-// ✅ MODIFIÉ : Détection multi-clients avec confirmation OUI/NON
-function toggleVenteSelection(id) {
-    // Si déjà sélectionné → retirer simplement
-    if (ventesSelectionnees.has(id)) {
-        ventesSelectionnees.delete(id);
-        
-        if (ventesSelectionnees.size === 0) {
-            window.venteSelectedClientId = null;
-            window.venteSelectedClientName = null;
-        }
-        updateVenteSelectionUI();
-        renderVentesTablePro();
-        return;
-    }
-    
-    var data = window.filteredVentes || window.allVentesData || [];
-    var vente = data.find(function(v) { return v.id === id; });
-    
-    if (!vente) {
-        updateVenteSelectionUI();
-        renderVentesTablePro();
-        return;
-    }
-    
-    // 1ère sélection → mémoriser le client
-    if (ventesSelectionnees.size === 0) {
-        window.venteSelectedClientId = vente.clientId || vente.clientName || null;
-        window.venteSelectedClientName = vente.clientName || 'Client inconnu';
-        ventesSelectionnees.add(id);
-        updateVenteSelectionUI();
-        renderVentesTablePro();
-        return;
-    }
-    
-    // Vérifier si c'est le même client
-    var currentClientId = window.venteSelectedClientId;
-    var currentClientName = window.venteSelectedClientName;
-    var newClientId = vente.clientId || vente.clientName || null;
-    
-    if (newClientId !== currentClientId) {
-        var confirmer = confirm(
-            '⚠️ CLIENT DIFFÉRENT DÉTECTÉ\n\n' +
-            'Vous avez déjà sélectionné des ventes de :\n' +
-            '👤 ' + (currentClientName || 'Client inconnu') + '\n\n' +
-            'Vous voulez ajouter des ventes de :\n' +
-            '👤 ' + (vente.clientName || 'Client inconnu') + '\n\n' +
-            '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
-            '✅ OK = Oui, autoriser les 2 clients\n' +
-            '❌ Annuler = Non, refuser'
-        );
-        
-        if (!confirmer) {
-            // Refus → décocher la case
-            var cb = document.querySelector('.vente-checkbox[data-id="' + id + '"]');
-            if (cb) cb.checked = false;
-            return;
-        }
-        
-        window.venteSelectedClientId = 'MULTI';
-        window.venteSelectedClientName = 'Plusieurs clients';
-    }
-    
-    ventesSelectionnees.add(id);
-    updateVenteSelectionUI();
-    renderVentesTablePro();
-}
-
-function toggleAllVentesSelection() {
-    var checkboxes = document.querySelectorAll('.vente-checkbox');
-    var allChecked = true;
-    checkboxes.forEach(function(cb) {
-        if (!cb.checked) allChecked = false;
-    });
-    
-    // Si on va tout cocher → vérifier multi-clients
-    if (!allChecked) {
-        var data = window.filteredVentes || window.allVentesData || [];
-        var pageData = getPageData('ventes', data);
-        
-        var clientsUniques = new Set();
-        pageData.forEach(function(v) {
-            clientsUniques.add(v.clientId || v.clientName || 'inconnu');
-        });
-        
-        if (clientsUniques.size > 1) {
-            var confirmer = confirm(
-                '⚠️ SÉLECTION MULTI-CLIENTS\n\n' +
-                'Cette page contient ' + clientsUniques.size + ' clients différents.\n\n' +
-                '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
-                '✅ OK = Oui, sélectionner TOUTES les ventes\n' +
-                '❌ Annuler = Non, annuler'
-            );
-            
-            if (!confirmer) return;
-            
-            window.venteSelectedClientId = 'MULTI';
-            window.venteSelectedClientName = 'Plusieurs clients';
-        } else if (pageData.length > 0) {
-            window.venteSelectedClientId = pageData[0].clientId || pageData[0].clientName || null;
-            window.venteSelectedClientName = pageData[0].clientName || 'Client inconnu';
-        }
-    } else {
-        window.venteSelectedClientId = null;
-        window.venteSelectedClientName = null;
-    }
-    
-    checkboxes.forEach(function(cb) {
-        cb.checked = !allChecked;
-        var id = cb.getAttribute('data-id');
-        if (cb.checked) {
-            ventesSelectionnees.add(id);
-        } else {
-            ventesSelectionnees.delete(id);
-        }
-    });
-    updateVenteSelectionUI();
-}
-
-function updateVenteSelectionUI() {
-    var count = ventesSelectionnees.size;
-    var btn = document.getElementById('deleteSelectedVentesBtn');
-    var payerBtn = document.getElementById('payerSelectedVentesBtn');
-    var selectAllBtn = document.getElementById('selectAllVentesBtn');
-    var countDisplay = document.getElementById('selectedVentesCount');
-
-    if (btn) {
-        btn.style.display = count > 0 ? 'inline-block' : 'none';
-        btn.textContent = '🗑️ Supprimer ' + count + ' vente(s)';
-    }
-
-    if (payerBtn) {
-        var data = window.filteredVentes || window.allVentesData || [];
-        var ventesImpayees = 0;
-        var totalImpaye = 0;
-        
-        data.forEach(function(v) {
-            if (ventesSelectionnees.has(v.id) && !v.paid) {
-                ventesImpayees++;
-                totalImpaye += v.remainingAmount || v.total || 0;
-            }
-        });
-        
-        if (count > 0 && ventesImpayees > 0) {
-            payerBtn.style.display = 'inline-block';
-            payerBtn.innerHTML = '<i class="fas fa-money-bill-wave"></i> Payer ' + ventesImpayees + ' (' + totalImpaye.toFixed(2) + ' MAD)';
-        } else {
-            payerBtn.style.display = 'none';
-        }
-    }
-
-    // ✅ MODIFIÉ : Afficher aussi le nom du client sélectionné
-    if (countDisplay) {
-        var clientLabel = '';
-        if (window.venteSelectedClientName === 'Plusieurs clients') {
-            clientLabel = ' - Multi-clients';
-        } else if (window.venteSelectedClientName) {
-            clientLabel = ' - ' + window.venteSelectedClientName.substring(0, 20);
-        }
-        countDisplay.textContent = count + ' sélectionnée(s)' + clientLabel;
-        countDisplay.style.display = count > 0 ? 'inline-block' : 'none';
-    }
-    if (selectAllBtn) {
-        var checkboxes = document.querySelectorAll('.vente-checkbox');
-        var allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
-        selectAllBtn.textContent = allChecked ? '❌ Désélectionner tout' : '✅ Tout sélectionner';
-    }
-}
-
-function toggleVenteSelectionMode() {
-    window.venteSelectionMode = !window.venteSelectionMode;
-    window.venteSelectedIds = [];
-    
-    // ✅ NOUVEAU : Réinitialiser le client verrouillé
-    window.venteSelectedClientId = null;
-    window.venteSelectedClientName = null;
-    ventesSelectionnees.clear();
-    
-    var selectAllBtn = document.getElementById('selectAllVentesBtn');
-    if (selectAllBtn) {
-        selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
-        selectAllBtn.style.background = '#4f46e5';
-    }
-    selectAllVentesBtnState = false;
-
-    var selectBtn = document.getElementById('toggleVenteSelectionBtn');
-    var deleteBtn = document.getElementById('deleteSelectedVentesBtn');
-    var payerBtn = document.getElementById('payerSelectedVentesBtn');
-    if (selectBtn) {
-        if (window.venteSelectionMode) {
-            selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
-        } else {
-            selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
-        }
-    }
-    if (selectAllBtn) {
-        selectAllBtn.style.display = window.venteSelectionMode ? 'inline-block' : 'none';
-    }
-    if (deleteBtn) {
-        deleteBtn.style.display = 'none';
-    }
-    if (payerBtn) {
-        payerBtn.style.display = 'none';
-    }
-    renderVentesTablePro();
-}
-
-function selectAllVisibleVentes() {
-    var data = window.filteredVentes || window.allVentesData;
-    var pageData = getPageData('ventes', data);
-    window.venteSelectedIds = pageData.map(function(d) { return d.id; });
-    window.venteSelectedIds.forEach(function(id) {
-        ventesSelectionnees.add(id);
-    });
-    updateVenteSelectionUI();
-    renderVentesTablePro();
-}
-
-function deselectAllVisibleVentes() {
-    window.venteSelectedIds = [];
-    var ids = Array.from(ventesSelectionnees);
-    ids.forEach(function(id) {
-        ventesSelectionnees.delete(id);
-    });
-    window.venteSelectedClientId = null;
-    window.venteSelectedClientName = null;
-    updateVenteSelectionUI();
-    renderVentesTablePro();
-}
-
-function toggleSelectAllVisibleVentes() {
-    if (selectAllVentesBtnState) {
-        deselectAllVisibleVentes();
-    } else {
-        selectAllVisibleVentes();
-    }
-    selectAllVentesBtnState = !selectAllVentesBtnState;
-    var btn = document.getElementById('selectAllVentesBtn');
-    if (btn) {
-        if (selectAllVentesBtnState) {
-            btn.innerHTML = '<i class="fas fa-times"></i> Tout décocher';
-            btn.style.background = '#ef4444';
-        } else {
-            btn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
-            btn.style.background = '#4f46e5';
-        }
-    }
-}
-
-async function deleteSelectedVentes() {
-if (ventesSelectionnees.size === 0) {
-alert('Aucune vente sélectionnée.');
-return;
-}
-
-var count = ventesSelectionnees.size;
-if (!confirm(`⚠️ Supprimer ${count} vente(s) sélectionnée(s) ? Cette action est IRRÉVERSIBLE.`)) return;
-
-try {
-var batch = db.batch();
-var batchCount = 0;
-var totalDeleted = 0;
-var ids = Array.from(ventesSelectionnees);
-
-for (var id of ids) {
-var ref = db.collection('ventes').doc(id);
-batch.delete(ref);
-batchCount++;
-totalDeleted++;
-
-if (batchCount >= 500) {
-await batch.commit();
-console.log(`✅ ${totalDeleted} ventes supprimées...`);
-batch = db.batch();
-batchCount = 0;
-}
-}
-if (batchCount > 0) {
-await batch.commit();
-}
-
-ventesSelectionnees.clear();
-window.venteSelectedClientId = null;
-window.venteSelectedClientName = null;
-alert(`✅ ${totalDeleted} vente(s) supprimée(s) !`);
-loadVentes();
-
-if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-    CacheDB.saveCollection('ventes');
-}
-
-} catch(e) {
-console.error('❌ Erreur :', e);
-alert('❌ Erreur : ' + e.message);
-}
-}
+// ✅ Filtre multi-clients
+window.creditSelectedClientId = null;
+window.creditSelectedClientName = null;
 
 // ========== FONCTIONS UTILITAIRES ==========
+
 function escapeHtml(str) {
 if (!str) return '';
 return str.replace(/[&<>]/g, function(m) {
@@ -379,7 +66,11 @@ minute: '2-digit'
 return { date, time, full: date + ' ' + time };
 }
 
-function detectPeriodFilterVentes(text) {
+function normalize(str) {
+return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function detectPeriodFilterCredits(text) {
 var cleaned = text.toLowerCase().trim();
 if (cleaned.includes("aujourd'hui") || cleaned.includes("aujourd hui") || cleaned.includes("today") || cleaned.includes("ajourdhui") || cleaned.includes("aujourd")) {
 return 'today';
@@ -393,13 +84,13 @@ return 'week';
 if (cleaned.includes("cette année") || cleaned.includes("cetteannee") || cleaned.includes("cette annee") || cleaned.includes("annee") || cleaned.includes("année") || cleaned.includes("1 an") || cleaned.includes("1an")) {
 return 'year';
 }
-if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous") || cleaned.includes("toute les ventes") || cleaned.includes("tout les ventes")) {
+if (cleaned.includes("tout") || cleaned.includes("toutes") || cleaned.includes("all") || cleaned.includes("tous") || cleaned.includes("toute les credits") || cleaned.includes("tout les crédits")) {
 return 'all';
 }
 return null;
 }
 
-async function loadClientsForSearch() {
+async function loadClientsForSearchCredits() {
 try {
 const snapshot = await db.collection('clients').limit(2000).get();
 window.clientsDataForSearch = [];
@@ -408,14 +99,14 @@ var d = doc.data();
 d.id = doc.id;
 window.clientsDataForSearch.push(d);
 });
-console.log('📋 Clients chargés pour recherche description:', window.clientsDataForSearch.length);
+console.log('📋 Clients chargés pour recherche description (Crédits):', window.clientsDataForSearch.length);
 } catch(e) {
 console.warn('Erreur chargement clients pour recherche:', e);
 window.clientsDataForSearch = [];
 }
 }
 
-function filterVentesBySearchWithDescription(data, query) {
+function filterCreditsBySearchWithDescription(data, query) {
 if (!query || query.trim() === '') return data;
 
 var q = query.toLowerCase().trim();
@@ -426,25 +117,25 @@ window.clientsDataForSearch.forEach(function(c) {
 clientsMap[c.id] = c;
 });
 
-data.forEach(function(vente) {
+data.forEach(function(credit) {
 var match = false;
 var clientInfo = null;
 
-if (vente.clientName && vente.clientName.toLowerCase().indexOf(q) !== -1) {
+if (credit.clientName && credit.clientName.toLowerCase().indexOf(q) !== -1) {
 match = true;
 }
 
-if (!match && vente.items) {
-for (var i = 0; i < vente.items.length; i++) {
-if (vente.items[i].nom && vente.items[i].nom.toLowerCase().indexOf(q) !== -1) {
+if (!match && credit.items) {
+for (var i = 0; i < credit.items.length; i++) {
+if (credit.items[i].nom && credit.items[i].nom.toLowerCase().indexOf(q) !== -1) {
 match = true;
 break;
 }
 }
 }
 
-if (!match && vente.clientId && clientsMap[vente.clientId]) {
-var client = clientsMap[vente.clientId];
+if (!match && credit.clientId && clientsMap[credit.clientId]) {
+var client = clientsMap[credit.clientId];
 var description = client.description || '';
 if (description.toLowerCase().indexOf(q) !== -1) {
 match = true;
@@ -452,11 +143,11 @@ clientInfo = client;
 }
 }
 
-if (!match && vente.clientName && !vente.clientId) {
+if (!match && credit.clientName && !credit.clientId) {
 for (var id in clientsMap) {
 var c = clientsMap[id];
 var fullName = (c.nom || '') + ' ' + (c.prenom || '');
-if (fullName.trim().toLowerCase() === vente.clientName.toLowerCase()) {
+if (fullName.trim().toLowerCase() === credit.clientName.toLowerCase()) {
 var desc = c.description || '';
 if (desc.toLowerCase().indexOf(q) !== -1) {
 match = true;
@@ -469,32 +160,32 @@ break;
 
 if (match) {
 if (clientInfo) {
-vente._clientDisplayName = (clientInfo.nom || '') + ' ' + (clientInfo.prenom || '');
-} else if (vente.clientId && clientsMap[vente.clientId]) {
-var c = clientsMap[vente.clientId];
-vente._clientDisplayName = (c.nom || '') + ' ' + (c.prenom || '');
+credit._clientDisplayName = (clientInfo.nom || '') + ' ' + (clientInfo.prenom || '');
+} else if (credit.clientId && clientsMap[credit.clientId]) {
+var c = clientsMap[credit.clientId];
+credit._clientDisplayName = (c.nom || '') + ' ' + (c.prenom || '');
 } else {
-vente._clientDisplayName = vente.clientName || vente.table || 'Client inconnu';
+credit._clientDisplayName = credit.clientName || credit.table || 'Client inconnu';
 }
-results.push(vente);
+results.push(credit);
 }
 });
 
 return results;
 }
 
-function renderFactureCell(vente) {
-const factureNum = vente.factureNum || vente.id?.substring(0, 8) || '---';
+function renderCreditFactureCell(credit) {
+const factureNum = credit.factureNum || credit.id?.substring(0, 8) || '---';
 return `
 <div class="facture-cell">
-<i class="fas fa-receipt"></i>
+<i class="fas fa-file-invoice"></i>
 <span class="facture-number">#${factureNum}</span>
 </div>
 `;
 }
 
-function renderDateCell(vente) {
-const dt = vente.createdAt ? formatDateHeure(vente.createdAt.seconds) : { date: '-', time: '-', full: '-' };
+function renderCreditDateCell(credit) {
+const dt = credit.createdAt ? formatDateHeure(credit.createdAt.seconds) : { date: '-', time: '-', full: '-' };
 return `
 <div class="date-cell">
 <div class="date-line">
@@ -509,72 +200,40 @@ return `
 `;
 }
 
-// ✅ Affiche la date de paiement (date + heure)
-function renderDatePaiementCell(vente) {
-    if (vente.datePaiement && vente.datePaiement.seconds) {
-        const dt = formatDateHeure(vente.datePaiement.seconds);
-        return `
-<div class="date-cell" style="background:#ECFDF5;border-radius:6px;padding:4px 8px;border:1px solid #99F6E4;">
-<div class="date-line" style="color:#065F46;">
-<i class="fas fa-calendar-check" style="color:#10B981;"></i>
-<span style="font-weight:700;">${dt.date}</span>
-</div>
-<div class="time-line" style="color:#065F46;">
-<i class="far fa-clock" style="color:#10B981;"></i>
-<span style="font-weight:600;">${dt.time}</span>
-</div>
-</div>
-`;
-    }
-    return `<span style="color:#9ca3af;font-size:13px;">—</span>`;
-}
-window.renderDatePaiementCell = renderDatePaiementCell;
-
-// ✅ MODIFIÉ : Nom du client CLIQUABLE → filtre automatique
-function renderClientCell(vente) {
-    var clientName = vente._clientDisplayName || vente.clientName || vente.table || 'Client inconnu';
+// ✅ MODIFIÉ : Nom du client CLIQUABLE
+function renderCreditClientCell(credit) {
+    var clientName = credit._clientDisplayName || credit.clientName || credit.table || 'Client inconnu';
     var escapedName = escapeHtml(clientName).replace(/'/g, "\\'").replace(/"/g, '&quot;');
     
     return `
-<div class="client-cell" onclick="filtrerVentesParClient('${escapedName}', event)" title="Cliquer pour filtrer par ce client" style="cursor:pointer;transition:all 0.2s ease;">
-<i class="fas fa-user-circle"></i>
-<span>${escapeHtml(clientName)}</span>
-</div>
-`;
+        <div class="client-cell" onclick="filtrerParClient('${escapedName}', event)" title="Cliquer pour filtrer par ce client">
+            <i class="fas fa-user-circle"></i>
+            <span>${escapeHtml(clientName)}</span>
+        </div>
+    `;
 }
 
-function renderCommandeFactureCell(commande) {
-const cmdId = commande.id?.substring(0, 8) || '---';
-return `
-<div class="facture-cell">
-<i class="fas fa-shopping-basket"></i>
-<span class="facture-number">#CMD-${cmdId}</span>
-</div>
-`;
-}
-
-// ✅ CSS MODERNE - Design PRO (identique à admin-credits)
-function injectVentesStyles() {
-const styleId = 'ventes-pro-styles-final';
+// ✅ CSS MODERNE - Design PRO
+function injectCreditsStyles() {
+const styleId = 'credits-pro-styles-final';
 if (document.getElementById(styleId)) return;
 
 const styles = `
 <style id="${styleId}">
-#ventesPage, #commandesPage,
-#ventesPage *, #commandesPage * {
+#creditsPage,
+#creditsPage * {
 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 /* ✅ Container principal */
-#ventesPage, #commandesPage {
+#creditsPage {
 background: linear-gradient(180deg, #FAFBFC 0%, #F4F6F8 100%) !important;
 padding: 20px !important;
 border-radius: 16px !important;
 }
 
-/* ✅ Carte header */
-#ventesPage .card-header,
-#commandesPage .card-header {
+/* ✅ Carte header avec ombre douce */
+#creditsPage .card-header {
 background: #FFFFFF !important;
 padding: 24px !important;
 border-radius: 16px !important;
@@ -583,8 +242,7 @@ border: 1px solid rgba(0,0,0,0.04) !important;
 margin-bottom: 20px !important;
 }
 
-#ventesPage .card-header h3,
-#commandesPage .card-header h3 {
+#creditsPage .card-header h3 {
 font-size: 24px !important;
 font-weight: 800 !important;
 color: #0F172A !important;
@@ -592,11 +250,9 @@ letter-spacing: -0.5px !important;
 display: flex !important;
 align-items: center !important;
 gap: 10px !important;
-margin: 0 !important;
 }
 
-#ventesPage .card-header h3 i,
-#commandesPage .card-header h3 i {
+#creditsPage .card-header h3 i {
 background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
 color: #fff !important;
 padding: 8px !important;
@@ -606,7 +262,7 @@ box-shadow: 0 4px 12px rgba(20,184,166,0.25) !important;
 }
 
 /* ✅ Statistiques en cartes modernes */
-.ventes-stats-grid {
+.credits-stats-grid {
 display: grid !important;
 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
 gap: 16px !important;
@@ -616,7 +272,7 @@ background: transparent !important;
 border: none !important;
 }
 
-.ventes-stat-card {
+.credits-stat-card {
 display: flex !important;
 flex-direction: row !important;
 align-items: center !important;
@@ -633,7 +289,7 @@ position: relative !important;
 overflow: hidden !important;
 }
 
-.ventes-stat-card::before {
+.credits-stat-card::before {
 content: '' !important;
 position: absolute !important;
 top: 0 !important;
@@ -645,16 +301,16 @@ opacity: 0 !important;
 transition: opacity 0.25s ease !important;
 }
 
-.ventes-stat-card:hover {
+.credits-stat-card:hover {
 transform: translateY(-3px) !important;
 box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 12px 24px rgba(0,0,0,0.06) !important;
 }
 
-.ventes-stat-card:hover::before {
+.credits-stat-card:hover::before {
 opacity: 1 !important;
 }
 
-.ventes-stat-card .stat-value {
+.credits-stat-card .stat-value {
 font-size: 24px !important;
 font-weight: 800 !important;
 color: #0F172A !important;
@@ -664,12 +320,12 @@ line-height: 1.2 !important;
 margin: 0 !important;
 }
 
-.ventes-stat-card .stat-value.green { color: #10B981 !important; }
-.ventes-stat-card .stat-value.blue { color: #3B82F6 !important; }
-.ventes-stat-card .stat-value.orange { color: #F59E0B !important; }
-.ventes-stat-card .stat-value.red { color: #EF4444 !important; }
+.credits-stat-card .stat-value.green { color: #10B981 !important; }
+.credits-stat-card .stat-value.blue { color: #3B82F6 !important; }
+.credits-stat-card .stat-value.orange { color: #F59E0B !important; }
+.credits-stat-card .stat-value.red { color: #EF4444 !important; }
 
-.ventes-stat-card .stat-label {
+.credits-stat-card .stat-label {
 font-size: 12px !important;
 font-weight: 600 !important;
 color: #64748B !important;
@@ -677,72 +333,6 @@ text-transform: uppercase !important;
 letter-spacing: 0.5px !important;
 margin: 4px 0 0 0 !important;
 display: block !important;
-}
-
-/* 🆕 Graphique container */
-#ventesChartContainer {
-background: #FFFFFF !important;
-border-radius: 14px !important;
-padding: 20px !important;
-margin-bottom: 20px !important;
-box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
-border: 1px solid rgba(0,0,0,0.04) !important;
-}
-
-#ventesChartHeader {
-display: flex !important;
-justify-content: space-between !important;
-align-items: center !important;
-gap: 12px !important;
-margin-bottom: 16px !important;
-flex-wrap: wrap !important;
-}
-
-#ventesChartHeader h4 {
-font-size: 16px !important;
-font-weight: 700 !important;
-color: #0F172A !important;
-margin: 0 !important;
-display: flex !important;
-align-items: center !important;
-gap: 8px !important;
-}
-
-#ventesChartHeader h4 i {
-color: #14B8A6 !important;
-}
-
-#toggleVentesChartBtn {
-background: #F1F5F9 !important;
-color: #475569 !important;
-border: 1.5px solid #E2E8F0 !important;
-border-radius: 10px !important;
-padding: 8px 16px !important;
-font-size: 13px !important;
-font-weight: 600 !important;
-cursor: pointer !important;
-transition: all 0.2s ease !important;
-display: inline-flex !important;
-align-items: center !important;
-gap: 6px !important;
-}
-
-#toggleVentesChartBtn:hover {
-background: #E2E8F0 !important;
-border-color: #CBD5E1 !important;
-transform: translateY(-1px) !important;
-}
-
-#ventesChartBody {
-transition: all 0.3s ease !important;
-}
-
-#ventesChartBody.hidden {
-display: none !important;
-}
-
-#ventesChartCanvas {
-max-height: 320px !important;
 }
 
 /* ✅ Barre de recherche moderne */
@@ -818,8 +408,7 @@ display: none !important;
 }
 
 /* ✅ Filtres et select modernes */
-#ventesPage .filter-group label,
-#commandesPage .filter-group label {
+#creditsPage .filter-group label {
 font-size: 12px !important;
 font-weight: 600 !important;
 color: #64748B !important;
@@ -827,8 +416,7 @@ text-transform: uppercase !important;
 letter-spacing: 0.5px !important;
 }
 
-#ventesPage .filter-group select,
-#commandesPage .filter-group select {
+#creditsPage .filter-group select {
 padding: 10px 14px !important;
 border: 1.5px solid #E2E8F0 !important;
 border-radius: 10px !important;
@@ -843,21 +431,18 @@ cursor: pointer !important;
 box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
 }
 
-#ventesPage .filter-group select:hover,
-#commandesPage .filter-group select:hover {
+#creditsPage .filter-group select:hover {
 border-color: #CBD5E1 !important;
 }
 
-#ventesPage .filter-group select:focus,
-#commandesPage .filter-group select:focus {
+#creditsPage .filter-group select:focus {
 border-color: #14B8A6 !important;
 outline: none !important;
 box-shadow: 0 0 0 4px rgba(20,184,166,0.1) !important;
 }
 
-/* ✅ Boutons principaux */
-#ventesPage .btn-add,
-#commandesPage .btn-add {
+/* ✅ Boutons modernes */
+#creditsPage .btn-add {
 padding: 10px 18px !important;
 border: none !important;
 border-radius: 10px !important;
@@ -873,15 +458,13 @@ align-items: center !important;
 gap: 6px !important;
 }
 
-#ventesPage .btn-add:hover,
-#commandesPage .btn-add:hover {
+#creditsPage .btn-add:hover {
 transform: translateY(-2px) !important;
 box-shadow: 0 4px 12px rgba(20,184,166,0.35) !important;
 }
 
-/* ✅ Table moderne */
-#ventesPage .table-container,
-#commandesPage .table-container {
+/* ✅ Table moderne avec SCROLL HORIZONTAL + VERTICAL (comme admin-ventes) */
+#creditsPage .table-container {
 background: #FFFFFF !important;
 border-radius: 14px !important;
 box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
@@ -892,17 +475,14 @@ max-height: 75vh !important;
 -webkit-overflow-scrolling: touch !important;
 }
 
-#ventesPage .data-table,
-#commandesPage .data-table {
+#creditsPage .data-table {
 width: 100% !important;
 border-collapse: separate !important;
 border-spacing: 0 !important;
 min-width: 1400px !important;
-font-size: 14px !important;
 }
 
-#ventesPage .data-table thead th,
-#commandesPage .data-table thead th {
+#creditsPage .data-table thead th {
 font-size: 12px !important;
 padding: 16px 18px !important;
 background: #F8FAFC !important;
@@ -917,15 +497,13 @@ top: 0 !important;
 z-index: 2 !important;
 }
 
-#ventesPage .data-table thead th i,
-#commandesPage .data-table thead th i {
+#creditsPage .data-table thead th i {
 font-size: 13px !important;
 margin-right: 6px !important;
 color: #94A3B8 !important;
 }
 
-#ventesPage .data-table tbody td,
-#commandesPage .data-table tbody td {
+#creditsPage .data-table tbody td {
 padding: 16px 18px !important;
 font-size: 14px !important;
 vertical-align: middle !important;
@@ -934,18 +512,15 @@ border-bottom: 1px solid #F1F5F9 !important;
 color: #334155 !important;
 }
 
-#ventesPage .data-table tbody tr,
-#commandesPage .data-table tbody tr {
+#creditsPage .data-table tbody tr {
 transition: background 0.15s ease !important;
 }
 
-#ventesPage .data-table tbody tr:hover td,
-#commandesPage .data-table tbody tr:hover td {
+#creditsPage .data-table tbody tr:hover td {
 background: #FAFBFC !important;
 }
 
-#ventesPage .data-table tbody tr:last-child td,
-#commandesPage .data-table tbody tr:last-child td {
+#creditsPage .data-table tbody tr:last-child td {
 border-bottom: none !important;
 }
 
@@ -1005,7 +580,7 @@ opacity: 0.8 !important;
 width: 14px !important;
 }
 
-/* ✅ Cellule client */
+/* ✅ ✅ ✅ Client cliquable */
 .client-cell {
 display: inline-flex !important;
 align-items: center !important;
@@ -1017,7 +592,21 @@ background: linear-gradient(135deg, #F8FAFC, #F1F5F9) !important;
 padding: 6px 12px !important;
 border-radius: 8px !important;
 border: 1px solid #E2E8F0 !important;
+cursor: pointer !important;
 transition: all 0.2s ease !important;
+user-select: none !important;
+}
+
+.client-cell:hover {
+background: linear-gradient(135deg, #EDE9FE, #DDD6FE) !important;
+border-color: #A78BFA !important;
+color: #6D28D9 !important;
+transform: translateY(-1px) !important;
+box-shadow: 0 4px 8px rgba(139,92,246,0.15) !important;
+}
+
+.client-cell:active {
+transform: translateY(0) scale(0.98) !important;
 }
 
 .client-cell i {
@@ -1026,19 +615,8 @@ font-size: 13px !important;
 transition: color 0.2s ease !important;
 }
 
-/* ✅ ✅ ✅ Client cliquable - HOVER VIOLET */
-.client-cell:hover {
-    background: linear-gradient(135deg, #EDE9FE, #DDD6FE) !important;
-    border-color: #A78BFA !important;
-    color: #6D28D9 !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 8px rgba(139,92,246,0.15) !important;
-}
-.client-cell:active {
-    transform: translateY(0) scale(0.98) !important;
-}
 .client-cell:hover i {
-    color: #6D28D9 !important;
+color: #6D28D9 !important;
 }
 
 /* ✅ Montants */
@@ -1057,12 +635,9 @@ letter-spacing: -0.2px !important;
 }
 
 /* ✅ Statuts */
-#ventesPage .status-success,
-#ventesPage .status-warning,
-#ventesPage .status-danger,
-#commandesPage .status-success,
-#commandesPage .status-warning,
-#commandesPage .status-danger {
+#creditsPage .status-success,
+#creditsPage .status-warning,
+#creditsPage .status-danger {
 font-size: 12px !important;
 padding: 4px 10px !important;
 border-radius: 6px !important;
@@ -1072,27 +647,20 @@ align-items: center !important;
 gap: 4px !important;
 }
 
-/* ✅ Boutons d'action (design moderne identique admin-credits) */
-#ventesPage .action-buttons,
-#commandesPage .action-buttons {
+/* ✅ Boutons d'action compacts */
+#creditsPage .action-buttons {
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
 gap: 4px !important;
 flex-wrap: nowrap !important;
-min-width: 160px !important;
 }
 
-#ventesPage .action-buttons .btn-print,
-#ventesPage .action-buttons .btn-whatsapp,
-#ventesPage .action-buttons .btn-payer,
-#ventesPage .action-buttons .btn-edit,
-#ventesPage .action-buttons .btn-delete,
-#commandesPage .action-buttons .btn-print,
-#commandesPage .action-buttons .btn-whatsapp,
-#commandesPage .action-buttons .btn-payer,
-#commandesPage .action-buttons .btn-edit,
-#commandesPage .action-buttons .btn-delete {
+#creditsPage .action-buttons .btn-print,
+#creditsPage .action-buttons .btn-whatsapp,
+#creditsPage .action-buttons .btn-payer,
+#creditsPage .action-buttons .btn-edit,
+#creditsPage .action-buttons .btn-delete {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -1109,358 +677,137 @@ min-width: 160px !important;
     line-height: 1.2 !important;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
     min-height: 26px !important;
-    width: auto !important;
 }
 
-/* 🖨️ Imprimer — Indigo doux */
-#ventesPage .action-buttons .btn-print,
-#commandesPage .action-buttons .btn-print {
+#creditsPage .action-buttons .btn-print {
     background: #EEF2FF !important;
     color: #4F46E5 !important;
 }
-#ventesPage .action-buttons .btn-print:hover,
-#commandesPage .action-buttons .btn-print:hover {
+#creditsPage .action-buttons .btn-print:hover {
     background: #4F46E5 !important;
     color: #fff !important;
     transform: translateY(-1px) !important;
 }
 
-/* 📱 WhatsApp — Vert clair */
-#ventesPage .action-buttons .btn-whatsapp,
-#commandesPage .action-buttons .btn-whatsapp {
+#creditsPage .action-buttons .btn-whatsapp {
     background: #ECFDF5 !important;
     color: #059669 !important;
 }
-#ventesPage .action-buttons .btn-whatsapp:hover,
-#commandesPage .action-buttons .btn-whatsapp:hover {
+#creditsPage .action-buttons .btn-whatsapp:hover {
     background: #25D366 !important;
     color: #fff !important;
     transform: translateY(-1px) !important;
 }
 
-/* 💰 Payer — Vert doux */
-#ventesPage .action-buttons .btn-payer,
-#commandesPage .action-buttons .btn-payer {
+#creditsPage .action-buttons .btn-payer {
     background: #F0FDF4 !important;
     color: #16A34A !important;
 }
-#ventesPage .action-buttons .btn-payer:hover,
-#commandesPage .action-buttons .btn-payer:hover {
+#creditsPage .action-buttons .btn-payer:hover {
     background: #10B981 !important;
     color: #fff !important;
     transform: translateY(-1px) !important;
 }
 
-/* ✏️ Modifier — Orange doux */
-#ventesPage .action-buttons .btn-edit,
-#commandesPage .action-buttons .btn-edit {
+#creditsPage .action-buttons .btn-edit {
     background: #FFF7ED !important;
     color: #EA580C !important;
 }
-#ventesPage .action-buttons .btn-edit:hover,
-#commandesPage .action-buttons .btn-edit:hover {
+#creditsPage .action-buttons .btn-edit:hover {
     background: #F59E0B !important;
     color: #fff !important;
     transform: translateY(-1px) !important;
 }
 
-/* 🗑️ Supprimer — Rouge doux */
-#ventesPage .action-buttons .btn-delete,
-#commandesPage .action-buttons .btn-delete {
+#creditsPage .action-buttons .btn-delete {
     background: #FEF2F2 !important;
     color: #DC2626 !important;
 }
-#ventesPage .action-buttons .btn-delete:hover,
-#commandesPage .action-buttons .btn-delete:hover {
+#creditsPage .action-buttons .btn-delete:hover {
     background: #EF4444 !important;
     color: #fff !important;
     transform: translateY(-1px) !important;
 }
 
-/* ✅ Boutons spéciaux commandes */
-#commandesPage .action-buttons .btn-add.validate-btn {
-    background: #EEF2FF !important;
-    color: #4F46E5 !important;
-}
-#commandesPage .action-buttons .btn-add.validate-btn:hover {
-    background: #4F46E5 !important;
-    color: #fff !important;
-}
-
-#commandesPage .action-buttons .btn-delete.cancel-btn {
-    background: #FEF2F2 !important;
-    color: #DC2626 !important;
-}
-#commandesPage .action-buttons .btn-delete.cancel-btn:hover {
-    background: #EF4444 !important;
-    color: #fff !important;
-}
-
-/* ✅ Total des ventes/commandes */
-#ventesPage .total-row-pro,
-#commandesPage .total-row-pro {
+/* ✅ Total impayés */
+.total-row-pro {
 display: flex !important;
 justify-content: flex-end !important;
 align-items: center !important;
 gap: 16px !important;
 padding: 18px 24px !important;
-background: linear-gradient(135deg, #F0FDFA, #CCFBF1) !important;
+background: linear-gradient(135deg, #FEF2F2, #FEE2E2) !important;
 border-radius: 12px !important;
 margin-top: 16px !important;
-border: 1px solid #99F6E4 !important;
-flex-wrap: wrap !important;
+border: 1px solid #FECACA !important;
 }
 
-#ventesPage .total-row-pro .total-label,
-#commandesPage .total-row-pro .total-label {
+.total-row-pro .total-label {
 font-size: 13px !important;
 font-weight: 700 !important;
-color: #0F766E !important;
+color: #991B1B !important;
 text-transform: uppercase !important;
 letter-spacing: 0.5px !important;
 }
 
-#ventesPage .total-row-pro .total-amount,
-#commandesPage .total-row-pro .total-amount {
+.total-row-pro .total-amount {
 font-size: 20px !important;
 font-weight: 800 !important;
-color: #0D9488 !important;
+color: #DC2626 !important;
 letter-spacing: -0.5px !important;
 display: flex !important;
 align-items: center !important;
 gap: 8px !important;
 }
 
-#ventesPage .total-row-pro .total-amount i,
-#commandesPage .total-row-pro .total-amount i {
-color: #14B8A6 !important;
+.total-row-pro .total-amount i {
+color: #EF4444 !important;
 font-size: 16px !important;
-}
-
-/* ✅ Boutons sélection en masse */
-#selectedVentesCount {
-font-size: 12px !important;
-color: #64748b !important;
-display: none;
-font-weight: 600 !important;
-padding: 4px 12px !important;
-background: #f1f5f9 !important;
-border-radius: 20px !important;
-}
-
-#selectAllVentesBtn {
-font-size: 14px !important;
-padding: 10px 18px !important;
-background: #4f46e5 !important;
-color: #fff !important;
-border: none !important;
-border-radius: 10px !important;
-cursor: pointer !important;
-display: none;
-transition: all 0.2s !important;
-font-weight: 600 !important;
-}
-
-#selectAllVentesBtn:hover {
-background: #4338ca !important;
-transform: translateY(-2px) !important;
-}
-
-#deleteSelectedVentesBtn {
-font-size: 14px !important;
-padding: 10px 18px !important;
-background: #FEF2F2 !important;
-color: #DC2626 !important;
-border: none !important;
-border-radius: 10px !important;
-cursor: pointer !important;
-display: none;
-transition: all 0.2s !important;
-font-weight: 600 !important;
-}
-
-#deleteSelectedVentesBtn:hover {
-background: #EF4444 !important;
-color: #fff !important;
-transform: translateY(-2px) !important;
-}
-
-/* ✅ Filtres de date personnalisés */
-.date-filter-group {
-display: flex !important;
-align-items: center !important;
-gap: 8px !important;
-flex-wrap: wrap !important;
-}
-
-.date-filter-group input[type="date"] {
-padding: 10px 14px !important;
-border: 1.5px solid #E2E8F0 !important;
-border-radius: 10px !important;
-font-size: 14px !important;
-font-family: 'Inter', sans-serif !important;
-background: #FFFFFF !important;
-color: #0F172A !important;
-min-width: 140px !important;
-transition: all 0.2s ease !important;
-}
-
-.date-filter-group input[type="date"]:focus {
-border-color: #14B8A6 !important;
-outline: none !important;
-box-shadow: 0 0 0 4px rgba(20,184,166,0.1) !important;
-}
-
-.date-filter-group .btn-filter {
-padding: 10px 18px !important;
-background: #3B82F6 !important;
-color: #fff !important;
-border: none !important;
-border-radius: 10px !important;
-font-size: 14px !important;
-font-weight: 600 !important;
-cursor: pointer !important;
-transition: all 0.2s !important;
-display: inline-flex !important;
-align-items: center !important;
-gap: 6px !important;
-}
-
-.date-filter-group .btn-filter:hover {
-background: #2563EB !important;
-transform: translateY(-2px) !important;
-}
-
-.date-filter-group .btn-clear-filter {
-padding: 10px 18px !important;
-background: #FEF2F2 !important;
-color: #DC2626 !important;
-border: none !important;
-border-radius: 10px !important;
-font-size: 14px !important;
-font-weight: 600 !important;
-cursor: pointer !important;
-transition: all 0.2s !important;
-display: inline-flex !important;
-align-items: center !important;
-gap: 6px !important;
-}
-
-.date-filter-group .btn-clear-filter:hover {
-background: #EF4444 !important;
-color: #fff !important;
-transform: translateY(-2px) !important;
-}
-
-/* ✅ Champ voix */
-.voice-display-field {
-padding: 10px 14px !important;
-border: 1.5px solid #14B8A6 !important;
-border-radius: 10px !important;
-width: 180px !important;
-background: #f0fdf4 !important;
-color: #0D9488 !important;
-font-weight: 600 !important;
-font-size: 14px !important;
-min-height: 42px !important;
-outline: none !important;
 }
 
 /* ✅ Responsive */
 @media(max-width:768px) {
-    #ventesPage, #commandesPage {
+    #creditsPage {
         padding: 12px !important;
     }
     
-    #ventesPage .card-header,
-    #commandesPage .card-header {
+    #creditsPage .card-header {
         padding: 16px !important;
     }
     
-    .ventes-stats-grid {
+    .credits-stats-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
     }
     
-    .ventes-stat-card {
+    .credits-stat-card {
         padding: 14px !important;
     }
     
-    .ventes-stat-card .stat-value {
+    .credits-stat-card .stat-value {
         font-size: 18px !important;
     }
-
-    #ventesChartContainer {
-        padding: 14px !important;
-    }
-    #ventesChartCanvas {
-        max-height: 250px !important;
-    }
     
-    #ventesPage .data-table thead th,
-    #ventesPage .data-table tbody td,
-    #commandesPage .data-table thead th,
-    #commandesPage .data-table tbody td {
+    #creditsPage .data-table thead th,
+    #creditsPage .data-table tbody td {
         padding: 12px 10px !important;
         font-size: 12px !important;
     }
     
-    #ventesPage .action-buttons .btn-print,
-    #ventesPage .action-buttons .btn-whatsapp,
-    #ventesPage .action-buttons .btn-payer,
-    #ventesPage .action-buttons .btn-edit,
-    #ventesPage .action-buttons .btn-delete,
-    #commandesPage .action-buttons .btn-print,
-    #commandesPage .action-buttons .btn-whatsapp,
-    #commandesPage .action-buttons .btn-payer,
-    #commandesPage .action-buttons .btn-edit,
-    #commandesPage .action-buttons .btn-delete {
+    #creditsPage .action-buttons .btn-print,
+    #creditsPage .action-buttons .btn-whatsapp,
+    #creditsPage .action-buttons .btn-payer,
+    #creditsPage .action-buttons .btn-edit,
+    #creditsPage .action-buttons .btn-delete {
         padding: 4px 8px !important;
         font-size: 10px !important;
         min-height: 24px !important;
     }
-    
-    .date-filter-group input[type="date"] {
-        min-width: 100px !important;
-        font-size: 13px !important;
-        padding: 8px 10px !important;
-    }
-    
-    .date-filter-group .btn-filter,
-    .date-filter-group .btn-clear-filter {
-        padding: 8px 14px !important;
-        font-size: 13px !important;
-    }
 }
 
 @media(max-width:500px) {
-    .ventes-stats-grid {
+    .credits-stats-grid {
         grid-template-columns: 1fr !important;
-    }
-
-    #ventesChartCanvas {
-        max-height: 200px !important;
-    }
-    
-    .date-filter-group input[type="date"] {
-        min-width: 80px !important;
-        font-size: 12px !important;
-        padding: 6px 8px !important;
-    }
-    
-    .date-filter-group .btn-filter,
-    .date-filter-group .btn-clear-filter {
-        padding: 6px 10px !important;
-        font-size: 12px !important;
-    }
-
-    #ventesChartHeader {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-    }
-    #toggleVentesChartBtn {
-        width: 100% !important;
-        justify-content: center !important;
     }
 }
 </style>
@@ -1469,552 +816,74 @@ outline: none !important;
 document.head.insertAdjacentHTML('beforeend', styles);
 }
 
-// 🆕 ==================== GRAPHIQUE DES VENTES ====================
-function renderVentesChart(data) {
-    var canvas = document.getElementById('ventesChartCanvas');
-    if (!canvas) return;
-    
-    // 🆕 Ne pas générer si masqué
-    if (!window._ventesChartVisible) return;
-    
-    if (typeof Chart === 'undefined') {
-        console.warn('⚠️ Chart.js non chargé');
-        return;
-    }
-    
-    // Détruire l'ancien graphique
-    if (window._ventesChart) {
-        try { window._ventesChart.destroy(); } catch(e) {}
-        window._ventesChart = null;
-    }
-    
-    // Déterminer la granularité selon la période
-    var period = window.ventesPeriod || 'all';
-    var dateDebut = window.ventesDateDebut;
-    var dateFin = window.ventesDateFin;
-    var granularity = 'day'; // hour, day, month
-    
-    var nbJours = 0;
-    if (dateDebut && dateFin) {
-        nbJours = Math.ceil((new Date(dateFin) - new Date(dateDebut)) / 86400000) + 1;
-    } else if (period === 'today') {
-        nbJours = 1;
-    } else if (period === '3' || period === '7' || period === '15') {
-        nbJours = parseInt(period);
-    } else if (period === '30') {
-        nbJours = 30;
-    } else if (period === '90') {
-        nbJours = 90;
-    } else if (period === '365') {
-        nbJours = 365;
-    } else {
-        nbJours = 30; // par défaut
-    }
-    
-    if (nbJours <= 1) {
-        granularity = 'hour';
-    } else if (nbJours <= 31) {
-        granularity = 'day';
-    } else {
-        granularity = 'month';
-    }
-    
-    // Construire les buckets
-    var buckets = {}; // key -> {ca, profit, credits, label}
-    var sortedKeys = [];
-    
-    function getKeyAndLabel(dateObj) {
-        if (granularity === 'hour') {
-            var h = dateObj.getHours();
-            var key = 'h' + h;
-            return { key: key, label: String(h).padStart(2, '0') + 'h' };
-        } else if (granularity === 'day') {
-            var key = dateObj.getFullYear() + '-' + String(dateObj.getMonth()+1).padStart(2,'0') + '-' + String(dateObj.getDate()).padStart(2,'0');
-            var label = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-            return { key: key, label: label };
-        } else {
-            var key = dateObj.getFullYear() + '-' + String(dateObj.getMonth()+1).padStart(2,'0');
-            var label = dateObj.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-            return { key: key, label: label };
-        }
-    }
-    
-    // Initialiser les buckets (pour afficher tous les points même vides)
-    var now = new Date();
-    if (granularity === 'hour') {
-        for (var h = 0; h < 24; h++) {
-            var key = 'h' + h;
-            buckets[key] = { ca: 0, profit: 0, credits: 0, label: String(h).padStart(2,'0') + 'h' };
-            sortedKeys.push(key);
-        }
-    } else if (granularity === 'day') {
-        var start, end;
-        if (dateDebut && dateFin) {
-            start = new Date(dateDebut); end = new Date(dateFin);
-        } else if (period === 'today') {
-            start = new Date(); end = new Date();
-        } else {
-            var days = parseInt(period) || 30;
-            if (isNaN(days) || days < 1) days = 30;
-            end = new Date();
-            start = new Date(now.getTime() - (days - 1) * 86400000);
-        }
-        start.setHours(0,0,0,0);
-        end.setHours(23,59,59,999);
-        var cur = new Date(start);
-        while (cur <= end) {
-            var kl = getKeyAndLabel(cur);
-            buckets[kl.key] = { ca: 0, profit: 0, credits: 0, label: kl.label };
-            sortedKeys.push(kl.key);
-            cur.setDate(cur.getDate() + 1);
-        }
-    } else {
-        var startM, endM;
-        if (dateDebut && dateFin) {
-            startM = new Date(dateDebut); endM = new Date(dateFin);
-        } else {
-            var days2 = parseInt(period) || 365;
-            if (isNaN(days2) || days2 < 1) days2 = 365;
-            endM = new Date();
-            startM = new Date(now.getTime() - (days2 - 1) * 86400000);
-        }
-        var curM = new Date(startM.getFullYear(), startM.getMonth(), 1);
-        var lastM = new Date(endM.getFullYear(), endM.getMonth(), 1);
-        while (curM <= lastM) {
-            var klm = getKeyAndLabel(curM);
-            buckets[klm.key] = { ca: 0, profit: 0, credits: 0, label: klm.label };
-            sortedKeys.push(klm.key);
-            curM.setMonth(curM.getMonth() + 1);
-        }
-    }
-    
-    // Remplir les données
-    (data || []).forEach(function(v) {
-        if (!v.createdAt || !v.createdAt.seconds) return;
-        var d = new Date(v.createdAt.seconds * 1000);
-        var kl = getKeyAndLabel(d);
-        if (!buckets[kl.key]) return;
-        buckets[kl.key].ca += (v.total || 0);
-        buckets[kl.key].profit += (v.profit || 0);
-        if (!v.paid) {
-            buckets[kl.key].credits += (v.remainingAmount || v.total || 0);
-        }
-    });
-    
-    // Préparer les séries
-    var labels = sortedKeys.map(function(k) { return buckets[k].label; });
-    var caData = sortedKeys.map(function(k) { return parseFloat(buckets[k].ca.toFixed(2)); });
-    var profitData = sortedKeys.map(function(k) { return parseFloat(buckets[k].profit.toFixed(2)); });
-    var creditsData = sortedKeys.map(function(k) { return parseFloat(buckets[k].credits.toFixed(2)); });
-    
-    // Créer le graphique
-    var ctx = canvas.getContext('2d');
-    window._ventesChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: '💰 CA',
-                    data: caData,
-                    backgroundColor: 'rgba(59, 130, 246, 0.75)',
-                    borderColor: '#3B82F6',
-                    borderWidth: 1,
-                    borderRadius: 4
-                },
-                {
-                    label: '📈 Profit',
-                    data: profitData,
-                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
-                    borderColor: '#10B981',
-                    borderWidth: 1,
-                    borderRadius: 4
-                },
-                {
-                    label: '💳 Crédits impayés',
-                    data: creditsData,
-                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
-                    borderColor: '#EF4444',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        font: { family: 'Inter', size: 13, weight: '600' },
-                        usePointStyle: true,
-                        pointStyle: 'rectRounded',
-                        padding: 16
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    titleFont: { family: 'Inter', size: 13, weight: '700' },
-                    bodyFont: { family: 'Inter', size: 12 },
-                    padding: 12,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: function(context) {
-                            var label = context.dataset.label || '';
-                            var val = context.parsed.y || 0;
-                            return label + ' : ' + val.toFixed(2) + ' MAD';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: {
-                        font: { family: 'Inter', size: 11 },
-                        color: '#64748B',
-                        maxRotation: 45,
-                        minRotation: 0,
-                        autoSkip: true,
-                        maxTicksLimit: granularity === 'hour' ? 24 : 20
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(226, 232, 240, 0.5)' },
-                    ticks: {
-                        font: { family: 'Inter', size: 11 },
-                        color: '#64748B',
-                        callback: function(val) { return val + ' MAD'; }
-                    }
-                }
-            }
-        }
-    });
-}
-window.renderVentesChart = renderVentesChart;
+// ==================== PAGE CRÉDITS ====================
+async function loadCreditsPage(c) {
+injectCreditsStyles();
 
-// 🆕 ==================== BOUTON AFFICHER/MASQUER LE GRAPHIQUE ====================
-function toggleVentesChart() {
-    var body = document.getElementById('ventesChartBody');
-    var btn = document.getElementById('toggleVentesChartBtn');
-    if (!body || !btn) return;
-    
-    if (window._ventesChartVisible) {
-        // Masquer
-        body.classList.add('hidden');
-        btn.innerHTML = '<i class="fas fa-eye"></i> Afficher';
-        window._ventesChartVisible = false;
-        localStorage.setItem('ventesChartVisible', 'false');
-    } else {
-        // Afficher
-        body.classList.remove('hidden');
-        btn.innerHTML = '<i class="fas fa-eye-slash"></i> Masquer';
-        window._ventesChartVisible = true;
-        localStorage.setItem('ventesChartVisible', 'true');
-        // Regénérer le graphique à l'affichage
-        setTimeout(function() {
-            try { renderVentesChart(window.filteredVentes || window.allVentesData || []); } catch(e) { console.warn(e); }
-        }, 50);
-    }
-}
-window.toggleVentesChart = toggleVentesChart;
+await loadClientsForSearchCredits();
 
-// ==================== COMMANDES EN LIGNE ====================
-function loadCommandesPage(c) {
-injectVentesStyles();
+var savedClientId = localStorage.getItem('posSelectedCreditClientId');
+var savedClientName = localStorage.getItem('posSelectedCreditClientName');
+
+if (savedClientId && savedClientName) {
+    window._posFilterClientId = savedClientId;
+    window._posFilterClientName = savedClientName;
+    window._fromPos = true;
+    localStorage.removeItem('posSelectedCreditClientId');
+    localStorage.removeItem('posSelectedCreditClientName');
+} else {
+    window._posFilterClientId = null;
+    window._posFilterClientName = null;
+    window._fromPos = false;
+}
+
+window.creditsPeriod = 'all';
+window.creditsSearch = '';
+window.creditsDateDebut = '';
+window.creditsDateFin = '';
+window.creditSelectionMode = false;
+window.creditSelectedIds = [];
+window.creditSelectedClientId = null;
+window.creditSelectedClientName = null;
+
+if (!window.sortOrders.credits) window.sortOrders.credits = {};
+if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
+
+var searchPlaceholder = window._posFilterClientName || 'Rechercher (client, produit, description)...';
+
+var showBackButton = window._fromPos ? '' : 'display:none;';
+var filterMessage = window._posFilterClientName ? 
+    `<div style="padding:8px 12px; background:#f0fdf4; border-radius:8px; margin-top:8px; border:2px solid #14B8A6; font-size:14px; font-weight:600; color:#0D9488;">
+        🔍 Client filtré : <strong>${escapeHtml(window._posFilterClientName)}</strong>
+    </div>` : '';
 
 c.innerHTML = `
-<div class="content-card" id="commandesPage">
+<div class="content-card" id="creditsPage">
 <div class="card-header">
-<h3><i class="fas fa-shopping-basket"></i> Commandes en ligne</h3>
+<div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;"><i class="fas fa-credit-card"></i> Crédits</h3>
+    <button id="creditsBackToPosBtn" onclick="retournerAuPaiement()" 
+            style="${showBackButton} background:#6366f1; color:#fff; border:none; border-radius:8px; 
+                   padding:8px 20px; font-size:14px; font-weight:700; cursor:pointer; 
+                   display:flex; align-items:center; gap:8px;">
+        <i class="fas fa-arrow-left"></i> Retour au paiement
+    </button>
+</div>
+${filterMessage}
 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
 <div class="search-bar-pro">
 <i class="fas fa-search"></i>
-<input type="text" id="commandesSearchInput"
-placeholder="Rechercher (client, email, tél, produit)..."
-onkeyup="window.commandesSearch = this.value; window.currentPages.commandes=1; handleSearchInput('commandes'); applyCommandesFilters();">
-<button class="search-clear-btn hidden" id="commandesClearBtn" onclick="clearSearch('commandes')" title="Effacer la recherche">
+<input type="text" id="creditsSearchInput"
+placeholder="${searchPlaceholder}"
+onkeyup="handleCreditsSearch(this.value);">
+<button class="search-clear-btn hidden" id="creditsClearBtn" onclick="clearCreditsSearch()" title="Effacer la recherche">
 <i class="fas fa-times"></i>
 </button>
 </div>
+<input type="text" id="creditsVoiceDisplay" placeholder="🎤 Audio..." class="voice-display-field" readonly style="display:none;">
 <div class="filter-group">
 <label><i class="far fa-calendar-alt"></i> Période</label>
-<select id="commandesPeriodSelect" onchange="window.commandesPeriod = this.value; window.currentPages.commandes=1; applyCommandesFilters();">
-${getPeriodOptions('all')}
-</select>
-</div>
-<button class="btn-add" onclick="loadCommandes()">
-<i class="fas fa-sync-alt"></i> Actualiser
-</button>
-</div>
-</div>
-<div id="commandesTableContainer"></div>
-<div id="commandesPagination" style="margin-top:12px;"></div>
-</div>
-`;
-loadCommandes();
-}
-
-async function loadCommandes() {
-try {
-const snapshot = await db.collection('commandes').orderBy('createdAt', 'desc').limit(500).get();
-window.allCommandesData = [];
-snapshot.forEach(dc => {
-var d = dc.data();
-d.id = dc.id;
-if (d.source === 'client') window.allCommandesData.push(d);
-});
-} catch (e) {
-console.error('Erreur chargement commandes en ligne :', e);
-const fallback = await db.collection('commandes').get();
-window.allCommandesData = [];
-fallback.forEach(dc => {
-var d = dc.data();
-if (d.source === 'client') {
-d.id = dc.id;
-window.allCommandesData.push(d);
-}
-});
-window.allCommandesData.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-}
-window.currentPages.commandes = 1;
-applyCommandesFilters();
-}
-
-function applyCommandesFilters() {
-var filtered = filterByPeriod(window.allCommandesData, window.commandesPeriod);
-filtered = filterBySearch(filtered, window.commandesSearch, ['clientName', 'clientEmail', 'clientTelephone', 'items.nom']);
-if (!window.sortOrders.commandes || !window.sortOrders.commandes.createdAt) {
-filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-} else {
-filtered = applySort('commandes', filtered, 'createdAt');
-}
-window.filteredCommandes = filtered;
-renderCommandesTablePro();
-}
-
-function renderCommandesTablePro() {
-var cont = document.getElementById('commandesTableContainer');
-if (!cont) return;
-var data = (window.filteredCommandes || window.allCommandesData).slice();
-if (!window.sortOrders.commandes || !window.sortOrders.commandes.createdAt) {
-data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-} else {
-data = applySort('commandes', data, 'createdAt');
-}
-var itemsPerPage = window.itemsPerPage || 15;
-var currentPage = window.currentPages.commandes || 1;
-var start = (currentPage - 1) * itemsPerPage;
-var pageData = data.slice(start, start + itemsPerPage);
-
-if (pageData.length === 0) {
-cont.innerHTML = `
-<div style="text-align:center;padding:60px 20px;">
-<i class="fas fa-inbox" style="font-size:3rem;color:#d1d5db;"></i>
-<p style="margin-top:16px;color:#6b7280;font-size:18px !important;">Aucune commande trouvée</p>
-</div>
-`;
-document.getElementById('commandesPagination').innerHTML = '';
-return;
-}
-
-var h = `
-<div class="table-container">
-<table class="data-table">
-<thead>
-<tr>
-<th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
-<th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
-<th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
-<th><i class="fas fa-envelope"></i> Email</th>
-<th><i class="fas fa-phone"></i> Tél</th>
-<th><i class="fas fa-box"></i> Articles</th>
-<th><i class="fas fa-cog"></i> Options</th>
-${makeSortableHeader('commandes', 'total', '💰 Total', 'renderCommandesTablePro')}
-${makeSortableHeader('commandes', 'statut', '📌 Statut', 'renderCommandesTablePro')}
-<th style="min-width:200px;"><i class="fas fa-tools"></i> Actions</th>
-</tr>
-</thead>
-<tbody>
-`;
-
-pageData.forEach(function(d) {
-const factureHtml = renderCommandeFactureCell(d);
-const dt = d.createdAt ? formatDateHeure(d.createdAt.seconds) : { date: '-', time: '-', full: '-' };
-const dateHtml = `
-<div class="date-cell">
-<div class="date-line"><i class="far fa-calendar-alt"></i> ${dt.date}</div>
-<div class="time-line"><i class="far fa-clock"></i> ${dt.time}</div>
-</div>
-`;
-const clientHtml = `
-<div class="client-cell">
-<i class="fas fa-user-circle"></i> ${escapeHtml(d.clientName || 'Client inconnu')}
-</div>
-`;
-var arts = d.items ? d.items.map(function(it) {
-return '<strong>' + it.quantite + 'x</strong> ' + escapeHtml(it.nom);
-}).join('<br>') : '-';
-
-var opts = d.items ? d.items.map(function(it) {
-var o = [];
-if (it.sauces && it.sauces.length) o.push('<span style="color:#14B8A6;">🥫' + escapeHtml(it.sauces.join(',')) + '</span>');
-if (it.interdits && it.interdits.length) o.push('<span style="color:#ef4444;">🚫' + escapeHtml(it.interdits.join(',')) + '</span>');
-if (it.epice && it.epice !== 'Normal') o.push('<span style="color:#d97706;">🌶️' + escapeHtml(it.epice) + '</span>');
-if (it.sel && it.sel !== 'Normal') o.push('<span style="color:#4f46e5;">🧂' + escapeHtml(it.sel) + '</span>');
-return o.length ? o.join(' | ') : '<span style="color:#9ca3af;">Aucune option</span>';
-}).join('<br>') : '-';
-
-var statutMap = {
-'payé': { class: 'status-success', label: 'Payée', icon: 'fa-check-circle' },
-'valide': { class: 'status-success', label: 'Validée', icon: 'fa-check' },
-'en_attente': { class: 'status-warning', label: 'En attente', icon: 'fa-clock' },
-'annule': { class: 'status-danger', label: 'Annulée', icon: 'fa-times-circle' }
-};
-var st = statutMap[d.statut] || { class: 'status-warning', label: d.statut || 'Inconnu', icon: 'fa-question-circle' };
-
-var act = '';
-if (d.statut === 'en_attente') {
-act = `
-<div class="action-buttons">
-<button class="btn-add validate-btn" onclick="validateCommande('${d.id}')" title="Valider">Valider</button>
-<button class="btn-payer" onclick="payCommande('${d.id}')" title="Payer">Payer</button>
-<button class="btn-delete cancel-btn" onclick="cancelCommande('${d.id}')" title="Annuler">Annuler</button>
-</div>
-`;
-} else if (d.statut === 'valide') {
-act = `
-<div class="action-buttons">
-<button class="btn-payer" onclick="payCommande('${d.id}')" title="Payer">Payer</button>
-</div>
-`;
-} else if (d.statut === 'payé') {
-act = `<span style="color:#10B981;font-weight:600;font-size:13px !important;"><i class="fas fa-check-circle"></i> Payée</span>`;
-} else {
-act = `<span style="color:#9ca3af;">${d.statut || '-'}</span>`;
-}
-
-h += `
-<tr>
-<td>${factureHtml}</td>
-<td>${dateHtml}</td>
-<td>${clientHtml}</td>
-<td>${escapeHtml(d.clientEmail || '-')}</td>
-<td>${escapeHtml(d.clientTelephone || '-')}</td>
-<td>${arts}</td>
-<td>${opts}</td>
-<td><span class="amount-total">${d.total.toFixed(2)} MAD</span></td>
-<td><span class="${st.class}"><i class="fas ${st.icon}"></i> ${st.label}</span></td>
-<td>${act}</td>
-</tr>
-`;
-});
-
-h += `
-</tbody>
-</table>
-</div>
-<div class="total-row-pro">
-<span class="total-label">Total des commandes</span>
-<span class="total-amount"><i class="fas fa-dollar-sign"></i> ${data.reduce((sum, d) => sum + (d.total || 0), 0).toFixed(2)} MAD</span>
-</div>
-`;
-cont.innerHTML = h;
-document.getElementById('commandesPagination').innerHTML = getPaginationHTML('commandes', data.length);
-}
-
-async function validateCommande(cid) {
-if (!confirm('Valider cette commande ?')) return;
-await CacheDB.write('commandes', cid, {
-statut: 'valide',
-validatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-validatedBy: window.currentUserData ? window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom : 'Admin'
-}, 'update');
-alert('✅ Validée !');
-loadCommandes();
-CacheDB.sync();
-
-if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-    CacheDB.saveCollection('commandes');
-}
-}
-
-async function payCommande(cid) {
-if (!confirm('Payer cette commande ? Redirection vers le POS...')) return;
-var dc = await db.collection('commandes').doc(cid).get();
-if (!dc.exists) { alert('Introuvable'); return; }
-var cmd = dc.data();
-localStorage.setItem('posCommandeData', JSON.stringify({
-commandeId: cid,
-clientId: cmd.clientId,
-clientName: cmd.clientName,
-items: cmd.items,
-total: cmd.total,
-table: cmd.table || ''
-}));
-navigateTo('pos');
-}
-
-function cancelCommande(cid) {
-if (confirm('Annuler ?')) {
-CacheDB.write('commandes', cid, { statut: 'annule' }, 'update').then(function() {
-alert('❌ Annulée');
-loadCommandes();
-CacheDB.sync();
-
-if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-    CacheDB.saveCollection('commandes');
-}
-});
-}
-}
-
-// ==================== VENTES ====================
-function loadVentesPage(c) {
-injectVentesStyles();
-
-loadClientsForSearch();
-
-window.ventesPeriod = 'all';
-window.ventesSearch = '';
-window.ventesDateDebut = '';
-window.ventesDateFin = '';
-window.venteSelectionMode = false;
-window.venteSelectedIndex = -1;
-window.venteSelectedClientId = null;
-window.venteSelectedClientName = null;
-ventesSelectionnees.clear();
-if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
-if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
-
-var today = new Date().toISOString().split('T')[0];
-
-// 🆕 Récupérer l'état du graphique
-var chartVisible = window._ventesChartVisible;
-var chartBodyClass = chartVisible ? '' : 'hidden';
-var chartBtnLabel = chartVisible ? '<i class="fas fa-eye-slash"></i> Masquer' : '<i class="fas fa-eye"></i> Afficher';
-
-c.innerHTML = `
-<div class="content-card" id="ventesPage">
-<div class="card-header">
-<h3><i class="fas fa-shopping-cart"></i> Ventes</h3>
-<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
-<div class="search-bar-pro">
-<i class="fas fa-search"></i>
-<input type="text" id="ventesSearchInput"
-placeholder="Rechercher (client, produit, description)..."
-onkeyup="handleVentesSearch(this.value);">
-<button class="search-clear-btn hidden" id="ventesClearBtn" onclick="clearVentesSearch()" title="Effacer la recherche">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<input type="text" id="ventesVoiceDisplay" placeholder="🎤 Audio..." class="voice-display-field" readonly>
-<div class="filter-group">
-<label><i class="far fa-calendar-alt"></i> Période</label>
-<select id="ventesPeriodSelect" onchange="window.ventesPeriod = this.value; window.currentPages.ventes=1; applyVentesFilters();">
+<select id="creditsPeriodSelect" onchange="window.creditsPeriod = this.value; window.currentPages.credits=1; applyCreditsFilters();">
 <option value="all">Toutes les dates</option>
 <option value="today">Aujourd'hui</option>
 <option value="3">3 jours</option>
@@ -2025,136 +894,128 @@ onkeyup="handleVentesSearch(this.value);">
 <option value="365">1 an</option>
 </select>
 </div>
-<div class="date-filter-group">
-<input type="date" id="ventesDateDebut" value="" placeholder="Date début" onchange="window.ventesDateDebut = this.value; applyVentesFilters();">
-<span style="font-weight:600; color:#64748B;">à</span>
-<input type="date" id="ventesDateFin" value="" placeholder="Date fin" onchange="window.ventesDateFin = this.value; applyVentesFilters();">
-<button class="btn-filter" onclick="appliquerFiltreDatePersonnalise()"><i class="fas fa-filter"></i> Filtrer</button>
-<button class="btn-clear-filter" onclick="reinitialiserFiltres()"><i class="fas fa-undo"></i> Réinitialiser</button>
-</div>
-<div class="filter-group">
-<label><i class="fas fa-filter"></i> Statut</label>
-<select id="ventesStatusFilter" onchange="applyVentesFilters();">
-<option value="all">Tous</option>
-<option value="payé">Payé</option>
-<option value="credit_partiel">Crédit + Partiel</option>
-<option value="en_attente">En attente</option>
-</select>
-</div>
-<button class="btn-add" onclick="loadVentes()">
+<button class="btn-add" onclick="loadCredits()">
 <i class="fas fa-sync-alt"></i> Actualiser
 </button>
-<button id="toggleVenteSelectionBtn" class="btn-add" onclick="toggleVenteSelectionMode()" style="background:#6366f1; box-shadow:0 2px 8px rgba(99,102,241,0.25);">
-<i class="fas fa-check-square"></i> Sélectionner
-</button>
-<button id="selectAllVentesBtn" class="btn-add" onclick="toggleSelectAllVisibleVentes()" style="display:none; background:#4f46e5;">
+<button id="toggleSelectionBtn" class="btn-add" onclick="toggleCreditSelectionMode()" style="background:#6366f1; box-shadow:0 2px 8px rgba(99,102,241,0.25);">
+<i class="fas fa-check-square"></i> Sélectionner</button>
+<button id="selectAllBtn" class="btn-add" onclick="toggleSelectAllVisible()" style="display:none; background:#4f46e5;">
 <i class="fas fa-check-double"></i> Tout sélectionner
 </button>
-<button id="deleteSelectedVentesBtn" class="btn-delete" onclick="deleteSelectedVentes()" style="display:none; background:#FEF2F2; color:#DC2626;">
+<button id="deleteSelectedBtn" class="btn-delete" onclick="deleteSelectedCredits()" style="display:none; background:#ef4444; color:#fff; padding:10px 18px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">
 <i class="fas fa-trash"></i> Supprimer
 </button>
-<button id="payerSelectedVentesBtn" class="btn-save" onclick="payerVentesSelectionnees()" style="display:none; background:#10B981; color:#fff; box-shadow:0 2px 8px rgba(16,185,129,0.25);">
-<i class="fas fa-money-bill-wave"></i> Payer tout
+<button id="paySelectedBtn" class="btn-save" onclick="paySelectedCredits()" style="display:none; background:#10B981; color:#fff; padding:10px 18px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.25);">
+<i class="fas fa-check-circle"></i> Marquer payé
 </button>
 </div>
 </div>
-<div id="ventesChartContainer">
-<div id="ventesChartHeader">
-<h4><i class="fas fa-chart-bar"></i> Aperçu graphique (CA / Profit / Crédits)</h4>
-<button id="toggleVentesChartBtn" onclick="toggleVentesChart()">${chartBtnLabel}</button>
+<div class="credits-stats-grid" id="creditsStatsGrid">
+<div class="credits-stat-card">
+<span class="stat-value blue" id="creditsStatsTotal">0.00</span>
+<span class="stat-label">💰 Total Crédits</span>
 </div>
-<div id="ventesChartBody" class="${chartBodyClass}">
-<div style="position:relative;height:320px;">
-<canvas id="ventesChartCanvas"></canvas>
+<div class="credits-stat-card">
+<span class="stat-value red" id="creditsStatsImpayes">0.00</span>
+<span class="stat-label">⏳ Total Impayés</span>
 </div>
+<div class="credits-stat-card">
+<span class="stat-value orange" id="creditsStatsCount">0</span>
+<span class="stat-label">📊 Nombre de crédits</span>
 </div>
-</div>
-<div class="ventes-stats-grid" id="ventesStatsGrid">
-<div class="ventes-stat-card">
-<span class="stat-value blue" id="ventesStatsTotal">0.00</span>
-<span class="stat-label">💰 Total Ventes</span>
-</div>
-<div class="ventes-stat-card">
-<span class="stat-value green" id="ventesStatsProfit">0.00</span>
-<span class="stat-label">📈 Profit</span>
-</div>
-<div class="ventes-stat-card">
-<span class="stat-value orange" id="ventesStatsCount">0</span>
-<span class="stat-label">📊 Nombre de ventes</span>
-</div>
-<div class="ventes-stat-card">
-<span class="stat-value" id="ventesStatsAchat" style="color:#6b7280;">0.00</span>
-<span class="stat-label">📦 Total Achat</span>
+<div class="credits-stat-card">
+<span class="stat-value green" id="creditsStatsPaye">0.00</span>
+<span class="stat-label">✅ Total Payé</span>
 </div>
 </div>
-<div id="ventesTableContainer"></div>
-<div id="ventesPagination" style="margin-top:12px;"></div>
+<div id="creditsTableContainer"></div>
+<div id="creditsPagination" style="margin-top:12px;"></div>
 </div>
 `;
 
-loadVentes();
+loadCredits();
+
+if (window._posFilterClientName) {
+    setTimeout(function() {
+        var searchInput = document.getElementById('creditsSearchInput');
+        if (searchInput) {
+            searchInput.value = window._posFilterClientName;
+            window.creditsSearch = window._posFilterClientName;
+            applyCreditsFilters();
+            var clearBtn = document.getElementById('creditsClearBtn');
+            if (clearBtn) clearBtn.classList.remove('hidden');
+        }
+    }, 300);
+}
 }
 
-function appliquerFiltreDatePersonnalise() {
-var debut = document.getElementById('ventesDateDebut').value;
-var fin = document.getElementById('ventesDateFin').value;
-window.ventesDateDebut = debut;
-window.ventesDateFin = fin;
-document.getElementById('ventesPeriodSelect').value = 'all';
-window.ventesPeriod = 'all';
-applyVentesFilters();
+function appliquerFiltreDatePersonnaliseCredits() {
+var debut = document.getElementById('creditsDateDebut').value;
+var fin = document.getElementById('creditsDateFin').value;
+window.creditsDateDebut = debut;
+window.creditsDateFin = fin;
+document.getElementById('creditsPeriodSelect').value = 'all';
+window.creditsPeriod = 'all';
+applyCreditsFilters();
+}
+window.appliquerFiltreDatePersonnaliseCredits = appliquerFiltreDatePersonnaliseCredits;
+
+function reinitialiserFiltresCredits() {
+document.getElementById('creditsDateDebut').value = '';
+document.getElementById('creditsDateFin').value = '';
+window.creditsDateDebut = '';
+window.creditsDateFin = '';
+document.getElementById('creditsPeriodSelect').value = 'all';
+window.creditsPeriod = 'all';
+document.getElementById('creditsSearchInput').value = '';
+window.creditsSearch = '';
+window._posFilterClientId = null;
+window._posFilterClientName = null;
+window._fromPos = false;
+applyCreditsFilters();
+loadCreditsPage(document.getElementById('dynamicContent'));
+}
+window.reinitialiserFiltresCredits = reinitialiserFiltresCredits;
+
+function handleCreditsSearch(value) {
+window.creditsSearch = value;
+window.currentPages.credits = 1;
+handleSearchInputCredits('credits');
+applyCreditsFilters();
 }
 
-function reinitialiserFiltres() {
-document.getElementById('ventesDateDebut').value = '';
-document.getElementById('ventesDateFin').value = '';
-window.ventesDateDebut = '';
-window.ventesDateFin = '';
-document.getElementById('ventesPeriodSelect').value = 'all';
-window.ventesPeriod = 'all';
-document.getElementById('ventesSearchInput').value = '';
-window.ventesSearch = '';
-document.getElementById('ventesStatusFilter').value = 'all';
-applyVentesFilters();
-}
-window.appliquerFiltreDatePersonnalise = appliquerFiltreDatePersonnalise;
-window.reinitialiserFiltres = reinitialiserFiltres;
-
-function handleVentesSearch(value) {
-window.ventesSearch = value;
-window.currentPages.ventes = 1;
-handleSearchInput('ventes');
-applyVentesFilters();
-}
-
-function clearVentesSearch() {
-var searchField = document.getElementById('ventesSearchInput');
+function clearCreditsSearch() {
+var searchField = document.getElementById('creditsSearchInput');
 if (searchField) {
 searchField.value = '';
-window.ventesSearch = '';
-applyVentesFilters();
-var clearBtn = document.getElementById('ventesClearBtn');
+window.creditsSearch = '';
+window._posFilterClientId = null;
+window._posFilterClientName = null;
+window._fromPos = false;
+applyCreditsFilters();
+var clearBtn = document.getElementById('creditsClearBtn');
 if (clearBtn) {
 clearBtn.classList.add('hidden');
 }
+loadCreditsPage(document.getElementById('dynamicContent'));
 }
 }
 
-function processVentesSearchFromVoice(text) {
-var searchField = document.getElementById('ventesSearchInput');
-var periodSelect = document.getElementById('ventesPeriodSelect');
-var voiceDisplay = document.getElementById('ventesVoiceDisplay');
+function processCreditsSearchFromVoice(text) {
+var searchField = document.getElementById('creditsSearchInput');
+var periodSelect = document.getElementById('creditsPeriodSelect');
+var voiceDisplay = document.getElementById('creditsVoiceDisplay');
 
 if (!searchField || !periodSelect) return;
 
-var detectedFilter = detectPeriodFilterVentes(text);
+var detectedFilter = detectPeriodFilterCredits(text);
 if (detectedFilter) {
 periodSelect.value = detectedFilter;
-window.ventesPeriod = detectedFilter;
-window.currentPages.ventes = 1;
+window.creditsPeriod = detectedFilter;
+window.currentPages.credits = 1;
 
 searchField.value = '';
-window.ventesSearch = '';
+window.creditsSearch = '';
 
 if (voiceDisplay) {
 var filterLabels = {
@@ -2162,113 +1023,102 @@ var filterLabels = {
 'week': '📅 Cette semaine',
 'month': '📅 Ce mois',
 'year': '📅 Cette année',
-'all': '📅 Toutes les ventes'
+'all': '📅 Tous les crédits'
 };
 voiceDisplay.value = filterLabels[detectedFilter] || '📅 Filtre appliqué';
 setTimeout(function() { voiceDisplay.value = ''; }, 2000);
 }
 
-applyVentesFilters();
+applyCreditsFilters();
 
-var clearBtn = document.getElementById('ventesClearBtn');
+var clearBtn = document.getElementById('creditsClearBtn');
 if (clearBtn) clearBtn.classList.add('hidden');
 
 return true;
 }
 
 searchField.value = text;
-window.ventesSearch = text;
-window.currentPages.ventes = 1;
-applyVentesFilters();
+window.creditsSearch = text;
+window.currentPages.credits = 1;
+applyCreditsFilters();
 
 return false;
 }
 
-// 🔧 CORRECTION CRITIQUE : Suppression de .limit(2000) pour charger TOUTES les ventes
-async function loadVentes() {
-var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
-var vendeurCaissier = '';
-if (!isAdmin && window.currentUserData) {
-    vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+function handleSearchInputCredits(target) {
+const searchField = document.getElementById(target + 'SearchInput');
+const clearBtn = document.getElementById(target + 'ClearBtn');
+if (searchField && clearBtn) {
+if (searchField.value.length > 0) {
+clearBtn.classList.remove('hidden');
+} else {
+clearBtn.classList.add('hidden');
+}
+}
 }
 
-var ventesFirestore = [];
-var ventesOffline = [];
-
-if (navigator.onLine) {
-    try {
-        // 🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes
-        const snapshot = await db.collection('ventes').orderBy('createdAt', 'desc').get();
-        snapshot.forEach(dc => {
-            var d = dc.data(); d.id = dc.id;
-            var achat = 0, profit = 0;
-            if (d.items) {
-                d.items.forEach(function(it) {
-                    var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
-                        pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
-                    achat += pa * q;
-                    profit += (pvr - pa) * q;
-                });
-            }
-            d.achat = achat; d.profit = profit;
-            ventesFirestore.push(d);
-        });
-        console.log('📥 Total ventes chargées depuis Firestore :', ventesFirestore.length);
-    } catch (e) {
-        console.warn('⚠️ Erreur Firestore ventes:', e);
+// 🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité
+async function loadCredits() {
+    var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
+    var vendeurCaissier = '';
+    if (!isAdmin && window.currentUserData) {
+        vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
     }
-}
 
-try {
-    var ventesOfflineRaw = JSON.parse(localStorage.getItem('posVentesOffline') || '[]');
-    ventesOfflineRaw.forEach(function(v) {
-        var dejaPresente = ventesFirestore.some(function(f) { return f.factureNum === v.factureNum; });
-        if (dejaPresente) return;
-
-        var achat = 0, profit = 0;
-        if (v.items) {
-            v.items.forEach(function(it) {
-                var pa = it.prixAchat || 0, pv = it.prixVente || 0, pp = it.prixPromo || 0,
-                    pvr = (pp > 0) ? pp : pv, q = it.quantite || 1;
-                achat += pa * q;
-                profit += (pvr - pa) * q;
+    // 🔥 ÉTAPE 1 : Charger TOUS les crédits depuis Firestore (SANS LIMITE) - Source de vérité
+    if (navigator.onLine) {
+        try {
+            const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').get();
+            window.allCreditsData = [];
+            snapshot.forEach(function(dc) {
+                var d = dc.data();
+                d.id = dc.id;
+                window.allCreditsData.push(d);
             });
+            console.log('📥 Total crédits chargés depuis Firestore :', window.allCreditsData.length);
+
+            // 🔥 ÉTAPE 2 : Mettre TOUS les crédits en cache
+            for (let doc of window.allCreditsData) {
+                await CacheDB.set('credits', doc.id, doc);
+            }
+            console.log('💾 Cache mis à jour avec', window.allCreditsData.length, 'crédits');
+        } catch (e) {
+            console.error('❌ Erreur chargement crédits Firestore:', e);
+            // Fallback sur le cache en cas d'erreur réseau
+            const cached = await CacheDB.getAll('credits');
+            window.allCreditsData = cached;
+            console.log('📴 Fallback cache:', window.allCreditsData.length, 'crédits');
         }
-        v.achat = achat; v.profit = profit;
-        v._isOffline = true;
-        ventesOffline.push(v);
-    });
-    console.log('📴 Ventes hors-ligne chargées:', ventesOffline.length);
-} catch(e) {
-    console.warn('⚠️ Erreur localStorage ventes:', e);
+    } else {
+        // Mode hors-ligne : utiliser le cache
+        const cached = await CacheDB.getAll('credits');
+        window.allCreditsData = cached;
+        console.log('📴 Hors-ligne:', cached.length, 'crédits depuis le cache');
+    }
+
+    // 🔥 ÉTAPE 3 : Appliquer le filtre vendeur UNIQUEMENT pour l'affichage
+    if (!isAdmin && vendeurCaissier) {
+        window.allCreditsData = window.allCreditsData.filter(function(d) {
+            return d.vendeur === vendeurCaissier;
+        });
+        console.log('👤 Crédits filtrés pour le caissier :', window.allCreditsData.length);
+    }
+
+    // 🔥 ÉTAPE 4 : Initialiser le tri et afficher
+    if (!window.sortOrders.credits) window.sortOrders.credits = {};
+    if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
+
+    window.currentPages.credits = 1;
+    applyCreditsFilters();
 }
 
-window.allVentesData = ventesFirestore.concat(ventesOffline);
+function applyCreditsFilters() {
+var filtered = filterByPeriodWithDatesCredits(window.allCreditsData, window.creditsPeriod);
 
-if (!isAdmin && vendeurCaissier) {
-    window.allVentesData = window.allVentesData.filter(function(d) { return d.vendeur === vendeurCaissier; });
-}
-
-window.allVentesData.sort(function(a, b) {
-    var da = a.createdAt?.seconds || 0;
-    var db = b.createdAt?.seconds || 0;
-    return db - da;
-});
-
-if (!window.sortOrders.ventes) window.sortOrders.ventes = {};
-if (!window.sortOrders.ventes.createdAt) { window.sortOrders.ventes.createdAt = 'desc'; }
-
-window.currentPages.ventes = 1;
-applyVentesFilters();
-}
-
-function applyVentesFilters() {
-var filtered = filterByPeriodWithDates(window.allVentesData, window.ventesPeriod);
-
-if (window.ventesDateDebut && window.ventesDateFin) {
-var debut = new Date(window.ventesDateDebut);
+if (window.creditsDateDebut && window.creditsDateFin) {
+var debut = new Date(window.creditsDateDebut);
 debut.setHours(0, 0, 0, 0);
-var fin = new Date(window.ventesDateFin);
+var fin = new Date(window.creditsDateFin);
 fin.setHours(23, 59, 59, 999);
 filtered = filtered.filter(function(d) {
 if (!d.createdAt) return false;
@@ -2277,48 +1127,38 @@ return date >= debut && date <= fin;
 });
 }
 
-if (window.ventesSearch && window.ventesSearch.trim() !== '') {
-filtered = filterVentesBySearchWithDescription(filtered, window.ventesSearch);
+if (window._posFilterClientId) {
+    filtered = filtered.filter(function(d) {
+        return d.clientId === window._posFilterClientId;
+    });
+}
+
+if (window.creditsSearch && window.creditsSearch.trim() !== '') {
+filtered = filterCreditsBySearchWithDescription(filtered, window.creditsSearch);
 } else {
 filtered.forEach(function(d) {
 delete d._clientDisplayName;
 });
 }
 
-var statusFilter = document.getElementById('ventesStatusFilter');
-if (statusFilter && statusFilter.value !== 'all') {
-    var sv = statusFilter.value;
-    filtered = filtered.filter(function(d) {
-        var st = d.statutPaiement || (d.paid ? 'payé' : 'impayé');
-        if (sv === 'credit_partiel') {
-            return (st === 'crédit' || st === 'partiel') && !d.paid;
-        }
-        return st === sv;
-    });
-}
-
-if (!window.sortOrders.ventes || !window.sortOrders.ventes.createdAt) {
+if (!window.sortOrders.credits || !window.sortOrders.credits.createdAt) {
 filtered.sort(function(a, b) {
 var da = a.createdAt?.seconds || 0;
 var db = b.createdAt?.seconds || 0;
 return db - da;
 });
 } else {
-filtered = applySort('ventes', filtered, 'createdAt');
-}
-window.filteredVentes = filtered;
-
-updateVentesStats(filtered);
-
-// 🆕 Mise à jour du graphique (uniquement si visible)
-if (window._ventesChartVisible) {
-    try { renderVentesChart(filtered); } catch(e) { console.warn('Erreur graphique:', e); }
+filtered = applySort('credits', filtered, 'createdAt');
 }
 
-renderVentesTablePro();
+window.filteredCredits = filtered;
+
+updateCreditsStats(filtered);
+
+renderCreditsTablePro();
 }
 
-function filterByPeriodWithDates(data, period) {
+function filterByPeriodWithDatesCredits(data, period) {
 if (!period || period === 'all') return data;
 var now = new Date(), cutoff;
 if (period === 'today') {
@@ -2334,125 +1174,31 @@ return date && date >= cutoff;
 });
 }
 
-function updateVentesStats(data) {
-var total = 0, profit = 0, achat = 0;
+function updateCreditsStats(data) {
+var total = 0, totalImpayes = 0, totalPaye = 0;
 data.forEach(function(d) {
 total += d.total || 0;
-profit += d.profit || 0;
-achat += d.achat || 0;
+if (!d.paid) {
+totalImpayes += d.remainingAmount || d.total || 0;
+}
+totalPaye += d.amountGiven || 0;
 });
 
-document.getElementById('ventesStatsTotal').textContent = total.toFixed(2);
-document.getElementById('ventesStatsProfit').textContent = profit.toFixed(2);
-document.getElementById('ventesStatsCount').textContent = data.length;
-document.getElementById('ventesStatsAchat').textContent = achat.toFixed(2);
+document.getElementById('creditsStatsTotal').textContent = total.toFixed(2);
+document.getElementById('creditsStatsImpayes').textContent = totalImpayes.toFixed(2);
+document.getElementById('creditsStatsCount').textContent = data.length;
+document.getElementById('creditsStatsPaye').textContent = totalPaye.toFixed(2);
 }
 
-async function synchroVenteDepuisCredit(creditData) {
-    try {
-        var factureNum = creditData.factureNum;
-        if (!factureNum) return;
-
-        var vente = window.allVentesData.find(function(v) {
-            return v.factureNum === factureNum || v.id === creditData.id;
-        });
-
-        if (!vente) {
-            var snapshot = await db.collection('ventes')
-                .where('factureNum', '==', factureNum)
-                .limit(1)
-                .get();
-            
-            if (snapshot.empty) {
-                console.log('⚠️ Aucune vente trouvée pour la facture:', factureNum);
-                return;
-            }
-            
-            snapshot.forEach(function(doc) {
-                vente = doc.data();
-                vente.id = doc.id;
-            });
-        }
-
-        if (vente) {
-            var totalVente = vente.total || 0;
-            var montantPaye = creditData.amountGiven || 0;
-            var restantCredit = creditData.remainingAmount || 0;
-            var estPaye = creditData.paid || (restantCredit <= 0.01);
-            
-            var statutPaiement = 'crédit';
-            if (estPaye) {
-                statutPaiement = 'payé';
-            } else if (montantPaye > 0 && restantCredit > 0) {
-                statutPaiement = 'partiel';
-            }
-
-            var updateData = {
-                paid: estPaye,
-                statutPaiement: statutPaiement,
-                amountGiven: montantPaye,
-                remainingAmount: restantCredit,
-                change: Math.max(0, montantPaye - totalVente),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            if (estPaye) {
-                updateData.paidAt = firebase.firestore.FieldValue.serverTimestamp();
-                updateData.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
-            }
-
-            await db.collection('ventes').doc(vente.id).update(updateData);
-            
-            var updatedVente = {
-                ...vente,
-                ...updateData,
-                paid: estPaye,
-                statutPaiement: statutPaiement,
-                amountGiven: montantPaye,
-                remainingAmount: restantCredit
-            };
-            await CacheDB.set('ventes', vente.id, updatedVente);
-            
-            var index = window.allVentesData.findIndex(function(v) {
-                return v.id === vente.id;
-            });
-            if (index !== -1) {
-                window.allVentesData[index] = updatedVente;
-            }
-            
-            var fIndex = (window.filteredVentes || []).findIndex(function(v) {
-                return v.id === vente.id;
-            });
-            if (fIndex !== -1) {
-                window.filteredVentes[fIndex] = updatedVente;
-            }
-            
-            var statusLabel = statutPaiement === 'payé' ? 'Payé ✅' : 
-                             statutPaiement === 'partiel' ? 'Partiel ⏳' : 'Crédit 💳';
-            console.log('✅ Vente synchronisée depuis crédit:', factureNum, '→ statut:', statusLabel);
-            
-            updateVentesStats(window.filteredVentes || window.allVentesData);
-            renderVentesTablePro();
-            
-            if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-                CacheDB.saveCollection('ventes');
-            }
-        }
-    } catch(e) {
-        console.error('❌ Erreur synchronisation vente depuis crédit:', e);
-    }
-}
-
-window.synchroVenteDepuisCredit = synchroVenteDepuisCredit;
-
-function renderVentesTablePro() {
-var cont = document.getElementById('ventesTableContainer');
+// ==================== RENDER CREDITS TABLE PRO ====================
+function renderCreditsTablePro() {
+var cont = document.getElementById('creditsTableContainer');
 if (!cont) return;
-var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
-var data = (window.filteredVentes || window.allVentesData).slice();
 
-if (window.sortOrders.ventes && window.sortOrders.ventes.createdAt) {
-data = applySort('ventes', data, 'createdAt');
+var data = (window.filteredCredits || window.allCreditsData).slice();
+
+if (window.sortOrders.credits && window.sortOrders.credits.createdAt) {
+data = applySort('credits', data, 'createdAt');
 } else {
 data.sort(function(a, b) {
 var da = a.createdAt?.seconds || 0;
@@ -2462,7 +1208,7 @@ return db - da;
 }
 
 var itemsPerPage = window.itemsPerPage || 15;
-var currentPage = window.currentPages.ventes || 1;
+var currentPage = window.currentPages.credits || 1;
 var start = (currentPage - 1) * itemsPerPage;
 var pageData = data.slice(start, start + itemsPerPage);
 
@@ -2470,275 +1216,836 @@ if (pageData.length === 0) {
 cont.innerHTML = `
 <div style="text-align:center;padding:60px 20px;">
 <i class="fas fa-inbox" style="font-size:3rem;color:#d1d5db;"></i>
-<p style="margin-top:16px;color:#6b7280;font-size:18px !important;">Aucune vente trouvée</p>
+<p style="margin-top:16px;color:#6b7280;font-size:18px !important;">Aucun crédit trouvé</p>
 </div>
 `;
-document.getElementById('ventesPagination').innerHTML = '';
+document.getElementById('creditsPagination').innerHTML = '';
 return;
 }
 
-var tv = 0, tProfit = 0, tAchat = 0;
+var tc = 0;
+var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
 
 var h = `
 <div class="table-container">
 <table class="data-table">
 <thead>
 <tr>
-<th style="width:40px; text-align:center;">
-${window.venteSelectionMode ? '<input type="checkbox" id="ventesSelectAllCheckbox" onchange="toggleAllVentesSelection()" title="Tout sélectionner">' : ''}
-</th>
-<th style="min-width:160px;"><i class="fas fa-receipt"></i> Facture</th>
+<th style="min-width:160px;"><i class="fas fa-file-invoice"></i> Facture</th>
 <th style="min-width:150px;"><i class="far fa-calendar-alt"></i> Date / Heure</th>
-<th style="min-width:150px;"><i class="fas fa-calendar-check"></i> Date paiement</th>
 <th style="min-width:180px;"><i class="fas fa-user"></i> Client</th>
 <th><i class="fas fa-box"></i> Articles</th>
-<th><i class="fas fa-cog"></i> Options</th>
-${isAdmin ? `<th><i class="fas fa-coins"></i> Achat</th><th><i class="fas fa-chart-line"></i> Profit</th>` : ''}
 <th><i class="fas fa-tag"></i> Total</th>
-<th><i class="fas fa-percent"></i> Remise</th>
-<th><i class="fas fa-hand-holding-usd"></i> Donné</th>
+<th><i class="fas fa-hand-holding-usd"></i> Payé</th>
 <th><i class="fas fa-hourglass-half"></i> Restant</th>
-<th><i class="fas fa-undo-alt"></i> Rendu</th>
+<th><i class="fas fa-credit-card"></i> Mode</th>
 ${isAdmin ? `<th><i class="fas fa-user-tie"></i> Vendeur</th>` : ''}
-<th><i class="fas fa-credit-card"></i> Paiement</th>
-<th><i class="fas fa-circle"></i> Statut</th>
 <th style="min-width:200px;"><i class="fas fa-tools"></i> Actions</th>
+${window.creditSelectionMode ? '<th style="width:40px;">☑️</th>' : ''}
 </tr>
 </thead>
 <tbody>
 `;
 
 pageData.forEach(function(d, index) {
-var isChecked = ventesSelectionnees.has(d.id) ? 'checked' : '';
+var reste = d.paid ? 0 : (d.remainingAmount || d.total || 0);
+if (!d.paid) tc += reste;
+
 const factureNum = d.factureNum || d.id?.substring(0, 8) || '---';
 const factureHtml = `
 <div class="facture-cell">
-<i class="fas fa-receipt"></i>
+<i class="fas fa-file-invoice"></i>
 <span class="facture-number">#${factureNum}</span>
 </div>
 `;
-const dateHtml = renderDateCell(d);
-const datePaiementHtml = renderDatePaiementCell(d);
-const clientHtml = renderClientCell(d);
+const dateHtml = renderCreditDateCell(d);
+const clientHtml = renderCreditClientCell(d);
 
-var arts = d.items ? d.items.map(function(it) {
-return '<strong>' + it.quantite + 'x</strong> ' + escapeHtml(it.nom);
-}).join('<br>') : '-';
-
-var opts = d.items ? d.items.map(function(it) {
-var o = [];
-if (it.sauces && it.sauces.length) o.push('<span style="color:#14B8A6;">🥫' + escapeHtml(it.sauces.join(',')) + '</span>');
-if (it.interdits && it.interdits.length) o.push('<span style="color:#ef4444;">🚫' + escapeHtml(it.interdits.join(',')) + '</span>');
-if (it.epice && it.epice !== 'Normal') o.push('<span style="color:#d97706;">🌶️' + escapeHtml(it.epice) + '</span>');
-if (it.sel && it.sel !== 'Normal') o.push('<span style="color:#4f46e5;">🧂' + escapeHtml(it.sel) + '</span>');
-return o.length ? o.join(' | ') : '<span style="color:#9ca3af;">Aucune option</span>';
-}).join('<br>') : '-';
-
-tv += d.total || 0;
-tProfit += d.profit || 0;
-tAchat += d.achat || 0;
-
-var statutPaiement = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
-if (d.paid && statutPaiement !== 'payé') {
-    statutPaiement = 'payé';
-}
-if (d.amountGiven > 0 && d.remainingAmount > 0 && statutPaiement !== 'partiel') {
-    statutPaiement = 'partiel';
+var articlesHtml = '';
+if (d.items && d.items.length > 0) {
+articlesHtml = d.items.map(function(it) {
+return '<strong>' + (it.quantite || 1) + 'x</strong> ' + escapeHtml(it.nom || '');
+}).join('<br>');
+} else {
+articlesHtml = '-';
 }
 
-var statutMap = {
-'payé': { class: 'status-success', label: 'Payé', icon: 'fa-check-circle' },
-'crédit': { class: 'status-warning', label: 'Crédit', icon: 'fa-hand-holding-usd' },
-'partiel': { class: 'status-warning', label: 'Partiel', icon: 'fa-clock' },
-'en_attente': { class: 'status-danger', label: 'En attente', icon: 'fa-hourglass-half' },
-'impayé': { class: 'status-danger', label: 'Impayé', icon: 'fa-times-circle' }
-};
-var st = statutMap[statutPaiement] || { class: 'status-warning', label: statutPaiement || 'Inconnu', icon: 'fa-question-circle' };
-
-var paymentMethod = d.paymentMethod || 'crédit';
+var mode = d.paymentMethod || '-';
+var amountPaid = d.amountGiven || 0;
 
 var actions = `
 <div class="action-buttons">
     <button class="btn-print" onclick="printFacture('${d.id}')" title="Imprimer / PDF">Imprimer</button>
-    <button class="btn-whatsapp" onclick="sendWhatsApp('${d.id}')" title="Envoyer WhatsApp">WhatsApp</button>
+    <button class="btn-whatsapp" onclick="sendCreditWhatsApp('${d.id}')" title="Envoyer WhatsApp">WhatsApp</button>
     `;
 if (!d.paid) {
-    actions += `<button class="btn-payer" onclick="payerVente('${d.id}')" title="Payer">Payer</button>`;
+    actions += `<button class="btn-payer" onclick="openCreditPaymentModal('${d.id}')" title="Marquer payé">Payer</button>`;
 }
-if (isAdmin) {
-    actions += `
-    <button class="btn-edit" onclick="editVente('${d.id}')" title="Modifier">Modifier</button>
-    <button class="btn-delete" onclick="deleteVente('${d.id}')" title="Supprimer">Supprimer</button>
+actions += `
+    <button class="btn-edit" onclick="editCredit('${d.id}')" title="Modifier">Modifier</button>
     `;
+if (isAdmin) {
+    actions += `<button class="btn-delete" onclick="if(confirm('Supprimer définitivement ce crédit ?')) deleteCredit('${d.id}')" title="Supprimer">Supprimer</button>`;
 }
 actions += `</div>`;
 
-var restantColor = (d.remainingAmount || 0) > 0 ? '#ef4444' : '#14B8A6';
+var isSelected = window.creditSelectedIds.includes(d.id);
+var rowClass = isSelected ? ' style="background:#fef3c7; border-left:4px solid #d97706;"' : '';
 
-h += `
-<tr>
-<td style="text-align:center; vertical-align:middle;">
-${window.venteSelectionMode ? '<input type="checkbox" class="vente-checkbox" data-id="' + d.id + '" ' + isChecked + ' onchange="toggleVenteSelection(\'' + d.id + '\')" style="transform:scale(1.3);width:20px;height:20px;">' : ''}
-</td>
-<td onclick="openFactureDetails('${d.id}', '${escapeHtml(factureNum)}')" style="cursor:pointer;">
+h += `<tr${rowClass}>
+<td onclick="openCreditFactureDetails('${d.id}', '${escapeHtml(factureNum)}')" style="cursor:pointer;">
 ${factureHtml}
 </td>
 <td>${dateHtml}</td>
-<td>${datePaiementHtml}</td>
 <td>${clientHtml}</td>
-<td>${arts}</td>
-<td>${opts}</td>
-${isAdmin ? `<td>${(d.achat || 0).toFixed(2)}</td><td style="color:#14B8A6;font-weight:700;">${(d.profit || 0).toFixed(2)}</td>` : ''}
-<td><span class="amount-total">${(d.total || 0).toFixed(2)} MAD</span></td>
-<td>${(d.discountMAD || 0).toFixed(2)}</td>
-<td><span style="font-weight:700;color:#2563eb;">${(d.amountGiven || 0).toFixed(2)}</span></td>
-<td><span style="font-weight:700;color:${restantColor};">${(d.remainingAmount || 0).toFixed(2)} MAD</span></td>
-<td>${(d.change || 0).toFixed(2)}</td>
+<td>${articlesHtml}</td>
+<td><span class="amount-total">${d.total.toFixed(2)} MAD</span></td>
+<td>${amountPaid.toFixed(2)} MAD</td>
+<td><span class="amount-remaining">${reste.toFixed(2)} MAD</span></td>
+<td>${escapeHtml(mode)}</td>
 ${isAdmin ? `<td>${escapeHtml(d.vendeur || '-')}</td>` : ''}
-<td>${escapeHtml(paymentMethod)}</td>
-<td><span class="${st.class}"><i class="fas ${st.icon}"></i> ${st.label}</span></td>
 <td>${actions}</td>
-</tr>
-`;
+${window.creditSelectionMode ? `<td style="text-align:center;"><input type="checkbox" class="credit-select-check" data-id="${d.id}" ${isSelected ? 'checked' : ''} onchange="toggleCreditSelection('${d.id}')" style="transform:scale(1.5);width:24px;height:24px;"></td>` : ''}
+</tr>`;
 });
 
 h += `
 </tbody>
 </table>
 </div>
+<div class="total-row-pro">
+<span class="total-label">Total Impayés</span>
+<span class="total-amount"><i class="fas fa-exclamation-triangle"></i> ${tc.toFixed(2)} MAD</span>
+</div>
 `;
+
 cont.innerHTML = h;
-document.getElementById('ventesPagination').innerHTML = getPaginationHTML('ventes', data.length);
-updateVenteSelectionUI();
+document.getElementById('creditsPagination').innerHTML = getPaginationHTML('credits', data.length);
 }
 
-function editVente(did) {
-db.collection('ventes').doc(did).get().then(function(doc) {
-if (doc.exists) {
-window.editingId = did;
-window.currentCollection = 'ventes';
-var d = doc.data();
-var h = `
-<div class="form-row">
-<div class="form-group">
-<label><i class="fas fa-circle"></i> Statut paiement</label>
-<select id="editStatut">
-<option value="payé" ${d.statutPaiement === 'payé' ? 'selected' : ''}>Payé</option>
-<option value="crédit" ${d.statutPaiement === 'crédit' ? 'selected' : ''}>Crédit</option>
-<option value="partiel" ${d.statutPaiement === 'partiel' ? 'selected' : ''}>Partiel</option>
-<option value="en_attente" ${d.statutPaiement === 'en_attente' ? 'selected' : ''}>En attente</option>
-</select>
-</div>
-<div class="form-group">
-<label><i class="fas fa-hand-holding-usd"></i> Montant donné</label>
-<input type="number" id="editAmountGiven" value="${d.amountGiven || 0}" step="0.01">
-</div>
-</div>
-<div class="form-row">
-<div class="form-group">
-<label><i class="fas fa-undo-alt"></i> Montant rendu</label>
-<input type="number" id="editChange" value="${d.change || 0}" step="0.01">
-</div>
-<div class="form-group">
-<label><i class="fas fa-hourglass-half"></i> Reste à payer</label>
-<input type="number" id="editRemaining" value="${d.remainingAmount || 0}" step="0.01">
-</div>
-</div>
-<button class="btn-cancel" onclick="closeModal()">Annuler</button>
-<button class="btn-save" onclick="saveEditVente()"><i class="fas fa-save"></i> Enregistrer</button>
-`;
-openModal('Modifier vente ' + (d.factureNum || ''), h);
+// ==================== SÉLECTION CRÉDITS ====================
+
+function toggleCreditSelectionMode() {
+    window.creditSelectionMode = !window.creditSelectionMode;
+    window.creditSelectedIds = [];
+    window.creditSelectedClientId = null;
+    window.creditSelectedClientName = null;
+    var selectAllBtn = document.getElementById('selectAllBtn');
+    if (selectAllBtn) {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+        selectAllBtn.style.background = '#4f46e5';
+    }
+    window.selectAllBtnState = false;
+
+    var selectBtn = document.getElementById('toggleSelectionBtn');
+    var deleteBtn = document.getElementById('deleteSelectedBtn');
+    var payBtn = document.getElementById('paySelectedBtn');
+    if (selectBtn) {
+        if (window.creditSelectionMode) {
+            selectBtn.innerHTML = '<i class="fas fa-times-circle"></i> Annuler';
+        } else {
+            selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+        }
+    }
+    if (selectAllBtn) {
+        selectAllBtn.style.display = window.creditSelectionMode ? 'inline-block' : 'none';
+    }
+    if (deleteBtn) {
+        deleteBtn.style.display = 'none';
+    }
+    if (payBtn) {
+        payBtn.style.display = 'none';
+    }
+    renderCreditsTablePro();
 }
+
+function toggleCreditSelection(id) {
+    var idx = window.creditSelectedIds.indexOf(id);
+
+    if (idx !== -1) {
+        window.creditSelectedIds.splice(idx, 1);
+        if (window.creditSelectedIds.length === 0) {
+            window.creditSelectedClientId = null;
+            window.creditSelectedClientName = null;
+        }
+        updateDeleteButtonVisibility();
+        renderCreditsTablePro();
+        return;
+    }
+
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) { return c.id === id; });
+
+    if (!credit) {
+        updateDeleteButtonVisibility();
+        renderCreditsTablePro();
+        return;
+    }
+
+    if (window.creditSelectedIds.length === 0) {
+        window.creditSelectedClientId = credit.clientId || null;
+        window.creditSelectedClientName = credit.clientName || 'Client inconnu';
+        window.creditSelectedIds.push(id);
+        updateDeleteButtonVisibility();
+        renderCreditsTablePro();
+        return;
+    }
+
+    var currentClientId = window.creditSelectedClientId;
+    var currentClientName = window.creditSelectedClientName;
+
+    if (credit.clientId !== currentClientId) {
+        var confirmer = confirm(
+            '⚠️ CLIENT DIFFÉRENT DÉTECTÉ\n\n' +
+            'Vous avez déjà sélectionné des crédits de :\n' +
+            '👤 ' + (currentClientName || 'Client inconnu') + '\n\n' +
+            'Vous voulez ajouter des crédits de :\n' +
+            '👤 ' + (credit.clientName || 'Client inconnu') + '\n\n' +
+            '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
+            '✅ OK = Oui, autoriser les 2 clients\n' +
+            '❌ Annuler = Non, refuser'
+        );
+
+        if (!confirmer) {
+            renderCreditsTablePro();
+            return;
+        }
+
+        window.creditSelectedClientId = 'MULTI';
+        window.creditSelectedClientName = 'Plusieurs clients';
+    }
+
+    window.creditSelectedIds.push(id);
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
+}
+
+function updateDeleteButtonVisibility() {
+    var deleteBtn = document.getElementById('deleteSelectedBtn');
+    var payBtn = document.getElementById('paySelectedBtn');
+
+    if (deleteBtn) {
+        if (window.creditSelectedIds.length === 0) {
+            deleteBtn.style.display = 'none';
+        } else {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Supprimer (' + window.creditSelectedIds.length + ')';
+        }
+    }
+
+    if (payBtn) {
+        if (window.creditSelectedIds.length === 0) {
+            payBtn.style.display = 'none';
+        } else {
+            payBtn.style.display = 'inline-block';
+            var clientLabel = '';
+            if (window.creditSelectedClientName === 'Plusieurs clients') {
+                clientLabel = ' - Multi-clients';
+            } else if (window.creditSelectedClientName) {
+                clientLabel = ' - ' + window.creditSelectedClientName.substring(0, 15);
+            }
+            payBtn.innerHTML = '<i class="fas fa-check-circle"></i> Marquer payé (' + window.creditSelectedIds.length + ')' + clientLabel;
+        }
+    }
+}
+
+window.selectAllBtnState = false;
+
+function selectAllVisibleCredits() {
+    var data = window.filteredCredits || window.allCreditsData;
+    var pageData = getPageData('credits', data);
+    
+    if (pageData.length === 0) return;
+    
+    var firstClientId = pageData[0].clientId;
+    var firstClientName = pageData[0].clientName || 'Client inconnu';
+    var hasDifferentClient = pageData.some(function(c) {
+        return c.clientId !== firstClientId;
+    });
+    
+    if (hasDifferentClient) {
+        var uniqueClients = new Set();
+        pageData.forEach(function(c) {
+            uniqueClients.add(c.clientId || 'inconnu');
+        });
+        
+        var confirmer = confirm(
+            '⚠️ SÉLECTION MULTI-CLIENTS\n\n' +
+            'Cette page contient des crédits de ' + uniqueClients.size + ' clients différents.\n\n' +
+            '❓ Voulez-vous AUTORISER la sélection multi-clients ?\n\n' +
+            '✅ OK = Oui, sélectionner TOUS les crédits\n' +
+            '❌ Annuler = Non, annuler'
+        );
+        
+        if (!confirmer) {
+            return;
+        }
+        
+        window.creditSelectedClientId = 'MULTI';
+        window.creditSelectedClientName = 'Plusieurs clients';
+    } else {
+        window.creditSelectedClientId = firstClientId;
+        window.creditSelectedClientName = firstClientName;
+    }
+    
+    window.creditSelectedIds = pageData.map(function(d) { return d.id; });
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
+}
+
+function deselectAllVisibleCredits() {
+    window.creditSelectedIds = [];
+    window.creditSelectedClientId = null;
+    window.creditSelectedClientName = null;
+    updateDeleteButtonVisibility();
+    renderCreditsTablePro();
+}
+
+function toggleSelectAllVisible() {
+if (window.selectAllBtnState) {
+deselectAllVisibleCredits();
+} else {
+selectAllVisibleCredits();
+}
+window.selectAllBtnState = !window.selectAllBtnState;
+var btn = document.getElementById('selectAllBtn');
+if (btn) {
+if (window.selectAllBtnState) {
+btn.innerHTML = '<i class="fas fa-times"></i> Tout décocher';
+btn.style.background = '#ef4444';
+} else {
+btn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+btn.style.background = '#4f46e5';
+}
+}
+}
+
+function deleteSelectedCredits() {
+if (window.creditSelectedIds.length === 0) {
+alert('Aucun crédit sélectionné.');
+return;
+}
+if (!confirm('Supprimer définitivement les ' + window.creditSelectedIds.length + ' crédits sélectionnés ?')) return;
+
+var promises = window.creditSelectedIds.map(function(id) {
+return db.collection('credits').doc(id).delete().then(function() {
+window.allCreditsData = window.allCreditsData.filter(function(c) { return c.id !== id; });
 });
-}
-
-function saveEditVente() {
-var statut = document.getElementById('editStatut').value;
-var amountGiven = parseFloat(document.getElementById('editAmountGiven').value) || 0;
-var change = parseFloat(document.getElementById('editChange').value) || 0;
-var remaining = parseFloat(document.getElementById('editRemaining').value) || 0;
-var paid = (statut === 'payé');
-
-var data = {
-statutPaiement: statut,
-amountGiven: amountGiven,
-change: change,
-remainingAmount: paid ? 0 : remaining,
-paid: paid,
-updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-};
-
-if (paid) {
-    data.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
-    data.paidAt = firebase.firestore.FieldValue.serverTimestamp();
-}
-
-saveDocument('ventes', data, function() { 
-closeModal(); 
-loadVentes(); 
-
-if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-    CacheDB.saveCollection('ventes');
-}
 });
-}
 
-function deleteVente(did) {
-if (confirm('Supprimer définitivement cette vente ?')) {
-CacheDB.write('ventes', did, null, 'delete').then(function() {
-alert('✅ Supprimé');
-loadVentes();
+Promise.all(promises).then(function() {
+alert('✅ ' + window.creditSelectedIds.length + ' crédit(s) supprimé(s).');
+window.creditSelectedIds = [];
+window.creditSelectionMode = false;
+window.creditSelectedClientId = null;
+window.creditSelectedClientName = null;
+var selectBtn = document.getElementById('toggleSelectionBtn');
+var deleteBtn = document.getElementById('deleteSelectedBtn');
+var selectAllBtn = document.getElementById('selectAllBtn');
+var payBtn = document.getElementById('paySelectedBtn');
+if (selectBtn) selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+if (deleteBtn) deleteBtn.style.display = 'none';
+if (selectAllBtn) selectAllBtn.style.display = 'none';
+if (payBtn) payBtn.style.display = 'none';
+loadCredits();
 CacheDB.sync();
 
 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-    CacheDB.saveCollection('ventes');
+    CacheDB.saveCollection('credits');
 }
+}).catch(function(e) {
+alert('❌ Erreur: ' + e.message);
 });
 }
+
+// ============================================================
+// ✅ FONCTION : Marquer payés tous les crédits sélectionnés
+// ============================================================
+async function paySelectedCredits() {
+    if (!window.creditSelectedIds || window.creditSelectedIds.length === 0) {
+        alert('❌ Aucun crédit sélectionné.');
+        return;
+    }
+
+    var count = window.creditSelectedIds.length;
+    var alreadyPaid = 0;
+    var toPay = [];
+    var totalImpayes = 0;
+
+    window.creditSelectedIds.forEach(function(id) {
+        var credit = (window.allCreditsData || []).find(function(c) { return c.id === id; });
+        if (!credit) return;
+        if (credit.paid) {
+            alreadyPaid++;
+        } else {
+            toPay.push(credit);
+            totalImpayes += credit.remainingAmount || credit.total || 0;
+        }
+    });
+
+    if (toPay.length === 0) {
+        alert('⚠️ Tous les crédits sélectionnés sont déjà payés.');
+        return;
+    }
+
+    var message = '💳 Marquer ' + toPay.length + ' crédit(s) comme PAYÉ(S) ?\n\n';
+    message += '💰 Montant total à régulariser : ' + totalImpayes.toFixed(2) + ' MAD\n';
+    if (alreadyPaid > 0) {
+        message += '\n⚠️ ' + alreadyPaid + ' crédit(s) déjà payé(s) seront ignorés.\n';
+    }
+    message += '\nConfirmer ?';
+
+    if (!confirm(message)) return;
+
+    try {
+        var paiements = [];
+        var now = firebase.firestore.FieldValue.serverTimestamp();
+
+        var promises = toPay.map(function(credit) {
+            var restant = credit.remainingAmount || credit.total || 0;
+            var nouveauPaye = (credit.amountGiven || 0) + restant;
+
+            paiements.push({
+                creditId: credit.id,
+                factureNum: credit.factureNum || credit.id.substring(0, 8),
+                clientId: credit.clientId,
+                clientName: credit.clientName || 'Client inconnu',
+                montantPaye: restant,
+                totalCredit: credit.total || 0,
+                items: credit.items || []
+            });
+
+            // ✅ AJOUT : datePaiement + paidAt quand le crédit est soldé
+            return db.collection('credits').doc(credit.id).update({
+                amountGiven: nouveauPaye,
+                remainingAmount: 0,
+                paid: true,
+                datePaiement: now,
+                paidAt: now,
+                updatedAt: now,
+                lastPaymentAt: now,
+                lastPaymentAmount: restant
+            }).then(function() {
+                var updatedCredit = {
+                    ...credit,
+                    amountGiven: nouveauPaye,
+                    remainingAmount: 0,
+                    paid: true
+                };
+                return CacheDB.set('credits', credit.id, updatedCredit).then(function() {
+                    var idx = window.allCreditsData.findIndex(function(c) { return c.id === credit.id; });
+                    if (idx !== -1) window.allCreditsData[idx] = updatedCredit;
+
+                    if (window.filteredCredits) {
+                        var fidx = window.filteredCredits.findIndex(function(c) { return c.id === credit.id; });
+                        if (fidx !== -1) window.filteredCredits[fidx] = updatedCredit;
+                    }
+
+                    if (typeof window.synchroVenteDepuisCredit === 'function') {
+                        var creditData = {
+                            id: credit.id,
+                            factureNum: credit.factureNum,
+                            amountGiven: nouveauPaye,
+                            total: credit.total,
+                            paid: true,
+                            remainingAmount: 0,
+                            clientId: credit.clientId,
+                            clientName: credit.clientName
+                        };
+                        return window.synchroVenteDepuisCredit(creditData);
+                    }
+                    return Promise.resolve();
+                });
+            });
+        });
+
+        await Promise.all(promises);
+
+        var facturePaiement = await creerFacturePaiementCredits(paiements, totalImpayes);
+
+        updateCreditsStats(window.filteredCredits || window.allCreditsData);
+        renderCreditsTablePro();
+
+        window.creditSelectedIds = [];
+        window.creditSelectionMode = false;
+        window.selectAllBtnState = false;
+        window.creditSelectedClientId = null;
+        window.creditSelectedClientName = null;
+
+        var selectBtn = document.getElementById('toggleSelectionBtn');
+        var selectAllBtn = document.getElementById('selectAllBtn');
+        var deleteBtn = document.getElementById('deleteSelectedBtn');
+        var payBtn = document.getElementById('paySelectedBtn');
+        if (selectBtn) selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+        if (selectAllBtn) {
+            selectAllBtn.style.display = 'none';
+            selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+        }
+        if (deleteBtn) deleteBtn.style.display = 'none';
+        if (payBtn) payBtn.style.display = 'none';
+
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('credits');
+            CacheDB.saveCollection('ventes');
+        }
+
+        CacheDB.sync();
+
+        await posAfficherOptionWhatsAppPaiement(facturePaiement, toPay);
+
+    } catch (e) {
+        console.error('❌ Erreur paiement groupé:', e);
+        alert('❌ Erreur lors du paiement groupé : ' + e.message);
+    }
 }
+window.paySelectedCredits = paySelectedCredits;
 
-async function payerVente(did) {
-    var dc = await db.collection('ventes').doc(did).get();
-    if (!dc.exists) { alert('Vente introuvable'); return; }
-    var d = dc.data();
-    d.id = did;
+// ============================================================
+// ✅ FONCTION : Créer une facture de paiement de crédits
+// ============================================================
+async function creerFacturePaiementCredits(paiements, totalPaye) {
+    var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
+    factureCounter++;
+    localStorage.setItem('factureCounter', factureCounter);
+    var numFacture = 'PAI-' + new Date().getFullYear() + '-' + String(factureCounter).padStart(5, '0');
 
-    if (d.paid) {
-        alert('✅ Cette vente est déjà payée.');
+    var clientIds = [...new Set(paiements.map(p => p.clientId).filter(Boolean))];
+    var clientNames = [...new Set(paiements.map(p => p.clientName).filter(Boolean))];
+    var clientId = clientIds.length === 1 ? clientIds[0] : null;
+
+    var clientName = '';
+    if (clientNames.length === 1) {
+        clientName = clientNames[0];
+    } else if (clientNames.length === 2) {
+        clientName = clientNames[0] + ' & ' + clientNames[1];
+    } else if (clientNames.length > 2) {
+        var noms = clientNames.slice(0, 3).join(', ');
+        if (clientNames.length > 3) {
+            noms += ' + ' + (clientNames.length - 3) + ' autres';
+        }
+        clientName = noms;
+    }
+
+    var vendeur = '';
+    if (window.currentUserData) {
+        vendeur = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    }
+
+    var items = paiements.map(function(p) {
+        return {
+            id: p.creditId,
+            nom: 'Crédit #' + p.factureNum + (p.clientName ? ' - ' + p.clientName : ''),
+            quantite: 1,
+            prixVente: p.montantPaye,
+            prixAchat: 0,
+            prixPromo: 0,
+            profit: 0
+        };
+    });
+
+    var factureData = {
+        factureNum: numFacture,
+        items: items,
+        subtotal: totalPaye,
+        discountMAD: 0,
+        total: totalPaye,
+        clientId: clientId,
+        clientName: clientName,
+        table: null,
+        vendeur: vendeur,
+        paymentMethod: 'espece',
+        statutPaiement: 'payé',
+        amountGiven: totalPaye,
+        change: 0,
+        paid: true,
+        remainingAmount: 0,
+        profitTotal: 0,
+        type: 'paiement_credits',
+        creditsPayes: paiements.map(p => ({
+            creditId: p.creditId,
+            factureNum: p.factureNum,
+            montantPaye: p.montantPaye,
+            clientName: p.clientName
+        })),
+        createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
+    };
+
+    try {
+        if (navigator.onLine) {
+            var sd = Object.assign({}, factureData, {
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            var docRef = await db.collection('factures_paiement').add(sd);
+            factureData.id = docRef.id;
+
+            if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+                await CacheDB.set('factures_paiement', docRef.id, Object.assign({id: docRef.id}, factureData));
+            }
+        } else {
+            factureData.id = 'offline_' + Date.now();
+            var facturesLS = JSON.parse(localStorage.getItem('facturesPaiementOffline') || '[]');
+            facturesLS.push(factureData);
+            localStorage.setItem('facturesPaiementOffline', JSON.stringify(facturesLS));
+        }
+    } catch(e) {
+        console.warn('⚠️ Erreur sauvegarde facture paiement:', e);
+    }
+
+    return factureData;
+}
+window.creerFacturePaiementCredits = creerFacturePaiementCredits;
+
+// ============================================================
+// 📱 AFFICHER LE MODAL WHATSAPP AVEC TOUS LES DÉTAILS
+// ============================================================
+async function posAfficherOptionWhatsAppPaiement(factureData, creditsDetailes) {
+    try {
+        var clientName = factureData.clientName || 'Client';
+        var clientId = factureData.clientId;
+        var clientTel = '';
+
+        if (clientId) {
+            var client = (window.clientsDataForSearch || []).find(function(c) { return c.id === clientId; });
+            if (client) {
+                clientTel = client.telephone || client.whatsapp || '';
+            }
+
+            if (!clientTel && navigator.onLine) {
+                try {
+                    var clientDoc = await db.collection('clients').doc(clientId).get();
+                    if (clientDoc.exists) {
+                        var cData = clientDoc.data();
+                        clientTel = cData.telephone || cData.whatsapp || '';
+                        console.log('✅ Téléphone client récupéré depuis Firestore:', clientTel);
+                    }
+                } catch(e) {
+                    console.warn('⚠️ Erreur récupération téléphone client:', e);
+                }
+            }
+        }
+
+        var telDisplay = clientTel ? clientTel.replace(/\D/g, '') : '';
+        var dateStr = new Date().toLocaleDateString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        var messageWhatsApp = '';
+        messageWhatsApp += '✅ *REÇU DE PAIEMENT*\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += '📄 Reçu N° : ' + factureData.factureNum + '\n';
+        messageWhatsApp += '📅 Date : ' + dateStr + '\n';
+        messageWhatsApp += '👤 Client : ' + clientName + '\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n\n';
+
+        if (creditsDetailes && creditsDetailes.length > 0) {
+            for (var i = 0; i < creditsDetailes.length; i++) {
+                var credit = creditsDetailes[i];
+                var factureNum = credit.factureNum || credit.id.substring(0, 8);
+                var sousTotal = credit.total || 0;
+                var restant = credit.remainingAmount || 0;
+
+                messageWhatsApp += '📋 *FACTURE #' + factureNum + '*\n';
+
+                if (credit.clientName) {
+                    messageWhatsApp += '   👤 ' + credit.clientName + '\n';
+                }
+
+                if (credit.createdAt && credit.createdAt.seconds) {
+                    var cDate = new Date(credit.createdAt.seconds * 1000);
+                    messageWhatsApp += '   📅 ' + cDate.toLocaleDateString('fr-FR') + ' ' + cDate.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '\n';
+                }
+
+                if (credit.items && credit.items.length > 0) {
+                    messageWhatsApp += '   *Produits :*\n';
+                    credit.items.forEach(function(item) {
+                        var prix = item.prixVente || item.prixUnitaire || 0;
+                        var qte = item.quantite || 1;
+                        var totalItem = prix * qte;
+
+                        var opts = '';
+                        if (item.interdits && item.interdits.length) opts += ' 🚫' + item.interdits.join(',');
+                        if (item.epice && item.epice !== 'Normal') opts += ' 🌶️' + item.epice;
+                        if (item.sel && item.sel !== 'Normal') opts += ' 🧂' + item.sel;
+
+                        messageWhatsApp += '   • ' + qte + 'x ' + item.nom + opts + ' → ' + totalItem.toFixed(2) + ' MAD\n';
+                    });
+                }
+
+                messageWhatsApp += '   💵 Sous-total : ' + sousTotal.toFixed(2) + ' MAD\n';
+
+                if (restant > 0) {
+                    messageWhatsApp += '   ⏳ Restant payé : ' + restant.toFixed(2) + ' MAD\n';
+                }
+
+                messageWhatsApp += '\n';
+            }
+        } else {
+            var lignesCredits = factureData.creditsPayes.map(function(c) {
+                return '• Facture #' + c.factureNum + ' → ' + c.montantPaye.toFixed(2) + ' MAD';
+            }).join('\n');
+            messageWhatsApp += '*CRÉDITS RÉGLÉS :*\n' + lignesCredits + '\n\n';
+        }
+
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += '💵 *TOTAL GÉNÉRAL : ' + factureData.total.toFixed(2) + ' MAD*\n';
+        messageWhatsApp += '💳 Mode : Espèces\n';
+        messageWhatsApp += '📊 Nombre de factures : ' + (creditsDetailes ? creditsDetailes.length : factureData.creditsPayes.length) + '\n';
+        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
+        messageWhatsApp += 'Merci pour votre règlement ! 🙏\n';
+        messageWhatsApp += 'E-SOLUTION POS';
+
+        window._posWhatsAppPaiementData = {
+            message: messageWhatsApp,
+            clientTel: clientTel,
+            clientName: clientName,
+            clientId: clientId,
+            factureNum: factureData.factureNum
+        };
+
+        var telInfo = telDisplay
+            ? '<strong>📞 Téléphone :</strong> ' + escapeHtml(clientTel) + ' <span style="color:#10B981;">✅</span>'
+            : '<em style="color:#92400E;">⚠️ Aucun numéro de téléphone enregistré pour ce client</em>';
+
+        var confirmHtml = `
+            <div style="padding:16px;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:8px;">✅</div>
+                <h3 style="margin:0 0 4px;color:#10B981;font-size:1.3rem;font-weight:700;">Paiement enregistré !</h3>
+                <p style="color:#64748b;margin:0 0 16px;font-size:0.95rem;">
+                    Reçu <strong>${escapeHtml(factureData.factureNum)}</strong> — <strong>${factureData.total.toFixed(2)} MAD</strong>
+                </p>
+
+                <div style="padding:14px;background:#F0FDF4;border:2px solid #10B981;border-radius:10px;margin-bottom:16px;text-align:left;">
+                    <p style="margin:0;font-size:0.9rem;color:#065F46;">
+                        <strong>👤 Client :</strong> ${escapeHtml(clientName)}<br>
+                        <strong>📄 Nb crédits :</strong> ${creditsDetailes ? creditsDetailes.length : factureData.creditsPayes.length}<br>
+                        ${telInfo}
+                    </p>
+                </div>
+
+                <p style="color:#334155;font-weight:600;margin-bottom:12px;font-size:1rem;">
+                    📱 Voulez-vous envoyer le reçu détaillé par WhatsApp${telDisplay ? ' au ' + escapeHtml(clientTel) : ''} ?
+                </p>
+
+                <div style="display:flex;gap:8px;">
+                    <button onclick="posFermerModalWhatsAppPaiement()"
+                        style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;">
+                        ❌ Non
+                    </button>
+                    <button onclick="posEnvoyerWhatsAppPaiement()"
+                        style="flex:2;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(37,211,102,0.3);">
+                        <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Envoyer WhatsApp
+                    </button>
+                </div>
+            </div>
+        `;
+
+        openModal('🧾 Paiement validé', confirmHtml);
+
+    } catch(e) {
+        console.error('❌ Erreur posAfficherOptionWhatsAppPaiement:', e);
+    }
+}
+window.posAfficherOptionWhatsAppPaiement = posAfficherOptionWhatsAppPaiement;
+
+// ============================================================
+// 📱 ENVOYER WHATSAPP POUR LE PAIEMENT
+// ============================================================
+function posEnvoyerWhatsAppPaiement() {
+    try {
+        var data = window._posWhatsAppPaiementData;
+        if (!data) {
+            alert('❌ Aucune facture en mémoire.');
+            closeModal();
+            return;
+        }
+
+        var message = data.message || '';
+        var tel = (data.clientTel || '').replace(/\D/g, '');
+
+        if (tel) {
+            if (tel.startsWith('0')) {
+                tel = '212' + tel.substring(1);
+            } else if (tel.startsWith('+')) {
+                tel = tel.replace(/\D/g, '');
+            }
+        }
+
+        var url;
+        if (tel && tel.length >= 8) {
+            url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp Paiement] Envoi au numéro :', tel);
+        } else {
+            url = 'https://wa.me/?text=' + encodeURIComponent(message);
+            console.log('📱 [WhatsApp Paiement] Aucun numéro — WhatsApp Web sans destinataire');
+        }
+
+        window.open(url, '_blank');
+
+        closeModal();
+        window._posWhatsAppPaiementData = null;
+
+    } catch(e) {
+        console.error('❌ Erreur posEnvoyerWhatsAppPaiement:', e);
+        alert('❌ Erreur WhatsApp : ' + e.message);
+    }
+}
+window.posEnvoyerWhatsAppPaiement = posEnvoyerWhatsAppPaiement;
+
+function posFermerModalWhatsAppPaiement() {
+    window._posWhatsAppPaiementData = null;
+    closeModal();
+}
+window.posFermerModalWhatsAppPaiement = posFermerModalWhatsAppPaiement;
+
+// ==================== PAIEMENT CRÉDIT (AVEC MODAL) ====================
+
+function openCreditPaymentModal(creditId) {
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) { return c.id === creditId; });
+    if (!credit) {
+        alert('Crédit introuvable');
         return;
     }
 
-    var totalVente = d.total || 0;
-    var dejaPaye = d.amountGiven || 0;
-    var restant = (d.remainingAmount != null) ? d.remainingAmount : (totalVente - dejaPaye);
-    if (restant < 0) restant = 0;
-
-    if (restant <= 0.01) {
-        alert('✅ Cette vente est déjà entièrement payée.');
+    if (credit.paid) {
+        alert('✅ Ce crédit est déjà entièrement payé.');
         return;
     }
+
+    var restant = credit.remainingAmount || credit.total || 0;
+    var total = credit.total || 0;
+    
+    if (total <= 0) {
+        if (confirm('⚠️ Ce crédit a un total de 0 MAD. Voulez-vous le marquer comme payé ?')) {
+            confirmerPaiementCreditZero(creditId);
+        }
+        return;
+    }
+
+    var currentPaye = credit.amountGiven || 0;
 
     var modalHtml = `
         <div style="padding:10px;">
             <h4 style="margin-bottom:16px;font-size:1.2rem;color:var(--text-primary);">
-                💰 Encaisser le paiement
+                💳 Paiement du crédit
             </h4>
             <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px;margin-bottom:16px;border:1px solid var(--border);">
                 <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
                     <span style="color:var(--text-secondary);">Facture</span>
-                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(d.factureNum || 'N/A')}</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(credit.factureNum || 'N/A')}</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
                     <span style="color:var(--text-secondary);">Client</span>
-                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(d.clientName || 'Passager')}</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(credit.clientName || 'N/A')}</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
                     <span style="color:var(--text-secondary);">Total</span>
-                    <span style="font-weight:600;color:var(--text-primary);">${totalVente.toFixed(2)} MAD</span>
+                    <span style="font-weight:600;color:var(--text-primary);">${total.toFixed(2)} MAD</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;">
                     <span style="color:var(--text-secondary);">Déjà payé</span>
-                    <span style="font-weight:600;color:var(--success);">${dejaPaye.toFixed(2)} MAD</span>
+                    <span style="font-weight:600;color:var(--success);">${currentPaye.toFixed(2)} MAD</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1.1rem;font-weight:700;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
                     <span style="color:var(--text-secondary);">Reste à payer</span>
@@ -2747,9 +2054,9 @@ async function payerVente(did) {
             </div>
             <div class="form-group" style="margin-bottom:14px;">
                 <label style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
-                    Montant à encaisser (MAD)
+                    Montant à payer (MAD)
                 </label>
-                <input type="number" id="ventePaymentAmount" value="${restant.toFixed(2)}"
+                <input type="number" id="creditPaymentAmount" value="${restant.toFixed(2)}" 
                     step="0.01" min="0.01" max="${restant}"
                     style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:var(--radius);font-size:1.3rem;font-weight:700;background:var(--bg-card);color:var(--text-primary);">
                 <div style="margin-top:4px;font-size:0.8rem;color:var(--text-muted);">
@@ -2760,18 +2067,84 @@ async function payerVente(did) {
                 <button onclick="closeModal()" class="btn-cancel" style="padding:10px 24px;border-radius:var(--radius);border:none;background:var(--gray-100);color:var(--text-secondary);font-weight:600;cursor:pointer;font-size:0.9rem;">
                     Annuler
                 </button>
-                <button onclick="confirmVentePayment('${did}')" class="btn-save" style="padding:10px 24px;border-radius:var(--radius);border:none;background:var(--success);color:white;font-weight:600;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-check"></i> Encaisser
+                <button onclick="confirmCreditPayment('${creditId}')" class="btn-save" style="padding:10px 24px;border-radius:var(--radius);border:none;background:var(--success);color:white;font-weight:600;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-check"></i> Payer
                 </button>
             </div>
         </div>
     `;
 
-    openModal('💰 Encaisser le paiement', modalHtml);
+    openModal('💰 Paiement crédit', modalHtml);
 }
 
-async function confirmVentePayment(venteId) {
-    var amountInput = document.getElementById('ventePaymentAmount');
+async function confirmerPaiementCreditZero(creditId) {
+    try {
+        var data = window.filteredCredits || window.allCreditsData || [];
+        var credit = data.find(function(c) { return c.id === creditId; });
+        if (!credit) {
+            alert('Crédit introuvable');
+            return;
+        }
+
+        var now = firebase.firestore.FieldValue.serverTimestamp();
+
+        // ✅ AJOUT : datePaiement + paidAt
+        await db.collection('credits').doc(creditId).update({
+            paid: true,
+            remainingAmount: 0,
+            amountGiven: credit.amountGiven || 0,
+            datePaiement: now,
+            paidAt: now,
+            updatedAt: now
+        });
+
+        var updatedCredit = {
+            ...credit,
+            paid: true,
+            remainingAmount: 0
+        };
+        await CacheDB.set('credits', creditId, updatedCredit);
+        
+        var index = window.allCreditsData.findIndex(function(c) { return c.id === creditId; });
+        if (index !== -1) window.allCreditsData[index] = updatedCredit;
+        
+        var fIndex = (window.filteredCredits || []).findIndex(function(c) { return c.id === creditId; });
+        if (fIndex !== -1) window.filteredCredits[fIndex] = updatedCredit;
+
+        if (typeof window.synchroVenteDepuisCredit === 'function') {
+            var creditData = {
+                id: creditId,
+                factureNum: credit.factureNum,
+                amountGiven: credit.amountGiven || 0,
+                total: credit.total || 0,
+                paid: true,
+                remainingAmount: 0,
+                clientId: credit.clientId,
+                clientName: credit.clientName
+            };
+            await window.synchroVenteDepuisCredit(creditData);
+        }
+        
+        closeModal();
+        updateCreditsStats(window.filteredCredits || window.allCreditsData);
+        renderCreditsTablePro();
+        CacheDB.sync();
+        
+        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+            CacheDB.saveCollection('credits');
+            CacheDB.saveCollection('ventes');
+        }
+        
+        alert('✅ Ce crédit a été marqué comme payé (total à 0).');
+        return;
+    } catch(e) {
+        console.error('Erreur paiement crédit à 0:', e);
+        alert('❌ Erreur lors du paiement: ' + e.message);
+    }
+}
+
+async function confirmCreditPayment(creditId) {
+    var amountInput = document.getElementById('creditPaymentAmount');
     if (!amountInput) {
         alert('Erreur: champ de montant introuvable');
         return;
@@ -2783,435 +2156,138 @@ async function confirmVentePayment(venteId) {
         return;
     }
 
-    var dc = await db.collection('ventes').doc(venteId).get();
-    if (!dc.exists) {
-        alert('Vente introuvable');
-        return;
-    }
-    var vente = dc.data();
-    vente.id = venteId;
-
-    var totalVente = vente.total || 0;
-    var ancienPaye = vente.amountGiven || 0;
-    var ancienRestant = (vente.remainingAmount != null) ? vente.remainingAmount : (totalVente - ancienPaye);
-
-    if (montant > ancienRestant + 0.01) {
-        alert('❌ Le montant ne peut pas dépasser le reste à payer (' + ancienRestant.toFixed(2) + ' MAD)');
+    var data = window.filteredCredits || window.allCreditsData || [];
+    var credit = data.find(function(c) { return c.id === creditId; });
+    if (!credit) {
+        alert('Crédit introuvable');
         return;
     }
 
-    var nouveauPaye = ancienPaye + montant;
-    var nouveauRestant = Math.max(0, ancienRestant - montant);
-    var estPaye = nouveauRestant <= 0.01;
-
-    var now = firebase.firestore.FieldValue.serverTimestamp();
-
-    var updateData = {
-        amountGiven: nouveauPaye,
-        remainingAmount: nouveauRestant,
-        paid: estPaye,
-        statutPaiement: estPaye ? 'payé' : 'partiel',
-        change: Math.max(0, nouveauPaye - totalVente),
-        updatedAt: now
-    };
-
-    if (estPaye) {
-        updateData.datePaiement = now;
-        updateData.paidAt = now;
+    var restant = credit.remainingAmount || credit.total || 0;
+    
+    if (montant > restant) {
+        alert('❌ Le montant ne peut pas dépasser le reste à payer (' + restant.toFixed(2) + ' MAD)');
+        return;
     }
 
     try {
-        await db.collection('ventes').doc(venteId).update(updateData);
-        console.log('✅ Vente mise à jour :', venteId, '→ statut:', updateData.statutPaiement);
+        var nouveauPaye = (credit.amountGiven || 0) + montant;
+        var nouveauRestant = Math.max(0, restant - montant);
+        var estPaye = nouveauRestant <= 0.01;
 
-        if (vente.factureNum) {
-            var creditsSnap = await db.collection('credits')
-                .where('factureNum', '==', vente.factureNum)
-                .limit(5)
-                .get();
+        var now = firebase.firestore.FieldValue.serverTimestamp();
 
-            if (!creditsSnap.empty) {
-                for (var i = 0; i < creditsSnap.docs.length; i++) {
-                    var cDoc = creditsSnap.docs[i];
-                    var cData = cDoc.data();
-                    if (cData.paid) continue;
-
-                    var creditRestant = (cData.remainingAmount != null) ? cData.remainingAmount : (cData.total || 0);
-                    var creditAncienPaye = cData.amountGiven || 0;
-
-                    var creditNouveauPaye = creditAncienPaye + montant;
-                    var creditNouveauRestant = Math.max(0, creditRestant - montant);
-                    var creditEstPaye = creditNouveauRestant <= 0.01;
-
-                    var creditUpdate = {
-                        amountGiven: creditNouveauPaye,
-                        remainingAmount: creditNouveauRestant,
-                        paid: creditEstPaye,
-                        updatedAt: now
-                    };
-                    if (creditEstPaye) {
-                        creditUpdate.datePaiement = now;
-                        creditUpdate.paidAt = now;
-                    }
-
-                    await db.collection('credits').doc(cDoc.id).update(creditUpdate);
-                    console.log('✅ Crédit mis à jour :', cDoc.id);
-
-                    if (window.allCreditsData) {
-                        var cIdx = window.allCreditsData.findIndex(function(c) { return c.id === cDoc.id; });
-                        if (cIdx !== -1) {
-                            Object.assign(window.allCreditsData[cIdx], creditUpdate);
-                        }
-                    }
-                    if (typeof CacheDB !== 'undefined' && CacheDB.set) {
-                        try {
-                            var updatedCredit = Object.assign({}, cData, creditUpdate);
-                            updatedCredit.id = cDoc.id;
-                            await CacheDB.set('credits', cDoc.id, updatedCredit);
-                        } catch(e) {}
-                    }
-                }
-            }
+        // ✅ AJOUT : datePaiement + paidAt si le crédit est soldé
+        var updateData = {
+            amountGiven: nouveauPaye,
+            remainingAmount: nouveauRestant,
+            paid: estPaye,
+            updatedAt: now,
+            lastPaymentAt: now,
+            lastPaymentAmount: montant
+        };
+        if (estPaye) {
+            updateData.datePaiement = now;
+            updateData.paidAt = now;
         }
 
-        if (typeof CacheDB !== 'undefined' && CacheDB.set) {
-            try {
-                var updatedVente = Object.assign({}, vente, updateData);
-                updatedVente.id = venteId;
-                await CacheDB.set('ventes', venteId, updatedVente);
-            } catch(e) {}
-        }
+        await db.collection('credits').doc(creditId).update(updateData);
 
-        if (window.allVentesData) {
-            var idx = window.allVentesData.findIndex(function(v) { return v.id === venteId; });
-            if (idx !== -1) {
-                Object.assign(window.allVentesData[idx], updateData);
-            }
+        var updatedCredit = {
+            ...credit,
+            amountGiven: nouveauPaye,
+            remainingAmount: nouveauRestant,
+            paid: estPaye
+        };
+        await CacheDB.set('credits', creditId, updatedCredit);
+        
+        var index = window.allCreditsData.findIndex(function(c) { return c.id === creditId; });
+        if (index !== -1) {
+            window.allCreditsData[index] = updatedCredit;
         }
-
-        if (window.filteredVentes) {
-            var fIdx = window.filteredVentes.findIndex(function(v) { return v.id === venteId; });
-            if (fIdx !== -1) {
-                Object.assign(window.filteredVentes[fIdx], updateData);
-            }
+        
+        var fIndex = (window.filteredCredits || []).findIndex(function(c) { return c.id === creditId; });
+        if (fIndex !== -1) {
+            window.filteredCredits[fIndex] = updatedCredit;
         }
-
+        
+        if (typeof window.synchroVenteDepuisCredit === 'function') {
+            var creditData = {
+                id: creditId,
+                factureNum: credit.factureNum,
+                amountGiven: nouveauPaye,
+                total: credit.total,
+                paid: estPaye,
+                remainingAmount: nouveauRestant,
+                clientId: credit.clientId,
+                clientName: credit.clientName
+            };
+            await window.synchroVenteDepuisCredit(creditData);
+            console.log('✅ Vente synchronisée avec le crédit');
+        } else {
+            console.warn('⚠️ fonction synchroVenteDepuisCredit non disponible');
+        }
+        
         closeModal();
-
-        if (typeof updateVentesStats === 'function') {
-            updateVentesStats(window.filteredVentes || window.allVentesData);
-        }
-        if (typeof renderVentesTablePro === 'function') {
-            renderVentesTablePro();
-        }
-        if (window._ventesChartVisible) {
-            try { renderVentesChart(window.filteredVentes || window.allVentesData); } catch(e) {}
-        }
+        
+        updateCreditsStats(window.filteredCredits || window.allCreditsData);
+        renderCreditsTablePro();
+        CacheDB.sync();
 
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-            CacheDB.saveCollection('ventes');
             CacheDB.saveCollection('credits');
+            CacheDB.saveCollection('ventes');
         }
 
-        if (estPaye) {
-            alert('✅ Vente entièrement payée ! Date de paiement enregistrée.');
-        } else {
-            alert('✅ Paiement partiel enregistré. Reste à payer : ' + nouveauRestant.toFixed(2) + ' MAD');
-        }
+        var paiements = [{
+            creditId: creditId,
+            factureNum: credit.factureNum || creditId.substring(0, 8),
+            clientId: credit.clientId,
+            clientName: credit.clientName || 'Client inconnu',
+            montantPaye: montant,
+            totalCredit: credit.total || 0,
+            items: credit.items || []
+        }];
+        var facturePaiement = await creerFacturePaiementCredits(paiements, montant);
+
+        await posAfficherOptionWhatsAppPaiement(facturePaiement, [updatedCredit]);
 
     } catch(e) {
-        console.error('❌ Erreur paiement vente:', e);
+        console.error('Erreur paiement crédit:', e);
         alert('❌ Erreur lors du paiement: ' + e.message);
     }
 }
-window.confirmVentePayment = confirmVentePayment;
 
-function printFacture(did) {
-db.collection('ventes').doc(did).get().then(function(dc) {
-if (dc.exists) imprimerFacture(dc.data(), dc.id);
-else {
-db.collection('credits').doc(did).get().then(function(cd) {
-if (cd.exists) imprimerFacture(cd.data(), cd.id);
-});
-}
-});
-}
+// ==================== FONCTIONS POUR LE MODAL DÉTAILS FACTURE CRÉDIT ====================
 
-function imprimerFacture(d, id) {
-var ih = '';
-if (d.items) {
-d.items.forEach(function(it) {
-var o = '';
-if (it.interdits && it.interdits.length > 0) o += ' 🚫' + it.interdits.join(',');
-if (it.permis && it.permis.length > 0) o += ' ✅' + it.permis.join(',');
-if (it.epice && it.epice !== 'Normal') o += ' 🌶️' + it.epice;
-ih += `<tr><td>${escapeHtml(it.nom)}${o}</td><td>${it.quantite}</td><td>${(it.prixVente || 0).toFixed(2)}</td><td>${((it.prixVente || 0) * it.quantite).toFixed(2)}</td></tr>`;
-});
-}
-var w = window.open('', '_blank', 'width=400,height=600');
-w.document.write(`
-<html><head><title>Facture E-SOLUTION</title>
-<style>
-body{font-family:'Inter',Arial,sans-serif;padding:24px;background:#f9fafb;}
-.invoice{background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
-h2{text-align:center;color:#111827;}
-.header-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;font-size:0.9rem;}
-table{width:100%;border-collapse:collapse;margin:16px 0;}
-th{background:#f3f4f6;padding:8px 12px;text-align:left;font-weight:600;font-size:0.8rem;}
-td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:0.85rem;}
-.total{font-size:1.2rem;font-weight:800;text-align:right;margin-top:16px;padding-top:16px;border-top:2px solid #111827;}
-.footer{text-align:center;color:#6b7280;font-size:0.75rem;margin-top:20px;}
-</style>
-</head><body>
-<div class="invoice">
-<h2>🛒 E-SOLUTION</h2>
-<div class="header-info">
-<div><strong>Facture:</strong> ${d.factureNum || id.substring(0, 8)}</div>
-<div><strong>Date:</strong> ${d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : ''}</div>
-<div><strong>Client:</strong> ${d.clientName || d.table || '-'}</div>
-<div><strong>Vendeur:</strong> ${d.vendeur || '-'}</div>
-</div>
-<table>
-<tr><th>Article</th><th>Qté</th><th>Prix</th><th>Total</th></tr>
-${ih}
-</table>
-${d.discountMAD > 0 ? `<p><strong>Remise:</strong> -${d.discountMAD.toFixed(2)} MAD</p>` : ''}
-<div class="total">Total: ${d.total.toFixed(2)} MAD</div>
-<div class="footer">Merci de votre visite ! 🌟</div>
-</div>
-</body></html>
-`);
-w.document.close();
-setTimeout(function() { w.print(); }, 500);
-}
+var currentCreditId = null;
 
-async function sendWhatsApp(did) {
-try {
-const doc = await db.collection('ventes').doc(did).get();
-if (!doc.exists) { alert('Vente introuvable'); return; }
-const vente = doc.data();
-
-let phone = '';
-
-const allClients = (window.posAllClients && window.posAllClients.length)
-? window.posAllClients
-: (window.allClientsData || []);
-let client = null;
-
-if (vente.clientId) {
-client = allClients.find(c => c.id === vente.clientId);
-} else if (vente.clientName) {
-const normalized = (vente.clientName || '')
-.normalize('NFD')
-.replace(/[\u0300-\u036f]/g, '')
-.toLowerCase()
-.trim();
-client = allClients.find(c => {
-const full = ((c.nom || '') + ' ' + (c.prenom || ''))
-.normalize('NFD')
-.replace(/[\u0300-\u036f]/g, '')
-.toLowerCase()
-.trim();
-return full === normalized;
-});
-}
-
-if (client) {
-phone = client.whatsapp || client.telephone || '';
-}
-
-if (!phone && vente.clientId) {
-try {
-const clientDoc = await db.collection('clients').doc(vente.clientId).get();
-if (clientDoc.exists) {
-const cdata = clientDoc.data();
-phone = cdata.whatsapp || cdata.telephone || '';
-}
-} catch (e) {}
-}
-
-phone = phone.replace(/[^\d+]/g, '').trim();
-if (phone.startsWith('0')) {
-phone = '+212' + phone.substring(1);
-} else if (!phone.startsWith('+')) {
-phone = '+' + phone;
-}
-
-if (!phone || phone === '+') {
-alert('❌ Aucun numéro WhatsApp trouvé.');
-return;
-}
-
-var msg = '🧾 *FACTURE E-SOLUTION*\n';
-msg += '━━━━━━━━━━━━━━━━━━\n';
-msg += '📄 ' + (vente.factureNum || did.substring(0, 8)) + '\n';
-msg += '📅 ' + (vente.createdAt ? new Date(vente.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : '') + '\n';
-msg += '👤 ' + (vente.clientName || '-') + '\n';
-msg += '━━━━━━━━━━━━━━━━━━\n';
-if (vente.items) {
-vente.items.forEach(function(it) {
-var opt = '';
-if (it.interdits && it.interdits.length) opt += ' 🚫' + it.interdits.join(',');
-if (it.epice && it.epice !== 'Normal') opt += ' 🌶️' + it.epice;
-if (it.sel && it.sel !== 'Normal') opt += ' 🧂' + it.sel;
-msg += it.quantite + 'x ' + it.nom + opt + ' → ' + ((it.prixVente || 0) * it.quantite).toFixed(2) + ' MAD\n';
-});
-}
-msg += '━━━━━━━━━━━━━━━━━━\n';
-if (vente.discountMAD > 0) msg += 'Remise: -' + vente.discountMAD.toFixed(2) + ' MAD\n';
-msg += '*💰 TOTAL: ' + vente.total.toFixed(2) + ' MAD*\n';
-if (vente.paymentMethod === 'crédit') msg += '📋 Reste à payer: ' + (vente.remainingAmount || vente.total).toFixed(2) + ' MAD\n';
-msg += '━━━━━━━━━━━━━━━━━━\n';
-msg += '🙏 Merci de votre visite !\n';
-msg += '🛒 E-SOLUTION';
-
-var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
-
-var w = window.open(url, '_blank');
-if (!w || w.closed) {
-var modalHtml = `
-<div style="text-align:center;padding:10px;">
-<i class="fab fa-whatsapp" style="font-size:4rem;color:#25D366;"></i>
-<p style="margin:16px 0;font-size:1.1rem;">Cliquez sur le bouton ci-dessous pour envoyer la facture</p>
-<a href="${url}" target="_blank" rel="noopener noreferrer"
-style="display:inline-block;padding:14px 32px;background:#25D366;color:#fff;
-border-radius:12px;font-weight:700;text-decoration:none;font-size:1.1rem;">
-<i class="fab fa-whatsapp"></i> Envoyer sur WhatsApp
-</a>
-</div>
-`;
-openModal('📱 Envoyer WhatsApp', modalHtml);
-}
-
-} catch (e) {
-console.error('WhatsApp:', e);
-alert('❌ Erreur lors de l\'envoi WhatsApp');
-}
-}
-
-function clearSearch(target) {
-if (target === 'ventes') {
-clearVentesSearch();
-} else if (target === 'commandes') {
-const searchField = document.getElementById('commandesSearchInput');
-if (searchField) {
-searchField.value = '';
-window.commandesSearch = '';
-applyCommandesFilters();
-const clearBtn = document.getElementById('commandesClearBtn');
-if (clearBtn) clearBtn.classList.add('hidden');
-}
-}
-}
-
-function handleSearchInput(target) {
-const searchField = document.getElementById(target + 'SearchInput');
-const clearBtn = document.getElementById(target + 'ClearBtn');
-if (searchField && clearBtn) {
-if (searchField.value.length > 0) {
-clearBtn.classList.remove('hidden');
-} else {
-clearBtn.classList.add('hidden');
-}
-}
-}
-
-// ✅ CORRIGÉ : Filtrer par clientId (clic sur le nom du client)
-// 🔧 CORRECTION : Utilise clientId au lieu du nom pour cohérence avec admin-credits
-// ✅ Si pas de clientId trouvé, fallback sur recherche textuelle par nom
-function filtrerVentesParClient(clientName, event) {
-    if (event) {
-        event.stopPropagation();
-        event.preventDefault();
-    }
-    
-    console.log('🖱️ Clic sur client :', clientName);
-    
-    // ✅ ÉTAPE 1 : Trouver la vente correspondante pour récupérer son clientId
-    var data = window.filteredVentes || window.allVentesData || [];
-    var vente = data.find(function(v) {
-        var vName = v._clientDisplayName || v.clientName || v.table || 'Client inconnu';
-        return vName === clientName;
-    });
-    
-    var searchInput = document.getElementById('ventesSearchInput');
-    var clearBtn = document.getElementById('ventesClearBtn');
-    
-    // ✅ ÉTAPE 2 : Si pas de clientId trouvé → fallback recherche textuelle par nom
-    if (!vente || !vente.clientId) {
-        console.warn('⚠️ clientId introuvable, fallback recherche textuelle par nom');
-        if (searchInput) {
-            searchInput.value = clientName;
-            window.ventesSearch = clientName;
-            window.currentPages.ventes = 1;
-            if (clearBtn) clearBtn.classList.remove('hidden');
-            applyVentesFilters();
-        }
-        var tableContainer = document.getElementById('ventesTableContainer');
-        if (tableContainer) {
-            tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        return;
-    }
-    
-    // ✅ ÉTAPE 3 : Filtrer par clientId (cohérence avec admin-credits)
-    window.ventesSearch = '';
-    window.currentPages.ventes = 1;
-    
-    if (searchInput) searchInput.value = '';
-    if (clearBtn) clearBtn.classList.add('hidden');
-    
-    // On stocke le clientId pour le filtrage
-    window._posFilterClientIdVentes = vente.clientId;
-    window._posFilterClientNameVentes = clientName;
-    
-    applyVentesFilters();
-    
-    var tableContainer2 = document.getElementById('ventesTableContainer');
-    if (tableContainer2) {
-        tableContainer2.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    
-    console.log('✅ Filtre par clientId :', vente.clientId, '(' + clientName + ')');
-    
-    setTimeout(function() {
-        if (searchInput) {
-            searchInput.focus();
-            searchInput.select();
-        }
-    }, 100);
-}
-window.filtrerVentesParClient = filtrerVentesParClient;
-
-// ==================== MODAL DÉTAILS FACTURE ====================
-var currentFactureId = null;
-
-function openFactureDetails(factureId, factureNum) {
-    var modal = document.getElementById('factureDetailsModal');
+function openCreditFactureDetails(creditId, factureNum) {
+    var modal = document.getElementById('creditFactureDetailsModal');
     if (!modal) {
         var modalHTML = `
-            <div id="factureDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+            <div id="creditFactureDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
                 <div style="background:var(--bg-card);border-radius:var(--radius-xl);width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-xl);border:1px solid var(--border);">
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:2px solid var(--border);flex-shrink:0;">
-                        <h3 id="factureDetailsTitle" style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin:0;display:flex;align-items:center;gap:10px;">
+                        <h3 id="creditFactureDetailsTitle" style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin:0;display:flex;align-items:center;gap:10px;">
                             <i class="fas fa-file-invoice" style="color:var(--accent);font-size:1.4rem;"></i>
-                            📄 Détails de la facture
+                            📄 Détails du crédit
                         </h3>
-                        <button onclick="closeFactureDetails()" style="background:none;border:none;font-size:2rem;cursor:pointer;color:var(--text-muted);padding:0 14px;border-radius:8px;transition:var(--transition);display:flex;align-items:center;justify-content:center;">
+                        <button onclick="closeCreditFactureDetails()" style="background:none;border:none;font-size:2rem;cursor:pointer;color:var(--text-muted);padding:0 14px;border-radius:8px;transition:var(--transition);display:flex;align-items:center;justify-content:center;">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div id="factureDetailsBody" style="flex:1;overflow-y:auto;padding:24px;padding-top:16px;">
+                    <div id="creditFactureDetailsBody" style="flex:1;overflow-y:auto;padding:24px;padding-top:16px;">
                         <div style="text-align:center;padding:40px;">
                             <i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:var(--accent);"></i>
                             <p style="color:var(--text-secondary);margin-top:12px;font-size:1.1rem;">Chargement...</p>
                         </div>
                     </div>
                     <div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;">
-                        <button onclick="closeFactureDetails()" style="padding:12px 28px;border-radius:var(--radius);border:none;background:var(--gray-100);color:var(--text-secondary);font-weight:600;cursor:pointer;transition:var(--transition);font-size:1rem;">
+                        <button onclick="closeCreditFactureDetails()" style="padding:12px 28px;border-radius:var(--radius);border:none;background:var(--gray-100);color:var(--text-secondary);font-weight:600;cursor:pointer;transition:var(--transition);font-size:1rem;">
                             Fermer
                         </button>
-                        <button onclick="printFactureDetails()" style="padding:12px 28px;border-radius:var(--radius);border:none;background:var(--black);color:var(--white);font-weight:600;cursor:pointer;transition:var(--transition);font-size:1rem;display:flex;align-items:center;gap:8px;">
+                        <button onclick="printCreditFactureDetails()" style="padding:12px 28px;border-radius:var(--radius);border:none;background:var(--black);color:var(--white);font-weight:600;cursor:pointer;transition:var(--transition);font-size:1rem;display:flex;align-items:center;gap:8px;">
                             <i class="fas fa-print"></i> Imprimer
                         </button>
                     </div>
@@ -3222,51 +2298,51 @@ function openFactureDetails(factureId, factureNum) {
         div.innerHTML = modalHTML;
         document.body.appendChild(div.firstElementChild);
         
-        document.getElementById('factureDetailsModal').addEventListener('click', function(e) {
+        document.getElementById('creditFactureDetailsModal').addEventListener('click', function(e) {
             if (e.target === this) {
-                closeFactureDetails();
+                closeCreditFactureDetails();
             }
         });
         
-        modal = document.getElementById('factureDetailsModal');
+        modal = document.getElementById('creditFactureDetailsModal');
     }
     
     modal.style.display = 'flex';
-    document.getElementById('factureDetailsTitle').textContent = '📄 Détails facture N° ' + (factureNum || 'N/A');
-    currentFactureId = factureId;
-    loadFactureDetails(factureId);
+    document.getElementById('creditFactureDetailsTitle').textContent = '📄 Détails crédit N° ' + (factureNum || 'N/A');
+    currentCreditId = creditId;
+    loadCreditFactureDetails(creditId);
 }
 
-function closeFactureDetails() {
-    var modal = document.getElementById('factureDetailsModal');
+function closeCreditFactureDetails() {
+    var modal = document.getElementById('creditFactureDetailsModal');
     if (modal) {
         modal.style.display = 'none';
     }
-    currentFactureId = null;
+    currentCreditId = null;
 }
 
-async function loadFactureDetails(factureId) {
-    var body = document.getElementById('factureDetailsBody');
+async function loadCreditFactureDetails(creditId) {
+    var body = document.getElementById('creditFactureDetailsBody');
     if (!body) return;
     
     try {
-        var doc = await db.collection('ventes').doc(factureId).get();
+        var doc = await db.collection('credits').doc(creditId).get();
         
         if (!doc.exists) {
             body.innerHTML = `
                 <div style="text-align:center;padding:40px;">
                     <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:var(--danger);"></i>
-                    <p style="color:var(--text-secondary);margin-top:12px;font-size:1.1rem;">Facture non trouvée</p>
+                    <p style="color:var(--text-secondary);margin-top:12px;font-size:1.1rem;">Crédit non trouvé</p>
                 </div>
             `;
             return;
         }
         
         var data = doc.data();
-        renderFactureDetails(data);
+        renderCreditFactureDetails(data);
         
     } catch(e) {
-        console.error('Erreur chargement facture:', e);
+        console.error('Erreur chargement crédit:', e);
         body.innerHTML = `
             <div style="text-align:center;padding:40px;">
                 <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:var(--danger);"></i>
@@ -3276,22 +2352,18 @@ async function loadFactureDetails(factureId) {
     }
 }
 
-function renderFactureDetails(data) {
-    var body = document.getElementById('factureDetailsBody');
+function renderCreditFactureDetails(data) {
+    var body = document.getElementById('creditFactureDetailsBody');
     if (!body) return;
     
     var date = data.createdAt ? new Date(data.createdAt.seconds * 1000) : new Date();
     var dateStr = date.toLocaleDateString('fr-FR');
     var timeStr = date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
     
-    var statutPaiement = data.statutPaiement || (data.paid ? 'payé' : 'crédit');
-    if (data.paid && statutPaiement !== 'payé') {
-        statutPaiement = 'payé';
-    }
+    var statusBg = data.paid ? '#ECFDF5' : '#FEF3C7';
+    var statusColor = data.paid ? '#065F46' : '#92400E';
     
-    var statusBg = statutPaiement === 'payé' ? '#ECFDF5' : statutPaiement === 'crédit' ? '#FEF3C7' : '#FEE2E2';
-    var statusColor = statutPaiement === 'payé' ? '#065F46' : statutPaiement === 'crédit' ? '#92400E' : '#991B1B';
-    
+    // ✅ AJOUT : Affichage de la date de paiement si le crédit est payé
     var datePaiementHtml = '';
     if (data.datePaiement && data.datePaiement.seconds) {
         var dP = new Date(data.datePaiement.seconds * 1000);
@@ -3310,13 +2382,13 @@ function renderFactureDetails(data) {
     var html = `
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--border);">
             <div>
-                <h4 style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin:0;">Facture N° ${data.factureNum || 'N/A'}</h4>
+                <h4 style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin:0;">Crédit N° ${data.factureNum || 'N/A'}</h4>
                 <p style="color:var(--text-secondary);font-size:1.1rem;margin:6px 0 0 0;">
                     <i class="far fa-calendar-alt"></i> ${dateStr} à ${timeStr}
                 </p>
             </div>
             <span style="display:inline-block;padding:6px 18px;border-radius:20px;font-size:1rem;font-weight:600;text-transform:uppercase;background:${statusBg};color:${statusColor};">
-                ${statutPaiement || 'N/A'}
+                ${data.paid ? 'Payé' : 'Impayé'}
             </span>
         </div>
         
@@ -3329,9 +2401,9 @@ function renderFactureDetails(data) {
                 <p style="font-size:1rem;color:var(--text-secondary);margin:4px 0 0 0;">${data.clientId ? 'ID: ' + data.clientId : 'Client non identifié'}</p>
             </div>
             <div style="background:var(--bg-page);border-radius:var(--radius);padding:14px 18px;border:1px solid var(--border);">
-                <p style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin:0 0 6px 0;">Table / Vendeur</p>
-                <p style="font-size:1.2rem;font-weight:600;color:var(--text-primary);margin:0;">${escapeHtml(data.table || '—')}</p>
-                <p style="font-size:1rem;color:var(--text-secondary);margin:4px 0 0 0;">👤 ${escapeHtml(data.vendeur || 'N/A')}</p>
+                <p style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin:0 0 6px 0;">Vendeur / Mode</p>
+                <p style="font-size:1.2rem;font-weight:600;color:var(--text-primary);margin:0;">${escapeHtml(data.vendeur || 'N/A')}</p>
+                <p style="font-size:1rem;color:var(--text-secondary);margin:4px 0 0 0;">💳 ${escapeHtml(data.paymentMethod || '—')}</p>
             </div>
         </div>
         
@@ -3373,6 +2445,10 @@ function renderFactureDetails(data) {
         });
     }
     
+    var restant = data.remainingAmount || data.total || 0;
+    var amountGiven = data.amountGiven || 0;
+    var total = data.total || 0;
+    
     html += `
                     </tbody>
                 </table>
@@ -3382,33 +2458,21 @@ function renderFactureDetails(data) {
         <div style="display:flex;justify-content:flex-end;padding-top:16px;border-top:2px solid var(--border);">
             <div style="width:280px;">
                 <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;color:var(--text-secondary);">
-                    <span>Sous-total</span>
-                    <span>${(data.subtotal || 0).toFixed(2)} MAD</span>
+                    <span>Total</span>
+                    <span>${total.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;color:var(--text-secondary);">
+                    <span>Payé</span>
+                    <span>${amountGiven.toFixed(2)} MAD</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:1.5rem;font-weight:700;color:var(--danger);border-top:2px solid var(--border);margin-top:6px;">
+                    <span>Reste à payer</span>
+                    <span>${restant.toFixed(2)} MAD</span>
                 </div>
                 ${data.discountMAD > 0 ? `
-                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;color:var(--danger);">
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:1rem;color:var(--text-secondary);">
                     <span>Remise</span>
                     <span>-${data.discountMAD.toFixed(2)} MAD</span>
-                </div>
-                ` : ''}
-                <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:1.5rem;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);margin-top:6px;">
-                    <span>Total</span>
-                    <span>${(data.total || 0).toFixed(2)} MAD</span>
-                </div>
-                ${data.amountGiven > 0 ? `
-                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;color:var(--text-secondary);">
-                    <span>Montant donné</span>
-                    <span>${(data.amountGiven || 0).toFixed(2)} MAD</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;font-weight:600;color:${data.change >= 0 ? 'var(--success)' : 'var(--danger)'};">
-                    <span>${data.change >= 0 ? 'Rendu' : 'Manquant'}</span>
-                    <span>${Math.abs(data.change || 0).toFixed(2)} MAD</span>
-                </div>
-                ` : ''}
-                ${data.remainingAmount > 0 ? `
-                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:1.1rem;font-weight:600;color:var(--danger);">
-                    <span>Reste à payer</span>
-                    <span>${(data.remainingAmount || 0).toFixed(2)} MAD</span>
                 </div>
                 ` : ''}
             </div>
@@ -3418,459 +2482,264 @@ function renderFactureDetails(data) {
     body.innerHTML = html;
 }
 
-function printFactureDetails() {
-    if (currentFactureId) {
-        printFacture(currentFactureId);
+function printCreditFactureDetails() {
+    if (currentCreditId) {
+        printFacture(currentCreditId);
     } else {
-        alert('Aucune facture sélectionnée');
+        alert('Aucun crédit sélectionné');
     }
 }
 
-// ============================================================
-// 💰 PAIEMENT GROUPÉ DE VENTES + WHATSAPP DÉTAILLÉ
-// ============================================================
-
-async function payerVentesSelectionnees() {
-    if (ventesSelectionnees.size === 0) {
-        alert('⚠️ Aucune vente sélectionnée.');
-        return;
-    }
-
-    var data = window.filteredVentes || window.allVentesData || [];
-    var ventesAPayer = [];
-    var totalGlobal = 0;
-
-    data.forEach(function(v) {
-        if (ventesSelectionnees.has(v.id) && !v.paid) {
-            ventesAPayer.push(v);
-            totalGlobal += v.remainingAmount || v.total || 0;
-        }
-    });
-
-    if (ventesAPayer.length === 0) {
-        alert('⚠️ Aucune vente impayée dans la sélection.');
-        return;
-    }
-
-    var msg = '💰 CONFIRMER LE PAIEMENT GROUPÉ ?\n\n';
-    msg += '📊 Nombre de ventes : ' + ventesAPayer.length + '\n';
-    msg += '💵 Total à encaisser : ' + totalGlobal.toFixed(2) + ' MAD\n';
-    msg += '\n⚠️ Cette action est IRRÉVERSIBLE.\n';
-    msg += 'Les ventes seront marquées comme PAYÉES.';
-
-    if (!confirm(msg)) return;
-
-    var payerBtn = document.getElementById('payerSelectedVentesBtn');
-    if (payerBtn) {
-        payerBtn.disabled = true;
-        payerBtn.innerHTML = '⏳ Traitement...';
-    }
-
+// ==================== ENVOYER WHATSAPP POUR UN CRÉDIT ====================
+async function sendCreditWhatsApp(creditId) {
     try {
-        var batch = db.batch();
-        var batchCount = 0;
-        var now = firebase.firestore.FieldValue.serverTimestamp();
+        const doc = await db.collection('credits').doc(creditId).get();
+        if (!doc.exists) {
+            alert('❌ Crédit introuvable');
+            return;
+        }
+        
+        const credit = doc.data();
+        let phone = '';
 
-        for (var i = 0; i < ventesAPayer.length; i++) {
-            var vente = ventesAPayer[i];
-            var ref = db.collection('ventes').doc(vente.id);
-
-            batch.update(ref, {
-                paid: true,
-                statutPaiement: 'payé',
-                remainingAmount: 0,
-                amountGiven: vente.total || 0,
-                change: 0,
-                datePaiement: now,
-                paidAt: now,
-                paidBy: window.currentUserData
-                    ? (window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom)
-                    : 'Admin',
-                paymentMethod: 'espece'
-            });
-
-            batchCount++;
-
-            if (batchCount >= 450) {
-                await batch.commit();
-                batch = db.batch();
-                batchCount = 0;
+        if (credit.clientId) {
+            const clientDoc = await db.collection('clients').doc(credit.clientId).get();
+            if (clientDoc.exists) {
+                const clientData = clientDoc.data();
+                phone = clientData.whatsapp || clientData.telephone || '';
             }
         }
-
-        if (batchCount > 0) {
-            await batch.commit();
+        
+        phone = phone.replace(/[^\d+]/g, '').trim();
+        if (phone.startsWith('0')) {
+            phone = '+212' + phone.substring(1);
+        } else if (!phone.startsWith('+')) {
+            phone = '+' + phone;
         }
 
-        for (var j = 0; j < ventesAPayer.length; j++) {
-            var vente2 = ventesAPayer[j];
-            try {
-                var creditsSnap = await db.collection('credits')
-                    .where('factureNum', '==', vente2.factureNum)
-                    .where('paid', '==', false)
-                    .get();
-
-                if (!creditsSnap.empty) {
-                    var batch2 = db.batch();
-                    creditsSnap.forEach(function(doc) {
-                        batch2.update(doc.ref, {
-                            paid: true,
-                            remainingAmount: 0,
-                            amountGiven: doc.data().total || 0,
-                            datePaiement: now,
-                            paidAt: now,
-                            updatedAt: now
-                        });
-                    });
-                    await batch2.commit();
-                    console.log('✅ Crédit(s) marqué(s) payé(s) pour facture:', vente2.factureNum);
-                }
-            } catch(e) {
-                console.warn('⚠️ Erreur mise à jour crédit:', e);
-            }
-        }
-
-        ventesAPayer.forEach(function(v) {
-            v.paid = true;
-            v.statutPaiement = 'payé';
-            v.remainingAmount = 0;
-            v.amountGiven = v.total || 0;
-            v.change = 0;
-        });
-
-        var paiements = ventesAPayer.map(function(v) {
-            return {
-                venteId: v.id,
-                factureNum: v.factureNum || v.id.substring(0, 8),
-                clientId: v.clientId,
-                clientName: v.clientName || 'Client inconnu',
-                montantPaye: v.remainingAmount || v.total || 0,
-                totalVente: v.total || 0,
-                items: v.items || []
-            };
-        });
-
-        var facturePaiement = await creerFacturePaiementVentes(paiements, totalGlobal);
-
-        ventesSelectionnees.clear();
-        window.venteSelectedIds = [];
-        window.venteSelectedClientId = null;
-        window.venteSelectedClientName = null;
-        selectAllVentesBtnState = false;
-
-        applyVentesFilters();
-        updateVenteSelectionUI();
-
-        if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
-            CacheDB.saveCollection('ventes');
-            CacheDB.saveCollection('credits');
-        }
-
-        console.log('✅ Paiement groupé terminé :', ventesAPayer.length, 'vente(s),', totalGlobal.toFixed(2), 'MAD');
-
-        await posAfficherOptionWhatsAppPaiementVentes(facturePaiement, ventesAPayer);
-
-    } catch(e) {
-        console.error('❌ Erreur paiement groupé :', e);
-        alert('❌ Erreur lors du paiement groupé : ' + e.message);
-    } finally {
-        if (payerBtn) {
-            payerBtn.disabled = false;
-        }
-        updateVenteSelectionUI();
-    }
-}
-window.payerVentesSelectionnees = payerVentesSelectionnees;
-
-// ============================================================
-// ✅ CRÉER UNE FACTURE DE PAIEMENT DE VENTES
-// ============================================================
-async function creerFacturePaiementVentes(paiements, totalPaye) {
-    var factureCounter = parseInt(localStorage.getItem('factureCounter')) || 0;
-    factureCounter++;
-    localStorage.setItem('factureCounter', factureCounter);
-    var numFacture = 'PAI-' + new Date().getFullYear() + '-' + String(factureCounter).padStart(5, '0');
-
-    var clientIds = [...new Set(paiements.map(p => p.clientId).filter(Boolean))];
-    var clientNames = [...new Set(paiements.map(p => p.clientName).filter(Boolean))];
-    var clientId = clientIds.length === 1 ? clientIds[0] : null;
-    var clientName = clientNames.length === 1 ? clientNames[0] : (clientNames.length + ' clients');
-
-    var vendeur = '';
-    if (window.currentUserData) {
-        vendeur = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
-    }
-
-    var items = paiements.map(function(p) {
-        return {
-            id: p.venteId,
-            nom: 'Vente #' + p.factureNum + (p.clientName ? ' - ' + p.clientName : ''),
-            quantite: 1,
-            prixVente: p.montantPaye,
-            prixAchat: 0,
-            prixPromo: 0,
-            profit: 0
-        };
-    });
-
-    var factureData = {
-        factureNum: numFacture,
-        items: items,
-        subtotal: totalPaye,
-        discountMAD: 0,
-        total: totalPaye,
-        clientId: clientId,
-        clientName: clientName,
-        table: null,
-        vendeur: vendeur,
-        paymentMethod: 'espece',
-        statutPaiement: 'payé',
-        amountGiven: totalPaye,
-        change: 0,
-        paid: true,
-        remainingAmount: 0,
-        profitTotal: 0,
-        type: 'paiement_ventes',
-        ventesPayees: paiements.map(p => ({
-            venteId: p.venteId,
-            factureNum: p.factureNum,
-            montantPaye: p.montantPaye,
-            clientName: p.clientName
-        })),
-        createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
-    };
-
-    try {
-        if (navigator.onLine) {
-            var sd = Object.assign({}, factureData, {
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            var docRef = await db.collection('factures_paiement').add(sd);
-            factureData.id = docRef.id;
-
-            if (typeof CacheDB !== 'undefined' && CacheDB.set) {
-                await CacheDB.set('factures_paiement', docRef.id, Object.assign({id: docRef.id}, factureData));
-            }
-        } else {
-            factureData.id = 'offline_' + Date.now();
-            var facturesLS = JSON.parse(localStorage.getItem('facturesPaiementOffline') || '[]');
-            facturesLS.push(factureData);
-            localStorage.setItem('facturesPaiementOffline', JSON.stringify(facturesLS));
-        }
-    } catch(e) {
-        console.warn('⚠️ Erreur sauvegarde facture paiement:', e);
-    }
-
-    return factureData;
-}
-window.creerFacturePaiementVentes = creerFacturePaiementVentes;
-
-// ============================================================
-// 📱 AFFICHER LE MODAL WHATSAPP AVEC TOUS LES DÉTAILS
-// ============================================================
-async function posAfficherOptionWhatsAppPaiementVentes(factureData, ventesDetaillees) {
-    try {
-        var clientName = 'Client';
-        var clientId = null;
-
-        var clientsUniques = new Set();
-        ventesDetaillees.forEach(function(v) {
-            if (v.clientName && v.clientName !== 'Passager' && v.clientName !== 'Client inconnu') {
-                clientsUniques.add(v.clientName);
-            }
-        });
-
-        if (clientsUniques.size === 1) {
-            clientName = Array.from(clientsUniques)[0];
-            for (var k = 0; k < ventesDetaillees.length; k++) {
-                if (ventesDetaillees[k].clientName === clientName && ventesDetaillees[k].clientId) {
-                    clientId = ventesDetaillees[k].clientId;
-                    break;
-                }
-            }
-        } else if (clientsUniques.size > 1) {
-            clientName = clientsUniques.size + ' clients';
-        }
-
-        var clientTel = '';
-        if (clientId) {
-            var client = (window.clientsDataForSearch || []).find(function(c) { return c.id === clientId; });
-            if (client) {
-                clientTel = client.telephone || client.whatsapp || '';
-            }
-            if (!clientTel && navigator.onLine) {
-                try {
-                    var clientDoc = await db.collection('clients').doc(clientId).get();
-                    if (clientDoc.exists) {
-                        var cData = clientDoc.data();
-                        clientTel = cData.telephone || cData.whatsapp || '';
-                    }
-                } catch(e) {}
-            }
-        }
-
-        var telDisplay = clientTel ? clientTel.replace(/\D/g, '') : '';
-        var dateStr = new Date().toLocaleDateString('fr-FR', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-
-        var messageWhatsApp = '';
-        messageWhatsApp += '✅ *REÇU DE PAIEMENT*\n';
-        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
-        messageWhatsApp += '📄 Reçu N° : ' + factureData.factureNum + '\n';
-        messageWhatsApp += '📅 Date : ' + dateStr + '\n';
-        messageWhatsApp += '👤 Client : ' + clientName + '\n';
-        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n\n';
-
-        for (var i = 0; i < ventesDetaillees.length; i++) {
-            var vente = ventesDetaillees[i];
-            var factureNum = vente.factureNum || vente.id.substring(0, 8);
-            var sousTotal = vente.total || 0;
-            var restant = vente.remainingAmount || 0;
-
-            messageWhatsApp += '📋 *FACTURE #' + factureNum + '*\n';
-
-            if (vente.createdAt && vente.createdAt.seconds) {
-                var vDate = new Date(vente.createdAt.seconds * 1000);
-                messageWhatsApp += '   📅 ' + vDate.toLocaleDateString('fr-FR') + ' ' + vDate.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '\n';
-            }
-
-            if (vente.items && vente.items.length > 0) {
-                messageWhatsApp += '   *Produits :*\n';
-                vente.items.forEach(function(item) {
-                    var prix = item.prixVente || item.prixUnitaire || 0;
-                    var qte = item.quantite || 1;
-                    var totalItem = prix * qte;
-
-                    var opts = '';
-                    if (item.interdits && item.interdits.length) opts += ' 🚫' + item.interdits.join(',');
-                    if (item.epice && item.epice !== 'Normal') opts += ' 🌶️' + item.epice;
-                    if (item.sel && item.sel !== 'Normal') opts += ' 🧂' + item.sel;
-
-                    messageWhatsApp += '   • ' + qte + 'x ' + item.nom + opts + ' → ' + totalItem.toFixed(2) + ' MAD\n';
-                });
-            }
-
-            messageWhatsApp += '   💵 Sous-total : ' + sousTotal.toFixed(2) + ' MAD\n';
-
-            if (restant > 0) {
-                messageWhatsApp += '   ⏳ Restant payé : ' + restant.toFixed(2) + ' MAD\n';
-            }
-
-            messageWhatsApp += '\n';
-        }
-
-        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
-        messageWhatsApp += '💵 *TOTAL GÉNÉRAL : ' + factureData.total.toFixed(2) + ' MAD*\n';
-        messageWhatsApp += '💳 Mode : Espèces\n';
-        messageWhatsApp += '📊 Nombre de factures : ' + ventesDetaillees.length + '\n';
-        messageWhatsApp += '━━━━━━━━━━━━━━━━━━━━━\n';
-        messageWhatsApp += 'Merci pour votre règlement ! 🙏\n';
-        messageWhatsApp += 'E-SOLUTION POS';
-
-        window._posWhatsAppPaiementData = {
-            message: messageWhatsApp,
-            clientTel: clientTel,
-            clientName: clientName,
-            clientId: clientId,
-            factureNum: factureData.factureNum
-        };
-
-        var telInfo = telDisplay
-            ? '<strong>📞 Téléphone :</strong> ' + escapeHtml(clientTel) + ' <span style="color:#10B981;">✅</span>'
-            : '<em style="color:#92400E;">⚠️ Aucun numéro de téléphone enregistré</em>';
-
-        var confirmHtml = `
-            <div style="padding:16px;text-align:center;">
-                <div style="font-size:3rem;margin-bottom:8px;">✅</div>
-                <h3 style="margin:0 0 4px;color:#10B981;font-size:1.3rem;font-weight:700;">Paiement enregistré !</h3>
-                <p style="color:#64748b;margin:0 0 16px;font-size:0.95rem;">
-                    Reçu <strong>${escapeHtml(factureData.factureNum)}</strong> — <strong>${factureData.total.toFixed(2)} MAD</strong>
-                </p>
-
-                <div style="padding:14px;background:#F0FDF4;border:2px solid #10B981;border-radius:10px;margin-bottom:16px;text-align:left;">
-                    <p style="margin:0;font-size:0.9rem;color:#065F46;">
-                        <strong>👤 Client :</strong> ${escapeHtml(clientName)}<br>
-                        <strong>📄 Nb factures :</strong> ${ventesDetaillees.length}<br>
-                        <strong>💰 Total :</strong> ${factureData.total.toFixed(2)} MAD<br>
-                        ${telInfo}
-                    </p>
-                </div>
-
-                <p style="color:#334155;font-weight:600;margin-bottom:12px;font-size:1rem;">
-                    📱 Voulez-vous envoyer le reçu détaillé par WhatsApp${telDisplay ? ' au ' + escapeHtml(clientTel) : ''} ?
-                </p>
-
-                <div style="display:flex;gap:8px;">
-                    <button onclick="posFermerModalWhatsAppPaiementVentes()"
-                        style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;">
-                        ❌ Non
-                    </button>
-                    <button onclick="posEnvoyerWhatsAppPaiementVentes()"
-                        style="flex:2;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(37,211,102,0.3);">
-                        <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Envoyer WhatsApp
-                    </button>
-                </div>
-            </div>
-        `;
-
-        openModal('🧾 Paiement validé', confirmHtml);
-
-    } catch(e) {
-        console.error('❌ Erreur posAfficherOptionWhatsAppPaiementVentes:', e);
-    }
-}
-window.posAfficherOptionWhatsAppPaiementVentes = posAfficherOptionWhatsAppPaiementVentes;
-
-// ============================================================
-// 📱 ENVOYER WHATSAPP POUR LE PAIEMENT
-// ============================================================
-function posEnvoyerWhatsAppPaiementVentes() {
-    try {
-        var data = window._posWhatsAppPaiementData;
-        if (!data) {
-            alert('❌ Aucune facture en mémoire.');
-            closeModal();
+        if (!phone || phone === '+') {
+            alert('❌ Aucun numéro WhatsApp trouvé pour ce client.');
             return;
         }
 
-        var message = data.message || '';
-        var tel = (data.clientTel || '').replace(/\D/g, '');
+        var msg = '🧾 *CRÉDIT E-SOLUTION*\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '📄 N°: ' + (credit.factureNum || creditId.substring(0, 8)) + '\n';
+        msg += '📅 ' + (credit.createdAt ? new Date(credit.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : '') + '\n';
+        msg += '👤 Client: ' + (credit.clientName || '-') + '\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        
+        if (credit.items && credit.items.length > 0) {
+            credit.items.forEach(function(item) {
+                msg += item.quantite + 'x ' + item.nom + ' → ' + (item.prixVente * item.quantite).toFixed(2) + ' MAD\n';
+            });
+        }
+        
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '*💰 TOTAL: ' + credit.total.toFixed(2) + ' MAD*\n';
+        msg += '💳 Déjà payé: ' + (credit.amountGiven || 0).toFixed(2) + ' MAD\n';
+        msg += '⏳ Reste à payer: ' + (credit.remainingAmount || credit.total || 0).toFixed(2) + ' MAD\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '🙏 Merci de régulariser votre crédit !\n';
+        msg += '🛒 E-SOLUTION';
 
-        if (tel) {
-            if (tel.startsWith('0')) {
-                tel = '212' + tel.substring(1);
-            } else if (tel.startsWith('+')) {
-                tel = tel.replace(/\D/g, '');
-            }
+        var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
+        
+        var w = window.open(url, '_blank');
+        if (!w || w.closed) {
+            var modalHtml = `
+                <div style="text-align:center;padding:10px;">
+                    <i class="fab fa-whatsapp" style="font-size:4rem;color:#25D366;"></i>
+                    <p style="margin:16px 0;font-size:1.1rem;">Cliquez sur le bouton ci-dessous pour envoyer le rappel de crédit</p>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer"
+                       style="display:inline-block;padding:14px 32px;background:#25D366;color:#fff;
+                       border-radius:12px;font-weight:700;text-decoration:none;font-size:1.1rem;">
+                        <i class="fab fa-whatsapp"></i> Envoyer sur WhatsApp
+                    </a>
+                </div>
+            `;
+            openModal('📱 Envoyer rappel WhatsApp', modalHtml);
         }
 
-        var url;
-        if (tel && tel.length >= 8) {
-            url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(message);
-            console.log('📱 [WhatsApp] Envoi au numéro :', tel);
-        } else {
-            url = 'https://wa.me/?text=' + encodeURIComponent(message);
-            console.log('📱 [WhatsApp] Aucun numéro — WhatsApp Web sans destinataire');
-        }
-
-        window.open(url, '_blank');
-        closeModal();
-        window._posWhatsAppPaiementData = null;
-
-    } catch(e) {
-        console.error('❌ Erreur posEnvoyerWhatsAppPaiementVentes:', e);
-        alert('❌ Erreur WhatsApp : ' + e.message);
+    } catch (e) {
+        console.error('Erreur envoi WhatsApp crédit:', e);
+        alert('❌ Erreur lors de l\'envoi WhatsApp');
     }
 }
-window.posEnvoyerWhatsAppPaiementVentes = posEnvoyerWhatsAppPaiementVentes;
 
-function posFermerModalWhatsAppPaiementVentes() {
-    window._posWhatsAppPaiementData = null;
-    closeModal();
+// ==================== AUTRES FONCTIONS ====================
+
+async function payerCredit(creditId) {
+    openCreditPaymentModal(creditId);
 }
-window.posFermerModalWhatsAppPaiementVentes = posFermerModalWhatsAppPaiementVentes;
+
+function printFacture(did) {
+db.collection('credits').doc(did).get().then(function(dc) {
+if (dc.exists) imprimerFactureCredit(dc.data(), dc.id);
+});
+}
+
+function imprimerFactureCredit(d, id) {
+var ih = '';
+if (d.items) {
+d.items.forEach(function(it) {
+var o = '';
+if (it.interdits && it.interdits.length > 0) o += ' 🚫' + it.interdits.join(',');
+if (it.epice && it.epice !== 'Normal') o += ' 🌶️' + it.epice;
+if (it.sel && it.sel !== 'Normal') o += ' 🧂' + it.sel;
+ih += `<tr><td>${escapeHtml(it.nom)}${o}</td><td>${it.quantite}</td><td>${(it.prixVente || 0).toFixed(2)}</td><td>${((it.prixVente || 0) * it.quantite).toFixed(2)}</td></tr>`;
+});
+}
+var w = window.open('', '_blank', 'width=400,height=600');
+w.document.write(`
+<html><head><title>Facture E-SOLUTION</title>
+<style>
+body{font-family:'Inter',Arial,sans-serif;padding:24px;background:#f9fafb;}
+.invoice{background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+h2{text-align:center;color:#111827;}
+.header-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;font-size:0.9rem;}
+table{width:100%;border-collapse:collapse;margin:16px 0;}
+th{background:#f3f4f6;padding:8px 12px;text-align:left;font-weight:600;font-size:0.8rem;}
+td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:0.85rem;}
+.total{font-size:1.2rem;font-weight:800;text-align:right;margin-top:16px;padding-top:16px;border-top:2px solid #111827;}
+.remaining{font-size:1rem;font-weight:700;text-align:right;color:#ef4444;margin-top:8px;}
+.footer{text-align:center;color:#6b7280;font-size:0.75rem;margin-top:20px;}
+</style>
+</head><body>
+<div class="invoice">
+<h2>🛒 E-SOLUTION</h2>
+<div class="header-info">
+<div><strong>Facture:</strong> ${d.factureNum || id.substring(0, 8)}</div>
+<div><strong>Date:</strong> ${d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : ''}</div>
+<div><strong>Client:</strong> ${d.clientName || d.table || '-'}</div>
+<div><strong>Vendeur:</strong> ${d.vendeur || '-'}</div>
+<div><strong>Mode:</strong> ${d.paymentMethod || '-'}</div>
+</div>
+<table>
+<tr><th>Article</th><th>Qté</th><th>Prix</th><th>Total</th></tr>
+${ih}
+</table>
+${d.discountMAD > 0 ? `<p><strong>Remise:</strong> -${d.discountMAD.toFixed(2)} MAD</p>` : ''}
+<div class="total">Total: ${d.total.toFixed(2)} MAD</div>
+<div class="remaining">💰 Restant: ${(d.remainingAmount || d.total || 0).toFixed(2)} MAD</div>
+<div class="footer">Merci de votre visite ! 🌟</div>
+</div>
+</body></html>
+`);
+w.document.close();
+setTimeout(function() { w.print(); }, 500);
+}
+
+async function editCredit(id) {
+try {
+var doc = await db.collection('credits').doc(id).get();
+if (!doc.exists) {
+alert('Crédit introuvable');
+return;
+}
+var d = doc.data();
+window.editingId = id;
+window.currentCollection = 'credits';
+
+var h = `
+<div class="form-row">
+<div class="form-group">
+<label><i class="fas fa-user"></i> Client</label>
+<input type="text" id="editCreditClient" value="${escapeHtml(d.clientName || '')}" style="font-size:14px;padding:10px;">
+</div>
+<div class="form-group">
+<label><i class="fas fa-tag"></i> Total (MAD)</label>
+<input type="number" id="editCreditTotal" value="${(d.total || 0)}" step="0.01" style="font-size:14px;padding:10px;">
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label><i class="fas fa-hand-holding-usd"></i> Payé (MAD)</label>
+<input type="number" id="editCreditPaid" value="${(d.amountGiven || 0)}" step="0.01" style="font-size:14px;padding:10px;">
+</div>
+<div class="form-group">
+<label><i class="fas fa-hourglass-half"></i> Restant (MAD)</label>
+<input type="number" id="editCreditRemaining" value="${(d.remainingAmount || 0)}" step="0.01" style="font-size:14px;padding:10px;">
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label><i class="fas fa-credit-card"></i> Mode de paiement</label>
+<input type="text" id="editCreditMode" value="${escapeHtml(d.paymentMethod || '')}" style="font-size:14px;padding:10px;">
+</div>
+<div class="form-group">
+<label><i class="fas fa-circle"></i> Statut</label>
+<select id="editCreditStatut" style="font-size:14px;padding:10px;">
+<option value="0" ${!d.paid ? 'selected' : ''}>Impayé</option>
+<option value="1" ${d.paid ? 'selected' : ''}>Payé</option>
+</select>
+</div>
+</div>
+<button class="btn-cancel" onclick="closeModal()">Annuler</button>
+<button class="btn-save" onclick="saveEditCredit()"><i class="fas fa-save"></i> Enregistrer</button>
+`;
+
+openModal('Modifier Crédit ' + (d.factureNum || id.substring(0, 8)), h);
+} catch (e) {
+console.error('Erreur editCredit:', e);
+alert('Erreur lors du chargement du crédit');
+}
+}
+
+async function saveEditCredit() {
+var clientName = document.getElementById('editCreditClient').value.trim();
+var total = parseFloat(document.getElementById('editCreditTotal').value) || 0;
+var amountGiven = parseFloat(document.getElementById('editCreditPaid').value) || 0;
+var remainingAmount = parseFloat(document.getElementById('editCreditRemaining').value) || 0;
+var paymentMethod = document.getElementById('editCreditMode').value.trim();
+var paid = document.getElementById('editCreditStatut').value === '1';
+
+var data = {
+clientName: clientName,
+total: total,
+amountGiven: amountGiven,
+remainingAmount: paid ? 0 : remainingAmount,
+paymentMethod: paymentMethod,
+paid: paid,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+};
+
+// ✅ AJOUT : datePaiement si le crédit passe à "payé"
+if (paid) {
+    data.datePaiement = firebase.firestore.FieldValue.serverTimestamp();
+    data.paidAt = firebase.firestore.FieldValue.serverTimestamp();
+}
+
+try {
+await CacheDB.write('credits', window.editingId, data, 'update');
+closeModal();
+loadCredits();
+CacheDB.sync();
+alert('✅ Crédit mis à jour');
+
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('credits');
+}
+} catch (e) {
+alert('❌ Erreur: ' + e.message);
+}
+}
+
+async function deleteCredit(id) {
+try {
+await db.collection('credits').doc(id).delete();
+window.allCreditsData = (window.allCreditsData || []).filter(function(c) { return c.id !== id; });
+if (typeof loadCredits === 'function') loadCredits();
+CacheDB.sync();
+
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('credits');
+}
+} catch (e) {
+console.error('Erreur deleteCredit:', e);
+throw e;
+}
+}
 
 // ==================== PAGINATION ====================
 
@@ -3917,102 +2786,247 @@ function changePage(pageType, page) {
     }
 }
 
+function getPageData(pageType, data) {
+    if (!window.currentPages) window.currentPages = {};
+    var currentPage = window.currentPages[pageType] || 1;
+    var itemsPerPage = window.itemsPerPage || 15;
+    var start = (currentPage - 1) * itemsPerPage;
+    var end = start + itemsPerPage;
+    return data.slice(start, end);
+}
+
+// ==================== FONCTIONS MANQUANTES AJOUTÉES ====================
+
+function closeCreditSelection() {
+    window.creditSelectedIds = [];
+    window.creditSelectionMode = false;
+    window.selectAllBtnState = false;
+    window.creditSelectedClientId = null;
+    window.creditSelectedClientName = null;
+
+    var paymentZone = document.getElementById('creditPaymentZone');
+    if (paymentZone) paymentZone.style.display = 'none';
+
+    var selectBtn = document.getElementById('toggleSelectionBtn');
+    if (selectBtn) {
+        selectBtn.innerHTML = '<i class="fas fa-check-square"></i> Sélectionner';
+    }
+
+    var selectAllBtn = document.getElementById('selectAllBtn');
+    if (selectAllBtn) {
+        selectAllBtn.style.display = 'none';
+        selectAllBtn.innerHTML = '<i class="fas fa-check-double"></i> Tout sélectionner';
+    }
+
+    var deleteBtn = document.getElementById('deleteSelectedBtn');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+
+    var payBtn = document.getElementById('paySelectedBtn');
+    if (payBtn) payBtn.style.display = 'none';
+
+    if (typeof renderCreditsTablePro === 'function') {
+        renderCreditsTablePro();
+    } else if (typeof renderCreditsTable === 'function') {
+        renderCreditsTable();
+    }
+}
+window.closeCreditSelection = closeCreditSelection;
+
+function validateCreditPayment() {
+    var amountInput = document.getElementById('creditPaymentAmountInput');
+    if (!amountInput) {
+        alert('❌ Erreur : champ de montant introuvable');
+        return;
+    }
+
+    var amount = parseFloat(amountInput.value);
+    if (isNaN(amount) || amount <= 0) {
+        alert('❌ Veuillez entrer un montant valide');
+        return;
+    }
+
+    if (!window.creditSelectedIds || window.creditSelectedIds.length === 0) {
+        alert('❌ Aucun crédit sélectionné');
+        return;
+    }
+
+    var promises = window.creditSelectedIds.map(function(id) {
+        var credit = (window.allCreditsData || []).find(function(c) { return c.id === id; });
+        if (!credit) return Promise.resolve();
+
+        var total = credit.remainingAmount || credit.total || 0;
+        var newPaid = total - amount;
+        var isFullyPaid = newPaid <= 0.01;
+
+        return db.collection('credits').doc(id).update({
+            amountGiven: (credit.amountGiven || 0) + amount,
+            remainingAmount: Math.max(0, newPaid),
+            paid: isFullyPaid,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function() {
+            var updatedCredit = {
+                ...credit,
+                amountGiven: (credit.amountGiven || 0) + amount,
+                remainingAmount: Math.max(0, newPaid),
+                paid: isFullyPaid
+            };
+            return CacheDB.set('credits', id, updatedCredit);
+        });
+    });
+
+    Promise.all(promises).then(function() {
+        alert('✅ Paiement effectué avec succès !');
+        closeCreditSelection();
+        if (typeof loadCredits === 'function') {
+            loadCredits();
+        }
+        CacheDB.sync();
+    }).catch(function(e) {
+        alert('❌ Erreur : ' + e.message);
+    });
+}
+window.validateCreditPayment = validateCreditPayment;
+
+function retournerAuPaiement() {
+    window._posFilterClientId = null;
+    window._posFilterClientName = null;
+    window._fromPos = false;
+    navigateTo('pos');
+}
+window.retournerAuPaiement = retournerAuPaiement;
+
+window.filterByPeriodWithDatesCredits = filterByPeriodWithDatesCredits;
+window.updateCreditsStats = updateCreditsStats;
+window.appliquerFiltreDatePersonnaliseCredits = appliquerFiltreDatePersonnaliseCredits;
+window.reinitialiserFiltresCredits = reinitialiserFiltresCredits;
+window.confirmerPaiementCreditZero = confirmerPaiementCreditZero;
+
+// ==================== ✅ NOUVELLE FONCTION : Filtrer par client (clic sur nom) ====================
+function filtrerParClient(clientName, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    console.log('🖱️ Clic sur client :', clientName);
+    
+    var searchInput = document.getElementById('creditsSearchInput');
+    if (!searchInput) {
+        console.warn('⚠️ Champ de recherche introuvable');
+        return;
+    }
+    
+    // ✅ Remplir la barre de recherche avec le nom complet du client
+    searchInput.value = clientName;
+    window.creditsSearch = clientName;
+    window.currentPages.credits = 1;
+    
+    // ✅ Afficher le bouton "effacer"
+    var clearBtn = document.getElementById('creditsClearBtn');
+    if (clearBtn) clearBtn.classList.remove('hidden');
+    
+    // ✅ Appliquer le filtre
+    applyCreditsFilters();
+    
+    // ✅ Scroll en haut de la table
+    var tableContainer = document.getElementById('creditsTableContainer');
+    if (tableContainer) {
+        tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // ✅ Focus sur le champ pour modification rapide
+    setTimeout(function() {
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }, 100);
+}
+window.filtrerParClient = filtrerParClient;
+
 // ==================== EXPOSITION DES FONCTIONS GLOBALES ====================
 
-window.loadCommandesPage = loadCommandesPage;
-window.loadCommandes = loadCommandes;
-window.applyCommandesFilters = applyCommandesFilters;
-window.renderCommandesTablePro = renderCommandesTablePro;
-window.validateCommande = validateCommande;
-window.payCommande = payCommande;
-window.cancelCommande = cancelCommande;
-window.loadVentesPage = loadVentesPage;
-window.loadVentes = loadVentes;
-window.applyVentesFilters = applyVentesFilters;
-window.renderVentesTablePro = renderVentesTablePro;
-window.editVente = editVente;
-window.saveEditVente = saveEditVente;
-window.deleteVente = deleteVente;
-window.payerVente = payerVente;
-window.confirmVentePayment = confirmVentePayment;
+window.loadCreditsPage = loadCreditsPage;
+window.loadCredits = loadCredits;
+window.applyCreditsFilters = applyCreditsFilters;
+window.renderCreditsTablePro = renderCreditsTablePro;
+window.editCredit = editCredit;
+window.deleteCredit = deleteCredit;
+window.saveEditCredit = saveEditCredit;
+window.payerCredit = payerCredit;
 window.printFacture = printFacture;
-window.imprimerFacture = imprimerFacture;
-window.sendWhatsApp = sendWhatsApp;
-window.clearSearch = clearSearch;
-window.handleSearchInput = handleSearchInput;
-window.injectVentesStyles = injectVentesStyles;
-window.detectPeriodFilterVentes = detectPeriodFilterVentes;
-window.processVentesSearchFromVoice = processVentesSearchFromVoice;
-window.handleVentesSearch = handleVentesSearch;
-window.clearVentesSearch = clearVentesSearch;
-window.loadClientsForSearch = loadClientsForSearch;
-window.filterVentesBySearchWithDescription = filterVentesBySearchWithDescription;
-window.toggleVenteSelection = toggleVenteSelection;
-window.toggleAllVentesSelection = toggleAllVentesSelection;
-window.deleteSelectedVentes = deleteSelectedVentes;
-window.updateVenteSelectionUI = updateVenteSelectionUI;
-window.filterByPeriodWithDates = filterByPeriodWithDates;
-window.updateVentesStats = updateVentesStats;
-window.appliquerFiltreDatePersonnalise = appliquerFiltreDatePersonnalise;
-window.reinitialiserFiltres = reinitialiserFiltres;
+window.imprimerFactureCredit = imprimerFactureCredit;
+window.normalize = normalize;
 
-window.synchroVenteDepuisCredit = synchroVenteDepuisCredit;
+window.toggleCreditSelectionMode = toggleCreditSelectionMode;
+window.toggleCreditSelection = toggleCreditSelection;
+window.deleteSelectedCredits = deleteSelectedCredits;
+window.updateDeleteButtonVisibility = updateDeleteButtonVisibility;
+window.toggleSelectAllVisible = toggleSelectAllVisible;
+window.selectAllVisibleCredits = selectAllVisibleCredits;
+window.deselectAllVisibleCredits = deselectAllVisibleCredits;
+window.closeCreditSelection = closeCreditSelection;
+window.clearCreditsSearch = clearCreditsSearch;
+window.handleCreditsSearch = handleCreditsSearch;
+window.handleSearchInputCredits = handleSearchInputCredits;
+window.processCreditsSearchFromVoice = processCreditsSearchFromVoice;
+window.detectPeriodFilterCredits = detectPeriodFilterCredits;
+window.loadClientsForSearchCredits = loadClientsForSearchCredits;
+window.filterCreditsBySearchWithDescription = filterCreditsBySearchWithDescription;
+window.injectCreditsStyles = injectCreditsStyles;
+window.renderCreditFactureCell = renderCreditFactureCell;
+window.renderCreditDateCell = renderCreditDateCell;
+window.renderCreditClientCell = renderCreditClientCell;
 
-window.openFactureDetails = openFactureDetails;
-window.closeFactureDetails = closeFactureDetails;
-window.loadFactureDetails = loadFactureDetails;
-window.renderFactureDetails = renderFactureDetails;
-window.printFactureDetails = printFactureDetails;
+window.openCreditFactureDetails = openCreditFactureDetails;
+window.closeCreditFactureDetails = closeCreditFactureDetails;
+window.loadCreditFactureDetails = loadCreditFactureDetails;
+window.renderCreditFactureDetails = renderCreditFactureDetails;
+window.printCreditFactureDetails = printCreditFactureDetails;
+
+window.openCreditPaymentModal = openCreditPaymentModal;
+window.confirmCreditPayment = confirmCreditPayment;
+window.validateCreditPayment = validateCreditPayment;
+
+window.sendCreditWhatsApp = sendCreditWhatsApp;
+
+window.paySelectedCredits = paySelectedCredits;
+window.creerFacturePaiementCredits = creerFacturePaiementCredits;
+window.posAfficherOptionWhatsAppPaiement = posAfficherOptionWhatsAppPaiement;
+window.posEnvoyerWhatsAppPaiement = posEnvoyerWhatsAppPaiement;
+window.posFermerModalWhatsAppPaiement = posFermerModalWhatsAppPaiement;
+
+window.renderCreditsTable = renderCreditsTablePro;
 
 window.getPaginationHTML = window.getPaginationHTML || getPaginationHTML;
 window.changePage = window.changePage || changePage;
+window.getPageData = window.getPageData || getPageData;
 
-window.renderVentesTable = window.renderVentesTablePro;
-window.renderCommandesTable = window.renderCommandesTablePro;
-window.renderCreditsTable = window.renderCreditsTablePro;
-
-window.toggleVenteSelectionMode = toggleVenteSelectionMode;
-window.selectAllVisibleVentes = selectAllVisibleVentes;
-window.deselectAllVisibleVentes = deselectAllVisibleVentes;
-window.toggleSelectAllVisibleVentes = toggleSelectAllVisibleVentes;
-window.selectAllVentesBtnState = selectAllVentesBtnState;
-
-window.payerVentesSelectionnees = payerVentesSelectionnees;
-window.creerFacturePaiementVentes = creerFacturePaiementVentes;
-window.posAfficherOptionWhatsAppPaiementVentes = posAfficherOptionWhatsAppPaiementVentes;
-window.posEnvoyerWhatsAppPaiementVentes = posEnvoyerWhatsAppPaiementVentes;
-window.posFermerModalWhatsAppPaiementVentes = posFermerModalWhatsAppPaiementVentes;
-
-window.renderDatePaiementCell = renderDatePaiementCell;
-
-// ✅ NOUVELLE FONCTION EXPOSÉE
-window.filtrerVentesParClient = filtrerVentesParClient;
-
-// 🆕 Graphique
-window.renderVentesChart = renderVentesChart;
-window.toggleVentesChart = toggleVentesChart;
-
-console.log('🚀 E-SOLUTION - Admin Ventes PRO chargé');
-console.log('✅ 📴 Ventes hors-ligne affichées (localStorage)');
-console.log('✅ Détails facture modal ajouté - Font size agrandi');
+console.log('🚀 E-SOLUTION - Admin Credits PRO chargé');
+console.log('✅ Détails facture crédit modal ajouté - Font size agrandi');
+console.log('✅ Paiement crédit avec modal - Mise à jour du crédit existant');
 console.log('✅ Pagination corrigée - Utilise window.itemsPerPage');
+console.log('✅ Caissier peut : Marquer payé, Modifier, Envoyer WhatsApp');
+console.log('✅ SEUL L\'ADMIN PEUT SUPPRIMER - Le caissier n\'a PAS le bouton Supprimer');
+console.log('✅ Boutons avec texte - Ultra compacts (10px)');
+console.log('✅ Retour au paiement depuis le POS (uniquement si venu du POS)');
+console.log('✅ Pré-sélection du client avec recherche auto');
 console.log('✅ Statistiques en haut de page avec filtres de date');
 console.log('✅ Filtres rapides : Aujourd\'hui, 3j, 7j, 15j, 30j, 90j, 365j');
-console.log('✅ Boutons avec texte - Style moderne comme admin credits');
-console.log('✅ Synchronisation avec admin credits');
-console.log('✅ Sélection en masse');
-console.log('✅ Articles et Options visibles pour tout le monde');
-console.log('✅ 💰 NOUVEAU : Bouton "Payer tout" pour paiement groupé');
-console.log('✅ 📱 NOUVEAU : WhatsApp détaillé avec toutes les factures + produits + sous-totaux + total général');
-console.log('✅ 🎨 NOUVEAU : Design MODERNE identique à admin-credits');
-console.log('✅ 💰 NOUVEAU : Paiement direct dans Admin Ventes (pas de redirection POS)');
-console.log('✅ 📅 NOUVEAU : Enregistrement automatique de la date de paiement (datePaiement)');
-console.log('✅ 🔄 NOUVEAU : Synchronisation vente ↔ crédit (B1)');
-console.log('✅ 📅 NOUVEAU : Colonne "Date paiement" dans la liste des ventes');
+console.log('✅ Paiement crédit : Le champ "Reste à payer" diminue correctement');
+console.log('✅ Synchronisation avec admin ventes : Quand un crédit est payé, la vente se met à jour');
+console.log('✅ Gestion des crédits à 0 MAD : Marqué comme payé automatiquement');
+console.log('✅ ALIAS renderCreditsTable = renderCreditsTablePro (compatibilité admin.js)');
+console.log('✅ changePage NON écrasée (garde la version d\'admin.js)');
+console.log('✅ Bouton "Marquer payé" pour paiement groupé');
+console.log('✅ Création facture "PAI-YYYY-XXXXX" après paiement + WhatsApp');
+console.log('✅ Récupération automatique du numéro client depuis Firestore');
+console.log('✅ Envoi WhatsApp direct au numéro du client (comme pos.js)');
+console.log('✅ 📱 WhatsApp DÉTAILLÉ avec toutes les factures + produits + sous-totaux + total général');
+console.log('✅ ⚠️ DIALOGUE OUI/NON pour multi-clients');
+console.log('✅ 👥 Affichage des 2 noms de clients dans la facture WhatsApp');
+console.log('✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, badges, boutons colorés)');
 console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
-console.log('✅ ⚠️ NOUVEAU : DIALOGUE OUI/NON pour multi-clients');
-console.log('🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option "Crédit + Partiel"');
-console.log('🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s\'adapte aux filtres (heure/jour/mois)');
-console.log('🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)');
-console.log('🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes');
-console.log('🔧 CORRECTION FILTRE CLIENT : filtrerVentesParClient utilise maintenant clientId (cohérence avec admin-credits)');
+console.log('✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table');
+console.log('✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)');
+console.log('🔧 CORRECTION CRITIQUE : Chargement de TOUS les crédits (sans limite) - Firestore source de vérité');
