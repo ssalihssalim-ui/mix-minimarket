@@ -20,6 +20,7 @@
 // 🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s'adapte aux filtres (heure/jour/mois)
 // 🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)
 // 🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes
+// 🆕 ✅ STATS : Ajout "Total Crédits impayés", "Total Remises", "Total Restant"
 
 // ========== VARIABLES GLOBALES ==========
 window.commandesSearch = window.commandesSearch || '';
@@ -667,6 +668,8 @@ margin: 0 !important;
 .ventes-stat-card .stat-value.blue { color: #3B82F6 !important; }
 .ventes-stat-card .stat-value.orange { color: #F59E0B !important; }
 .ventes-stat-card .stat-value.red { color: #EF4444 !important; }
+.ventes-stat-card .stat-value.purple { color: #8B5CF6 !important; }
+.ventes-stat-card .stat-value.pink { color: #EC4899 !important; }
 
 .ventes-stat-card .stat-label {
 font-size: 12px !important;
@@ -2085,6 +2088,18 @@ onkeyup="handleVentesSearch(this.value);">
 <span class="stat-value" id="ventesStatsAchat" style="color:#6b7280;">0.00</span>
 <span class="stat-label">📦 Total Achat</span>
 </div>
+<div class="ventes-stat-card">
+<span class="stat-value red" id="ventesStatsCreditsImpayes">0.00</span>
+<span class="stat-label">💳 Crédits impayés</span>
+</div>
+<div class="ventes-stat-card">
+<span class="stat-value purple" id="ventesStatsRemises">0.00</span>
+<span class="stat-label">🎁 Total Remises</span>
+</div>
+<div class="ventes-stat-card">
+<span class="stat-value pink" id="ventesStatsRestant">0.00</span>
+<span class="stat-label">⏳ Total Restant</span>
+</div>
 </div>
 <div id="ventesTableContainer"></div>
 <div id="ventesPagination" style="margin-top:12px;"></div>
@@ -2333,18 +2348,36 @@ return date && date >= cutoff;
 });
 }
 
+// ✅ MODIFIÉ : Ajout des stats Crédits impayés, Remises, Restant
 function updateVentesStats(data) {
 var total = 0, profit = 0, achat = 0;
+var creditsImpayes = 0, remises = 0, restant = 0;
+
 data.forEach(function(d) {
 total += d.total || 0;
 profit += d.profit || 0;
 achat += d.achat || 0;
+
+// ✅ Remises : toutes les remises (payées ou non)
+remises += d.discountMAD || 0;
+
+// ✅ Restant : somme de remainingAmount (utile pour partiels)
+restant += d.remainingAmount || 0;
+
+// ✅ Crédits impayés : ventes crédit/partiel non payées
+var st = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
+if (!d.paid && (st === 'crédit' || st === 'partiel')) {
+    creditsImpayes += d.remainingAmount || d.total || 0;
+}
 });
 
 document.getElementById('ventesStatsTotal').textContent = total.toFixed(2);
 document.getElementById('ventesStatsProfit').textContent = profit.toFixed(2);
 document.getElementById('ventesStatsCount').textContent = data.length;
 document.getElementById('ventesStatsAchat').textContent = achat.toFixed(2);
+document.getElementById('ventesStatsCreditsImpayes').textContent = creditsImpayes.toFixed(2);
+document.getElementById('ventesStatsRemises').textContent = remises.toFixed(2);
+document.getElementById('ventesStatsRestant').textContent = restant.toFixed(2);
 }
 
 async function synchroVenteDepuisCredit(creditData) {
@@ -3985,3 +4018,4 @@ console.log('🆕 ✅ FILTRE : "Partiel" fusionné avec "Crédit" → option "Cr
 console.log('🆕 ✅ GRAPHIQUE : CA / Profit / Crédits qui s\'adapte aux filtres (heure/jour/mois)');
 console.log('🆕 ✅ BOUTON : Afficher / Masquer le graphique (état sauvegardé)');
 console.log('🔧 CORRECTION : Suppression de .limit(2000) → charge TOUTES les ventes');
+console.log('🆕 ✅ STATS : "Total Crédits impayés" + "Total Remises" + "Total Restant" ajoutés');
