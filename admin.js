@@ -312,32 +312,120 @@ return false;
 
 // ==================== DASHBOARD ====================
 function loadDashboardPage(c) {
-c.innerHTML = '<div class="stats-grid">' +
-'<div class="stat-card"><div class="stat-icon"><i class="fas fa-coffee"></i></div><div class="stat-info"><span class="stat-label">Produits</span><span class="stat-value" id="productsCount">0</span></div></div>' +
-'<div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><span class="stat-label">Clients</span><span class="stat-value" id="clientsCount">0</span></div></div>' +
-'<div class="stat-card"><div class="stat-icon"><i class="fas fa-layer-group"></i></div><div class="stat-info"><span class="stat-label">Catégories</span><span class="stat-value" id="categoriesCount">0</span></div></div>' +
-'<div class="stat-card"><div class="stat-icon"><i class="fas fa-shopping-cart"></i></div><div class="stat-info"><span class="stat-label">Ventes</span><span class="stat-value" id="ventesCount">0</span></div></div>' +
-'</div>' +
-'<div class="content-card">' +
-'<div class="card-header"><h3><i class="fas fa-bell"></i> Inscriptions en attente</h3><button class="btn-add" onclick="loadPendingRegistrations()"><i class="fas fa-sync"></i> Actualiser</button></div>' +
-'<div id="pendingRegistrations">Chargement...</div>' +
-'</div>';
-loadDashboardStats();
-loadPendingRegistrations();
+    var userRole = (window.currentUserData && window.currentUserData.userData && window.currentUserData.userData.role) ? window.currentUserData.userData.role : 'admin';
 
-// ✅ AJOUT : Sauvegarde systématique
-if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
-    setTimeout(function() {
-        CacheDB.saveAll();
-    }, 500);
-}
+    // 📊 Bandeau de statistiques KPI (5 cartes)
+    var kpiHTML = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;">' +
+        '<div class="stat-card"><div class="stat-icon" style="background:#dcfce7;"><i class="fas fa-money-bill-wave" style="color:#16a34a;"></i></div><div class="stat-info"><span class="stat-label">CA du jour</span><span class="stat-value" id="kpiCaJour">0 MAD</span></div></div>' +
+        '<div class="stat-card"><div class="stat-icon" style="background:#dbeafe;"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i></div><div class="stat-info"><span class="stat-label">Ventes du jour</span><span class="stat-value" id="kpiVentesJour">0</span></div></div>' +
+        '<div class="stat-card"><div class="stat-icon" style="background:#fef3c7;"><i class="fas fa-box" style="color:#d97706;"></i></div><div class="stat-info"><span class="stat-label">Produits</span><span class="stat-value" id="productsCount">0</span></div></div>' +
+        '<div class="stat-card"><div class="stat-icon" style="background:#ede9fe;"><i class="fas fa-users" style="color:#7c3aed;"></i></div><div class="stat-info"><span class="stat-label">Clients</span><span class="stat-value" id="clientsCount">0</span></div></div>' +
+        '<div class="stat-card"><div class="stat-icon" style="background:#fee2e2;"><i class="fas fa-credit-card" style="color:#dc2626;"></i></div><div class="stat-info"><span class="stat-label">Crédits impayés</span><span class="stat-value" id="kpiCreditsImpayes">0 MAD</span></div></div>' +
+        '</div>';
+
+    // 🎛️ Cartes de navigation cliquables selon le rôle
+    var navItemsAdmin = [
+        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente', color: '#2563EB', bg: '#dbeafe' },
+        { page: 'statistiques', icon: 'fa-chart-bar', label: 'Statistiques', desc: 'Analyses & rapports', color: '#7c3aed', bg: '#ede9fe' },
+        { page: 'clients', icon: 'fa-users', label: 'Clients', desc: 'Gérer les clients', color: '#0891b2', bg: '#cffafe' },
+        { page: 'fournisseurs', icon: 'fa-truck', label: 'Fournisseurs', desc: 'Gérer les fournisseurs', color: '#ea580c', bg: '#ffedd5' },
+        { page: 'products', icon: 'fa-box', label: 'Produits', desc: 'Gérer les produits', color: '#16a34a', bg: '#dcfce7' },
+        { page: 'categories', icon: 'fa-layer-group', label: 'Catégories', desc: 'Gérer les catégories', color: '#d97706', bg: '#fef3c7' },
+        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique des ventes', color: '#059669', bg: '#d1fae5' },
+        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer les crédits', color: '#dc2626', bg: '#fee2e2' },
+        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer les dépenses', color: '#9333ea', bg: '#f3e8ff' },
+        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'Commandes en ligne', color: '#e11d48', bg: '#ffe4e6' },
+        { page: 'options', icon: 'fa-cog', label: 'Options', desc: 'Paramètres', color: '#475569', bg: '#e2e8f0' }
+    ];
+
+    var navItemsCaissier = [
+        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente', color: '#2563EB', bg: '#dbeafe' },
+        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique des ventes', color: '#059669', bg: '#d1fae5' },
+        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer les crédits', color: '#dc2626', bg: '#fee2e2' },
+        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer les dépenses', color: '#9333ea', bg: '#f3e8ff' },
+        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'Commandes en ligne', color: '#e11d48', bg: '#ffe4e6' }
+    ];
+
+    var navItems = (userRole === 'caissier') ? navItemsCaissier : navItemsAdmin;
+
+    var navHTML = '<div class="content-card">' +
+        '<div class="card-header"><h3><i class="fas fa-th-large"></i> Accès rapide</h3></div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;">';
+
+    navItems.forEach(function(item) {
+        navHTML += '<div onclick="navigateTo(\'' + item.page + '\')" style="cursor:pointer;background:#FFFFFF;border:1px solid #EAECEF;border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);box-shadow:0 1px 3px rgba(0,0,0,0.04);" ' +
+            'onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 8px 20px rgba(0,0,0,0.08)\';this.style.borderColor=\'' + item.color + '\';" ' +
+            'onmouseout="this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.04)\';this.style.borderColor=\'#EAECEF\';">' +
+            '<div style="width:56px;height:56px;border-radius:50%;background:' + item.bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+            '<i class="fas ' + item.icon + '" style="font-size:1.5rem;color:' + item.color + ';"></i>' +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:2px;">' +
+            '<span style="font-weight:700;font-size:1rem;color:#1A1D1F;">' + item.label + '</span>' +
+            '<span style="font-size:0.78rem;color:#6F767E;">' + item.desc + '</span>' +
+            '</div>' +
+            '</div>';
+    });
+
+    navHTML += '</div></div>';
+
+    // 📋 Section inscriptions en attente
+    var pendingHTML = '<div class="content-card">' +
+        '<div class="card-header"><h3><i class="fas fa-bell"></i> Inscriptions en attente</h3><button class="btn-add" onclick="loadPendingRegistrations()"><i class="fas fa-sync"></i> Actualiser</button></div>' +
+        '<div id="pendingRegistrations">Chargement...</div>' +
+        '</div>';
+
+    c.innerHTML = kpiHTML + navHTML + pendingHTML;
+
+    loadDashboardStats();
+    loadPendingRegistrations();
+
+    // ✅ AJOUT : Sauvegarde systématique
+    if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+        setTimeout(function() {
+            CacheDB.saveAll();
+        }, 500);
+    }
 }
 
 function loadDashboardStats() {
-db.collection('products').get().then(function(s) { var e = document.getElementById('productsCount'); if (e) e.textContent = s.size; });
-db.collection('clients').get().then(function(s) { var e = document.getElementById('clientsCount'); if (e) e.textContent = s.size; });
-db.collection('categories').get().then(function(s) { var e = document.getElementById('categoriesCount'); if (e) e.textContent = s.size; });
-db.collection('ventes').get().then(function(s) { var e = document.getElementById('ventesCount'); if (e) e.textContent = s.size; });
+    // Statistiques de base (compteurs)
+    db.collection('products').get().then(function(s) { var e = document.getElementById('productsCount'); if (e) e.textContent = s.size; });
+    db.collection('clients').get().then(function(s) { var e = document.getElementById('clientsCount'); if (e) e.textContent = s.size; });
+    db.collection('categories').get().then(function(s) { var e = document.getElementById('categoriesCount'); if (e) e.textContent = s.size; });
+    db.collection('ventes').get().then(function(s) { var e = document.getElementById('ventesCount'); if (e) e.textContent = s.size; });
+
+    // 🆕 Statistiques du jour (CA + nb ventes) + crédits impayés
+    db.collection('ventes').get().then(function(snapshot) {
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var caJour = 0, nbVentesJour = 0;
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            var dateVente = null;
+            if (d.createdAt && d.createdAt.seconds) dateVente = new Date(d.createdAt.seconds * 1000);
+            else if (d.createdAt && d.createdAt.toDate) dateVente = d.createdAt.toDate();
+            if (dateVente && dateVente >= today) {
+                caJour += parseFloat(d.total) || 0;
+                nbVentesJour += 1;
+            }
+        });
+        var caEl = document.getElementById('kpiCaJour');
+        if (caEl) caEl.textContent = caJour.toFixed(2) + ' MAD';
+        var vEl = document.getElementById('kpiVentesJour');
+        if (vEl) vEl.textContent = nbVentesJour;
+    }).catch(function(e) { console.warn('Erreur stats jour:', e); });
+
+    // Crédits impayés
+    db.collection('credits').get().then(function(snapshot) {
+        var totalImpaye = 0;
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            if (d.paid === false) {
+                totalImpaye += parseFloat(d.remainingAmount || d.total) || 0;
+            }
+        });
+        var el = document.getElementById('kpiCreditsImpayes');
+        if (el) el.textContent = totalImpaye.toFixed(2) + ' MAD';
+    }).catch(function(e) { console.warn('Erreur crédits:', e); });
 }
 
 // ==================== INSCRIPTIONS EN ATTENTE (CORRIGÉ) ====================
