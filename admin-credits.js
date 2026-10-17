@@ -20,6 +20,7 @@
 // ✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique
 // ✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table (comme admin-ventes)
 // ✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)
+// 🔧 CORRECTION : Chargement de TOUS les crédits (sans limite) pour synchronisation avec Ventes
 
 // ========== VARIABLES GLOBALES ==========
 window.creditsPeriod = window.creditsPeriod || 'all';
@@ -1056,56 +1057,56 @@ clearBtn.classList.add('hidden');
 }
 }
 
+// 🔧 CORRECTION : Chargement de TOUS les crédits (sans limite 2000)
 async function loadCredits() {
-var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
-var vendeurCaissier = '';
-if (!isAdmin && window.currentUserData) {
-vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
-}
+    var isAdmin = window.currentUserData && window.currentUserData.userData.role === 'admin';
+    var vendeurCaissier = '';
+    if (!isAdmin && window.currentUserData) {
+        vendeurCaissier = window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom;
+    }
 
-const cached = await CacheDB.getAll('credits');
-if (cached.length) {
-window.allCreditsData = cached;
-if (!isAdmin) {
-window.allCreditsData = window.allCreditsData.filter(function(d) {
-return d.vendeur === vendeurCaissier;
-});
-}
-if (!window.sortOrders.credits) window.sortOrders.credits = {};
-if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
-window.currentPages.credits = 1;
-applyCreditsFilters();
-}
+    // 1. Charger TOUS les crédits depuis Firestore (SANS LIMITE)
+    if (navigator.onLine) {
+        try {
+            const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').get();
+            window.allCreditsData = [];
+            snapshot.forEach(function(dc) {
+                var d = dc.data();
+                d.id = dc.id;
+                window.allCreditsData.push(d);
+            });
+            console.log('📥 Total crédits chargés depuis Firestore :', window.allCreditsData.length);
 
-if (navigator.onLine) {
-try {
-const snapshot = await db.collection('credits').orderBy('createdAt', 'desc').limit(2000).get();
-window.allCreditsData = [];
-snapshot.forEach(function(dc) {
-var d = dc.data();
-d.id = dc.id;
-window.allCreditsData.push(d);
-});
+            // 2. Mettre TOUS les crédits en cache (avant filtrage caissier)
+            for (let doc of window.allCreditsData) {
+                await CacheDB.set('credits', doc.id, doc);
+            }
+        } catch (e) {
+            console.error('Erreur chargement crédits Firestore:', e);
+            // Fallback sur le cache en cas d'erreur réseau
+            const cached = await CacheDB.getAll('credits');
+            window.allCreditsData = cached;
+        }
+    } else {
+        // Mode hors-ligne : utiliser le cache
+        const cached = await CacheDB.getAll('credits');
+        window.allCreditsData = cached;
+    }
 
-if (!isAdmin) {
-window.allCreditsData = window.allCreditsData.filter(function(d) {
-return d.vendeur === vendeurCaissier;
-});
-}
+    // 3. Appliquer le filtre vendeur UNIQUEMENT pour l'affichage (pas pour le cache)
+    if (!isAdmin && vendeurCaissier) {
+        window.allCreditsData = window.allCreditsData.filter(function(d) {
+            return d.vendeur === vendeurCaissier;
+        });
+        console.log('👤 Crédits filtrés pour le caissier :', window.allCreditsData.length);
+    }
 
-for (let doc of window.allCreditsData) {
-await CacheDB.set('credits', doc.id, doc);
-}
+    // 4. Initialiser le tri et afficher
+    if (!window.sortOrders.credits) window.sortOrders.credits = {};
+    if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
 
-if (!window.sortOrders.credits) window.sortOrders.credits = {};
-if (!window.sortOrders.credits.createdAt) window.sortOrders.credits.createdAt = 'desc';
-} catch (e) {
-console.error('Erreur chargement crédits:', e);
-}
-}
-
-window.currentPages.credits = 1;
-applyCreditsFilters();
+    window.currentPages.credits = 1;
+    applyCreditsFilters();
 }
 
 function applyCreditsFilters() {
@@ -3025,3 +3026,4 @@ console.log('✅ 🎨 NOUVEAU : Design MODERNE (cartes stats, table épurée, ba
 console.log('✅ 🖱️ NOUVEAU : Nom du client CLIQUABLE → filtre automatique');
 console.log('✅ ↔️ NOUVEAU : SCROLL HORIZONTAL + VERTICAL sur la table');
 console.log('✅ 📅 NOUVEAU : Enregistrement + affichage de la date de paiement (datePaiement)');
+console.log('🔧 CORRECTION : Chargement de TOUS les crédits (sans limite) pour synchronisation avec Ventes');
