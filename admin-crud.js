@@ -4,6 +4,9 @@
 // ✅ Module Achats fournisseur avec modal 90% (écran)
 // ✅ Reconnaissance par Gemini via Cloudflare Worker (sécurisé)
 // ✅ Gestion du stock, prix boîte, date d'expiration
+// 🆕 ✅ Date de production + Durée de conservation + Date d'expiration par produit
+// 🆕 ✅ Durées par défaut intelligentes selon la catégorie
+// 🆕 ✅ Badges colorés (production = bleu, expiration = vert/orange/rouge)
 
 // ====================================================
 //  🔑  CONFIGURATION GEMINI (via Cloudflare Worker)
@@ -41,6 +44,178 @@ function deselectCategory(catName) {
 
 window.updateSelectedCategories = updateSelectedCategories;
 window.deselectCategory = deselectCategory;
+
+// ========== 🆕 DATES DE PRODUCTION / EXPIRATION ==========
+
+// ✅ Durées de conservation par défaut selon la catégorie (en jours)
+var DUREES_CONSERVATION_DEFAUT = {
+    'produits laitiers': 20, 'laitier': 20, 'laitiers': 20, 'lait': 15,
+    'yaourt': 21, 'fromage': 30, 'beurre': 60, 'crème': 15, 'creme': 15,
+    'viande': 3, 'viandes': 3, 'poulet': 2, 'poisson': 2, 'poissons': 2, 'charcuterie': 7,
+    'fruits': 7, 'légumes': 7, 'legumes': 7, 'fruits et légumes': 7,
+    'pain': 3, 'viennoiserie': 2, 'pâtisserie': 3, 'patisserie': 3, 'boulangerie': 3,
+    'boissons': 180, 'jus': 30, 'soda': 180, 'eau': 365,
+    'épicerie': 365, 'epicerie': 365, 'sec': 365, 'pâtes': 365, 'pates': 365,
+    'riz': 365, 'conserves': 730, 'conserve': 730,
+    'surgelés': 180, 'surgele': 180, 'surgele': 180,
+    'hygiène': 730, 'hygiene': 730, 'entretien': 730, 'cosmétique': 730, 'cosmetique': 730
+};
+
+function getDureeConservationParCategorie(categorieNom) {
+    if (!categorieNom) return 0;
+    var key = categorieNom.toLowerCase().trim();
+    if (DUREES_CONSERVATION_DEFAUT[key] !== undefined) return DUREES_CONSERVATION_DEFAUT[key];
+    for (var k in DUREES_CONSERVATION_DEFAUT) {
+        if (DUREES_CONSERVATION_DEFAUT.hasOwnProperty(k)) {
+            if (key.indexOf(k) !== -1) return DUREES_CONSERVATION_DEFAUT[k];
+        }
+    }
+    return 0;
+}
+window.getDureeConservationParCategorie = getDureeConservationParCategorie;
+
+function remplirDateProductionAujourdhui() {
+    var input = document.getElementById('prodDateProduction');
+    if (input && !input.value) {
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        input.value = yyyy + '-' + mm + '-' + dd;
+    }
+}
+window.remplirDateProductionAujourdhui = remplirDateProductionAujourdhui;
+
+function calculerDateExpirationAuto() {
+    var productionInput = document.getElementById('prodDateProduction');
+    var dureeInput = document.getElementById('prodDureeConservation');
+    var dateInput = document.getElementById('prodDateExpiration');
+    if (!dureeInput || !dateInput) return;
+
+    var duree = parseInt(dureeInput.value) || 0;
+    if (duree <= 0) {
+        dateInput.value = '';
+        return;
+    }
+
+    var base = null;
+    if (productionInput && productionInput.value) {
+        base = new Date(productionInput.value);
+    }
+    if (!base || isNaN(base.getTime())) {
+        base = new Date();
+    }
+
+    var expiration = new Date(base.getTime() + duree * 86400000);
+    var yyyy = expiration.getFullYear();
+    var mm = String(expiration.getMonth() + 1).padStart(2, '0');
+    var dd = String(expiration.getDate()).padStart(2, '0');
+    dateInput.value = yyyy + '-' + mm + '-' + dd;
+}
+window.calculerDateExpirationAuto = calculerDateExpirationAuto;
+
+function autoRemplirDureeParCategorie() {
+    var dureeInput = document.getElementById('prodDureeConservation');
+    var select = document.getElementById('prodCategoriesSelect');
+    if (!dureeInput || !select) return;
+    if (dureeInput.value && parseInt(dureeInput.value) > 0) return;
+
+    var selected = Array.from(select.selectedOptions).map(opt => opt.value);
+    if (selected.length === 0) return;
+
+    var duree = getDureeConservationParCategorie(selected[0]);
+    if (duree > 0) {
+        dureeInput.value = duree;
+        calculerDateExpirationAuto();
+    }
+}
+window.autoRemplirDureeParCategorie = autoRemplirDureeParCategorie;
+
+function renderDateProductionCell(dateProduction) {
+    if (!dateProduction) {
+        return '<span style="color:#94a3b8;font-size:18px;">—</span>';
+    }
+    var d = null;
+    if (dateProduction.toDate) d = dateProduction.toDate();
+    else if (dateProduction.seconds) d = new Date(dateProduction.seconds * 1000);
+    else if (typeof dateProduction === 'string') d = new Date(dateProduction);
+    else if (dateProduction instanceof Date) d = dateProduction;
+
+    if (!d || isNaN(d.getTime())) {
+        return '<span style="color:#94a3b8;font-size:18px;">—</span>';
+    }
+
+    var dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    var maintenant = new Date();
+    maintenant.setHours(0, 0, 0, 0);
+    var prod = new Date(d);
+    prod.setHours(0, 0, 0, 0);
+    var joursDepuis = Math.ceil((maintenant - prod) / 86400000);
+
+    var tooltip = joursDepuis === 0 ? 'Produit aujourd\'hui' :
+                  joursDepuis > 0 ? 'Produit il y a ' + joursDepuis + ' jour(s)' :
+                  'Date dans le futur';
+
+    return '<span class="status-success" title="' + tooltip + '" style="font-size:18px; padding:4px 12px; white-space:nowrap; background:#EFF6FF; color:#2563EB; border-color:#BFDBFE;">' +
+           '<i class="fas fa-industry"></i> ' + dateStr +
+           '</span>';
+}
+window.renderDateProductionCell = renderDateProductionCell;
+
+function renderExpirationBadge(dateExpiration) {
+    if (!dateExpiration) {
+        return '<span style="color:#94a3b8;font-size:18px;">—</span>';
+    }
+    var d = null;
+    if (dateExpiration.toDate) d = dateExpiration.toDate();
+    else if (dateExpiration.seconds) d = new Date(dateExpiration.seconds * 1000);
+    else if (typeof dateExpiration === 'string') d = new Date(dateExpiration);
+    else if (dateExpiration instanceof Date) d = dateExpiration;
+
+    if (!d || isNaN(d.getTime())) {
+        return '<span style="color:#94a3b8;font-size:18px;">—</span>';
+    }
+
+    var maintenant = new Date();
+    maintenant.setHours(0, 0, 0, 0);
+    var expire = new Date(d);
+    expire.setHours(0, 0, 0, 0);
+
+    var joursRestants = Math.ceil((expire - maintenant) / 86400000);
+    var dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    var cls, label, icone, tooltip;
+    if (joursRestants < 0) {
+        cls = 'status-danger'; icone = 'fa-times-circle';
+        label = dateStr + ' (expiré)';
+        tooltip = 'Expiré depuis ' + Math.abs(joursRestants) + ' jour(s)';
+    } else if (joursRestants === 0) {
+        cls = 'status-danger'; icone = 'fa-exclamation-triangle';
+        label = dateStr + " (aujourd'hui)";
+        tooltip = "Expire aujourd'hui";
+    } else if (joursRestants <= 3) {
+        cls = 'status-danger'; icone = 'fa-exclamation-triangle';
+        label = dateStr + ' (J-' + joursRestants + ')';
+        tooltip = 'Expire dans ' + joursRestants + ' jour(s)';
+    } else if (joursRestants <= 7) {
+        cls = 'status-warning'; icone = 'fa-clock';
+        label = dateStr + ' (J-' + joursRestants + ')';
+        tooltip = 'Expire dans ' + joursRestants + ' jour(s)';
+    } else if (joursRestants <= 30) {
+        cls = 'status-warning'; icone = 'fa-clock';
+        label = dateStr;
+        tooltip = 'Expire dans ' + joursRestants + ' jour(s)';
+    } else {
+        cls = 'status-success'; icone = 'fa-calendar-check';
+        label = dateStr;
+        tooltip = 'Expire dans ' + joursRestants + ' jour(s)';
+    }
+
+    return '<span class="' + cls + '" title="' + tooltip + '" style="font-size:18px; padding:4px 12px; white-space:nowrap;">' +
+           '<i class="fas ' + icone + '"></i> ' + label +
+           '</span>';
+}
+window.renderExpirationBadge = renderExpirationBadge;
 
 // ==================== CATÉGORIES ====================
 function loadCategoriesPage(c) {
@@ -216,6 +391,9 @@ function loadProductsPage(c) {
         makeSortableHeader('products', 'prixPromo', 'Promo', 'loadProducts') + makeSortableHeader('products', 'profit', 'Profit', 'loadProducts') +
         makeSortableHeader('products', 'stock', 'Stock', 'loadProducts') + makeSortableHeader('products', 'vendues', 'Vendues', 'loadProducts') +
         makeSortableHeader('products', 'ca', 'CA', 'loadProducts') + makeSortableHeader('products', 'disponible', 'Dispo', 'loadProducts') +
+        '<th style="padding:14px 10px;"><i class="fas fa-industry"></i> Production</th>' +
+        '<th style="padding:14px 10px;"><i class="fas fa-hourglass-half"></i> Durée (j)</th>' +
+        '<th style="padding:14px 10px;"><i class="fas fa-calendar-check"></i> Date exp.</th>' +
         '<th style="padding:14px 10px;">Temps</th><th style="padding:14px 10px;">Desc</th><th style="padding:14px 10px;">Actions</th></thead><tbody style="font-size:20px;"></tbody></div><div id="productsPagination"></div></div>';
     loadCategoriesInFilter(); loadProducts();
 }
@@ -237,7 +415,17 @@ async function loadProducts() {
     try {
         const snapshot = await db.collection('products').get();
         window.allProductsData = [];
-        snapshot.forEach(d => { let dd = d.data(); dd.id = d.id; let prix = (dd.prixPromo && dd.prixPromo > 0) ? dd.prixPromo : (dd.prixVente || 0); dd.profit = (prix - (dd.prixAchat || 0)); window.allProductsData.push(dd); });
+        snapshot.forEach(d => {
+            let dd = d.data();
+            dd.id = d.id;
+            let prix = (dd.prixPromo && dd.prixPromo > 0) ? dd.prixPromo : (dd.prixVente || 0);
+            dd.profit = (prix - (dd.prixAchat || 0));
+            // ✅ Initialiser les nouveaux champs avec valeurs par défaut
+            dd.dateProduction = dd.dateProduction || '';
+            dd.dureeConservation = dd.dureeConservation || 0;
+            dd.dateExpiration = dd.dateExpiration || '';
+            window.allProductsData.push(dd);
+        });
         for (let doc of window.allProductsData) await CacheDB.set('products', doc.id, doc);
         renderProductsTable();
     } catch (e) { console.error(e); }
@@ -260,7 +448,7 @@ function renderProductsTable() {
     }
     data = applySort('products', data, 'nom'); var pageData = getPageData('products', data);
     tb.innerHTML = '';
-    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="18" style="text-align:center;padding:40px;font-size:24px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
+    if (pageData.length === 0) { tb.innerHTML = '<tr><td colspan="21" style="text-align:center;padding:40px;font-size:24px;">Aucun produit</td></tr>'; document.getElementById('productsPagination').innerHTML = ''; return; }
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var im = d.imageBase64 ? '<img src="' + d.imageBase64 + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">' : '<i class="fas fa-box" style="color:#94a3b8; font-size:28px;"></i>';
@@ -284,6 +472,9 @@ function renderProductsTable() {
             '<td style="padding:14px 10px; font-size:20px;">' + (d.vendues || 0) + '</td>' +
             '<td style="padding:14px 10px; font-size:20px;">' + ((d.ca || 0).toFixed(2)) + '</td>' +
             '<td style="padding:14px 10px;">' + disp + '</td>' +
+            '<td style="padding:14px 10px;">' + renderDateProductionCell(d.dateProduction) + '</td>' +
+            '<td style="padding:14px 10px; font-size:20px; text-align:center;">' + (d.dureeConservation || 0) + '</td>' +
+            '<td style="padding:14px 10px;">' + renderExpirationBadge(d.dateExpiration) + '</td>' +
             '<td style="padding:14px 10px; font-size:20px;">' + (d.tempsPrep || '-') + '</td>' +
             '<td style="padding:14px 10px; font-size:20px;">' + (d.description || '-') + '</td>' +
             '<td style="padding:14px 10px;"><button class="btn-edit" onclick="editDocument(\'products\',\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')" style="font-size:20px; padding:10px 16px;"><i class="fas fa-trash"></i></button></td></tr>';
@@ -308,7 +499,7 @@ async function openProductForm(data) {
     var categoriesHtml = 
         '<div class="form-group" style="min-width:100%;">' +
             '<label style="font-size:22px; font-weight:600;">Catégories</label>' +
-            '<select id="prodCategoriesSelect" multiple size="5" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:12px; font-size:20px; min-height:120px;" onchange="updateSelectedCategories()">' +
+            '<select id="prodCategoriesSelect" multiple size="5" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:12px; font-size:20px; min-height:120px;" onchange="updateSelectedCategories(); autoRemplirDureeParCategorie();">' +
                 selectOptions +
             '</select>' +
             '<div id="selectedCategoriesDisplay" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:10px;"></div>' +
@@ -352,6 +543,26 @@ async function openProductForm(data) {
         '</div>' +
         '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Prix Vente</label><input type="number" id="prodPV" value="' + (data.prixVente || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Prix Promo</label><input type="number" id="prodPromo" value="' + (data.prixPromo || 0) + '" step="0.01" style="font-size:22px; padding:14px;"></div></div>' +
         '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Stock</label><input type="number" id="prodStock" value="' + (data.stock || 0) + '" style="font-size:22px; padding:14px;"></div><div class="form-group"><label style="font-size:22px;">Temps Prep</label><input type="text" id="prodTemps" value="' + escapeHtml(data.tempsPrep || '') + '" placeholder="15 min" style="font-size:22px; padding:14px;"></div></div>' +
+        // 🆕 3 champs production / durée / expiration
+        '<div class="form-row">' +
+            '<div class="form-group">' +
+                '<label style="font-size:22px;"><i class="fas fa-industry"></i> Date de production</label>' +
+                '<input type="date" id="prodDateProduction" value="' + (data.dateProduction || '') + '" onchange="calculerDateExpirationAuto()" style="font-size:22px; padding:14px;">' +
+                '<small style="display:block; color:#64748b; font-size:16px; margin-top:4px;">Par défaut : aujourd\'hui</small>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label style="font-size:22px;"><i class="fas fa-calendar-check"></i> Durée de conservation (jours)</label>' +
+                '<input type="number" id="prodDureeConservation" min="0" step="1" value="' + (data.dureeConservation || 0) + '" placeholder="Ex: 20 pour laitier, 365 pour sec" oninput="calculerDateExpirationAuto()" style="font-size:22px; padding:14px;">' +
+                '<small style="display:block; color:#64748b; font-size:16px; margin-top:4px;">0 = pas de péremption</small>' +
+            '</div>' +
+        '</div>' +
+        '<div class="form-row">' +
+            '<div class="form-group" style="min-width:100%;">' +
+                '<label style="font-size:22px;"><i class="fas fa-hourglass-half"></i> Date d\'expiration</label>' +
+                '<input type="date" id="prodDateExpiration" value="' + (data.dateExpiration || '') + '" style="font-size:22px; padding:14px;">' +
+                '<small style="display:block; color:#64748b; font-size:16px; margin-top:4px;">Calculée automatiquement = production + durée (modifiable)</small>' +
+            '</div>' +
+        '</div>' +
         '<div class="form-row"><div class="form-group"><label style="font-size:22px;">Disponible</label><select id="prodDispo" style="font-size:22px; padding:14px;"><option value="1" ' + dy + '>Oui</option><option value="0" ' + dn + '>Non</option></select></div><div class="form-group"><label style="font-size:22px;">Description</label><textarea id="prodDesc" style="font-size:22px; padding:14px;">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
         '<div class="form-row" style="flex-direction:column;"><label style="font-weight:600; font-size:22px; margin-bottom:12px;">🧾 Recette (ingrédients du stock)</label><div id="productIngredientsList" style="display:flex; flex-direction:column; gap:10px;">';
     if (data.ingredients && data.ingredients.length > 0) { data.ingredients.forEach(function(ing, idx) { h += renderIngredientRow(idx, ing); }); }
@@ -363,6 +574,8 @@ async function openProductForm(data) {
     setTimeout(function() {
         if (typeof updateSelectedCategories === 'function') updateSelectedCategories();
         calculatePrixAchat();
+        remplirDateProductionAujourdhui();
+        autoRemplirDureeParCategorie();
     }, 50);
 }
 
@@ -427,6 +640,10 @@ function saveProduct() {
             description: document.getElementById('prodDesc').value,
             categories: selectedCategories,
             categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',
+            // 🆕 3 nouveaux champs production / durée / expiration
+            dateProduction: document.getElementById('prodDateProduction')?.value || '',
+            dureeConservation: parseInt(document.getElementById('prodDureeConservation')?.value) || 0,
+            dateExpiration: document.getElementById('prodDateExpiration')?.value || '',
             ingredients: ingredients,
             fournisseurId: fournisseurId,
             fournisseurNom: fournisseurNom
@@ -901,9 +1118,19 @@ async function validerAchats() {
             updateData.prixVente = prixUnitaire * 1.3;
             updateData.profit = updateData.prixVente - prixUnitaire;
         }
-        if (item.dateExpiration) {
+        // ✅ Nouvelle réception = date de production = aujourd'hui
+        var aujourdhui = new Date();
+        var todayStr = aujourdhui.toISOString().split('T')[0];
+        updateData.dateProduction = todayStr;
+
+        // ✅ Recalcule la date d'expiration à partir de la durée de conservation du produit
+        if (produit && produit.dureeConservation > 0) {
+            var nouvelleExpiration = new Date(aujourdhui.getTime() + produit.dureeConservation * 86400000);
+            updateData.dateExpiration = nouvelleExpiration.toISOString().split('T')[0];
+        } else if (item.dateExpiration) {
             updateData.dateExpiration = item.dateExpiration;
         }
+
         batch.update(prodRef, updateData);
     }
     try {
@@ -1021,3 +1248,6 @@ window.renderClientsTable = renderClientsTable;
 window.renderFournisseursTable = renderFournisseursTable;
 
 console.log('🚀 E-SOLUTION - Admin CRUD - Module achats pro avec Gemini via Cloudflare Worker');
+console.log('✅ 🆕 Date de production + Durée de conservation + Date d\'expiration par produit');
+console.log('✅ 🆕 Durées par défaut intelligentes selon la catégorie');
+console.log('✅ 🆕 Badges colorés (production = bleu, expiration = vert/orange/rouge)');
