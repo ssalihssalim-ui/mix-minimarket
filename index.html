@@ -26,53 +26,70 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-<!-- ✅ STYLE RESPONSIVE LOGIN / REGISTER — TOUS LES ÉCRANS -->
+<!-- ✅ STYLE RESPONSIVE LOGIN / REGISTER — FORMULAIRE 80% + CENTRÉ + POLICE PRO -->
 <style id="auth-responsive-styles">
 /* ============================================
-   BASE - Login wrapper
+   🌐 BASE GLOBALE — Police professionnelle Inter
+   ============================================ */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
+}
+
+/* ============================================
+   BASE - Login wrapper (formulaire TOUJOURS centré)
    ============================================ */
 .login-wrapper {
     min-height: 100vh;
     min-height: 100dvh;
     min-height: -webkit-fill-available;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    padding-top: max(20px, env(safe-area-inset-top));
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
-    padding-left: max(20px, env(safe-area-inset-left));
-    padding-right: max(20px, env(safe-area-inset-right));
-    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    padding: 10px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+    overflow: hidden;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* ============================================
-   LOGIN CONTAINER — Grid 2 colonnes (desktop)
+   📐 CONTAINER — 80% de l'écran, TOUJOURS centré
    ============================================ */
 .login-container,
 .register-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    max-width: 1000px;
-    width: 100%;
-    min-height: 580px;
-    max-height: 92vh;
+    width: 80vw;
+    height: 80vh;
+    width: 80dvw;
+    height: 80dvh;
+    min-width: 320px;
+    min-height: 420px;
+    max-width: 1400px;
+    max-height: 900px;
     border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
     background: #fff;
+    box-sizing: border-box;
+    position: relative;
 }
 
 /* ============================================
-   BRAND PANEL — Colonne gauche
+   🎨 BRAND PANEL — Colonne gauche (design premium)
    ============================================ */
 .login-brand,
 .register-brand {
     background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-    padding: 48px 32px;
+    padding: clamp(24px, 4vw, 48px) clamp(16px, 3vw, 32px);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -80,6 +97,7 @@
     text-align: center;
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .login-brand::before,
@@ -88,37 +106,63 @@
     position: absolute;
     top: -50%;
     right: -50%;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle, rgba(20, 184, 166, 0.15) 0%, transparent 70%);
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(circle, rgba(20, 184, 166, 0.18) 0%, transparent 60%);
     pointer-events: none;
+    animation: floatGlow 8s ease-in-out infinite;
+}
+
+@keyframes floatGlow {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-10%, 10%); }
 }
 
 .login-brand h1,
 .register-brand h1 {
-    font-size: 2rem;
+    font-size: clamp(1.2rem, 2.6vw, 2rem);
     font-weight: 800;
     color: #fff;
-    margin: 20px 0 8px;
-    letter-spacing: -1px;
+    margin: clamp(12px, 2vh, 20px) 0 clamp(4px, 0.8vh, 8px);
+    letter-spacing: -0.8px;
+    line-height: 1.15;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    z-index: 1;
 }
 
 .login-brand h1 span,
 .register-brand h1 span {
     color: #14B8A6;
+    text-shadow: 0 2px 12px rgba(20, 184, 166, 0.4);
+}
+
+.login-brand p,
+.register-brand p {
+    font-size: clamp(0.7rem, 1.1vw, 0.9rem);
+    margin: 0;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.75) !important;
+    position: relative;
+    z-index: 1;
+    font-weight: 500;
 }
 
 .brand-icon {
-    width: 100px;
-    height: 100px;
+    width: clamp(50px, 8vw, 100px);
+    height: clamp(50px, 8vw, 100px);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(20, 184, 166, 0.3);
+    backdrop-filter: blur(12px);
+    border: 2px solid rgba(20, 184, 166, 0.35);
     overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 8px 24px rgba(20, 184, 166, 0.15);
 }
 
 .brand-logo {
@@ -129,58 +173,94 @@
 }
 
 /* ============================================
-   FORM PANEL — Colonne droite
+   📋 FORM PANEL — Colonne droite
    ============================================ */
 .login-form,
 .register-form {
-    padding: 48px 40px;
+    padding: clamp(20px, 3.5vw, 48px) clamp(16px, 3vw, 40px);
     display: flex;
     flex-direction: column;
     justify-content: center;
     overflow-y: auto;
+    overflow-x: hidden;
     background: #fff;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #E2E8F0 #F8FAFC;
+}
+
+.login-form::-webkit-scrollbar,
+.register-form::-webkit-scrollbar {
+    width: 6px;
+}
+.login-form::-webkit-scrollbar-track,
+.register-form::-webkit-scrollbar-track {
+    background: #F8FAFC;
+}
+.login-form::-webkit-scrollbar-thumb,
+.register-form::-webkit-scrollbar-thumb {
+    background: #E2E8F0;
+    border-radius: 3px;
 }
 
 .login-form h2,
 .register-form h2 {
-    font-size: 1.6rem;
+    font-size: clamp(1rem, 1.7vw, 1.6rem);
     font-weight: 800;
     color: #0F172A;
-    margin: 0 0 24px;
-    letter-spacing: -0.5px;
+    margin: 0 0 clamp(12px, 2vh, 24px);
+    letter-spacing: -0.6px;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* ============================================
-   INPUTS
+   🔤 INPUTS — Design moderne
    ============================================ */
 .login-form .input-group,
 .register-form .input-group {
     display: flex;
     align-items: center;
     background: #F8FAFC;
-    border: 2px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 4px 16px;
-    margin-bottom: 14px;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 11px;
+    padding: 2px 14px;
+    margin-bottom: clamp(8px, 1.2vh, 14px);
     transition: all 0.2s ease;
-    min-height: 52px;
+    min-height: clamp(42px, 5.5vh, 52px);
+    box-sizing: border-box;
+}
+
+.login-form .input-group:hover,
+.register-form .input-group:hover {
+    border-color: #CBD5E1;
 }
 
 .login-form .input-group:focus-within,
 .register-form .input-group:focus-within {
     border-color: #14B8A6;
     background: #fff;
-    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1);
+    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.12);
+    transform: translateY(-1px);
 }
 
 .login-form .input-group i,
 .register-form .input-group i {
     color: #94A3B8;
-    font-size: 16px;
-    margin-right: 12px;
-    width: 20px;
+    font-size: clamp(13px, 1.1vw, 16px);
+    margin-right: 10px;
+    width: 18px;
     text-align: center;
     flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.login-form .input-group:focus-within i,
+.register-form .input-group:focus-within i {
+    color: #14B8A6;
 }
 
 .login-form .input-group input,
@@ -190,45 +270,55 @@
     flex: 1;
     border: none;
     background: transparent;
-    padding: 12px 0;
-    font-size: 15px;
+    padding: 10px 0;
+    font-size: max(16px, clamp(13px, 1.1vw, 15px));
     font-family: 'Inter', sans-serif;
+    font-weight: 500;
     color: #0F172A;
     outline: none;
     min-width: 0;
+    width: 100%;
 }
 
 .login-form .input-group input::placeholder,
 .register-form .input-group input::placeholder {
     color: #94A3B8;
+    font-weight: 400;
 }
 
 /* ============================================
-   BOUTONS
+   🔘 BOUTONS
    ============================================ */
 .btn-login {
     width: 100%;
-    padding: 14px 24px;
-    background: linear-gradient(135deg, #14B8A6, #0D9488);
+    padding: clamp(10px, 1.6vh, 14px) 20px;
+    background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
     color: #fff;
     border: none;
-    border-radius: 12px;
-    font-size: 16px;
+    border-radius: 11px;
+    font-size: clamp(13px, 1.1vw, 16px);
     font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.2px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
-    min-height: 52px;
-    margin-top: 18px;
+    box-shadow: 0 4px 14px rgba(20, 184, 166, 0.35);
+    min-height: clamp(42px, 5.5vh, 52px);
+    margin-top: clamp(8px, 1.2vh, 18px);
+    box-sizing: border-box;
 }
 
 .btn-login:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(20, 184, 166, 0.4);
+    box-shadow: 0 8px 24px rgba(20, 184, 166, 0.45);
+}
+
+.btn-login:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .btn-login:disabled {
@@ -238,21 +328,28 @@
 
 #quickLoginBtn {
     transition: all 0.2s ease;
+    width: clamp(42px, 5.5vh, 52px) !important;
+    min-width: clamp(42px, 5.5vh, 52px) !important;
+    height: auto !important;
+    font-size: clamp(0.9rem, 1vw, 1.2rem) !important;
+    font-family: 'Inter', sans-serif;
 }
 
 #quickLoginBtn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4) !important;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
 }
 
 /* ============================================
-   REGISTER LINK
+   🔗 REGISTER LINK
    ============================================ */
 .register-link {
     text-align: center;
-    margin-top: 20px;
-    font-size: 14px;
+    margin-top: clamp(10px, 1.5vh, 20px);
+    font-size: clamp(11px, 0.95vw, 14px);
     color: #64748B;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
 }
 
 .register-link strong {
@@ -268,220 +365,147 @@
 }
 
 /* ============================================
-   📱 TABLETTES (768px à 1024px)
+   📱 TABLETTES (≤ 1024px)
    ============================================ */
 @media (max-width: 1024px) {
     .login-container,
     .register-container {
+        width: 88vw;
+        width: 88dvw;
+        height: 85vh;
+        height: 85dvh;
         max-width: 900px;
-        min-height: 540px;
+        max-height: 700px;
     }
 
     .login-brand,
     .register-brand {
-        padding: 36px 24px;
-    }
-
-    .login-brand h1,
-    .register-brand h1 {
-        font-size: 1.7rem;
-    }
-
-    .brand-icon {
-        width: 85px;
-        height: 85px;
+        padding: 28px 20px;
     }
 
     .login-form,
     .register-form {
-        padding: 36px 28px;
-    }
-
-    .login-form h2,
-    .register-form h2 {
-        font-size: 1.4rem;
+        padding: 24px 22px;
     }
 }
 
 /* ============================================
-   📱 GRANDS TÉLÉPHONES (600px à 768px)
+   📱 GRANDS TÉLÉPHONES (≤ 768px) — 1 colonne
    ============================================ */
 @media (max-width: 768px) {
-    .login-wrapper {
-        padding: 16px;
-        padding-top: max(16px, env(safe-area-inset-top));
-        padding-bottom: max(16px, env(safe-area-inset-bottom));
-    }
-
-    .login-container,
-    .register-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
-        max-width: 480px;
-        min-height: auto;
-        max-height: none;
-        border-radius: 20px;
-    }
-
-    .login-brand,
-    .register-brand {
-        padding: 28px 24px 24px;
-        flex-direction: row;
-        gap: 16px;
-        justify-content: flex-start;
-        text-align: left;
-    }
-
-    .login-brand h1,
-    .register-brand h1 {
-        font-size: 1.3rem;
-        margin: 0 0 4px;
-    }
-
-    .login-brand p,
-    .register-brand p {
-        margin: 0;
-        font-size: 0.8rem;
-    }
-
-    .brand-icon {
-        width: 60px;
-        height: 60px;
-        flex-shrink: 0;
-    }
-
-    .login-form,
-    .register-form {
-        padding: 24px 20px 32px;
-    }
-
-    .login-form h2,
-    .register-form h2 {
-        font-size: 1.3rem;
-        margin-bottom: 18px;
-    }
-
-    .login-form .input-group,
-    .register-form .input-group {
-        min-height: 48px;
-        padding: 2px 14px;
-        margin-bottom: 12px;
-    }
-
-    .login-form .input-group input,
-    .login-form .input-group select,
-    .register-form .input-group input,
-    .register-form .input-group select {
-        font-size: 16px;
-        padding: 10px 0;
-    }
-
-    .btn-login {
-        padding: 13px 20px;
-        font-size: 15px;
-        min-height: 48px;
-    }
-
-    #quickLoginBtn {
-        width: 48px !important;
-        min-width: 48px !important;
-    }
-}
-
-/* ============================================
-   📱 PETITS TÉLÉPHONES (480px à 600px)
-   ============================================ */
-@media (max-width: 480px) {
-    .login-wrapper {
-        padding: 12px;
-        padding-top: max(12px, env(safe-area-inset-top));
-        padding-bottom: max(12px, env(safe-area-inset-bottom));
-    }
-
-    .login-container,
-    .register-container {
-        border-radius: 16px;
-    }
-
-    .login-brand,
-    .register-brand {
-        padding: 20px 16px 18px;
-        gap: 12px;
-    }
-
-    .login-brand h1,
-    .register-brand h1 {
-        font-size: 1.15rem;
-    }
-
-    .brand-icon {
-        width: 52px;
-        height: 52px;
-    }
-
-    .login-form,
-    .register-form {
-        padding: 20px 16px 28px;
-    }
-
-    .login-form h2,
-    .register-form h2 {
-        font-size: 1.15rem;
-        margin-bottom: 16px;
-    }
-
-    .login-form .input-group,
-    .register-form .input-group {
-        min-height: 46px;
-        padding: 2px 12px;
-        margin-bottom: 10px;
-    }
-
-    .login-form .input-group i,
-    .register-form .input-group i {
-        font-size: 14px;
-        margin-right: 10px;
-    }
-
-    .login-form .input-group input,
-    .login-form .input-group select,
-    .register-form .input-group input,
-    .register-form .input-group select {
-        font-size: 16px;
-    }
-
-    .btn-login {
-        padding: 12px 16px;
-        font-size: 14px;
-        min-height: 46px;
-        margin-top: 14px;
-    }
-
-    .register-link {
-        font-size: 13px;
-        margin-top: 16px;
-    }
-
-    #quickLoginBtn {
-        width: 46px !important;
-        min-width: 46px !important;
-        font-size: 1rem !important;
-    }
-}
-
-/* ============================================
-   📱 TRÈS PETITS TÉLÉPHONES (≤ 375px — iPhone SE)
-   ============================================ */
-@media (max-width: 375px) {
     .login-wrapper {
         padding: 8px;
         padding-top: max(8px, env(safe-area-inset-top));
         padding-bottom: max(8px, env(safe-area-inset-bottom));
     }
 
+    .login-container,
+    .register-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        width: 94vw;
+        width: 94dvw;
+        height: 94vh;
+        height: 94dvh;
+        max-width: 500px;
+        max-height: none;
+        min-height: 500px;
+        border-radius: 20px;
+    }
+
     .login-brand,
     .register-brand {
-        padding: 16px 14px 14px;
+        padding: 16px 20px;
+        flex-direction: row;
+        gap: 14px;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .login-brand::before,
+    .register-brand::before {
+        display: none;
+    }
+
+    .login-brand h1,
+    .register-brand h1 {
+        font-size: 1.1rem;
+        margin: 0 0 2px;
+    }
+
+    .login-brand p,
+    .register-brand p {
+        font-size: 0.75rem;
+        margin: 0;
+    }
+
+    .brand-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .login-form,
+    .register-form {
+        padding: 20px 18px 24px;
+        overflow-y: auto;
+    }
+
+    .login-form h2,
+    .register-form h2 {
+        font-size: 1.15rem;
+        margin-bottom: 14px;
+    }
+
+    .login-form .input-group,
+    .register-form .input-group {
+        min-height: 44px;
+        padding: 2px 12px;
+        margin-bottom: 10px;
+    }
+
+    .login-form .input-group input,
+    .login-form .input-group select,
+    .register-form .input-group input,
+    .register-form .input-group select {
+        font-size: 16px !important;
+        padding: 8px 0;
+    }
+
+    .btn-login {
+        padding: 12px 16px;
+        font-size: 14px;
+        min-height: 44px;
+        margin-top: 12px;
+    }
+
+    #quickLoginBtn {
+        width: 44px !important;
+        min-width: 44px !important;
+    }
+
+    .register-link {
+        font-size: 12px;
+        margin-top: 12px;
+    }
+}
+
+/* ============================================
+   📱 PETITS TÉLÉPHONES (≤ 480px)
+   ============================================ */
+@media (max-width: 480px) {
+    .login-container,
+    .register-container {
+        width: 96vw;
+        width: 96dvw;
+        height: 96vh;
+        height: 96dvh;
+        min-height: 460px;
+        border-radius: 16px;
+    }
+
+    .login-brand,
+    .register-brand {
+        padding: 12px 14px;
         gap: 10px;
     }
 
@@ -496,13 +520,13 @@
     }
 
     .brand-icon {
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
     }
 
     .login-form,
     .register-form {
-        padding: 16px 12px 24px;
+        padding: 16px 14px 20px;
     }
 
     .login-form h2,
@@ -513,96 +537,180 @@
 
     .login-form .input-group,
     .register-form .input-group {
-        min-height: 44px;
+        min-height: 42px;
+        padding: 2px 10px;
         margin-bottom: 8px;
+    }
+
+    .login-form .input-group i,
+    .register-form .input-group i {
+        font-size: 13px;
+        margin-right: 8px;
+        width: 16px;
     }
 
     .login-form .input-group input,
     .login-form .input-group select,
     .register-form .input-group input,
     .register-form .input-group select {
-        font-size: 16px;
-        padding: 8px 0;
+        font-size: 16px !important;
+        padding: 7px 0;
     }
 
     .btn-login {
         padding: 11px 14px;
         font-size: 13px;
-        min-height: 44px;
-        margin-top: 12px;
-    }
-
-    .register-link {
-        font-size: 12px;
-        margin-top: 12px;
+        min-height: 42px;
+        margin-top: 10px;
     }
 
     #quickLoginBtn {
-        width: 44px !important;
-        min-width: 44px !important;
+        width: 42px !important;
+        min-width: 42px !important;
+        font-size: 0.95rem !important;
+    }
+
+    .register-link {
+        font-size: 11px;
+        margin-top: 10px;
     }
 }
 
 /* ============================================
-   🔄 MODE PAYSAGE (TÉLÉPHONES COUCHÉS)
+   📱 TRÈS PETITS TÉLÉPHONES (≤ 375px — iPhone SE)
    ============================================ */
-@media (max-height: 500px) and (orientation: landscape) {
-    .login-wrapper {
-        padding: 8px;
-        align-items: flex-start;
-    }
-
+@media (max-width: 375px) {
     .login-container,
     .register-container {
-        grid-template-columns: 1fr 1.3fr;
-        grid-template-rows: 1fr;
-        min-height: auto;
-        max-height: none;
-        max-width: 100%;
-        border-radius: 12px;
+        width: 98vw;
+        width: 98dvw;
+        height: 98vh;
+        height: 98dvh;
+        min-height: 440px;
+        border-radius: 14px;
     }
 
     .login-brand,
     .register-brand {
-        padding: 16px 14px;
-        flex-direction: column;
-        text-align: center;
+        padding: 10px 12px;
+        gap: 8px;
     }
 
     .login-brand h1,
     .register-brand h1 {
-        font-size: 1.1rem;
-        margin: 8px 0 4px;
+        font-size: 0.9rem;
     }
 
     .login-brand p,
     .register-brand p {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
 
     .brand-icon {
-        width: 50px;
-        height: 50px;
+        width: 38px;
+        height: 38px;
     }
 
     .login-form,
     .register-form {
-        padding: 16px 20px;
-        max-height: 100vh;
-        max-height: 100dvh;
-        overflow-y: auto;
+        padding: 12px 12px 16px;
     }
 
     .login-form h2,
     .register-form h2 {
-        font-size: 1.1rem;
-        margin-bottom: 12px;
+        font-size: 1rem;
+        margin-bottom: 10px;
     }
 
     .login-form .input-group,
     .register-form .input-group {
         min-height: 40px;
-        margin-bottom: 8px;
+        margin-bottom: 7px;
+    }
+
+    .login-form .input-group input,
+    .login-form .input-group select,
+    .register-form .input-group input,
+    .register-form .input-group select {
+        font-size: 16px !important;
+        padding: 6px 0;
+    }
+
+    .btn-login {
+        padding: 10px 12px;
+        font-size: 12px;
+        min-height: 40px;
+        margin-top: 8px;
+    }
+
+    #quickLoginBtn {
+        width: 40px !important;
+        min-width: 40px !important;
+    }
+
+    .register-link {
+        font-size: 11px;
+        margin-top: 8px;
+    }
+}
+
+/* ============================================
+   🔄 MODE PAYSAGE MOBILE (hauteur ≤ 500px)
+   ============================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+    .login-container,
+    .register-container {
+        grid-template-columns: 1fr 1.4fr;
+        grid-template-rows: 1fr;
+        width: 98vw;
+        width: 98dvw;
+        height: 98vh;
+        height: 98dvh;
+        max-width: none;
+        max-height: none;
+        border-radius: 12px;
+    }
+
+    .login-brand,
+    .register-brand {
+        padding: 12px 14px;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .login-brand h1,
+    .register-brand h1 {
+        font-size: 1rem;
+        margin: 4px 0 2px;
+    }
+
+    .login-brand p,
+    .register-brand p {
+        font-size: 0.65rem;
+    }
+
+    .brand-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .login-form,
+    .register-form {
+        padding: 12px 16px;
+        overflow-y: auto;
+    }
+
+    .login-form h2,
+    .register-form h2 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    .login-form .input-group,
+    .register-form .input-group {
+        min-height: 36px;
+        margin-bottom: 6px;
         padding: 2px 10px;
     }
 
@@ -610,20 +718,26 @@
     .login-form .input-group select,
     .register-form .input-group input,
     .register-form .input-group select {
-        font-size: 16px;
-        padding: 6px 0;
+        font-size: 16px !important;
+        padding: 5px 0;
     }
 
     .btn-login {
-        padding: 10px 16px;
-        min-height: 40px;
-        font-size: 14px;
-        margin-top: 10px;
+        padding: 8px 14px;
+        min-height: 36px;
+        font-size: 13px;
+        margin-top: 8px;
+    }
+
+    #quickLoginBtn {
+        width: 36px !important;
+        min-width: 36px !important;
+        font-size: 0.9rem !important;
     }
 
     .register-link {
-        font-size: 12px;
-        margin-top: 10px;
+        font-size: 11px;
+        margin-top: 8px;
     }
 }
 
@@ -633,13 +747,12 @@
 @media (min-width: 1440px) {
     .login-container,
     .register-container {
-        max-width: 1100px;
-        min-height: 640px;
-    }
-
-    .login-form,
-    .register-form {
-        padding: 56px 48px;
+        width: 75vw;
+        width: 75dvw;
+        height: 78vh;
+        height: 78dvh;
+        max-width: 1300px;
+        max-height: 850px;
     }
 
     .login-form h2,
@@ -664,13 +777,12 @@
 @media (min-width: 1920px) {
     .login-container,
     .register-container {
-        max-width: 1200px;
-        min-height: 700px;
-    }
-
-    .login-form,
-    .register-form {
-        padding: 64px 56px;
+        width: 70vw;
+        width: 70dvw;
+        height: 75vh;
+        height: 75dvh;
+        max-width: 1400px;
+        max-height: 900px;
     }
 
     .login-form h2,
@@ -695,8 +807,11 @@
 @media (prefers-reduced-motion: reduce) {
     .btn-login,
     #quickLoginBtn,
-    .register-link strong {
+    .register-link strong,
+    .login-brand::before,
+    .register-brand::before {
         transition: none !important;
+        animation: none !important;
     }
 }
 </style>
