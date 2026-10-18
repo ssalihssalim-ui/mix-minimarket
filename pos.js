@@ -28,7 +28,7 @@
 // 🎨 AJUSTEMENTS V3 : cartes 190px + images 85px + prix 0.90rem + AUCUN gradient
 // 🎨 PANIER V2 : nom produit en haut + boutons à droite + sous-total à droite
 // 🆕 AJUSTEMENTS MOBILE : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px
-// ✅ 💳 CRÉDIT CLIENT : loadClientCredits lit UNIQUEMENT VENTES (cohérent avec Admin-Ventes et Admin-Credits)
+// ✅ 💳 CRÉDIT CLIENT : loadClientCredits() reproduit EXACTEMENT le filtre d'Admin-Credits (aucune divergence)
 
 var posCart = [];
 var posStep = 1;
@@ -388,15 +388,16 @@ container.style.position = 'relative';
 }
 }
 
-// ✅ CORRIGÉ : Lit UNIQUEMENT les VENTES (crédit + partiel non payés)
-// → Cohérent avec Admin-Ventes et Admin-Credits (pas de double comptage)
+// ✅ CORRIGÉ : Reproduit EXACTEMENT le filtre d'Admin-Credits.loadCredits()
+// → Lit UNIQUEMENT les VENTES avec les mêmes conditions qu'Admin-Credits
+// → Résultat strictement identique (aucune divergence de montant)
 async function loadClientCredits(clientId) {
     if (!clientId) return 0;
     if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
 
     var total = 0;
 
-    // ✅ SOURCE UNIQUE : VENTES (crédit + partiel non payés)
+    // ✅ SOURCE UNIQUE : VENTES — MÊME FILTRE EXACT QUE Admin-Credits
     try {
         var ventesSnap = await db.collection('ventes')
             .where('clientId', '==', clientId)
@@ -405,10 +406,16 @@ async function loadClientCredits(clientId) {
         ventesSnap.forEach(function(doc) {
             var d = doc.data();
 
-            // ❌ Ignorer tout ce qui est totalement payé
-            if (d.paid === true) return;
+            // 🔥 REPRENDRE EXACTEMENT LE FILTRE DE loadCredits() DANS admin-credits.js
             var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
-            if (statut !== 'crédit' && statut !== 'partiel') return;
+            var remaining = (d.remainingAmount != null) ? d.remainingAmount : (d.total || 0);
+
+            // ❌ Mêmes exclusions qu'Admin-Credits (lignes 786-791 de admin-credits.js)
+            if (d.paid === true) return;                              // déjà totalement payé
+            if (statut === 'payé') return;                            // statut payé
+            if (remaining <= 0.01) return;                            // rien à payer
+            if ((d.total || 0) <= 0) return;                          // ⚠️ total = 0 (exclusion ajoutée)
+            if (statut !== 'crédit' && statut !== 'partiel') return;  // autres statuts
 
             var reste = (d.remainingAmount != null)
                 ? d.remainingAmount
@@ -1040,35 +1047,21 @@ var nameSize = isMobile ? '13px' : '0.80rem';
 var priceSize = isMobile ? '11px' : '0.70rem';
 var totalSize = isMobile ? '14px' : '0.85rem';
 
-// 🎨 PANIER V2 : Structure refondue
-// Ligne 1 : Nom produit (prend toute la largeur)
-// Ligne 2 : Prix unitaire à gauche + Sous-total à droite + Boutons au milieu/droite
 html += '<div class="pos-cart-item" style="display:flex;flex-direction:column;padding:10px 8px;border-bottom:1px solid #EAECEF;gap:6px;background:#FFFFFF;border-radius:10px;margin-bottom:4px;">' +
-
-// Ligne 1 : NOM DU PRODUIT (toute la largeur, peut sauter)
 '<div style="width:100%;font-size:'+nameSize+';font-weight:700;color:#1A1D1F;line-height:1.4;word-break:break-word;white-space:normal;">'+escapeHtml(it.nom)+opts+'</div>' +
-
-// Ligne 2 : Prix + Boutons + Sous-total
 '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;">' +
-
-// Prix unitaire à gauche
 '<div style="display:flex;flex-direction:column;gap:2px;min-width:60px;">' +
 '<span style="font-size:'+priceSize+';color:#6F767E;font-weight:500;">'+it.prixUnitaire.toFixed(2)+' MAD</span>' +
 '</div>' +
-
-// Boutons +/- et supprimer au milieu/droite
 '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">' +
 '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:1px solid #EAECEF;background:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-minus"></i></button>' +
 '<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:1px solid #EAECEF;border-radius:10px;padding:4px 4px;background:#FFFFFF;color:#1A1D1F;-moz-appearance:textfield;">' +
 '<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:1px solid #EAECEF;background:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-plus"></i></button>' +
 '<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:transparent;border:none;color:#FF5B5B;cursor:pointer;padding:6px;font-size:0.85rem;transition:all 0.15s;border-radius:8px;"><i class="fas fa-trash-alt"></i></button>' +
 '</div>' +
-
-// Sous-total à droite
 '<div style="min-width:70px;text-align:right;flex-shrink:0;">' +
 '<span style="font-size:'+totalSize+';font-weight:800;color:#2563EB;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
 '</div>' +
-
 '</div></div>';
 }
 }
@@ -2338,4 +2331,4 @@ console.log('🚀 E-SOLUTION - POS chargé avec corrections');
 console.log('🎨 STYLE "RESTOE POS" V3 : fond gris plat + cartes 190px + prix 0.90rem + AUCUN gradient');
 console.log('🎨 PANIER V2 : nom en haut + boutons à droite + sous-total à droite');
 console.log('🆕 MOBILE V4 : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px');
-console.log('✅ 💳 CRÉDIT CLIENT : lit UNIQUEMENT VENTES (cohérent avec Admin-Ventes et Admin-Credits — plus de double comptage)');
+console.log('✅ 💳 CRÉDIT CLIENT : lit UNIQUEMENT VENTES avec le MÊME filtre qu\'Admin-Credits (statut!=payé, remaining>0.01, total>0) → plus de divergence entre POS et Admin-Credits');
