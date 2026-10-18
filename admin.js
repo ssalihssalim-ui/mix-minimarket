@@ -1,5 +1,7 @@
 // ==================== ADMIN.JS - MIXMAX MINIMARKET (COMPLET CORRIGÉ) ====================
 // Toutes les variables globales utilisent window. pour compatibilité
+// ✅ 🆕 Alertes intelligentes sur le dashboard (Stock / Expiration / Prévisions ventes)
+// ✅ 🎨 Style et apparence améliorés (cartes modernes + animations douces)
 
 // ==================== VARIABLES GLOBALES ====================
 window.editingId = window.editingId || null;
@@ -68,6 +70,175 @@ if (val.seconds) return new Date(val.seconds * 1000);
 if (typeof val === 'string') return new Date(val);
 if (val instanceof Date) return val;
 return null;
+}
+
+// ==================== 🎨 STYLE AMÉLIORÉ ====================
+function injectAdminStyles() {
+    var styleId = 'admin-styles-pro';
+    if (document.getElementById(styleId)) return;
+    var style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+        /* === Cartes stats KPI modernisées === */
+        .stat-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+            border: 1px solid #EAECEF !important;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09) !important;
+        }
+        .stat-icon {
+            transition: transform 0.25s ease !important;
+        }
+        .stat-card:hover .stat-icon {
+            transform: scale(1.08) rotate(-3deg) !important;
+        }
+
+        /* === Cartes d'accès rapide === */
+        .content-card {
+            transition: box-shadow 0.25s ease !important;
+        }
+
+        /* === Alertes intelligentes === */
+        .smart-alert-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #EAECEF;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .smart-alert-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #14B8A6, #0D9488);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .smart-alert-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+        .smart-alert-card:hover::before {
+            opacity: 1;
+        }
+        .smart-alert-card.stock::before { background: linear-gradient(90deg, #EF4444, #DC2626); }
+        .smart-alert-card.expiration::before { background: linear-gradient(90deg, #F59E0B, #D97706); }
+        .smart-alert-card.forecast::before { background: linear-gradient(90deg, #3B82F6, #2563EB); }
+
+        .smart-alert-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .smart-alert-header h4 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1A1D1F;
+            letter-spacing: -0.2px;
+        }
+        .smart-alert-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .smart-alert-icon i { font-size: 1.15rem; }
+        .smart-alert-icon.stock { background: #FEE2E2; }
+        .smart-alert-icon.stock i { color: #DC2626; }
+        .smart-alert-icon.expiration { background: #FEF3C7; }
+        .smart-alert-icon.expiration i { color: #D97706; }
+        .smart-alert-icon.forecast { background: #DBEAFE; }
+        .smart-alert-icon.forecast i { color: #2563EB; }
+
+        .smart-alert-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .smart-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 11px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .smart-badge.red { background: #FEE2E2; color: #B91C1C; }
+        .smart-badge.orange { background: #FEF3C7; color: #92400E; }
+        .smart-badge.yellow { background: #FEF9C3; color: #713F12; }
+        .smart-badge.green { background: #DCFCE7; color: #166534; }
+        .smart-badge.blue { background: #DBEAFE; color: #1E40AF; }
+
+        .smart-alert-summary {
+            font-size: 0.85rem;
+            color: #64748B;
+            line-height: 1.5;
+        }
+        .smart-alert-summary strong { color: #0F172A; }
+
+        .smart-forecast-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .smart-forecast-item {
+            background: #F8FAFC;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .smart-forecast-item .label {
+            display: block;
+            font-size: 0.72rem;
+            color: #64748B;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 3px;
+        }
+        .smart-forecast-item .value {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+        }
+        .smart-forecast-item.today .value { color: #2563EB; }
+        .smart-forecast-item.week .value { color: #10B981; }
+
+        /* === Amélioration de la grille accès rapide === */
+        .quick-access-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        /* === Animation d'apparition === */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .smart-alert-card {
+            animation: fadeUp 0.35s ease both;
+        }
+        .smart-alert-card:nth-child(1) { animation-delay: 0.05s; }
+        .smart-alert-card:nth-child(2) { animation-delay: 0.1s; }
+        .smart-alert-card:nth-child(3) { animation-delay: 0.15s; }
+    `;
+    document.head.appendChild(style);
 }
 
 // ==================== MODAL & CRUD ====================
@@ -316,6 +487,7 @@ return false;
 
 // ==================== DASHBOARD ====================
 function loadDashboardPage(c) {
+    injectAdminStyles();
     var userRole = (window.currentUserData && window.currentUserData.userData && window.currentUserData.userData.role) ? window.currentUserData.userData.role : 'admin';
 
     // 📊 Bandeau de statistiques KPI (5 cartes)
@@ -326,6 +498,31 @@ function loadDashboardPage(c) {
         '<div class="stat-card"><div class="stat-icon" style="background:#ede9fe;"><i class="fas fa-users" style="color:#7c3aed;"></i></div><div class="stat-info"><span class="stat-label">Clients</span><span class="stat-value" id="clientsCount">0</span></div></div>' +
         '<div class="stat-card"><div class="stat-icon" style="background:#fee2e2;"><i class="fas fa-credit-card" style="color:#dc2626;"></i></div><div class="stat-info"><span class="stat-label">Crédits impayés</span><span class="stat-value" id="kpiCreditsImpayes">0 MAD</span></div></div>' +
         '</div>';
+
+    // 🧠 Bandeau des 3 alertes intelligentes
+    var alertsHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:18px;">' +
+        '<div class="smart-alert-card stock">' +
+            '<div class="smart-alert-header">' +
+                '<div class="smart-alert-icon stock"><i class="fas fa-box"></i></div>' +
+                '<h4>Alertes Stock</h4>' +
+            '</div>' +
+            '<div id="alertStockContent"><i class="fas fa-spinner fa-spin" style="color:#94a3b8;"></i> Chargement...</div>' +
+        '</div>' +
+        '<div class="smart-alert-card expiration">' +
+            '<div class="smart-alert-header">' +
+                '<div class="smart-alert-icon expiration"><i class="fas fa-calendar-check"></i></div>' +
+                '<h4>Alertes Expiration</h4>' +
+            '</div>' +
+            '<div id="alertExpContent"><i class="fas fa-spinner fa-spin" style="color:#94a3b8;"></i> Chargement...</div>' +
+        '</div>' +
+        '<div class="smart-alert-card forecast">' +
+            '<div class="smart-alert-header">' +
+                '<div class="smart-alert-icon forecast"><i class="fas fa-chart-line"></i></div>' +
+                '<h4>Prévisions de ventes</h4>' +
+            '</div>' +
+            '<div id="alertPrevContent"><i class="fas fa-spinner fa-spin" style="color:#94a3b8;"></i> Chargement...</div>' +
+        '</div>' +
+    '</div>';
 
     // 🎛️ Cartes de navigation cliquables selon le rôle
     var navItemsAdmin = [
@@ -354,13 +551,14 @@ function loadDashboardPage(c) {
 
     var navHTML = '<div class="content-card">' +
         '<div class="card-header"><h3><i class="fas fa-th-large"></i> Accès rapide</h3></div>' +
-        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;">';
+        '<div class="quick-access-grid">';
 
     navItems.forEach(function(item) {
-        navHTML += '<div onclick="navigateTo(\'' + item.page + '\')" style="cursor:pointer;background:#FFFFFF;border:1px solid #EAECEF;border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);box-shadow:0 1px 3px rgba(0,0,0,0.04);" ' +
-            'onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 8px 20px rgba(0,0,0,0.08)\';this.style.borderColor=\'' + item.color + '\';" ' +
+        navHTML += '<div onclick="navigateTo(\'' + item.page + '\')" style="cursor:pointer;background:#FFFFFF;border:1px solid #EAECEF;border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);box-shadow:0 1px 3px rgba(0,0,0,0.04);" ' +
+            'onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 12px 28px rgba(0,0,0,0.08)\';this.style.borderColor=\'' + item.color + '\';" ' +
             'onmouseout="this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.04)\';this.style.borderColor=\'#EAECEF\';">' +
-            '<div style="width:56px;height:56px;border-radius:50%;background:' + item.bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+            '<div style="width:56px;height:56px;border-radius:50%;background:' + item.bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.25s ease;" ' +
+            'onmouseover="this.style.transform=\'scale(1.08) rotate(-3deg)\';" onmouseout="this.style.transform=\'scale(1) rotate(0)\';">' +
             '<i class="fas ' + item.icon + '" style="font-size:1.5rem;color:' + item.color + ';"></i>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;gap:2px;">' +
@@ -378,9 +576,10 @@ function loadDashboardPage(c) {
         '<div id="pendingRegistrations">Chargement...</div>' +
         '</div>';
 
-    c.innerHTML = kpiHTML + navHTML + pendingHTML;
+    c.innerHTML = kpiHTML + alertsHTML + navHTML + pendingHTML;
 
     loadDashboardStats();
+    loadSmartAlerts();
     loadPendingRegistrations();
 
     // ✅ AJOUT : Sauvegarde systématique
@@ -390,6 +589,182 @@ function loadDashboardPage(c) {
         }, 500);
     }
 }
+
+// ==================== 🧠 ALERTES INTELLIGENTES ====================
+async function loadSmartAlerts() {
+    try {
+        // Charger les produits
+        var produits = window.allProductsData || [];
+        if (produits.length === 0) {
+            try {
+                var snapP = await db.collection('products').get();
+                produits = [];
+                snapP.forEach(function(d) { var dd = d.data(); dd.id = d.id; produits.push(dd); });
+            } catch(e) {}
+        }
+
+        // ========== 1️⃣ ALERTES STOCK ==========
+        var ventes30j = [];
+        try {
+            var cutoff30 = new Date(Date.now() - 30 * 86400000);
+            var snapVentes = await db.collection('ventes').where('createdAt', '>=', cutoff30).get();
+            snapVentes.forEach(function(d) { ventes30j.push(d.data()); });
+        } catch(e) {
+            try {
+                var snapVAll = await db.collection('ventes').get();
+                var cutoffMs = Date.now() - 30 * 86400000;
+                snapVAll.forEach(function(d) {
+                    var v = d.data();
+                    if (v.createdAt && v.createdAt.seconds * 1000 >= cutoffMs) ventes30j.push(v);
+                });
+            } catch(e2) {}
+        }
+
+        var ventesParProduit = {};
+        ventes30j.forEach(function(v) {
+            (v.items || []).forEach(function(it) {
+                var pid = it.id || it.nom;
+                ventesParProduit[pid] = (ventesParProduit[pid] || 0) + (it.quantite || 0);
+            });
+        });
+
+        var alertesStock = [];
+        produits.forEach(function(p) {
+            var vendues30 = ventesParProduit[p.id] || ventesParProduit[p.nom] || 0;
+            var vitesseJour = vendues30 / 30;
+            var stock = p.stock || 0;
+            var jours = vitesseJour > 0 ? (stock / vitesseJour) : (stock > 0 ? Infinity : 0);
+
+            var niveau = 'ok';
+            if (stock <= 0) niveau = 'rupture';
+            else if (jours <= 2) niveau = 'rouge';
+            else if (jours <= 5) niveau = 'orange';
+            else if (jours <= 10) niveau = 'jaune';
+
+            if (niveau !== 'ok') {
+                alertesStock.push({ nom: p.nom, stock: stock, jours: jours, niveau: niveau });
+            }
+        });
+
+        // ========== 2️⃣ ALERTES EXPIRATION ==========
+        var alertesExpiration = [];
+        var today = new Date(); today.setHours(0,0,0,0);
+        produits.forEach(function(p) {
+            if (!p.dateExpiration) return;
+            var d = null;
+            if (typeof p.dateExpiration === 'string') d = new Date(p.dateExpiration);
+            else if (p.dateExpiration.seconds) d = new Date(p.dateExpiration.seconds * 1000);
+            else if (p.dateExpiration.toDate) d = p.dateExpiration.toDate();
+            if (!d || isNaN(d.getTime())) return;
+            d.setHours(0,0,0,0);
+            var joursRestants = Math.ceil((d - today) / 86400000);
+
+            var niveau = 'ok';
+            if (joursRestants < 0) niveau = 'expire';
+            else if (joursRestants <= 3) niveau = 'rouge';
+            else if (joursRestants <= 7) niveau = 'orange';
+            else if (joursRestants <= 30) niveau = 'jaune';
+
+            if (niveau !== 'ok') {
+                alertesExpiration.push({ nom: p.nom, dateExp: d, jours: joursRestants, niveau: niveau });
+            }
+        });
+
+        // ========== 3️⃣ PRÉVISIONS VENTES ==========
+        var ventesParJour = {};
+        try {
+            var cutoff90 = new Date(Date.now() - 90 * 86400000);
+            var snapV90 = await db.collection('ventes').where('createdAt', '>=', cutoff90).get();
+            snapV90.forEach(function(d) {
+                var v = d.data();
+                if (!v.createdAt || !v.createdAt.seconds) return;
+                var key = new Date(v.createdAt.seconds * 1000).toISOString().split('T')[0];
+                ventesParJour[key] = (ventesParJour[key] || 0) + (v.total || 0);
+            });
+        } catch(e) {
+            try {
+                var snapVAll2 = await db.collection('ventes').get();
+                var cutoffMs2 = Date.now() - 90 * 86400000;
+                snapVAll2.forEach(function(d) {
+                    var v = d.data();
+                    if (v.createdAt && v.createdAt.seconds * 1000 >= cutoffMs2) {
+                        var key = new Date(v.createdAt.seconds * 1000).toISOString().split('T')[0];
+                        ventesParJour[key] = (ventesParJour[key] || 0) + (v.total || 0);
+                    }
+                });
+            } catch(e2) {}
+        }
+
+        var total30 = 0, count30 = 0;
+        for (var i = 0; i < 30; i++) {
+            var d = new Date(Date.now() - i * 86400000);
+            var k = d.toISOString().split('T')[0];
+            total30 += (ventesParJour[k] || 0);
+            count30++;
+        }
+        var caPrevuJour = count30 > 0 ? (total30 / count30) : 0;
+        var caPrevu7j = caPrevuJour * 7;
+
+        // ========== AFFICHAGE ==========
+        var stockRouge = alertesStock.filter(function(a) { return a.niveau === 'rouge' || a.niveau === 'rupture'; }).length;
+        var stockOrange = alertesStock.filter(function(a) { return a.niveau === 'orange'; }).length;
+        var stockJaune = alertesStock.filter(function(a) { return a.niveau === 'jaune'; }).length;
+
+        var expRouge = alertesExpiration.filter(function(a) { return a.niveau === 'rouge' || a.niveau === 'expire'; }).length;
+        var expOrange = alertesExpiration.filter(function(a) { return a.niveau === 'orange'; }).length;
+        var expJaune = alertesExpiration.filter(function(a) { return a.niveau === 'jaune'; }).length;
+
+        var elStock = document.getElementById('alertStockContent');
+        if (elStock) {
+            if (alertesStock.length === 0) {
+                elStock.innerHTML = '<div class="smart-alert-summary" style="color:#16a34a;"><i class="fas fa-check-circle"></i> Tous les stocks sont optimaux</div>';
+            } else {
+                elStock.innerHTML =
+                    '<div class="smart-alert-badges">' +
+                        (stockRouge > 0 ? '<span class="smart-badge red"><i class="fas fa-times-circle"></i> Rupture/Critique : ' + stockRouge + '</span>' : '') +
+                        (stockOrange > 0 ? '<span class="smart-badge orange"><i class="fas fa-exclamation-triangle"></i> Bas : ' + stockOrange + '</span>' : '') +
+                        (stockJaune > 0 ? '<span class="smart-badge yellow"><i class="fas fa-clock"></i> À surveiller : ' + stockJaune + '</span>' : '') +
+                    '</div>' +
+                    '<div class="smart-alert-summary"><strong>' + alertesStock.length + '</strong> produit(s) nécessitent votre attention</div>';
+            }
+        }
+
+        var elExp = document.getElementById('alertExpContent');
+        if (elExp) {
+            if (alertesExpiration.length === 0) {
+                elExp.innerHTML = '<div class="smart-alert-summary" style="color:#16a34a;"><i class="fas fa-check-circle"></i> Aucun produit n\'expire bientôt</div>';
+            } else {
+                elExp.innerHTML =
+                    '<div class="smart-alert-badges">' +
+                        (expRouge > 0 ? '<span class="smart-badge red"><i class="fas fa-times-circle"></i> Expiré/Critique : ' + expRouge + '</span>' : '') +
+                        (expOrange > 0 ? '<span class="smart-badge orange"><i class="fas fa-clock"></i> Bientôt : ' + expOrange + '</span>' : '') +
+                        (expJaune > 0 ? '<span class="smart-badge yellow"><i class="fas fa-calendar"></i> À surveiller : ' + expJaune + '</span>' : '') +
+                    '</div>' +
+                    '<div class="smart-alert-summary"><strong>' + alertesExpiration.length + '</strong> lot(s) d\'expiration à surveiller</div>';
+            }
+        }
+
+        var elPrev = document.getElementById('alertPrevContent');
+        if (elPrev) {
+            elPrev.innerHTML =
+                '<div class="smart-forecast-grid">' +
+                    '<div class="smart-forecast-item today">' +
+                        '<span class="label">Aujourd\'hui</span>' +
+                        '<span class="value">' + caPrevuJour.toFixed(2) + ' MAD</span>' +
+                    '</div>' +
+                    '<div class="smart-forecast-item week">' +
+                        '<span class="label">7 jours</span>' +
+                        '<span class="value">' + caPrevu7j.toFixed(2) + ' MAD</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="smart-alert-summary" style="margin-top:10px;"><i class="fas fa-info-circle"></i> Basé sur la moyenne des <strong>30 derniers jours</strong></div>';
+        }
+
+    } catch(e) {
+        console.error('❌ Erreur loadSmartAlerts:', e);
+    }
+}
+window.loadSmartAlerts = loadSmartAlerts;
 
 function loadDashboardStats() {
     // Statistiques de base (compteurs)
@@ -1083,6 +1458,8 @@ window.filterByPeriod = filterByPeriod;
 window.filterBySearch = filterBySearch;
 window.loadDashboardPage = loadDashboardPage;
 window.loadDashboardStats = loadDashboardStats;
+window.loadSmartAlerts = loadSmartAlerts;
+window.injectAdminStyles = injectAdminStyles;
 window.loadPendingRegistrations = loadPendingRegistrations;
 window.renderPendingTable = renderPendingTable;
 window.approveUser = approveUser;
@@ -1113,3 +1490,5 @@ window.qrSaveAll = qrSaveAll;
 //  sont définies dans admin-credits.js pour éviter les conflits)
 
 console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
+console.log('🧠 Alertes intelligentes : Stock / Expiration / Prévisions ventes');
+console.log('🎨 Style amélioré : animations douces, cartes modernes, badges colorés');
