@@ -2,6 +2,7 @@
 // Toutes les variables globales utilisent window. pour compatibilité
 // ✅ 🆕 Alertes intelligentes sur le dashboard (Stock / Expiration / Prévisions ventes)
 // ✅ 🎨 Style et apparence améliorés (cartes modernes + animations douces)
+// 🆕 🎨 Dashboard PRO UX/UI : KPI cards premium + alertes actionnables + accès rapide 3D + inscriptions stylées
 
 // ==================== VARIABLES GLOBALES ====================
 window.editingId = window.editingId || null;
@@ -72,45 +73,136 @@ if (val instanceof Date) return val;
 return null;
 }
 
-// ==================== 🎨 STYLE AMÉLIORÉ ====================
+// ==================== 🎨 STYLE AMÉLIORÉ — DASHBOARD PRO UX/UI ====================
 function injectAdminStyles() {
     var styleId = 'admin-styles-pro';
     if (document.getElementById(styleId)) return;
     var style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        /* === Cartes stats KPI modernisées === */
+        /* =========================================================
+           🎨 DASHBOARD PRO — Design SaaS moderne
+           ========================================================= */
+
+        #dynamicContent {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* =========================================================
+           📊 CARTES KPI — Design premium
+           ========================================================= */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
         .stat-card {
-            transition: transform 0.25s ease, box-shadow 0.25s ease !important;
-            border: 1px solid #EAECEF !important;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 18px 20px;
+            background: #FFFFFF;
+            border-radius: 16px;
+            border: 1px solid #EAECEF;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            cursor: default;
         }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #14B8A6, #0D9488);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
         .stat-card:hover {
-            transform: translateY(-4px) !important;
-            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09) !important;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.10), 0 4px 12px rgba(15, 23, 42, 0.05);
+            border-color: #D1D9E2;
         }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
         .stat-icon {
-            transition: transform 0.25s ease !important;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .stat-icon i {
+            font-size: 1.25rem;
+        }
+
         .stat-card:hover .stat-icon {
-            transform: scale(1.08) rotate(-3deg) !important;
+            transform: scale(1.1) rotate(-5deg);
         }
 
-        /* === Cartes d'accès rapide === */
-        .content-card {
-            transition: box-shadow 0.25s ease !important;
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+            flex: 1;
         }
 
-        /* === Alertes intelligentes === */
+        .stat-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #0F172A;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* =========================================================
+           🧠 ALERTES INTELLIGENTES — Cartes modernes
+           ========================================================= */
+        .smart-alerts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
         .smart-alert-card {
             background: #FFFFFF;
             border-radius: 16px;
             padding: 20px;
             border: 1px solid #EAECEF;
             box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
-            transition: all 0.25s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
+
         .smart-alert-card::before {
             content: '';
             position: absolute;
@@ -118,15 +210,18 @@ function injectAdminStyles() {
             height: 4px;
             background: linear-gradient(90deg, #14B8A6, #0D9488);
             opacity: 0;
-            transition: opacity 0.25s ease;
+            transition: opacity 0.3s ease;
         }
+
         .smart-alert-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.10);
         }
+
         .smart-alert-card:hover::before {
             opacity: 1;
         }
+
         .smart-alert-card.stock::before { background: linear-gradient(90deg, #EF4444, #DC2626); }
         .smart-alert-card.expiration::before { background: linear-gradient(90deg, #F59E0B, #D97706); }
         .smart-alert-card.forecast::before { background: linear-gradient(90deg, #3B82F6, #2563EB); }
@@ -135,25 +230,33 @@ function injectAdminStyles() {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
+
         .smart-alert-header h4 {
             margin: 0;
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 700;
-            color: #1A1D1F;
+            color: #0F172A;
             letter-spacing: -0.2px;
         }
+
         .smart-alert-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 11px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            transition: transform 0.3s ease;
         }
-        .smart-alert-icon i { font-size: 1.15rem; }
+
+        .smart-alert-card:hover .smart-alert-icon {
+            transform: scale(1.08) rotate(-4deg);
+        }
+
+        .smart-alert-icon i { font-size: 1.2rem; }
         .smart-alert-icon.stock { background: #FEE2E2; }
         .smart-alert-icon.stock i { color: #DC2626; }
         .smart-alert-icon.expiration { background: #FEF3C7; }
@@ -165,18 +268,25 @@ function injectAdminStyles() {
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
+
         .smart-badge {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            padding: 5px 11px;
+            padding: 6px 12px;
             border-radius: 8px;
             font-size: 0.78rem;
-            font-weight: 600;
+            font-weight: 700;
             white-space: nowrap;
+            transition: all 0.2s ease;
         }
+
+        .smart-badge:hover {
+            transform: translateY(-1px);
+        }
+
         .smart-badge.red { background: #FEE2E2; color: #B91C1C; }
         .smart-badge.orange { background: #FEF3C7; color: #92400E; }
         .smart-badge.yellow { background: #FEF9C3; color: #713F12; }
@@ -184,59 +294,394 @@ function injectAdminStyles() {
         .smart-badge.blue { background: #DBEAFE; color: #1E40AF; }
 
         .smart-alert-summary {
-            font-size: 0.85rem;
+            font-size: 0.88rem;
             color: #64748B;
             line-height: 1.5;
         }
+
         .smart-alert-summary strong { color: #0F172A; }
 
+        .smart-alert-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: #F8FAFC;
+            border: 1px solid #EAECEF;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #0F172A;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .smart-alert-action:hover {
+            background: #0F172A;
+            color: #FFFFFF;
+            border-color: #0F172A;
+            transform: translateY(-1px);
+        }
+
+        /* === Prévisions === */
         .smart-forecast-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-top: 4px;
         }
+
         .smart-forecast-item {
             background: #F8FAFC;
             border-radius: 10px;
-            padding: 10px 12px;
+            padding: 12px 14px;
+            border: 1px solid #EAECEF;
         }
+
         .smart-forecast-item .label {
             display: block;
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             color: #64748B;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.3px;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
+
         .smart-forecast-item .value {
             display: block;
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 800;
             letter-spacing: -0.4px;
         }
+
         .smart-forecast-item.today .value { color: #2563EB; }
         .smart-forecast-item.week .value { color: #10B981; }
 
-        /* === Amélioration de la grille accès rapide === */
+        /* =========================================================
+           🎛️ CARTES D'ACCÈS RAPIDE — Grille moderne
+           ========================================================= */
         .quick-access-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
             gap: 14px;
         }
 
-        /* === Animation d'apparition === */
+        .quick-access-card {
+            cursor: pointer;
+            background: #FFFFFF;
+            border: 1px solid #EAECEF;
+            border-radius: 14px;
+            padding: 20px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-access-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, var(--card-color) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .quick-access-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
+            border-color: var(--card-color);
+        }
+
+        .quick-access-card:hover::after {
+            opacity: 0.06;
+        }
+
+        .quick-access-card .qa-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .quick-access-card .qa-icon i {
+            font-size: 1.5rem;
+        }
+
+        .quick-access-card:hover .qa-icon {
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        .quick-access-card .qa-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .quick-access-card .qa-label {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #0F172A;
+        }
+
+        .quick-access-card .qa-desc {
+            font-size: 0.75rem;
+            color: #6F767E;
+        }
+
+        /* =========================================================
+           📋 CARTES CONTENT — Base
+           ========================================================= */
+        .content-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #EAECEF;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+            transition: box-shadow 0.25s ease;
+            margin-bottom: 18px;
+        }
+
+        .content-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .content-card .card-header h3 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #0F172A;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.3px;
+        }
+
+        .content-card .card-header h3 i {
+            color: #14B8A6;
+            font-size: 1.1rem;
+        }
+
+        /* =========================================================
+           ⚡ ANIMATIONS
+           ========================================================= */
         @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(12px); }
+            from { opacity: 0; transform: translateY(14px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .smart-alert-card {
-            animation: fadeUp 0.35s ease both;
+
+        .stat-card,
+        .smart-alert-card,
+        .quick-access-card,
+        .content-card {
+            animation: fadeUp 0.4s ease both;
         }
-        .smart-alert-card:nth-child(1) { animation-delay: 0.05s; }
-        .smart-alert-card:nth-child(2) { animation-delay: 0.1s; }
-        .smart-alert-card:nth-child(3) { animation-delay: 0.15s; }
+
+        .stat-card:nth-child(1) { animation-delay: 0.02s; }
+        .stat-card:nth-child(2) { animation-delay: 0.06s; }
+        .stat-card:nth-child(3) { animation-delay: 0.1s; }
+        .stat-card:nth-child(4) { animation-delay: 0.14s; }
+        .stat-card:nth-child(5) { animation-delay: 0.18s; }
+
+        .smart-alert-card:nth-child(1) { animation-delay: 0.22s; }
+        .smart-alert-card:nth-child(2) { animation-delay: 0.26s; }
+        .smart-alert-card:nth-child(3) { animation-delay: 0.3s; }
+
+        /* =========================================================
+           📱 RESPONSIVE
+           ========================================================= */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
+            }
+            .stat-value { font-size: 1.2rem; }
+            .stat-icon { width: 42px; height: 42px; }
+            .stat-icon i { font-size: 1.1rem; }
+
+            .smart-alerts-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 12px;
+            }
+
+            .quick-access-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 14px 16px;
+                flex-direction: row;
+                gap: 12px;
+            }
+
+            .stat-value { font-size: 1.15rem; }
+            .stat-label { font-size: 0.68rem; }
+
+            .stat-icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+            }
+            .stat-icon i { font-size: 1rem; }
+
+            .smart-alerts-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .smart-alert-card {
+                padding: 16px;
+            }
+
+            .smart-alert-header h4 { font-size: 0.95rem; }
+
+            .smart-forecast-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .smart-forecast-item {
+                padding: 10px 12px;
+            }
+            .smart-forecast-item .value { font-size: 1rem; }
+
+            .quick-access-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .quick-access-card {
+                padding: 16px 10px;
+                gap: 8px;
+            }
+
+            .quick-access-card .qa-icon {
+                width: 48px;
+                height: 48px;
+            }
+            .quick-access-card .qa-icon i { font-size: 1.25rem; }
+
+            .quick-access-card .qa-label { font-size: 0.88rem; }
+            .quick-access-card .qa-desc { font-size: 0.7rem; }
+
+            .content-card {
+                padding: 16px;
+                border-radius: 14px;
+            }
+
+            .content-card .card-header h3 {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .stat-card {
+                padding: 12px 14px;
+                gap: 10px;
+            }
+
+            .stat-value { font-size: 1.05rem; }
+            .stat-label { font-size: 0.65rem; }
+
+            .stat-icon {
+                width: 34px;
+                height: 34px;
+                border-radius: 9px;
+            }
+            .stat-icon i { font-size: 0.9rem; }
+
+            .smart-alert-card {
+                padding: 14px;
+            }
+
+            .smart-alert-icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+            }
+            .smart-alert-icon i { font-size: 1rem; }
+
+            .smart-alert-header h4 { font-size: 0.9rem; }
+
+            .quick-access-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .quick-access-card {
+                padding: 14px 8px;
+                gap: 6px;
+            }
+
+            .quick-access-card .qa-icon {
+                width: 42px;
+                height: 42px;
+            }
+            .quick-access-card .qa-icon i { font-size: 1.1rem; }
+
+            .quick-access-card .qa-label { font-size: 0.8rem; }
+            .quick-access-card .qa-desc { font-size: 0.65rem; }
+
+            .content-card {
+                padding: 14px;
+            }
+        }
+
+        @media (max-width: 375px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-access-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .stat-card,
+            .smart-alert-card,
+            .quick-access-card,
+            .content-card,
+            .stat-icon,
+            .quick-access-card .qa-icon {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
     `;
     document.head.appendChild(style);
 }
@@ -491,16 +936,31 @@ function loadDashboardPage(c) {
     var userRole = (window.currentUserData && window.currentUserData.userData && window.currentUserData.userData.role) ? window.currentUserData.userData.role : 'admin';
 
     // 📊 Bandeau de statistiques KPI (5 cartes)
-    var kpiHTML = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;">' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#dcfce7;"><i class="fas fa-money-bill-wave" style="color:#16a34a;"></i></div><div class="stat-info"><span class="stat-label">CA du jour</span><span class="stat-value" id="kpiCaJour">0 MAD</span></div></div>' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#dbeafe;"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i></div><div class="stat-info"><span class="stat-label">Ventes du jour</span><span class="stat-value" id="kpiVentesJour">0</span></div></div>' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#fef3c7;"><i class="fas fa-box" style="color:#d97706;"></i></div><div class="stat-info"><span class="stat-label">Produits</span><span class="stat-value" id="productsCount">0</span></div></div>' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#ede9fe;"><i class="fas fa-users" style="color:#7c3aed;"></i></div><div class="stat-info"><span class="stat-label">Clients</span><span class="stat-value" id="clientsCount">0</span></div></div>' +
-        '<div class="stat-card"><div class="stat-icon" style="background:#fee2e2;"><i class="fas fa-credit-card" style="color:#dc2626;"></i></div><div class="stat-info"><span class="stat-label">Crédits impayés</span><span class="stat-value" id="kpiCreditsImpayes">0 MAD</span></div></div>' +
-        '</div>';
+    var kpiHTML = '<div class="stats-grid">' +
+        '<div class="stat-card">' +
+            '<div class="stat-icon" style="background:#DCFCE7;"><i class="fas fa-money-bill-wave" style="color:#16A34A;"></i></div>' +
+            '<div class="stat-info"><span class="stat-label">CA du jour</span><span class="stat-value" id="kpiCaJour">0 MAD</span></div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+            '<div class="stat-icon" style="background:#DBEAFE;"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i></div>' +
+            '<div class="stat-info"><span class="stat-label">Ventes du jour</span><span class="stat-value" id="kpiVentesJour">0</span></div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+            '<div class="stat-icon" style="background:#FEF3C7;"><i class="fas fa-box" style="color:#D97706;"></i></div>' +
+            '<div class="stat-info"><span class="stat-label">Produits</span><span class="stat-value" id="productsCount">0</span></div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+            '<div class="stat-icon" style="background:#EDE9FE;"><i class="fas fa-users" style="color:#7C3AED;"></i></div>' +
+            '<div class="stat-info"><span class="stat-label">Clients</span><span class="stat-value" id="clientsCount">0</span></div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+            '<div class="stat-icon" style="background:#FEE2E2;"><i class="fas fa-credit-card" style="color:#DC2626;"></i></div>' +
+            '<div class="stat-info"><span class="stat-label">Crédits impayés</span><span class="stat-value" id="kpiCreditsImpayes">0 MAD</span></div>' +
+        '</div>' +
+    '</div>';
 
     // 🧠 Bandeau des 3 alertes intelligentes
-    var alertsHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:18px;">' +
+    var alertsHTML = '<div class="smart-alerts-grid">' +
         '<div class="smart-alert-card stock">' +
             '<div class="smart-alert-header">' +
                 '<div class="smart-alert-icon stock"><i class="fas fa-box"></i></div>' +
@@ -526,25 +986,25 @@ function loadDashboardPage(c) {
 
     // 🎛️ Cartes de navigation cliquables selon le rôle
     var navItemsAdmin = [
-        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente', color: '#2563EB', bg: '#dbeafe' },
-        { page: 'statistiques', icon: 'fa-chart-bar', label: 'Statistiques', desc: 'Analyses & rapports', color: '#7c3aed', bg: '#ede9fe' },
-        { page: 'clients', icon: 'fa-users', label: 'Clients', desc: 'Gérer les clients', color: '#0891b2', bg: '#cffafe' },
-        { page: 'fournisseurs', icon: 'fa-truck', label: 'Fournisseurs', desc: 'Gérer les fournisseurs', color: '#ea580c', bg: '#ffedd5' },
-        { page: 'products', icon: 'fa-box', label: 'Produits', desc: 'Gérer les produits', color: '#16a34a', bg: '#dcfce7' },
-        { page: 'categories', icon: 'fa-layer-group', label: 'Catégories', desc: 'Gérer les catégories', color: '#d97706', bg: '#fef3c7' },
-        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique des ventes', color: '#059669', bg: '#d1fae5' },
-        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer les crédits', color: '#dc2626', bg: '#fee2e2' },
-        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer les dépenses', color: '#9333ea', bg: '#f3e8ff' },
-        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'Commandes en ligne', color: '#e11d48', bg: '#ffe4e6' },
-        { page: 'options', icon: 'fa-cog', label: 'Options', desc: 'Paramètres', color: '#475569', bg: '#e2e8f0' }
+        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente', color: '#2563EB', bg: '#DBEAFE' },
+        { page: 'statistiques', icon: 'fa-chart-bar', label: 'Statistiques', desc: 'Analyses & rapports', color: '#7C3AED', bg: '#EDE9FE' },
+        { page: 'clients', icon: 'fa-users', label: 'Clients', desc: 'Gérer les clients', color: '#0891B2', bg: '#CFFAFE' },
+        { page: 'fournisseurs', icon: 'fa-truck', label: 'Fournisseurs', desc: 'Gérer les fournisseurs', color: '#EA580C', bg: '#FFEDD5' },
+        { page: 'products', icon: 'fa-box', label: 'Produits', desc: 'Gérer les produits', color: '#16A34A', bg: '#DCFCE7' },
+        { page: 'categories', icon: 'fa-layer-group', label: 'Catégories', desc: 'Gérer les catégories', color: '#D97706', bg: '#FEF3C7' },
+        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique des ventes', color: '#059669', bg: '#D1FAE5' },
+        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer les crédits', color: '#DC2626', bg: '#FEE2E2' },
+        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer les dépenses', color: '#9333EA', bg: '#F3E8FF' },
+        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'Commandes en ligne', color: '#E11D48', bg: '#FFE4E6' },
+        { page: 'options', icon: 'fa-cog', label: 'Options', desc: 'Paramètres', color: '#475569', bg: '#E2E8F0' }
     ];
 
     var navItemsCaissier = [
-        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente', color: '#2563EB', bg: '#dbeafe' },
-        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique des ventes', color: '#059669', bg: '#d1fae5' },
-        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer les crédits', color: '#dc2626', bg: '#fee2e2' },
-        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer les dépenses', color: '#9333ea', bg: '#f3e8ff' },
-        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'Commandes en ligne', color: '#e11d48', bg: '#ffe4e6' }
+        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente', color: '#2563EB', bg: '#DBEAFE' },
+        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique des ventes', color: '#059669', bg: '#D1FAE5' },
+        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer les crédits', color: '#DC2626', bg: '#FEE2E2' },
+        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer les dépenses', color: '#9333EA', bg: '#F3E8FF' },
+        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'Commandes en ligne', color: '#E11D48', bg: '#FFE4E6' }
     ];
 
     var navItems = (userRole === 'caissier') ? navItemsCaissier : navItemsAdmin;
@@ -554,18 +1014,13 @@ function loadDashboardPage(c) {
         '<div class="quick-access-grid">';
 
     navItems.forEach(function(item) {
-        navHTML += '<div onclick="navigateTo(\'' + item.page + '\')" style="cursor:pointer;background:#FFFFFF;border:1px solid #EAECEF;border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);box-shadow:0 1px 3px rgba(0,0,0,0.04);" ' +
-            'onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 12px 28px rgba(0,0,0,0.08)\';this.style.borderColor=\'' + item.color + '\';" ' +
-            'onmouseout="this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.04)\';this.style.borderColor=\'#EAECEF\';">' +
-            '<div style="width:56px;height:56px;border-radius:50%;background:' + item.bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.25s ease;" ' +
-            'onmouseover="this.style.transform=\'scale(1.08) rotate(-3deg)\';" onmouseout="this.style.transform=\'scale(1) rotate(0)\';">' +
-            '<i class="fas ' + item.icon + '" style="font-size:1.5rem;color:' + item.color + ';"></i>' +
+        navHTML += '<div class="quick-access-card" style="--card-color:' + item.color + ';" onclick="navigateTo(\'' + item.page + '\')">' +
+            '<div class="qa-icon" style="background:' + item.bg + ';"><i class="fas ' + item.icon + '" style="color:' + item.color + ';"></i></div>' +
+            '<div class="qa-info">' +
+                '<span class="qa-label">' + item.label + '</span>' +
+                '<span class="qa-desc">' + item.desc + '</span>' +
             '</div>' +
-            '<div style="display:flex;flex-direction:column;gap:2px;">' +
-            '<span style="font-weight:700;font-size:1rem;color:#1A1D1F;">' + item.label + '</span>' +
-            '<span style="font-size:0.78rem;color:#6F767E;">' + item.desc + '</span>' +
-            '</div>' +
-            '</div>';
+        '</div>';
     });
 
     navHTML += '</div></div>';
@@ -582,11 +1037,9 @@ function loadDashboardPage(c) {
     loadSmartAlerts();
     loadPendingRegistrations();
 
-    // ✅ AJOUT : Sauvegarde systématique
+    // ✅ Sauvegarde systématique
     if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
-        setTimeout(function() {
-            CacheDB.saveAll();
-        }, 500);
+        setTimeout(function() { CacheDB.saveAll(); }, 500);
     }
 }
 
@@ -717,7 +1170,7 @@ async function loadSmartAlerts() {
         var elStock = document.getElementById('alertStockContent');
         if (elStock) {
             if (alertesStock.length === 0) {
-                elStock.innerHTML = '<div class="smart-alert-summary" style="color:#16a34a;"><i class="fas fa-check-circle"></i> Tous les stocks sont optimaux</div>';
+                elStock.innerHTML = '<div class="smart-alert-summary" style="color:#16A34A;"><i class="fas fa-check-circle"></i> Tous les stocks sont optimaux</div>';
             } else {
                 elStock.innerHTML =
                     '<div class="smart-alert-badges">' +
@@ -725,14 +1178,15 @@ async function loadSmartAlerts() {
                         (stockOrange > 0 ? '<span class="smart-badge orange"><i class="fas fa-exclamation-triangle"></i> Bas : ' + stockOrange + '</span>' : '') +
                         (stockJaune > 0 ? '<span class="smart-badge yellow"><i class="fas fa-clock"></i> À surveiller : ' + stockJaune + '</span>' : '') +
                     '</div>' +
-                    '<div class="smart-alert-summary"><strong>' + alertesStock.length + '</strong> produit(s) nécessitent votre attention</div>';
+                    '<div class="smart-alert-summary"><strong>' + alertesStock.length + '</strong> produit(s) nécessitent votre attention</div>' +
+                    '<div class="smart-alert-action" onclick="navigateTo(\'products\')"><i class="fas fa-arrow-right"></i> Voir les produits</div>';
             }
         }
 
         var elExp = document.getElementById('alertExpContent');
         if (elExp) {
             if (alertesExpiration.length === 0) {
-                elExp.innerHTML = '<div class="smart-alert-summary" style="color:#16a34a;"><i class="fas fa-check-circle"></i> Aucun produit n\'expire bientôt</div>';
+                elExp.innerHTML = '<div class="smart-alert-summary" style="color:#16A34A;"><i class="fas fa-check-circle"></i> Aucun produit n\'expire bientôt</div>';
             } else {
                 elExp.innerHTML =
                     '<div class="smart-alert-badges">' +
@@ -740,7 +1194,8 @@ async function loadSmartAlerts() {
                         (expOrange > 0 ? '<span class="smart-badge orange"><i class="fas fa-clock"></i> Bientôt : ' + expOrange + '</span>' : '') +
                         (expJaune > 0 ? '<span class="smart-badge yellow"><i class="fas fa-calendar"></i> À surveiller : ' + expJaune + '</span>' : '') +
                     '</div>' +
-                    '<div class="smart-alert-summary"><strong>' + alertesExpiration.length + '</strong> lot(s) d\'expiration à surveiller</div>';
+                    '<div class="smart-alert-summary"><strong>' + alertesExpiration.length + '</strong> lot(s) d\'expiration à surveiller</div>' +
+                    '<div class="smart-alert-action" onclick="navigateTo(\'products\')"><i class="fas fa-arrow-right"></i> Voir les produits</div>';
             }
         }
 
@@ -807,7 +1262,7 @@ function loadDashboardStats() {
     }).catch(function(e) { console.warn('Erreur crédits:', e); });
 }
 
-// ==================== INSCRIPTIONS EN ATTENTE (CORRIGÉ) ====================
+// ==================== INSCRIPTIONS EN ATTENTE (CORRIGÉ + STYLÉ) ====================
 function loadPendingRegistrations() {
 var d = document.getElementById('pendingRegistrations');
 if (!d) return;
@@ -866,45 +1321,56 @@ renderPendingTable();
 }
 
 function renderPendingTable() {
-var tb = document.querySelector('#pendingTable tbody');
-if (!tb) return;
-tb.innerHTML = '';
+    var tb = document.querySelector('#pendingTable tbody');
+    if (!tb) return;
+    tb.innerHTML = '';
 
-var data = window.pendingUsersData || [];
+    var data = window.pendingUsersData || [];
 
-if (data.length === 0) {
-tb.innerHTML = `
-<tr>
-<td colspan="5" style="text-align:center;padding:40px;color:#16a34a;font-size:24px;">
-✅ Aucune inscription en attente
-</td>
-</tr>
-`;
-return;
-}
+    if (data.length === 0) {
+        tb.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align:center;padding:40px;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+                    <i class="fas fa-check-circle" style="font-size:2.5rem;color:#16A34A;"></i>
+                    <span style="font-size:1rem;color:#16A34A;font-weight:600;">Aucune inscription en attente</span>
+                </div>
+            </td>
+        </tr>
+        `;
+        return;
+    }
 
-for (var i = 0; i < data.length; i++) {
-var x = data[i];
-var dt = x.createdAt ? new Date(x.createdAt.seconds * 1000).toLocaleDateString('fr-FR') + ' ' +
-new Date(x.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : 'N/A';
+    for (var i = 0; i < data.length; i++) {
+        var x = data[i];
+        var dt = x.createdAt ? new Date(x.createdAt.seconds * 1000).toLocaleDateString('fr-FR') + ' ' +
+            new Date(x.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : 'N/A';
+        var initial = (x.prenom || '?').trim().charAt(0).toUpperCase();
 
-tb.innerHTML += `
-<tr>
-<td style="font-size:22px;"><strong>${escapeHtml(x.prenom)}</strong></td>
-<td style="font-size:22px;">${escapeHtml(x.email)}</td>
-<td style="font-size:22px;"><span class="status-warning">${escapeHtml(x.role)}</span></td>
-<td style="font-size:22px;">${dt}</td>
-<td style="font-size:22px;">
-<button class="btn-add" style="padding:8px 16px;font-size:20px;margin-right:8px;" onclick="approveUser('${x.id}')">
-✅ Accepter
-</button>
-<button class="btn-delete" style="padding:8px 16px;font-size:20px;" onclick="rejectUser('${x.id}')">
-❌ Refuser
-</button>
-</td>
-</tr>
-`;
-}
+        tb.innerHTML += `
+        <tr>
+            <td style="font-size:1rem;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#14B8A6,#0D9488);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;">${initial}</div>
+                    <strong>${escapeHtml(x.prenom)}</strong>
+                </div>
+            </td>
+            <td style="font-size:1rem;">${escapeHtml(x.email)}</td>
+            <td style="font-size:1rem;"><span class="status-warning" style="padding:4px 10px;border-radius:6px;background:#FEF3C7;color:#92400E;font-weight:600;font-size:0.8rem;">${escapeHtml(x.role)}</span></td>
+            <td style="font-size:0.9rem;color:#64748B;">${dt}</td>
+            <td style="font-size:0.9rem;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button style="padding:8px 14px;font-size:0.8rem;font-weight:600;border:none;border-radius:8px;background:#DCFCE7;color:#166534;cursor:pointer;display:flex;align-items:center;gap:4px;" onclick="approveUser('${x.id}')">
+                        <i class="fas fa-check"></i> Accepter
+                    </button>
+                    <button style="padding:8px 14px;font-size:0.8rem;font-weight:600;border:none;border-radius:8px;background:#FEE2E2;color:#991B1B;cursor:pointer;display:flex;align-items:center;gap:4px;" onclick="rejectUser('${x.id}')">
+                        <i class="fas fa-times"></i> Refuser
+                    </button>
+                </div>
+            </td>
+        </tr>
+        `;
+    }
 }
 
 // ==================== APPROVE USER (CORRIGÉ) ====================
@@ -1492,3 +1958,4 @@ window.qrSaveAll = qrSaveAll;
 console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
 console.log('🧠 Alertes intelligentes : Stock / Expiration / Prévisions ventes');
 console.log('🎨 Style amélioré : animations douces, cartes modernes, badges colorés');
+console.log('🎨 🆕 Dashboard PRO UX/UI : KPI cards premium + alertes actionnables + accès rapide 3D + inscriptions stylées');
