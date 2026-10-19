@@ -3303,3 +3303,58 @@ opacity: 1 !important;
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
     }
 }
+/* ============================================================
+✅ AMÉLIORATIONS ADDITIVES — Aucune règle existante modifiée
+============================================================ */
+
+/* Focus clavier accessible et visible */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Impression propre */
+@media print {
+    .sidebar,
+    .mobile-menu-btn,
+    .sidebar-overlay,
+    .btn-add,
+    .btn-save,
+    .btn-cancel,
+    .btn-edit,
+    .btn-delete {
+        display: none !important;
+    }
+    .main-content {
+        height: auto !important;
+        overflow: visible !important;
+        padding: 0 !important;
+    }
+    .content-card {
+        break-inside: avoid;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+/* Respect de la préférence "mouvement réduit" */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Scrollbar Firefox (complète le ::-webkit-scrollbar existant) */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-300) transparent;
+}
+
+/* ============================================================
+✅ FIN DES AMÉLIORATIONS
+============================================================ */
