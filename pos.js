@@ -30,6 +30,7 @@
 // 🆕 AJUSTEMENTS MOBILE : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px
 // ✅ 💳 CRÉDIT CLIENT : loadClientCredits() reproduit EXACTEMENT le filtre d'Admin-Credits (aucune divergence)
 // 🆕 RESPONSIVE RENFORCÉ : tout s'adapte de 320px à 4K
+// 🎨 V4 : steps-nav TRANSPARENT sur fond gris + cartes blanches individuelles + qualité renforcée
 
 var posCart = [];
 var posStep = 1;
@@ -391,15 +392,12 @@ container.style.position = 'relative';
 }
 
 // ✅ CORRIGÉ : Reproduit EXACTEMENT le filtre d'Admin-Credits.loadCredits()
-// → Lit UNIQUEMENT les VENTES avec les mêmes conditions qu'Admin-Credits
-// → Résultat strictement identique (aucune divergence de montant)
 async function loadClientCredits(clientId) {
     if (!clientId) return 0;
     if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
 
     var total = 0;
 
-    // ✅ SOURCE UNIQUE : VENTES — MÊME FILTRE EXACT QUE Admin-Credits
     try {
         var ventesSnap = await db.collection('ventes')
             .where('clientId', '==', clientId)
@@ -408,16 +406,14 @@ async function loadClientCredits(clientId) {
         ventesSnap.forEach(function(doc) {
             var d = doc.data();
 
-            // 🔥 REPRENDRE EXACTEMENT LE FILTRE DE loadCredits() DANS admin-credits.js
             var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
             var remaining = (d.remainingAmount != null) ? d.remainingAmount : (d.total || 0);
 
-            // ❌ Mêmes exclusions qu'Admin-Credits
-            if (d.paid === true) return;                              // déjà totalement payé
-            if (statut === 'payé') return;                            // statut payé
-            if (remaining <= 0.01) return;                            // rien à payer
-            if ((d.total || 0) <= 0) return;                          // ⚠️ total = 0 (exclusion ajoutée)
-            if (statut !== 'crédit' && statut !== 'partiel') return;  // autres statuts
+            if (d.paid === true) return;
+            if (statut === 'payé') return;
+            if (remaining <= 0.01) return;
+            if ((d.total || 0) <= 0) return;
+            if (statut !== 'crédit' && statut !== 'partiel') return;
 
             var reste = (d.remainingAmount != null)
                 ? d.remainingAmount
@@ -667,7 +663,6 @@ if(posSearchQuery) dn = dn.replace(new RegExp('(' + posSearchQuery.replace(/[.*+
 
 var isMobile = window.innerWidth < 700;
 
-// 🎨 Cartes adaptatives : 190px desktop / 145-170px mobile
 var cardStyle = isMobile ?
 'padding:6px 4px;min-height:145px;max-height:170px;aspect-ratio:1/1;border-radius:10px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
 'padding:12px 10px;min-height:190px;max-height:200px;aspect-ratio:1/1;border-radius:14px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
@@ -1019,9 +1014,6 @@ if (typeof renderStockTable === 'function') renderStockTable();
 }
 
 // ==================== updateCartOnly() — PANIER V2 ====================
-// ✅ Nom produit EN HAUT (peut sauter à la ligne)
-// ✅ Boutons +/- et supprimer À DROITE
-// ✅ Sous-total À DROITE
 function updateCartOnly(){
 if(!isOnPOSPage()) return;
 var ci=document.querySelector('.pos-cart-items');
@@ -1647,27 +1639,20 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         min-height: calc(100vh - 60px) !important;
         font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif !important;
         color: var(--r-text) !important;
+        gap: 14px !important;
     }
 
-    .pos-products-panel,
-    .pos-cart-panel,
-    .pos-multi-carts-bar,
-    .pos-steps-nav,
-    .pos-cart-header,
-    .pos-cart-total-row {
-        background-image: none !important;
-    }
-
+    /* ============ 🎯 STEPS TRANSPARENT SUR FOND GRIS ============ */
     .pos-steps-nav {
         display: flex !important;
         justify-content: center !important;
         gap: 8px !important;
-        padding: 6px !important;
-        background: var(--r-card) !important;
-        border-radius: var(--r-radius-pill) !important;
-        box-shadow: var(--r-shadow-card) !important;
-        border: 1px solid var(--r-border) !important;
-        margin-bottom: 16px !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        margin-bottom: 8px !important;
         max-width: 400px !important;
         margin-left: auto !important;
         margin-right: auto !important;
@@ -1677,26 +1662,34 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         display: flex !important;
         align-items: center !important;
         gap: 8px !important;
-        padding: 8px 16px !important;
+        padding: 10px 18px !important;
         border-radius: var(--r-radius-pill) !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
         font-weight: 600 !important;
+        background: #FFFFFF !important;
+        border: 1px solid var(--r-border) !important;
+        color: var(--r-text-2) !important;
+        box-shadow: var(--r-shadow-card) !important;
+    }
+
+    .pos-step:hover:not(.active) {
+        background: var(--r-bg) !important;
+        color: var(--r-text) !important;
+        border-color: var(--r-border-strong) !important;
+        transform: translateY(-1px) !important;
     }
 
     .pos-step.active {
         background: var(--r-blue) !important;
         color: #fff !important;
+        border-color: var(--r-blue) !important;
         box-shadow: var(--r-shadow-blue) !important;
     }
 
     .pos-step.active .step-number {
-        background: rgba(255,255,255,0.25) !important;
+        background: rgba(255,255,255,0.28) !important;
         color: #fff !important;
-    }
-
-    .pos-step:not(.active) {
-        color: var(--r-text-2) !important;
     }
 
     .pos-step .step-number {
@@ -1722,7 +1715,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border-radius: var(--r-radius) !important;
         box-shadow: var(--r-shadow-card) !important;
         border: 1px solid var(--r-border) !important;
-        margin-bottom: 16px !important;
+        margin-bottom: 14px !important;
     }
 
     .pos-multi-carts-bar > div {
@@ -1739,6 +1732,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-multi-carts-bar button[onclick*="posCreateNewCart"]:hover:not(:disabled) {
         background: var(--r-blue-hover) !important;
         transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px rgba(37,99,235,0.35) !important;
     }
 
     .pos-products-panel {
@@ -1767,12 +1761,26 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         padding: 14px !important;
         min-height: 190px !important;
         max-height: 200px !important;
+        position: relative !important;
+    }
+
+    .pos-product-card::after {
+        content: '' !important;
+        position: absolute !important;
+        inset: 0 !important;
+        border-radius: var(--r-radius) !important;
+        pointer-events: none !important;
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02) !important;
     }
 
     .pos-product-card:hover {
-        transform: translateY(-2px) !important;
+        transform: translateY(-3px) !important;
         border-color: var(--r-blue-border) !important;
         box-shadow: var(--r-shadow-hover) !important;
+    }
+
+    .pos-product-card:active {
+        transform: translateY(-1px) !important;
     }
 
     .pos-product-card.pos-out-of-stock {
@@ -1783,33 +1791,49 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-product-img {
         height: 85px !important;
         width: 85px !important;
+        border-radius: var(--r-radius-sm) !important;
+        overflow: hidden !important;
+        background: linear-gradient(135deg, #F7F8FA, #EFF6FF) !important;
+        border: 1px solid var(--r-border) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     .pos-product-img img {
-        border-radius: var(--r-radius-sm) !important;
+        border-radius: calc(var(--r-radius-sm) - 2px) !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+
+    .pos-product-img i {
+        color: var(--r-text-3) !important;
     }
 
     .pos-product-name {
         color: var(--r-text) !important;
         font-weight: 700 !important;
         font-size: 0.85rem !important;
+        line-height: 1.3 !important;
     }
 
     .pos-product-price {
         color: var(--r-text) !important;
         font-weight: 800 !important;
-        font-size: 0.90rem !important;
+        font-size: 0.92rem !important;
         letter-spacing: -0.3px;
     }
 
     .pos-promo-price {
         color: var(--r-red) !important;
         font-weight: 800 !important;
-        font-size: 0.90rem !important;
+        font-size: 0.92rem !important;
     }
 
     .pos-old-price {
-        font-size: 0.7rem !important;
+        font-size: 0.70rem !important;
+        color: var(--r-text-3) !important;
     }
 
     .pos-products-grid button[onclick*="retournerCategories"] {
@@ -1838,7 +1862,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     }
 
     .pos-category-card:hover {
-        transform: translateY(-2px) !important;
+        transform: translateY(-3px) !important;
         border-color: var(--r-blue-border) !important;
         box-shadow: var(--r-shadow-hover) !important;
     }
@@ -1972,20 +1996,27 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         background: var(--r-bg) !important;
         border-radius: var(--r-radius-sm) !important;
         border: 1px solid var(--r-border) !important;
+        padding: 16px 20px !important;
     }
 
     .pos-cart-total-row span:first-child {
         color: var(--r-text-2) !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px;
     }
 
     .pos-cart-total-row span:last-child {
         color: var(--r-text) !important;
         font-weight: 800 !important;
+        font-size: 1.4rem !important;
+        letter-spacing: -0.5px;
     }
 
-    .pos-validate-btn {
-        background: var(--r-blue) !important;
+    .pos-validate-btn,
+    .pos-finalize-btn {
+        background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
         color: #fff !important;
         border: none !important;
         border-radius: var(--r-radius-sm) !important;
@@ -1995,14 +2026,22 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: var(--r-shadow-blue) !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
-        margin: 0 12px 16px 12px !important;
         width: calc(100% - 24px) !important;
+        margin: 0 12px 16px 12px !important;
     }
 
-    .pos-validate-btn:hover:not(:disabled) {
-        background: var(--r-blue-hover) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+    .pos-finalize-btn {
+        margin-top: 4px !important;
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .pos-validate-btn:hover:not(:disabled),
+    .pos-finalize-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #2563EB, #1D4ED8) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4) !important;
     }
 
     .pos-validate-btn:disabled {
@@ -2010,36 +2049,16 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         color: var(--r-text-3) !important;
         box-shadow: none !important;
         cursor: not-allowed !important;
-    }
-
-    .pos-finalize-btn {
-        background: var(--r-blue) !important;
-        color: #fff !important;
-        border: none !important;
-        border-radius: var(--r-radius-sm) !important;
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-        padding: 14px 20px !important;
-        box-shadow: var(--r-shadow-blue) !important;
-        transition: all 0.2s ease !important;
-        cursor: pointer !important;
-        width: 100%;
-        margin-top: 4px;
-    }
-
-    .pos-finalize-btn:hover:not(:disabled) {
-        background: var(--r-blue-hover) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+        transform: none !important;
     }
 
     .pos-payment-btn {
         background: var(--r-card) !important;
-        border: 1px solid var(--r-border) !important;
+        border: 1.5px solid var(--r-border) !important;
         color: var(--r-text-2) !important;
         border-radius: var(--r-radius-sm) !important;
         padding: 12px 16px !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
         transition: all 0.15s ease !important;
         cursor: pointer !important;
         display: flex !important;
@@ -2051,6 +2070,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-payment-btn:hover:not(:disabled) {
         background: var(--r-bg) !important;
         border-color: var(--r-border-strong) !important;
+        color: var(--r-text) !important;
     }
 
     .pos-payment-btn.active {
@@ -2069,12 +2089,14 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         background: var(--r-amber) !important;
         border-color: var(--r-amber) !important;
         box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3) !important;
+        color: #fff !important;
     }
 
     #posPartielBtn.active {
         background: var(--r-purple) !important;
         border-color: var(--r-purple) !important;
         box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3) !important;
+        color: #fff !important;
     }
 
     .pos-payment-form input[type="text"],
@@ -2083,7 +2105,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-payment-form select,
     .pos-payment-form textarea {
         background: var(--r-card) !important;
-        border: 1px solid var(--r-border) !important;
+        border: 1.5px solid var(--r-border) !important;
         border-radius: var(--r-radius-sm) !important;
         color: var(--r-text) !important;
         font-family: inherit !important;
@@ -2099,7 +2121,10 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     .pos-payment-form label {
         color: var(--r-text-2) !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 11px !important;
+        letter-spacing: 0.5px;
     }
 
     .pos-payment-form button[onclick*="posAjouterNouveauClient"] {
@@ -2119,7 +2144,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     #posMicBtn {
         background: var(--r-card) !important;
-        border: 1px solid var(--r-border) !important;
+        border: 1.5px solid var(--r-border) !important;
         color: var(--r-text-2) !important;
         border-radius: var(--r-radius-sm) !important;
         transition: all 0.15s ease !important;
@@ -2149,7 +2174,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     #posTablesBtn,
     #posEnLigneBtn {
         background: var(--r-card) !important;
-        border: 1px solid var(--r-border) !important;
+        border: 1.5px solid var(--r-border) !important;
         color: var(--r-text) !important;
         border-radius: var(--r-radius-pill) !important;
         font-weight: 600 !important;
@@ -2175,7 +2200,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     #posToolsContainer > div > div:first-child {
         background: var(--r-card) !important;
-        border: 1px solid var(--r-border) !important;
+        border: 1.5px solid var(--r-border) !important;
         border-radius: var(--r-radius-sm) !important;
     }
 
@@ -2187,7 +2212,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     #posToggleToolsBtn {
         background: var(--r-card) !important;
         color: var(--r-text) !important;
-        border: 1px solid var(--r-border) !important;
+        border: 1.5px solid var(--r-border) !important;
         border-radius: var(--r-radius-pill) !important;
         font-weight: 600 !important;
         box-shadow: var(--r-shadow-card) !important;
@@ -2201,15 +2226,17 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-products-grid .btn-add {
         background: var(--r-card) !important;
         color: var(--r-text) !important;
-        border: 1px solid var(--r-border) !important;
+        border: 1.5px solid var(--r-border) !important;
         border-radius: var(--r-radius-sm) !important;
         font-weight: 600 !important;
         box-shadow: var(--r-shadow-card) !important;
+        padding: 10px 20px !important;
     }
 
     .pos-products-grid .btn-add:hover {
-        background: var(--r-bg) !important;
-        border-color: var(--r-border-strong) !important;
+        background: var(--r-blue-soft) !important;
+        color: var(--r-blue) !important;
+        border-color: var(--r-blue-border) !important;
     }
 
     .pos-products-grid::-webkit-scrollbar,
@@ -2224,7 +2251,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-cart-items::-webkit-scrollbar-track,
     .pos-payment-form::-webkit-scrollbar-track,
     #posClientDropdown::-webkit-scrollbar-track {
-        background: var(--r-bg);
+        background: transparent;
         border-radius: 4px;
     }
 
@@ -2232,8 +2259,13 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-cart-items::-webkit-scrollbar-thumb,
     .pos-payment-form::-webkit-scrollbar-thumb,
     #posClientDropdown::-webkit-scrollbar-thumb {
-        background: var(--r-border-strong);
+        background: #E2E8F0;
         border-radius: 4px;
+    }
+
+    .pos-products-grid::-webkit-scrollbar-thumb:hover,
+    .pos-cart-items::-webkit-scrollbar-thumb:hover {
+        background: #CBD5E1;
     }
 
     #posClientDropdown > div {
@@ -2247,12 +2279,13 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     .pos-container > div > div > button[onclick*="scrollIntoView"] {
         background: var(--r-blue) !important;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
         transition: all 0.3s ease !important;
     }
 
     .pos-container > div > div > button[onclick*="scrollIntoView"]:hover {
         transform: scale(1.1) translateY(-2px) !important;
+        background: var(--r-blue-hover) !important;
     }
 
     .pos-multi-carts-bar button[onclick*="posDeleteCart"]:hover {
@@ -2275,43 +2308,51 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     }
 
     @media (max-width: 768px) {
-        .pos-container { padding: 10px !important; }
-        .pos-steps-nav { padding: 6px !important; gap: 6px !important; }
-        .pos-step { padding: 6px 12px !important; font-size: 0.85rem !important; }
+        .pos-container { padding: 10px !important; gap: 10px !important; }
+        .pos-steps-nav { padding: 0 !important; gap: 6px !important; }
+        .pos-step { padding: 8px 14px !important; font-size: 0.82rem !important; }
         .pos-multi-carts-bar { padding: 8px 10px !important; gap: 6px !important; }
         .pos-cart-header { padding: 12px 14px !important; }
         .pos-cart-total-row { padding: 12px 14px !important; }
+        .pos-cart-total-row span:last-child { font-size: 1.2rem !important; }
         .pos-payment-btn { padding: 10px 12px !important; font-size: 0.85rem !important; }
     }
 
     @media (max-width: 500px) {
-        .pos-step span:not(.step-number) { font-size: 0.8rem !important; }
+        .pos-step span:not(.step-number) { font-size: 0.78rem !important; }
         .pos-cart-header h3 { font-size: 1rem !important; }
+        .pos-step { padding: 7px 12px !important; }
     }
 
     @media (max-width: 700px) {
         .pos-product-card {
             min-height: 145px !important;
             max-height: 170px !important;
+            padding: 10px !important;
         }
         .pos-product-img {
             height: 70px !important;
             width: 70px !important;
+            margin-bottom: 6px !important;
         }
         .pos-product-price,
         .pos-promo-price {
             font-size: 12px !important;
             font-weight: 800 !important;
         }
+        .pos-product-name {
+            font-size: 10px !important;
+            font-weight: 600 !important;
+        }
     }
     `;
 
     document.head.appendChild(styles);
-    console.log('🎨 [POS] Style minimaliste bleu/blanc injecté');
+    console.log('🎨 [POS] Style minimaliste bleu/blanc V4 injecté');
 })();
 
 console.log('🚀 E-SOLUTION - POS chargé avec corrections');
-console.log('🎨 STYLE MINIMALISTE : fond gris plat + cartes blanches + bleu #2563EB + aucun gradient');
+console.log('🎨 STYLE MINIMALISTE V4 : steps transparents + cartes blanches individuelles + qualité renforcée');
 console.log('🎨 PANIER V2 : nom en haut + boutons à droite + sous-total à droite');
 console.log('🆕 RESPONSIVE : 320px → 4K, cartes adaptatives, tout s\'ajuste');
 console.log('✅ 💳 CRÉDIT CLIENT : lit UNIQUEMENT VENTES avec le MÊME filtre qu\'Admin-Credits (statut!=payé, remaining>0.01, total>0) → plus de divergence entre POS et Admin-Credits');
