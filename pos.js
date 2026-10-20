@@ -28,7 +28,7 @@
 // ✅ DESIGN ASTRONAUTE : glassmorphism + glow + gradients + animations fluides
 // ✅ BOUTON FLÈCHE DÉPLACÉ DANS <body> → au-dessus de TOUT (modales incluses)
 // ✅ BORDURES RETIRÉES : design épuré, séparations par ombres/ombres intérieures uniquement
-// ✅ ÉPICES/SEL UNIQUEMENT SI CATÉGORIE "recette:true"
+// ✅ ÉPICES/SEL SUPPRIMÉS COMPLÈTEMENT
 // ✅ QUANTITÉ INGRÉDIENTS PERSONNALISABLE + STOCK DÉCRÉMENTÉ À LA BONNE QUANTITÉ
 
 var posCart = [];
@@ -892,7 +892,7 @@ function posAddToCartOrOpenOptions(pid){
     posSaveMultiCarts(); 
 }
 
-// ✅ MODIFIÉ : Épices/Sel uniquement si catégorie "recette:true" + champ quantité par ingrédient
+// ✅ ÉPICES ET SEL SUPPRIMÉS COMPLÈTEMENT - Uniquement les ingrédients avec quantité
 async function posOpenOptionsModal(pid) {
 var p = posProductsList.find(function(x) { return x.id === pid; });
 if (!p) return;
@@ -956,44 +956,27 @@ h += '</div></div>';
 });
 }
 
-// ✅ Épices et Sel UNIQUEMENT si le produit est dans une catégorie "recette"
-var catObj = posCategoriesList.find(function(c) { return c.nom === p.categorie; });
-var isRecette = catObj && catObj.recette === true;
-if (isRecette) {
-h += '<div style="margin-bottom:12px;"><label style="font-weight:700;font-size:0.9rem;">🌶️ Épices:</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">';
-posEpicesList.forEach(function(s, idx) { h += '<label style="padding:6px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-epice" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>'; });
-h += '</div></div>';
-
-h += '<div style="margin-bottom:12px;"><label style="font-weight:700;font-size:0.9rem;">🧂 Sel:</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">';
-posSelList.forEach(function(s, idx) { h += '<label style="padding:6px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-sel" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>'; });
-h += '</div></div>';
-}
-
 h += '<div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify-content:flex-end;"><button class="btn-cancel" onclick="closeModal()" style="font-size:0.9rem;padding:10px 20px;">Annuler</button><button class="btn-save" onclick="posConfirmOptions()" style="font-size:0.9rem;padding:10px 24px;"><i class="fas fa-check"></i> Ajouter au panier</button></div>';
 openModal('Personnaliser - ' + escapeHtml(p.nom), h);
 }
 
-// ✅ MODIFIÉ : Récupère les quantités choisies pour chaque ingrédient
+// ✅ ÉPICES ET SEL SUPPRIMÉS - Récupère uniquement les ingrédients avec quantités
 function posConfirmOptions() {
 var interdits = [];
 document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) { interdits.push(cb.value); });
 
-// Épices/Sel uniquement si présents
-var epiceInput = document.querySelector('input[name="pos-epice"]:checked');
-var selInput = document.querySelector('input[name="pos-sel"]:checked');
-var epice = epiceInput ? epiceInput.value : 'Normal';
-var sel = selInput ? selInput.value : 'Normal';
+// Épices/Sel forcés à "Normal" car la modale ne les affiche plus
+var epice = 'Normal';
+var sel = 'Normal';
 
 var p = posProductsList.find(function(x) { return x.id === posCurrentProductId; });
 if (!p) { closeModal(); return; }
 
-// Récupérer ingrédients exclus
 var ingredientsExclus = [];
 document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) {
     ingredientsExclus.push(cb.value.toLowerCase().trim());
 });
 
-// Récupérer ingrédients avec quantités personnalisées
 var ingredientsAvecQuantite = [];
 document.querySelectorAll('.pos-ingredient-qty').forEach(function(input) {
     var nom = input.getAttribute('data-nom');
@@ -1022,13 +1005,12 @@ posSauvegarderDonneesPanier(posCurrentCartId);
 posSaveMultiCarts();
 }
 
-// ✅ MODIFIÉ : Décrémente avec les quantités personnalisées si fournies
+// ✅ Décrémente avec les quantités personnalisées si fournies
 function decrementerIngredientsStock(productId, ingredientsExclus, ingredientsAvecQuantite) {
     db.collection('products').doc(productId).get().then(function(doc) {
         if (!doc.exists) return;
         var ingredients = doc.data().ingredients || [];
 
-        // Si quantités personnalisées fournies → les utiliser
         if (ingredientsAvecQuantite && ingredientsAvecQuantite.length > 0) {
             ingredientsAvecQuantite.forEach(function(customIng) {
                 if (!customIng.idStock || customIng.quantite <= 0) return;
@@ -1049,7 +1031,6 @@ function decrementerIngredientsStock(productId, ingredientsExclus, ingredientsAv
             return;
         }
 
-        // Sinon : comportement par défaut
         ingredients.forEach(function(ing) {
             var isExcluded = ingredientsExclus.some(function(excl) { return excl === ing.nom.toLowerCase().trim(); });
             if (!isExcluded && ing.idStock) {
@@ -2710,6 +2691,6 @@ console.log('✅ Bouton flèche ↑ corrigé (5 conteneurs écoutés + MutationO
 console.log('✅ Panier min-height 220px (3+ articles visibles)');
 console.log('✅ Boutons POS AGRANDIS + hover néon');
 console.log('✅ BOUTON VALIDER STICKY (toujours visible)');
-console.log('✅ Épices/Sel UNIQUEMENT si catégorie "recette:true"');
+console.log('✅ ÉPICES ET SEL SUPPRIMÉS COMPLÈTEMENT');
 console.log('✅ Champ quantité par ingrédient dans la modale');
 console.log('✅ Stock décrémenté à la bonne quantité (2 sucres, 3 pièces, etc.)');
