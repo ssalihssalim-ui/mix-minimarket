@@ -2603,6 +2603,118 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     document.head.appendChild(s);
     console.log('✅ [POS] Zone mobile agrandie (header masqué + marges supprimées)');
 })();
+// ============================================================
+// ⬆️ BOUTON FLÈCHE — REPOSITIONNÉ EN BAS À DROITE (style login)
+// ⚠️ Bloc isolé — ne modifie AUCUNE autre partie du code
+// ============================================================
+(function posScrollTopBottomFinal() {
+    var STYLE_ID = 'pos-scroll-top-bottom-final';
+    if (document.getElementById(STYLE_ID)) return;
+
+    var s = document.createElement('style');
+    s.id = STYLE_ID;
+    s.textContent = `
+    /* ========== BOUTON FLÈCHE EN BAS À DROITE ========== */
+    .pos-scroll-top-btn,
+    button[onclick*="scrollIntoView"] {
+        position: fixed !important;
+        bottom: 24px !important;
+        right: 20px !important;
+        top: auto !important;
+        left: auto !important;
+        width: 56px !important;
+        height: 56px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%) !important;
+        color: #FFFFFF !important;
+        border: 2px solid rgba(255,255,255,0.2) !important;
+        font-size: 22px !important;
+        cursor: pointer !important;
+        box-shadow:
+            0 6px 20px rgba(20,184,166,0.5),
+            0 3px 8px rgba(0,0,0,0.3) !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        opacity: 0 !important;
+        transform: translateY(20px) !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .pos-scroll-top-btn.show,
+    button[onclick*="scrollIntoView"].show {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+        pointer-events: auto !important;
+    }
+
+    .pos-scroll-top-btn:hover,
+    button[onclick*="scrollIntoView"]:hover {
+        transform: translateY(-3px) scale(1.08) !important;
+        box-shadow:
+            0 10px 28px rgba(20,184,166,0.65),
+            0 4px 10px rgba(0,0,0,0.35) !important;
+    }
+
+    .pos-scroll-top-btn:active,
+    button[onclick*="scrollIntoView"]:active {
+        transform: scale(0.94) !important;
+    }
+
+    @media (max-width: 700px) {
+        .pos-scroll-top-btn,
+        button[onclick*="scrollIntoView"] {
+            width: 48px !important;
+            height: 48px !important;
+            font-size: 18px !important;
+            bottom: 18px !important;
+            right: 14px !important;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .pos-scroll-top-btn,
+        button[onclick*="scrollIntoView"] {
+            width: 44px !important;
+            height: 44px !important;
+            font-size: 16px !important;
+            bottom: 14px !important;
+            right: 12px !important;
+        }
+    }
+    `;
+    document.head.appendChild(s);
+
+    function updateScrollBtn() {
+        var btn = document.querySelector('.pos-scroll-top-btn');
+        if (!btn) return;
+        var scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        var container = document.getElementById('dynamicContent');
+        var containerScroll = container ? container.scrollTop : 0;
+        if (scrollY > 200 || containerScroll > 200) {
+            btn.classList.add('show');
+        } else {
+            btn.classList.remove('show');
+        }
+    }
+
+    window.addEventListener('scroll', updateScrollBtn, { passive: true });
+    document.addEventListener('scroll', updateScrollBtn, { passive: true });
+
+    setTimeout(function() {
+        var scrollables = document.querySelectorAll('#dynamicContent, .pos-container, .pos-cart-items, .pos-products-grid');
+        scrollables.forEach(function(el) {
+            el.addEventListener('scroll', updateScrollBtn, { passive: true });
+        });
+    }, 500);
+
+    setInterval(updateScrollBtn, 500);
+    console.log('⬆️ [POS] Bouton flèche en BAS à droite (teal)');
+})();
 console.log('🚀 E-SOLUTION - POS V5 ASTRONAUTE (sans bordures)');
 console.log('✅ Design glassmorphism + glow + gradients');
 console.log('✅ BORDURES RETIRÉES : séparations par ombres uniquement');
