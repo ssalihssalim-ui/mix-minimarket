@@ -2604,34 +2604,30 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     console.log('✅ [POS] Zone mobile agrandie (header masqué + marges supprimées)');
 })();
 // ============================================================
-// ⬆️ BOUTON FLÈCHE — VERSION FINALE (écrase tout le reste)
-// Position : BAS À DROITE — couleur TEAL — TOUJOURS VISIBLE
+// ⬆️ BOUTON FLÈCHE — VERSION FINALE ANTI-DOUBLON
+// Un seul bouton, en BAS à droite, TEAL, TOUJOURS VISIBLE
 // ⚠️ Bloc isolé — ne modifie AUCUNE autre partie du code
 // ============================================================
-(function posScrollBtnFinalOverride() {
-    var STYLE_ID = 'pos-scroll-btn-final-override';
-    var OLD_STYLE_ID = 'pos-scroll-top-style';
-    var OLD_STYLE_ID_2 = 'pos-scroll-top-bottom-final';
-    var OLD_STYLE_ID_3 = 'pos-scroll-top-always';
+(function posScrollBtnUnique() {
+    var STYLE_ID = 'pos-scroll-btn-unique-style';
+    var UNIQUE_BTN_ID = 'posUniqueScrollBtn';
 
-    // Supprimer les anciens styles du bouton flèche
-    [OLD_STYLE_ID, OLD_STYLE_ID_2, OLD_STYLE_ID_3].forEach(function(id) {
+    // Supprimer les anciens styles
+    ['pos-scroll-top-style', 'pos-scroll-top-bottom-final', 'pos-scroll-top-always', 'pos-scroll-btn-final-override'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.remove();
     });
 
     // Supprimer l'ancien style s'il existe
-    var existing = document.getElementById(STYLE_ID);
-    if (existing) existing.remove();
+    var oldStyle = document.getElementById(STYLE_ID);
+    if (oldStyle) oldStyle.remove();
 
+    // Injecter le CSS
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = `
-    /* ========== BOUTON FLÈCHE — VERSION FINALE ========== */
-    body .pos-scroll-top-btn,
-    body button.pos-scroll-top-btn,
-    body button[onclick*="scrollIntoView"],
-    body .pos-scroll-top-btn * {
+    /* ========== BOUTON FLÈCHE UNIQUE ========== */
+    #posUniqueScrollBtn {
         position: fixed !important;
         bottom: 24px !important;
         right: 20px !important;
@@ -2641,7 +2637,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         height: 56px !important;
         border-radius: 50% !important;
         background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%) !important;
-        background-color: #14B8A6 !important;
         color: #FFFFFF !important;
         border: 2px solid rgba(255,255,255,0.25) !important;
         font-size: 22px !important;
@@ -2654,32 +2649,23 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         align-items: center !important;
         justify-content: center !important;
         transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
         margin: 0 !important;
         padding: 0 !important;
-        transform: translateZ(0) !important;
     }
 
-    body .pos-scroll-top-btn:hover,
-    body button.pos-scroll-top-btn:hover,
-    body button[onclick*="scrollIntoView"]:hover {
-        transform: translateZ(0) translateY(-3px) scale(1.08) !important;
+    #posUniqueScrollBtn:hover {
+        transform: translateY(-3px) scale(1.08) !important;
         box-shadow:
             0 10px 28px rgba(20,184,166,0.7),
             0 4px 10px rgba(0,0,0,0.4) !important;
     }
 
-    body .pos-scroll-top-btn:active,
-    body button.pos-scroll-top-btn:active {
-        transform: translateZ(0) scale(0.94) !important;
+    #posUniqueScrollBtn:active {
+        transform: scale(0.94) !important;
     }
 
     @media (max-width: 700px) {
-        body .pos-scroll-top-btn,
-        body button.pos-scroll-top-btn,
-        body button[onclick*="scrollIntoView"] {
+        #posUniqueScrollBtn {
             width: 50px !important;
             height: 50px !important;
             font-size: 19px !important;
@@ -2689,9 +2675,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     }
 
     @media (max-width: 380px) {
-        body .pos-scroll-top-btn,
-        body button.pos-scroll-top-btn,
-        body button[onclick*="scrollIntoView"] {
+        #posUniqueScrollBtn {
             width: 46px !important;
             height: 46px !important;
             font-size: 17px !important;
@@ -2702,44 +2686,77 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     `;
     document.head.appendChild(s);
 
-    // ========== S'ASSURER QUE LE BOUTON EXISTE ==========
-    function ensureButton() {
-        var btn = document.querySelector('.pos-scroll-top-btn');
-        if (!btn) {
-            btn = document.createElement('button');
-            btn.className = 'pos-scroll-top-btn';
-            btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-            btn.title = 'Remonter en haut';
-            btn.setAttribute('type', 'button');
-            btn.onclick = function() {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                var dc = document.getElementById('dynamicContent');
-                if (dc) dc.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-            document.body.appendChild(btn);
-        } else {
-            // S'assurer qu'il est dans le body
-            if (btn.parentElement !== document.body) {
-                document.body.appendChild(btn);
+    // ========== FONCTION POUR SUPPRIMER LES DOUBLONS ==========
+    function cleanupDuplicates() {
+        // Supprimer TOUS les boutons avec les anciennes classes
+        document.querySelectorAll('.pos-scroll-top-btn, button[onclick*="scrollIntoView"]').forEach(function(btn) {
+            // Garder uniquement le bouton unique
+            if (btn.id !== UNIQUE_BTN_ID) {
+                btn.remove();
             }
-            // S'assurer que son onclick est correct
-            if (!btn.onclick) {
-                btn.onclick = function() {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    var dc = document.getElementById('dynamicContent');
-                    if (dc) dc.scrollTo({ top: 0, behavior: 'smooth' });
-                };
-            }
-        }
+        });
     }
 
-    // Créer tout de suite
-    ensureButton();
+    // ========== CRÉER LE BOUTON UNIQUE (1 SEULE FOIS) ==========
+    function createUniqueButton() {
+        // Si le bouton existe déjà, on ne fait rien
+        if (document.getElementById(UNIQUE_BTN_ID)) {
+            return;
+        }
 
-    // Re-vérifier régulièrement
-    setInterval(ensureButton, 1000);
+        // Nettoyer les doublons avant de créer
+        cleanupDuplicates();
 
-    console.log('⬆️ [POS] Bouton flèche FINAL — BAS à droite, TEAL, TOUJOURS VISIBLE');
+        var btn = document.createElement('button');
+        btn.id = UNIQUE_BTN_ID;
+        btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        btn.title = 'Remonter en haut';
+        btn.setAttribute('type', 'button');
+        btn.onclick = function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            var dc = document.getElementById('dynamicContent');
+            if (dc) dc.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        document.body.appendChild(btn);
+    }
+
+    // Créer immédiatement
+    createUniqueButton();
+
+    // ========== SURVEILLER LES DOUBLONS ==========
+    // MutationObserver : dès qu'un doublon est ajouté, on le supprime
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) {
+                    // Si c'est un bouton flèche doublon
+                    if (node.classList && node.classList.contains('pos-scroll-top-btn') && node.id !== UNIQUE_BTN_ID) {
+                        node.remove();
+                    }
+                    // Si c'est un bouton scrollIntoView doublon
+                    if (node.onclick && node.onclick.toString().indexOf('scrollIntoView') !== -1 && node.id !== UNIQUE_BTN_ID) {
+                        node.remove();
+                    }
+                    // Chercher les doublons dans les enfants ajoutés
+                    if (node.querySelectorAll) {
+                        node.querySelectorAll('.pos-scroll-top-btn, button[onclick*="scrollIntoView"]').forEach(function(child) {
+                            if (child.id !== UNIQUE_BTN_ID) child.remove();
+                        });
+                    }
+                }
+            });
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Vérifier régulièrement (sécurité supplémentaire)
+    setInterval(function() {
+        cleanupDuplicates();
+        createUniqueButton();
+    }, 1000);
+
+    console.log('⬆️ [POS] Bouton flèche UNIQUE — BAS à droite, TEAL, anti-doublon');
 })();
 console.log('🚀 E-SOLUTION - POS V5 ASTRONAUTE (sans bordures)');
 console.log('✅ Design glassmorphism + glow + gradients');
