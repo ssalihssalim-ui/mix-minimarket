@@ -24,7 +24,7 @@
 // ✅ Responsive renforcé 320px → 4K
 // ✅ BOUTONS POS AGRANDIS (panier + validation paiement)
 // ✅ PANIER AGRANDI + BOUTON VALIDER TOUJOURS VISIBLE (sticky footer)
-// ✅ MOBILE : panier 95% largeur + marges propres + outils visibles
+// ✅ MOBILE : outils visibles + panier 100% largeur + bouton flèche en HAUT
 
 var posCart = [];
 var posStep = 1;
@@ -1133,9 +1133,9 @@ if (cartKeys.length > 1) multiCartBar += '<button onclick="posResetAllCarts()" s
 multiCartBar += '</div>';
 
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
-// ✅ MODIFIÉ : panier 95% largeur sur mobile + centré
+// ✅ MODIFIÉ : panier 100% largeur sur mobile (au lieu de 95%)
 var mobileCartStyle = '';
-if (isMobile) mobileCartStyle = 'width:95% !important;max-width:95% !important;min-width:0 !important;margin:6px auto !important;max-height:calc(100vh - 120px) !important;min-height:280px !important;flex:1 !important;overflow:hidden !important;display:flex !important;flex-direction:column !important;';
+if (isMobile) mobileCartStyle = 'width:100% !important;max-width:100% !important;min-width:0 !important;margin:4px 0 !important;max-height:calc(100vh - 120px) !important;min-height:280px !important;flex:1 !important;overflow:hidden !important;display:flex !important;flex-direction:column !important;';
 var gridCols = isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))';
 var gridGap = isMobile ? '8px' : '14px';
 var gridPadding = isMobile ? '4px' : '0';
@@ -1152,14 +1152,15 @@ var toolsDisplay = 'flex';
 // ✅ MODIFIÉ : Panier min 3 articles visibles (280px PC / 220px mobile)
 var cartItemsMinHeight = isMobile ? '220px' : '280px';
 
-var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:'+(isMobile?'6px':'10px')+';height:auto;padding-bottom:'+(isMobile?'60px':'30px')+';padding-left:'+(isMobile?'4px':'0')+';padding-right:'+(isMobile?'4px':'0')+';">' +
+var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:'+(isMobile?'6px':'10px')+';height:auto;padding-bottom:'+(isMobile?'60px':'30px')+';padding-left:0;padding-right:0;">' +
 stepIndicator + multiCartBar +
 '<div class="pos-row" style="display:flex;flex-direction:column;gap:8px;width:100%;height:auto;">' +
-// ✅ MODIFIÉ : panneau produits 95% largeur sur mobile
-'<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:'+(isMobile?'95%':'100%')+'; max-width:'+(isMobile?'95%':'100%')+'; margin:'+(isMobile?'0 auto':'0')+'; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #EAECEF; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:'+(isMobile?'300px':'350px')+'; max-height:'+(isMobile?'55vh':'80vh')+'; flex:8;">' +
+// ✅ MODIFIÉ : panneau produits 100% largeur sur mobile (au lieu de 95%)
+'<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:100%; max-width:100%; margin:0; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #EAECEF; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:'+(isMobile?'300px':'350px')+'; max-height:'+(isMobile?'55vh':'80vh')+'; flex:8;">' +
 '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;">' +
 toggleToolsBtnHtml +
-'<div id="posToolsContainer" style="display:'+toolsDisplay+';flex-direction:column;gap:8px;margin-bottom:4px;padding:'+(isMobile?'0':'8px 12px')+';background:'+(isMobile?'transparent':'#F7F8FA')+';border-radius:12px;border:'+(isMobile?'none':'1px solid #EAECEF')+';">' +
+// ✅ MODIFIÉ : class="visible" + display:flex !important pour forcer l'affichage sur mobile
+'<div id="posToolsContainer" class="visible" style="display:flex !important;flex-direction:column;gap:8px;margin-bottom:4px;padding:'+(isMobile?'0':'8px 12px')+';background:'+(isMobile?'transparent':'#F7F8FA')+';border-radius:12px;border:'+(isMobile?'none':'1px solid #EAECEF')+';">' +
 // 🔍 Barre de recherche TOUJOURS visible
 '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">' +
 '<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;padding:2px 12px;position:relative;height:'+(isMobile?'38px':'40px')+';">' +
@@ -1222,7 +1223,8 @@ h+='</div>' +
 (posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;font-size:'+(isMobile?'12px':'0.85rem')+';color:#6F767E;padding:4px 0;"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#FF5B5B;font-size:'+(isMobile?'12px':'0.85rem')+';padding:4px 0;"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'') +
 '<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:'+(isMobile?'18px':'20px')+';font-weight:800;padding:14px 18px;border:1px solid #EAECEF;background:#F7F8FA;border-radius:10px;margin:8px 0 12px 0;"><span style="color:#6F767E;">Total</span><span style="color:#1A1D1F;">'+t.toFixed(2)+' MAD</span></div>' +
 '<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'') + '><i class="fas fa-check-circle"></i> Valider</button>' +
-'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:#2563EB;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(37,99,235,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrow-up"></i></button>' +
+// ✅ MODIFIÉ : bouton flèche ↑ en HAUT (au lieu de bottom)
+'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;top:'+(isMobile?'70px':'90px')+';right:14px;width:56px;height:56px;border-radius:50%;background:#2563EB;color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 15px rgba(37,99,235,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrow-up"></i></button>' +
 '</div>';
 } else {
 var canCredit=posCurrentClient&&posCurrentClient.id;
@@ -1257,7 +1259,8 @@ if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') {
 h+='<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:10px 14px;border:1px solid #EAECEF;border-radius:10px;font-size:22px !important;font-weight:700 !important;background:#FFFFFF;color:#1A1D1F;"><div id="posChangeDisplay" style="font-size:20px;font-weight:700;padding:4px 0;"></div></div>';
 }
 h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()"><i class="fas fa-check-circle"></i> Finaliser</button>' +
-'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:#2563EB;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(37,99,235,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrow-up"></i></button>' +
+// ✅ MODIFIÉ : bouton flèche ↑ en HAUT (au lieu de bottom)
+'<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;top:'+(isMobile?'70px':'90px')+';right:14px;width:56px;height:56px;border-radius:50%;background:#2563EB;color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 15px rgba(37,99,235,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrow-up"></i></button>' +
 '</div>';
 }
 h+='</div></div></div></div>'; c.innerHTML=h;
@@ -1526,6 +1529,7 @@ async function posConfirmerAjoutClient() {
     } catch(e) { alert('❌ Erreur lors de l\'ajout du client: ' + e.message); }
 }
 
+// ✅ MODIFIÉ : 100% largeur produits + panier sur mobile
 function corrigerDispositionMobile() {
 if (window.innerWidth <= 700) {
 var row = document.querySelector('.pos-row');
@@ -1533,9 +1537,10 @@ var produits = document.querySelector('.pos-products-panel');
 var panier = document.querySelector('.pos-cart-panel');
 if (row && produits && panier) {
 row.style.display = 'flex'; row.style.flexDirection = 'column'; row.style.flexWrap = 'nowrap';
-produits.style.width = '95%'; produits.style.maxWidth = '95%'; produits.style.minWidth = '0'; produits.style.margin = '0 auto';
+row.style.padding = '0'; row.style.margin = '0';
+produits.style.width = '100%'; produits.style.maxWidth = '100%'; produits.style.minWidth = '0'; produits.style.margin = '0';
 produits.style.height = 'auto'; produits.style.minHeight = '300px'; produits.style.maxHeight = '55vh'; produits.style.flex = '1';
-panier.style.width = '95%'; panier.style.maxWidth = '95%'; panier.style.minWidth = '0'; panier.style.margin = '6px auto';
+panier.style.width = '100%'; panier.style.maxWidth = '100%'; panier.style.minWidth = '0'; panier.style.margin = '4px 0';
 panier.style.height = 'auto'; panier.style.minHeight = '280px'; panier.style.maxHeight = 'calc(100vh - 120px)';
 panier.style.position = 'static';
 }
@@ -2144,11 +2149,11 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
 console.log('🚀 E-SOLUTION - POS V5');
 console.log('✅ Recherche + Tables/En ligne visibles sur PC ET mobile');
-console.log('✅ Panier 95% largeur sur mobile + marges propres');
+console.log('✅ Panier 100% largeur sur mobile + marges propres');
 console.log('✅ Panier min-height 220px (3+ articles visibles)');
 console.log('✅ Clic "Panier" → scroll vers le panier');
 console.log('✅ Couleurs 100% bleues');
 console.log('✅ Responsive renforcé');
 console.log('✅ Boutons POS AGRANDIS (panier + validation paiement)');
 console.log('✅ PANIER AGRANDI + BOUTON VALIDER STICKY (toujours visible)');
-console.log('✅ MOBILE : outils visibles + panier 95% + marges propres');
+console.log('✅ MOBILE : outils visibles + panier 100% + bouton flèche en HAUT');
