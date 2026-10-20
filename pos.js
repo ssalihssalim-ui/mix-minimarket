@@ -23,6 +23,7 @@
 // ✅ Clic "Panier" → scroll vers le panier
 // ✅ Responsive renforcé 320px → 4K
 // ✅ BOUTONS POS AGRANDIS (panier + validation paiement)
+// ✅ PANIER AGRANDI (3+ articles visibles : 320px PC / 240px mobile)
 
 var posCart = [];
 var posStep = 1;
@@ -1130,7 +1131,8 @@ multiCartBar += '</div>';
 
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
 var mobileCartStyle = '';
-if (isMobile) mobileCartStyle = 'width:100% !important;max-height:40vh !important;min-height:220px !important;margin-top:4px !important;flex:1 !important;';
+// ✅ MODIFIÉ : max-height 50vh + min-height 280px (au lieu de 40vh/220px)
+if (isMobile) mobileCartStyle = 'width:100% !important;max-height:50vh !important;min-height:280px !important;margin-top:4px !important;flex:1 !important;';
 var gridCols = isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))';
 var gridGap = isMobile ? '8px' : '14px';
 var gridPadding = isMobile ? '4px' : '0';
@@ -1144,8 +1146,8 @@ var toggleToolsBtnHtml = isMobile
 // 🎯 Sur PC : outils TOUJOURS visibles au départ
 var toolsDisplay = isMobile ? 'none' : (isPC ? 'flex' : (posToolsVisible ? 'flex' : 'none'));
 
-// 🎯 Panier : min 3 articles visibles
-var cartItemsMinHeight = isMobile ? '180px' : '220px';
+// ✅ MODIFIÉ : Panier min 3 articles visibles (320px PC / 240px mobile au lieu de 220px/180px)
+var cartItemsMinHeight = isMobile ? '240px' : '320px';
 
 var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:10px;height:auto;padding-bottom:30px;">' +
 stepIndicator + multiCartBar +
@@ -1176,12 +1178,14 @@ toggleToolsBtnHtml +
 '</div></div>' +
 '<div class="pos-products-grid" id="posProductGrid" style="grid-template-columns:'+gridCols+';gap:'+gridGap+';padding:'+gridPadding+';overflow-x:hidden;overflow-y:auto;flex-wrap:wrap;align-content:start;flex:1;contain:layout paint;content-visibility:auto;"></div>' +
 '</div>' +
-'<div class="pos-cart-panel" style="' + (isMobile ? mobileCartStyle : 'width:100%;background:#FFFFFF;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);border:1px solid #EAECEF;display:flex;flex-direction:column;margin-top:4px;max-height:45vh;flex:2;min-height:260px;') + '">';
+// ✅ MODIFIÉ : max-height 60vh + min-height 380px (au lieu de 45vh/260px)
+'<div class="pos-cart-panel" style="' + (isMobile ? mobileCartStyle : 'width:100%;background:#FFFFFF;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);border:1px solid #EAECEF;display:flex;flex-direction:column;margin-top:4px;max-height:60vh;flex:2;min-height:380px;') + '">';
 
 if(posStep===1){
 // 🎯 Titre Panier cliquable avec scroll vers le panier
 h+='<div class="pos-cart-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #EAECEF;flex-shrink:0;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';cursor:pointer;margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;" onclick="scrollToCart()"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i> Panier <span class="pos-cart-badge" style="background:#2563EB;color:#fff;border-radius:999px;padding:2px 10px;font-size:'+(isMobile?'12px':'0.75rem')+';font-weight:700;">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()" style="font-size:'+(isMobile?'12px':'0.8rem')+';background:transparent;color:#FF5B5B;border:1px solid transparent;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:600;"><i class="fas fa-trash-alt"></i> Vider</button></div>' +
-'<div class="pos-cart-items" style="flex:1;overflow-y:auto;padding:8px 12px;min-height:'+cartItemsMinHeight+';max-height:280px;">';
+// ✅ MODIFIÉ : max-height 380px PC / 260px mobile (au lieu de 280px fixe)
+'<div class="pos-cart-items" style="flex:1;overflow-y:auto;padding:8px 12px;min-height:'+cartItemsMinHeight+';max-height:'+(isMobile?'260px':'380px')+';">';
 if(posCart.length===0){ h+='<div class="pos-cart-empty" style="text-align:center;padding:20px;color:#9A9FA5;"><i class="fas fa-shopping-basket" style="font-size:'+(isMobile?'22px':'28px')+';"></i><p style="font-size:'+(isMobile?'12px':'0.8rem')+';margin-top:8px;">Panier vide</p></div>'; }
 else{
 for(var k=0;k<posCart.length;k++){
@@ -2051,6 +2055,18 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border-color: var(--r-border-strong) !important;
     }
 
+    /* ✅ HAUTEUR PANIER — 3 ARTICLES MINIMUM VISIBLES */
+    .pos-cart-items {
+        min-height: 320px !important;
+        max-height: 380px !important;
+    }
+    @media (max-width: 700px) {
+        .pos-cart-items {
+            min-height: 240px !important;
+            max-height: 260px !important;
+        }
+    }
+
     .pos-products-grid::-webkit-scrollbar,
     .pos-cart-items::-webkit-scrollbar,
     .pos-payment-form::-webkit-scrollbar {
@@ -2131,3 +2147,4 @@ console.log('✅ Clic "Panier" → scroll vers le panier');
 console.log('✅ Couleurs 100% bleues');
 console.log('✅ Responsive renforcé');
 console.log('✅ Boutons POS AGRANDIS (panier + validation paiement)');
+console.log('✅ PANIER AGRANDI (3+ articles visibles : 320px PC / 240px mobile)');
