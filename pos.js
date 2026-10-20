@@ -10,27 +10,18 @@
 // ✅ Vente impossible si panier vide
 // ✅ Retour automatique à l'étape 1 après finalisation
 // ✅ CA et Profit client mis à jour (FORCE UPDATE)
-// ✅ Bouton "Afficher tout" corrigé
-// ✅ Affichage crédit client cliquable - REDIRECTION VERS PAGE CRÉDITS AVEC SAUVEGARDE D'ÉTAT
-// ✅ MULTI-PANIERS : Chaque panier sauvegarde son propre client, table, paiement, remise, montant donné
-// ✅ LIMITE À 5 PANIERS MAXIMUM
-// ✅ AFFICHAGE CORRECT DES PRODUITS ET NAVIGATION FLUIDE ENTRE PANIERS
-// ✅ SUPPRESSION IMMÉDIATE DES PANIERS AVEC RE-RENDU COMPLET
-// ✅ RÉORGANISATION DES NUMÉROS DE PANIERS (1 À 5)
-// ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE DÉFINITIVEMENT
-// ✅ BOUTONS TABLES/EN LIGNE MASQUÉS POUR LE CLIENT
-// ✅ 🤖 BOUTON GEMINI AJOUTÉ À CÔTÉ DU MICRO
-// ✅ 🤖 FONCTION posAddMultipleProductsToCart AJOUTÉE (pour Gemini)
-// ✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier
-// ✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES
-// ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
-// 🎨 DESIGN MINIMALISTE BLEU/BLANC — cohérent avec admin-crud.js
-// 🎨 AJUSTEMENTS V3 : cartes 190px + images 85px + prix 0.90rem + AUCUN gradient
-// 🎨 PANIER V2 : nom produit en haut + boutons à droite + sous-total à droite
-// 🆕 AJUSTEMENTS MOBILE : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px
-// ✅ 💳 CRÉDIT CLIENT : loadClientCredits() reproduit EXACTEMENT le filtre d'Admin-Credits (aucune divergence)
-// 🆕 RESPONSIVE RENFORCÉ : tout s'adapte de 320px à 4K
-// 🎨 V4 : steps-nav TRANSPARENT sur fond gris + cartes blanches individuelles + qualité renforcée
+// ✅ Affichage crédit client cliquable
+// ✅ MULTI-PANIERS (5 max)
+// ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE
+// ✅ BOUTONS GEMINI + MICRO
+// ✅ SUR PC : recherche + Tables + En ligne visibles automatiquement au départ
+// ✅ MOBILE : bouton "Afficher tout" (pas sur PC)
+// ✅ SHADOW inline sur steps Panier/Paiement
+// ✅ Formulaire paiement centré (max 600px)
+// ✅ Couleurs 100% bleues (aucun vert)
+// ✅ Panier minimum 3 articles visibles
+// ✅ Clic "Panier" → scroll vers le panier
+// ✅ Responsive renforcé 320px → 4K
 
 var posCart = [];
 var posStep = 1;
@@ -349,13 +340,6 @@ function posToggleTools() {
     if (toolsContainer) {
         if (posToolsVisible) {
             toolsContainer.style.display = 'flex';
-            toolsContainer.style.flexDirection = 'column';
-            toolsContainer.style.gap = '10px';
-            toolsContainer.style.marginBottom = '10px';
-            toolsContainer.style.padding = '12px 16px';
-            toolsContainer.style.background = '#FFFFFF';
-            toolsContainer.style.borderRadius = '12px';
-            toolsContainer.style.border = '1px solid #EAECEF';
             toolsContainer.classList.add('visible');
         } else { toolsContainer.style.display = 'none'; toolsContainer.classList.remove('visible'); }
     }
@@ -391,7 +375,6 @@ container.style.position = 'relative';
 }
 }
 
-// ✅ CORRIGÉ : Reproduit EXACTEMENT le filtre d'Admin-Credits.loadCredits()
 async function loadClientCredits(clientId) {
     if (!clientId) return 0;
     if (clientCreditsCache[clientId] !== undefined) return clientCreditsCache[clientId];
@@ -1013,7 +996,7 @@ if (typeof renderStockTable === 'function') renderStockTable();
 });
 }
 
-// ==================== updateCartOnly() — PANIER V2 ====================
+// ==================== updateCartOnly() ====================
 function updateCartOnly(){
 if(!isOnPOSPage()) return;
 var ci=document.querySelector('.pos-cart-items');
@@ -1091,15 +1074,25 @@ function buildFullPOS(c){
 if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#2563EB;"></i><p>Chargement...</p></div>'; return; }
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var isMobile = window.innerWidth < 700;
-var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
-var stepSize = isMobile ? '14px' : '16px';
-var stepGap = isMobile ? '6px' : '10px';
+var isPC = window.innerWidth >= 1024;
 
-var stepIndicator = '<div class="pos-steps-nav">' +
-'<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" onclick="posNaviguerEtape(1)">' +
-'<span class="step-number">1</span><span style="font-size:'+stepSize+';font-weight:600;">Panier</span></div>' +
-'<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" onclick="posNaviguerEtape(2)">' +
-'<span class="step-number">2</span><span style="font-size:'+stepSize+';font-weight:600;">Paiement</span></div></div>';
+if (isPC && !window._posToolsInitialized) {
+    posToolsVisible = true;
+    window._posToolsInitialized = true;
+}
+
+// 🎯 SHADOW inline pour steps actifs
+var stepActiveShadow = '0 4px 14px rgba(37, 99, 235, 0.4), 0 2px 4px rgba(37,99,235,0.2)';
+var stepInactiveShadow = '0 1px 2px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.02)';
+var stepSize = isMobile ? '14px' : '16px';
+
+var stepIndicator = '<div class="pos-steps-nav" style="display:flex;justify-content:center;gap:8px;padding:0;background:transparent;border:none;box-shadow:none;margin-bottom:8px;">' +
+'<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" onclick="posNaviguerEtape(1)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 1 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 1 ? '#FFFFFF' : '#6F767E') + ';border:1px solid ' + (posStep === 1 ? '#2563EB' : '#EAECEF') + ';box-shadow:' + (posStep === 1 ? stepActiveShadow : stepInactiveShadow) + ';">' +
+'<span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:' + (posStep === 1 ? 'rgba(255,255,255,0.28)' : '#F7F8FA') + ';color:' + (posStep === 1 ? '#FFFFFF' : '#9A9FA5') + ';">1</span>' +
+'<span>Panier</span></div>' +
+'<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" onclick="posNaviguerEtape(2)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 2 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 2 ? '#FFFFFF' : '#6F767E') + ';border:1px solid ' + (posStep === 2 ? '#2563EB' : '#EAECEF') + ';box-shadow:' + (posStep === 2 ? stepActiveShadow : stepInactiveShadow) + ';">' +
+'<span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:' + (posStep === 2 ? 'rgba(255,255,255,0.28)' : '#F7F8FA') + ';color:' + (posStep === 2 ? '#FFFFFF' : '#9A9FA5') + ';">2</span>' +
+'<span>Paiement</span></div></div>';
 
 var multiCartBar = '<div class="pos-multi-carts-bar">';
 var cartCount = Object.keys(posMultiCarts).length;
@@ -1136,42 +1129,58 @@ multiCartBar += '</div>';
 
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
 var mobileCartStyle = '';
-if (isMobile) mobileCartStyle = 'width:100% !important;max-height:35vh !important;min-height:150px !important;margin-top:4px !important;flex:1 !important;';
-var gridCols = isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))';
-var gridGap = isMobile ? '6px' : '14px';
-var gridPadding = isMobile ? '2px' : '0';
+if (isMobile) mobileCartStyle = 'width:100% !important;max-height:40vh !important;min-height:220px !important;margin-top:4px !important;flex:1 !important;';
+var gridCols = isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))';
+var gridGap = isMobile ? '8px' : '14px';
+var gridPadding = isMobile ? '4px' : '0';
 var panelPadding = isMobile ? '8px' : '16px';
 
-var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:6px;height:auto;padding-bottom:30px;">' +
+// 🎯 Bouton "Afficher tout" SEULEMENT sur PC/tablette (pas mobile)
+var toggleToolsBtnHtml = isMobile
+    ? ''  // pas de bouton sur mobile
+    : '<div style="display:flex;justify-content:center;align-items:center;margin-bottom:4px;"><button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:999px;padding:8px 20px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;">' + (posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout') + '</button></div>';
+
+// 🎯 Sur PC : outils TOUJOURS visibles au départ
+var toolsDisplay = isMobile ? 'none' : (isPC ? 'flex' : (posToolsVisible ? 'flex' : 'none'));
+
+// 🎯 Panier : min 3 articles visibles
+var cartItemsMinHeight = isMobile ? '180px' : '220px';
+
+var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:10px;height:auto;padding-bottom:30px;">' +
 stepIndicator + multiCartBar +
 '<div class="pos-row" style="display:flex;flex-direction:column;gap:8px;width:100%;height:auto;">' +
 '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:100%; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #EAECEF; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:350px; max-height:80vh; flex:8;">' +
 '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;">' +
-'<div style="display:flex;justify-content:center;align-items:center;margin-bottom:2px;">' +
-'<button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:999px;padding:8px 20px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;">🔍 Afficher tout</button>' +
-'</div>' +
-'<div id="posToolsContainer" style="display:none;flex-direction:column;gap:4px;margin-bottom:4px;padding:8px 12px;background:#F7F8FA;border-radius:12px;border:1px solid #EAECEF;">' +
-'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-'<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;padding:2px 12px;position:relative;height:'+(isMobile?'34px':'40px')+';">' +
+toggleToolsBtnHtml +
+'<div id="posToolsContainer" style="display:'+toolsDisplay+';flex-direction:column;gap:8px;margin-bottom:4px;padding:'+(isMobile?'0':'8px 12px')+';background:'+(isMobile?'transparent':'#F7F8FA')+';border-radius:12px;border:'+(isMobile?'none':'1px solid #EAECEF')+';">' +
+// 🔍 Barre de recherche TOUJOURS visible
+'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">' +
+'<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;padding:2px 12px;position:relative;height:'+(isMobile?'38px':'40px')+';">' +
 '<i class="fas fa-search" style="color:#9A9FA5;margin-right:6px;font-size:'+(isMobile?'13px':'15px')+';"></i>' +
 '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher un produit..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:'+(isMobile?'13px':'15px')+';padding-right:28px;color:#1A1D1F;">' +
 '<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:2px;color:#9A9FA5;font-size:'+(isMobile?'14px':'16px')+';align-items:center;justify-content:center;"><i class="fas fa-times-circle"></i></button>' +
 '</div>' +
-'<button id="posMicBtn" title="Recherche vocale" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#6F767E;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
-'<button id="posGeminiBtn" title="Commande vocale Gemini (FR)" style="background:#8B5CF6;border:none;border-radius:10px;width:'+(isMobile?'36px':'40px')+';height:'+(isMobile?'36px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#fff;" onclick="posOuvrirCommandeVocaleGemini()"><i class="fas fa-robot"></i></button>' +
-'<div style="display:flex;gap:6px;margin-left:auto;">' +
+'<button id="posMicBtn" title="Recherche vocale" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#6F767E;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
+'<button id="posGeminiBtn" title="Commande vocale Gemini (FR)" style="background:#8B5CF6;border:none;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#fff;" onclick="posOuvrirCommandeVocaleGemini()"><i class="fas fa-robot"></i></button>' +
+'</div>' +
+// Boutons Tables/En ligne : visibles sur PC, cachés sur mobile
+(!isMobile ?
+'<div style="display:flex;gap:6px;width:100%;">' +
 (window.posIsClientMode ? '' :
-'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;">🍽️ Tables <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
-'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:'+(isMobile?'11px':'13px')+';display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;">🌐 En ligne <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:'+(isMobile?'9px':'11px')+';font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
+'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;">🍽️ Tables <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
+'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;">🌐 En ligne <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
 ) +
-'</div></div></div></div>' +
+'</div>'
+: '') +
+'</div></div>' +
 '<div class="pos-products-grid" id="posProductGrid" style="grid-template-columns:'+gridCols+';gap:'+gridGap+';padding:'+gridPadding+';overflow-x:hidden;overflow-y:auto;flex-wrap:wrap;align-content:start;flex:1;contain:layout paint;content-visibility:auto;"></div>' +
 '</div>' +
-'<div class="pos-cart-panel" style="' + (isMobile ? mobileCartStyle : 'width:100%;background:#FFFFFF;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);border:1px solid #EAECEF;display:flex;flex-direction:column;margin-top:4px;max-height:35vh;flex:2;min-height:120px;') + '">';
+'<div class="pos-cart-panel" style="' + (isMobile ? mobileCartStyle : 'width:100%;background:#FFFFFF;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);border:1px solid #EAECEF;display:flex;flex-direction:column;margin-top:4px;max-height:45vh;flex:2;min-height:260px;') + '">';
 
 if(posStep===1){
-h+='<div class="pos-cart-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #EAECEF;flex-shrink:0;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';cursor:pointer;margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i> Panier <span class="pos-cart-badge" style="background:#2563EB;color:#fff;border-radius:999px;padding:2px 10px;font-size:'+(isMobile?'12px':'0.75rem')+';font-weight:700;">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()" style="font-size:'+(isMobile?'12px':'0.8rem')+';background:transparent;color:#FF5B5B;border:1px solid transparent;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:600;"><i class="fas fa-trash-alt"></i> Vider</button></div>' +
-'<div class="pos-cart-items" style="flex:1;overflow-y:auto;padding:8px 12px;min-height:60px;max-height:240px;">';
+// 🎯 Titre Panier cliquable avec scroll vers le panier
+h+='<div class="pos-cart-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #EAECEF;flex-shrink:0;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';cursor:pointer;margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;" onclick="scrollToCart()"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i> Panier <span class="pos-cart-badge" style="background:#2563EB;color:#fff;border-radius:999px;padding:2px 10px;font-size:'+(isMobile?'12px':'0.75rem')+';font-weight:700;">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()" style="font-size:'+(isMobile?'12px':'0.8rem')+';background:transparent;color:#FF5B5B;border:1px solid transparent;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:600;"><i class="fas fa-trash-alt"></i> Vider</button></div>' +
+'<div class="pos-cart-items" style="flex:1;overflow-y:auto;padding:8px 12px;min-height:'+cartItemsMinHeight+';max-height:280px;">';
 if(posCart.length===0){ h+='<div class="pos-cart-empty" style="text-align:center;padding:20px;color:#9A9FA5;"><i class="fas fa-shopping-basket" style="font-size:'+(isMobile?'22px':'28px')+';"></i><p style="font-size:'+(isMobile?'12px':'0.8rem')+';margin-top:8px;">Panier vide</p></div>'; }
 else{
 for(var k=0;k<posCart.length;k++){
@@ -1211,8 +1220,10 @@ h+='</div>' +
 var canCredit=posCurrentClient&&posCurrentClient.id;
 var creditDisplay = '';
 if (posCurrentClient && posCurrentClient.id) creditDisplay = '<div id="clientCreditDisplay" style="font-size:20px;font-weight:700;padding:2px 0;text-align:right;"></div>';
+
+// 🎯 Formulaire paiement centré 600px max
 h+='<div class="pos-cart-header" style="padding:14px 18px;border-bottom:1px solid #EAECEF;flex-shrink:0;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;"><i class="fas fa-credit-card" style="color:#2563EB;"></i> Paiement</h3></div>' +
-'<div class="pos-payment-form" style="padding:14px 18px;flex:1;overflow-y:auto;max-height:400px;">' +
+'<div class="pos-payment-form" style="padding:14px 18px;flex:1;overflow-y:auto;max-height:400px;width:100%;max-width:600px;margin:0 auto;box-sizing:border-box;">' +
 '<div style="margin-bottom:8px;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;flex-shrink:0;">Client</label>' +
 '<button onclick="posAjouterNouveauClient()" style="background:#8B5CF6;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:'+(isMobile?'11px':'0.75rem')+';font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0;"><i class="fas fa-plus" style="font-size:'+(isMobile?'10px':'0.7rem')+';"></i> Nouveau</button></div>' +
 '<div style="position:relative;">' +
@@ -1249,17 +1260,10 @@ if(posStep===1) {
 posViewMode = 'categories';
 posSelectedCategoryForView = null;
 filterProductGrid();
-if (window.innerWidth >= 1024 && !window._posToolsInitialized) { posToolsVisible = true; window._posToolsInitialized = true; }
-var toolsContainer = document.getElementById('posToolsContainer');
-var toggleBtn = document.getElementById('posToggleToolsBtn');
-if (toolsContainer) { toolsContainer.style.display = posToolsVisible ? 'flex' : 'none'; if (posToolsVisible) toolsContainer.classList.add('visible'); }
-if (toggleBtn) { toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout'; toggleBtn.style.background = posToolsVisible ? '#FF5B5B' : '#FFFFFF'; toggleBtn.style.color = posToolsVisible ? '#fff' : '#1A1D1F'; }
-if (posToolsVisible) {
-var searchInput = document.getElementById('posSearchInput'); if (searchInput) searchInput.style.display = 'flex';
-var micBtn = document.getElementById('posMicBtn'); if (micBtn) micBtn.style.display = 'flex';
-var geminiBtn = document.getElementById('posGeminiBtn'); if (geminiBtn) geminiBtn.style.display = 'flex';
-var tablesBtn = document.getElementById('posTablesBtn'); if (tablesBtn) tablesBtn.style.display = 'inline-flex';
-var enligneBtn = document.getElementById('posEnLigneBtn'); if (enligneBtn) enligneBtn.style.display = 'inline-flex';
+// Sur PC : forcer l'affichage des outils
+if (isPC) {
+    var toolsContainer = document.getElementById('posToolsContainer');
+    if (toolsContainer) toolsContainer.style.display = 'flex';
 }
 }
 if(posStep===2) {
@@ -1273,6 +1277,19 @@ if (clearBtn) clearBtn.style.display = 'flex';
 }, 200);
 }
 }
+
+// 🆕 Scroll vers le panier quand on clique sur le titre
+function scrollToCart() {
+    var cartPanel = document.querySelector('.pos-cart-panel');
+    if (cartPanel) {
+        cartPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        cartPanel.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.3)';
+        setTimeout(function() {
+            cartPanel.style.boxShadow = '';
+        }, 1200);
+    }
+}
+window.scrollToCart = scrollToCart;
 
 function posNaviguerEtape(etape) {
 if (etape === 1) posGoToStep1(); else if (etape === 2) posGoToStep2();
@@ -1511,7 +1528,7 @@ row.style.display = 'flex'; row.style.flexDirection = 'column'; row.style.flexWr
 produits.style.width = '100%'; produits.style.maxWidth = '100%'; produits.style.minWidth = '100%';
 produits.style.height = 'auto'; produits.style.minHeight = '300px'; produits.style.maxHeight = '60vh'; produits.style.flex = '1';
 panier.style.width = '100%'; panier.style.maxWidth = '100%'; panier.style.minWidth = '100%';
-panier.style.height = 'auto'; panier.style.minHeight = '150px'; panier.style.maxHeight = '35vh';
+panier.style.height = 'auto'; panier.style.minHeight = '220px'; panier.style.maxHeight = '40vh';
 panier.style.marginTop = '4px'; panier.style.position = 'static';
 }
 }
@@ -1556,6 +1573,7 @@ window.posAjouterNouveauClient = posAjouterNouveauClient;
 window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 window.posUpdateQtyInput = posUpdateQtyInput;
 window.updateCartTotalsOnly = updateCartTotalsOnly;
+window.scrollToCart = scrollToCart;
 
 function posAddMultipleProductsToCart(produitsList) {
     var ajoutCount = 0;
@@ -1590,8 +1608,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
 // ============================================================
 // 🎨 STYLE MINIMALISTE BLEU/BLANC
-// Fond gris plat + cartes blanches + bleu #2563EB
-// Cohérent avec admin-crud.js (pages Produits/Catégories/Clients/Fournisseurs)
 // ============================================================
 (function injectMinimalistStyle() {
     var STYLE_ID = 'pos-minimalist-styles';
@@ -1640,69 +1656,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif !important;
         color: var(--r-text) !important;
         gap: 14px !important;
-    }
-
-    /* ============ 🎯 STEPS TRANSPARENT SUR FOND GRIS ============ */
-    .pos-steps-nav {
-        display: flex !important;
-        justify-content: center !important;
-        gap: 8px !important;
-        padding: 0 !important;
-        background: transparent !important;
-        border: none !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        margin-bottom: 8px !important;
-        max-width: 400px !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-    }
-
-    .pos-step {
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        padding: 10px 18px !important;
-        border-radius: var(--r-radius-pill) !important;
-        transition: all 0.2s ease !important;
-        cursor: pointer !important;
-        font-weight: 600 !important;
-        background: #FFFFFF !important;
-        border: 1px solid var(--r-border) !important;
-        color: var(--r-text-2) !important;
-        box-shadow: var(--r-shadow-card) !important;
-    }
-
-    .pos-step:hover:not(.active) {
-        background: var(--r-bg) !important;
-        color: var(--r-text) !important;
-        border-color: var(--r-border-strong) !important;
-        transform: translateY(-1px) !important;
-    }
-
-    .pos-step.active {
-        background: var(--r-blue) !important;
-        color: #fff !important;
-        border-color: var(--r-blue) !important;
-        box-shadow: var(--r-shadow-blue) !important;
-    }
-
-    .pos-step.active .step-number {
-        background: rgba(255,255,255,0.28) !important;
-        color: #fff !important;
-    }
-
-    .pos-step .step-number {
-        width: 22px !important;
-        height: 22px !important;
-        border-radius: 50% !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background: var(--r-bg) !important;
-        color: var(--r-text-3) !important;
-        font-size: 12px !important;
-        font-weight: 700 !important;
     }
 
     .pos-multi-carts-bar {
@@ -1764,23 +1717,10 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         position: relative !important;
     }
 
-    .pos-product-card::after {
-        content: '' !important;
-        position: absolute !important;
-        inset: 0 !important;
-        border-radius: var(--r-radius) !important;
-        pointer-events: none !important;
-        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02) !important;
-    }
-
     .pos-product-card:hover {
         transform: translateY(-3px) !important;
         border-color: var(--r-blue-border) !important;
         box-shadow: var(--r-shadow-hover) !important;
-    }
-
-    .pos-product-card:active {
-        transform: translateY(-1px) !important;
     }
 
     .pos-product-card.pos-out-of-stock {
@@ -1805,10 +1745,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         width: 100% !important;
         height: 100% !important;
         object-fit: cover !important;
-    }
-
-    .pos-product-img i {
-        color: var(--r-text-3) !important;
     }
 
     .pos-product-name {
@@ -1836,29 +1772,12 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         color: var(--r-text-3) !important;
     }
 
-    .pos-products-grid button[onclick*="retournerCategories"] {
-        background: var(--r-card) !important;
-        color: var(--r-text) !important;
-        border: 1px solid var(--r-border) !important;
-        border-radius: var(--r-radius-sm) !important;
-        padding: 8px 16px !important;
-        font-weight: 600 !important;
-        box-shadow: var(--r-shadow-card) !important;
-    }
-
-    .pos-products-grid button[onclick*="retournerCategories"]:hover {
-        background: var(--r-bg) !important;
-        border-color: var(--r-border-strong) !important;
-    }
-
     .pos-category-card {
         background: var(--r-card) !important;
         border: 1px solid var(--r-border) !important;
         border-radius: var(--r-radius) !important;
         box-shadow: var(--r-shadow-card) !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        min-height: 170px !important;
-        max-height: 210px !important;
     }
 
     .pos-category-card:hover {
@@ -1874,32 +1793,13 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: var(--r-shadow-blue) !important;
     }
 
-    .pos-category-card.active span {
-        color: #fff !important;
-    }
-
     .pos-cart-panel {
         background: var(--r-card) !important;
         border-radius: var(--r-radius) !important;
         box-shadow: var(--r-shadow-card) !important;
         border: 1px solid var(--r-border) !important;
         overflow: hidden !important;
-    }
-
-    .pos-cart-header {
-        background: var(--r-card) !important;
-        border-bottom: 1px solid var(--r-border) !important;
-        padding: 16px 20px !important;
-    }
-
-    .pos-cart-header h3 {
-        color: var(--r-text) !important;
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        margin: 0 !important;
+        transition: box-shadow 0.3s ease !important;
     }
 
     .pos-cart-header h3 i {
@@ -1910,40 +1810,8 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         background: var(--r-blue) !important;
         color: #fff !important;
         border-radius: var(--r-radius-pill) !important;
-        padding: 2px 10px !important;
-        font-size: 0.75rem !important;
         font-weight: 700 !important;
         box-shadow: none !important;
-    }
-
-    .pos-clear-btn {
-        background: transparent !important;
-        color: var(--r-red) !important;
-        border: 1px solid transparent !important;
-        border-radius: var(--r-radius-sm) !important;
-        padding: 6px 12px !important;
-        font-weight: 600 !important;
-    }
-
-    .pos-clear-btn:hover {
-        background: rgba(255, 91, 91, 0.08) !important;
-        border-color: rgba(255, 91, 91, 0.2) !important;
-    }
-
-    .pos-cart-items {
-        background: var(--r-card) !important;
-        padding: 8px 12px !important;
-    }
-
-    .pos-cart-item {
-        background: transparent !important;
-        border-bottom: 1px solid var(--r-border) !important;
-        transition: background 0.15s ease !important;
-        border-radius: var(--r-radius-sm) !important;
-    }
-
-    .pos-cart-item:hover {
-        background: var(--r-bg) !important;
     }
 
     .pos-qty-btn {
@@ -1951,7 +1819,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border: 1px solid var(--r-border) !important;
         color: var(--r-text-2) !important;
         border-radius: var(--r-radius-sm) !important;
-        transition: all 0.15s ease !important;
         cursor: pointer !important;
         display: inline-flex !important;
         align-items: center !important;
@@ -1962,7 +1829,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         background: var(--r-blue) !important;
         color: #fff !important;
         border-color: var(--r-blue) !important;
-        transform: scale(1.05) !important;
     }
 
     .pos-qty-input {
@@ -1980,29 +1846,9 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
     }
 
-    .pos-remove-btn {
-        color: var(--r-red) !important;
-        background: transparent !important;
-        border: none !important;
-        transition: all 0.15s ease !important;
-        cursor: pointer !important;
-    }
-
-    .pos-remove-btn:hover {
-        background: rgba(255, 91, 91, 0.08) !important;
-    }
-
-    .pos-cart-total-row {
-        background: var(--r-bg) !important;
-        border-radius: var(--r-radius-sm) !important;
-        border: 1px solid var(--r-border) !important;
-        padding: 16px 20px !important;
-    }
-
     .pos-cart-total-row span:first-child {
         color: var(--r-text-2) !important;
         font-weight: 700 !important;
-        font-size: 0.85rem !important;
         text-transform: uppercase !important;
         letter-spacing: 0.5px;
     }
@@ -2010,7 +1856,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-cart-total-row span:last-child {
         color: var(--r-text) !important;
         font-weight: 800 !important;
-        font-size: 1.4rem !important;
         letter-spacing: -0.5px;
     }
 
@@ -2021,20 +1866,9 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border: none !important;
         border-radius: var(--r-radius-sm) !important;
         font-weight: 700 !important;
-        font-size: 1rem !important;
-        padding: 14px 20px !important;
         box-shadow: var(--r-shadow-blue) !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
-        width: calc(100% - 24px) !important;
-        margin: 0 12px 16px 12px !important;
-    }
-
-    .pos-finalize-btn {
-        margin-top: 4px !important;
-        width: 100% !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
     }
 
     .pos-validate-btn:hover:not(:disabled),
@@ -2049,7 +1883,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         color: var(--r-text-3) !important;
         box-shadow: none !important;
         cursor: not-allowed !important;
-        transform: none !important;
     }
 
     .pos-payment-btn {
@@ -2057,14 +1890,9 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border: 1.5px solid var(--r-border) !important;
         color: var(--r-text-2) !important;
         border-radius: var(--r-radius-sm) !important;
-        padding: 12px 16px !important;
         font-weight: 700 !important;
         transition: all 0.15s ease !important;
         cursor: pointer !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 8px !important;
     }
 
     .pos-payment-btn:hover:not(:disabled) {
@@ -2080,113 +1908,53 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: var(--r-shadow-blue) !important;
     }
 
-    .pos-payment-btn:disabled {
-        opacity: 0.35 !important;
-        cursor: not-allowed !important;
-    }
-
     #posCreditBtn.active {
         background: var(--r-amber) !important;
         border-color: var(--r-amber) !important;
-        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3) !important;
         color: #fff !important;
     }
 
     #posPartielBtn.active {
         background: var(--r-purple) !important;
         border-color: var(--r-purple) !important;
-        box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3) !important;
         color: #fff !important;
-    }
-
-    .pos-payment-form input[type="text"],
-    .pos-payment-form input[type="number"],
-    .pos-payment-form input[type="email"],
-    .pos-payment-form select,
-    .pos-payment-form textarea {
-        background: var(--r-card) !important;
-        border: 1.5px solid var(--r-border) !important;
-        border-radius: var(--r-radius-sm) !important;
-        color: var(--r-text) !important;
-        font-family: inherit !important;
-        transition: all 0.15s ease !important;
-    }
-
-    .pos-payment-form input:focus,
-    .pos-payment-form select:focus {
-        outline: none !important;
-        border-color: var(--r-blue) !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
-    }
-
-    .pos-payment-form label {
-        color: var(--r-text-2) !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        font-size: 11px !important;
-        letter-spacing: 0.5px;
-    }
-
-    .pos-payment-form button[onclick*="posAjouterNouveauClient"] {
-        background: var(--r-purple) !important;
-        color: #fff !important;
-        border: none !important;
-        border-radius: var(--r-radius-sm) !important;
-        font-weight: 600 !important;
-        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25) !important;
-        transition: all 0.15s ease !important;
-    }
-
-    .pos-payment-form button[onclick*="posAjouterNouveauClient"]:hover {
-        background: #7C3AED !important;
-        transform: translateY(-1px) !important;
     }
 
     #posMicBtn {
         background: var(--r-card) !important;
-        border: 1.5px solid var(--r-border) !important;
+        border: 1px solid var(--r-border) !important;
         color: var(--r-text-2) !important;
-        border-radius: var(--r-radius-sm) !important;
-        transition: all 0.15s ease !important;
     }
 
     #posMicBtn:hover {
         background: var(--r-blue) !important;
         color: #fff !important;
         border-color: var(--r-blue) !important;
-        transform: scale(1.05) !important;
     }
 
     #posGeminiBtn {
         background: var(--r-purple) !important;
         border: none !important;
         color: #fff !important;
-        border-radius: var(--r-radius-sm) !important;
-        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25) !important;
-        transition: all 0.15s ease !important;
     }
 
     #posGeminiBtn:hover {
         background: #7C3AED !important;
-        transform: translateY(-1px) scale(1.05) !important;
     }
 
     #posTablesBtn,
     #posEnLigneBtn {
         background: var(--r-card) !important;
-        border: 1.5px solid var(--r-border) !important;
+        border: 1px solid var(--r-border) !important;
         color: var(--r-text) !important;
         border-radius: var(--r-radius-pill) !important;
         font-weight: 600 !important;
-        transition: all 0.15s ease !important;
-        box-shadow: var(--r-shadow-card) !important;
     }
 
     #posTablesBtn:hover,
     #posEnLigneBtn:hover {
         background: var(--r-bg) !important;
         border-color: var(--r-border-strong) !important;
-        transform: translateY(-1px) !important;
     }
 
     #posTablesBtn span,
@@ -2195,24 +1963,12 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         color: #fff !important;
         border-radius: var(--r-radius-pill) !important;
         font-weight: 700 !important;
-        box-shadow: none !important;
-    }
-
-    #posToolsContainer > div > div:first-child {
-        background: var(--r-card) !important;
-        border: 1.5px solid var(--r-border) !important;
-        border-radius: var(--r-radius-sm) !important;
-    }
-
-    #posToolsContainer > div > div:first-child:focus-within {
-        border-color: var(--r-blue) !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
     }
 
     #posToggleToolsBtn {
         background: var(--r-card) !important;
         color: var(--r-text) !important;
-        border: 1.5px solid var(--r-border) !important;
+        border: 1px solid var(--r-border) !important;
         border-radius: var(--r-radius-pill) !important;
         font-weight: 600 !important;
         box-shadow: var(--r-shadow-card) !important;
@@ -2223,105 +1979,25 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border-color: var(--r-border-strong) !important;
     }
 
-    .pos-products-grid .btn-add {
-        background: var(--r-card) !important;
-        color: var(--r-text) !important;
-        border: 1.5px solid var(--r-border) !important;
-        border-radius: var(--r-radius-sm) !important;
-        font-weight: 600 !important;
-        box-shadow: var(--r-shadow-card) !important;
-        padding: 10px 20px !important;
-    }
-
-    .pos-products-grid .btn-add:hover {
-        background: var(--r-blue-soft) !important;
-        color: var(--r-blue) !important;
-        border-color: var(--r-blue-border) !important;
-    }
-
     .pos-products-grid::-webkit-scrollbar,
     .pos-cart-items::-webkit-scrollbar,
-    .pos-payment-form::-webkit-scrollbar,
-    #posClientDropdown::-webkit-scrollbar {
+    .pos-payment-form::-webkit-scrollbar {
         width: 8px;
         height: 8px;
     }
 
     .pos-products-grid::-webkit-scrollbar-track,
     .pos-cart-items::-webkit-scrollbar-track,
-    .pos-payment-form::-webkit-scrollbar-track,
-    #posClientDropdown::-webkit-scrollbar-track {
+    .pos-payment-form::-webkit-scrollbar-track {
         background: transparent;
         border-radius: 4px;
     }
 
     .pos-products-grid::-webkit-scrollbar-thumb,
     .pos-cart-items::-webkit-scrollbar-thumb,
-    .pos-payment-form::-webkit-scrollbar-thumb,
-    #posClientDropdown::-webkit-scrollbar-thumb {
+    .pos-payment-form::-webkit-scrollbar-thumb {
         background: #E2E8F0;
         border-radius: 4px;
-    }
-
-    .pos-products-grid::-webkit-scrollbar-thumb:hover,
-    .pos-cart-items::-webkit-scrollbar-thumb:hover {
-        background: #CBD5E1;
-    }
-
-    #posClientDropdown > div {
-        transition: all 0.15s ease;
-    }
-
-    #posClientDropdown > div:hover {
-        background: var(--r-blue-soft) !important;
-        color: var(--r-blue) !important;
-    }
-
-    .pos-container > div > div > button[onclick*="scrollIntoView"] {
-        background: var(--r-blue) !important;
-        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .pos-container > div > div > button[onclick*="scrollIntoView"]:hover {
-        transform: scale(1.1) translateY(-2px) !important;
-        background: var(--r-blue-hover) !important;
-    }
-
-    .pos-multi-carts-bar button[onclick*="posDeleteCart"]:hover {
-        background: #FEE2E2 !important;
-        border-radius: 50% !important;
-    }
-
-    @keyframes posFadeUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .pos-product-card,
-    .pos-category-card {
-        animation: posFadeUp 0.3s ease both;
-    }
-
-    .pos-cart-item {
-        animation: posFadeUp 0.2s ease both;
-    }
-
-    @media (max-width: 768px) {
-        .pos-container { padding: 10px !important; gap: 10px !important; }
-        .pos-steps-nav { padding: 0 !important; gap: 6px !important; }
-        .pos-step { padding: 8px 14px !important; font-size: 0.82rem !important; }
-        .pos-multi-carts-bar { padding: 8px 10px !important; gap: 6px !important; }
-        .pos-cart-header { padding: 12px 14px !important; }
-        .pos-cart-total-row { padding: 12px 14px !important; }
-        .pos-cart-total-row span:last-child { font-size: 1.2rem !important; }
-        .pos-payment-btn { padding: 10px 12px !important; font-size: 0.85rem !important; }
-    }
-
-    @media (max-width: 500px) {
-        .pos-step span:not(.step-number) { font-size: 0.78rem !important; }
-        .pos-cart-header h3 { font-size: 1rem !important; }
-        .pos-step { padding: 7px 12px !important; }
     }
 
     @media (max-width: 700px) {
@@ -2348,11 +2024,13 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     `;
 
     document.head.appendChild(styles);
-    console.log('🎨 [POS] Style minimaliste bleu/blanc V4 injecté');
+    console.log('🎨 [POS] Style minimaliste bleu/blanc V5 injecté');
 })();
 
-console.log('🚀 E-SOLUTION - POS chargé avec corrections');
-console.log('🎨 STYLE MINIMALISTE V4 : steps transparents + cartes blanches individuelles + qualité renforcée');
-console.log('🎨 PANIER V2 : nom en haut + boutons à droite + sous-total à droite');
-console.log('🆕 RESPONSIVE : 320px → 4K, cartes adaptatives, tout s\'ajuste');
-console.log('✅ 💳 CRÉDIT CLIENT : lit UNIQUEMENT VENTES avec le MÊME filtre qu\'Admin-Credits (statut!=payé, remaining>0.01, total>0) → plus de divergence entre POS et Admin-Credits');
+console.log('🚀 E-SOLUTION - POS V5');
+console.log('✅ Recherche + Tables/En ligne visibles sur PC au départ');
+console.log('✅ Bouton "Afficher tout" UNIQUEMENT sur tablette/PC');
+console.log('✅ Panier min-height 220px (3+ articles visibles)');
+console.log('✅ Clic "Panier" → scroll vers le panier');
+console.log('✅ Couleurs 100% bleues');
+console.log('✅ Responsive renforcé');
