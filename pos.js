@@ -2461,7 +2461,51 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     setInterval(relocate, 500);
     relocate();
 })();
+/////////
+// ============================================================
+// ✅ SUPPRESSION DU PAGE-HEADER SUR MOBILE (< 700px)
+// Ajout isolé — ne modifie AUCUNE autre partie du code
+// ============================================================
+(function hidePageHeaderOnMobile() {
+    var STYLE_ID = 'pos-hide-pageheader-mobile';
+    if (document.getElementById(STYLE_ID)) return;
 
+    var s = document.createElement('style');
+    s.id = STYLE_ID;
+    s.textContent = `
+    @media (max-width: 700px) {
+        .page-header,
+        #pageHeader,
+        header.page-header,
+        .page-header-wrapper,
+        #pageHeaderWrapper {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            overflow: hidden !important;
+        }
+        .pos-container {
+            margin-top: 0 !important;
+            padding-top: 6px !important;
+        }
+        #dynamicContent {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        }
+        body {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        }
+    }
+    `;
+    document.head.appendChild(s);
+    console.log('✅ [POS] page-header supprimé sur mobile (< 700px)');
+})();
 console.log('🚀 E-SOLUTION - POS V5 ASTRONAUTE (sans bordures)');
 console.log('✅ Design glassmorphism + glow + gradients');
 console.log('✅ BORDURES RETIRÉES : séparations par ombres uniquement');
