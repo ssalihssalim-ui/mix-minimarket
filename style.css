@@ -2,6 +2,7 @@
 /* 🎨 Palette bleu/blanc — cohérente POS + Admin */
 /* ⚠️ Ce fichier ne modifie QUE les couleurs/valeurs visuelles */
 /* ⚠️ Aucune classe, aucun ID, aucun sélecteur n'a été changé */
+/* ✅ MODIFIÉ : déblocage du scroll + panier scrollable + bouton Valider toujours visible */
 
 :root {
     --white: #FFFFFF;
@@ -723,12 +724,15 @@ body {
 ✅ POS SYSTEM
 ============================================================ */
 
+/* ✅ MODIFIÉ : height:auto + min-height:100vh + max-height:none + padding-bottom:140px
+   → permet au scroll d'atteindre le bouton Valider en bas du panier */
 #dynamicContent {
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    padding-bottom: 40px !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    padding-bottom: 140px !important;
     position: relative !important;
 }
 
@@ -838,7 +842,8 @@ body {
     transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-/* ✅ PANIER PANEL */
+/* ✅ MODIFIÉ PANIER PANEL : overflow:visible (au lieu de hidden) + max-height:none
+   → le footer/bouton Valider n'est plus clippé */
 .pos-cart-panel {
     position: static !important;
     width: 100% !important;
@@ -853,10 +858,10 @@ body {
     border: 1px solid rgba(0,0,0,0.04) !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     margin-top: 4px !important;
-    max-height: 75vh !important;
-    min-height: 400px !important;
+    max-height: none !important;
+    min-height: 380px !important;
     transition: background 0.3s ease, border-color 0.3s ease;
 }
 
@@ -1108,13 +1113,14 @@ body {
     display: flex !important;
 }
 
-/* ✅ ARTICLES PANIER */
+/* ✅ MODIFIÉ ARTICLES PANIER : max-height:none (au lieu de 350px)
+   → le panier n'est plus bridé, il prend la hauteur nécessaire (min 280px) */
 .pos-cart-items {
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     overflow-y: auto !important;
-    padding: 4px 6px !important;
-    min-height: 60px !important;
-    max-height: 350px !important;
+    padding: 8px 12px !important;
+    min-height: 280px !important;
+    max-height: none !important;
 }
 
 /* ✅ PAIEMENT */
@@ -1259,11 +1265,13 @@ body {
     .pos-multi-carts-bar > button { font-size: 18px !important; padding: 5px 14px !important; }
 
     .pos-products-panel { height: 75vh !important; min-height: 450px !important; max-height: 80vh !important; }
-    .pos-cart-panel { max-height: 80vh !important; min-height: 450px !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 80vh) */
+    .pos-cart-panel { max-height: none !important; min-height: 450px !important; }
     .pos-products-grid { gap: 8px !important; padding: 6px !important; }
     .pos-categories-grid { gap: 10px !important; padding: 8px !important; }
 
-    .pos-cart-items { min-height: 300px !important; max-height: 400px !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 400px) */
+    .pos-cart-items { min-height: 320px !important; max-height: none !important; }
 }
 
 /* ✅ IPAD (700px - 1024px) */
@@ -1301,7 +1309,8 @@ body {
     .pos-products-grid { gap: 6px !important; padding: 4px !important; grid-template-columns: repeat(4, 1fr) !important; }
     .pos-categories-grid { gap: 8px !important; padding: 6px !important; grid-template-columns: repeat(3, 1fr) !important; }
 
-    .pos-cart-items { min-height: 350px !important; max-height: 450px !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 450px) */
+    .pos-cart-items { min-height: 320px !important; max-height: none !important; }
 
     .pos-steps-nav {
         padding: 0px 4px !important;
@@ -1323,6 +1332,7 @@ body {
         min-height: 300px !important;
         max-height: calc(100vh - 160px) !important;
     }
+    /* ✅ MODIFIÉ : max-height calc(100vh - 100px) (au lieu de -160px) */
     .pos-cart-panel {
         position: sticky !important;
         top: 0 !important;
@@ -1330,12 +1340,13 @@ body {
         min-width: 30% !important;
         max-width: 30% !important;
         flex: 0 0 30% !important;
-        max-height: calc(100vh - 160px) !important;
+        max-height: calc(100vh - 100px) !important;
         min-height: 400px !important;
         align-self: flex-start !important;
     }
 
-    #dynamicContent { height: calc(100vh - 100px) !important; max-height: calc(100vh - 100px) !important; }
+    /* ✅ MODIFIÉ : height:auto sur #dynamicContent pour cet intervalle */
+    #dynamicContent { height: auto !important; min-height: calc(100vh - 100px) !important; max-height: none !important; }
     .main-content {
         padding: 12px !important;
         padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
@@ -1352,7 +1363,8 @@ body {
     .pos-category-card.active { box-shadow: 0 2px 16px rgba(37,99,235,0.25) !important; }
 
     .pos-products-panel { height: 75vh !important; min-height: 400px !important; max-height: 80vh !important; }
-    .pos-cart-panel { max-height: 80vh !important; min-height: 400px !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 80vh) */
+    .pos-cart-panel { max-height: none !important; min-height: 400px !important; }
 }
 
 /* ✅ MOBILE (< 700px) */
@@ -1370,13 +1382,14 @@ body {
         order: 1 !important;
     }
 
+    /* ✅ MODIFIÉ : max-height:none + min-height:280px (au lieu de 35vh/150px) */
     .pos-cart-panel {
         width: 100% !important;
         max-width: 100% !important;
         min-width: 100% !important;
         height: auto !important;
-        min-height: 150px !important;
-        max-height: 35vh !important;
+        min-height: 280px !important;
+        max-height: none !important;
         order: 2 !important;
         margin-top: 4px !important;
         position: static !important;
@@ -1420,7 +1433,8 @@ body {
     .pos-products-grid { gap: 4px !important; padding: 3px !important; grid-template-columns: repeat(4, 1fr) !important; }
     .pos-categories-grid { gap: 6px !important; padding: 4px !important; grid-template-columns: repeat(3, 1fr) !important; }
 
-    .pos-cart-items { max-height: 200px !important; min-height: 60px !important; }
+    /* ✅ MODIFIÉ : max-height:none + min-height:220px (au lieu de 200px/60px) */
+    .pos-cart-items { max-height: none !important; min-height: 220px !important; }
     .pos-payment-form { max-height: 300px !important; }
 }
 
@@ -1439,13 +1453,14 @@ body {
         order: 1 !important;
     }
 
+    /* ✅ MODIFIÉ : max-height:none + min-height:260px (au lieu de 35vh/140px) */
     .pos-cart-panel {
         width: 100% !important;
         max-width: 100% !important;
         min-width: 100% !important;
         height: auto !important;
-        min-height: 140px !important;
-        max-height: 35vh !important;
+        min-height: 260px !important;
+        max-height: none !important;
         order: 2 !important;
         margin-top: 4px !important;
         position: static !important;
@@ -1683,12 +1698,15 @@ button .fa-brands {
 /* ============================================================
 ✅ CLIENT - POS IDENTIQUE À L'ADMIN
 ============================================================ */
+
+/* ✅ MODIFIÉ : height:auto + min-height:100vh + max-height:none (même correction que #dynamicContent) */
 #clientDynamicContent {
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    padding-bottom: 40px !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    padding-bottom: 140px !important;
     position: relative !important;
 }
 
@@ -1789,6 +1807,7 @@ button .fa-brands {
     flex: none !important;
 }
 
+/* ✅ MODIFIÉ : overflow:visible + max-height:none (même correction que .pos-cart-panel) */
 #clientDynamicContent .pos-cart-panel {
     position: static !important;
     width: 100% !important;
@@ -1802,10 +1821,10 @@ button .fa-brands {
     border: 1px solid rgba(0,0,0,0.04) !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     margin-top: 4px !important;
-    max-height: 75vh !important;
-    min-height: 400px !important;
+    max-height: none !important;
+    min-height: 380px !important;
 }
 
 #clientDynamicContent .pos-products-grid {
@@ -1956,12 +1975,13 @@ button .fa-brands {
 
 #clientDynamicContent .pos-cat-btn img { max-width: 20px !important; max-height: 20px !important; border-radius: 4px !important; object-fit: contain !important; }
 
+/* ✅ MODIFIÉ : max-height:none + min-height:280px (même correction que .pos-cart-items) */
 #clientDynamicContent .pos-cart-items {
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     overflow-y: auto !important;
-    padding: 4px 6px !important;
-    min-height: 60px !important;
-    max-height: 350px !important;
+    padding: 8px 12px !important;
+    min-height: 280px !important;
+    max-height: none !important;
 }
 
 #clientDynamicContent .pos-payment-form {
@@ -1981,10 +2001,12 @@ button .fa-brands {
     #clientDynamicContent .pos-category-card .category-image { width: 190px !important; height: 190px !important; }
     #clientDynamicContent .pos-category-card .category-name { font-size: 20px !important; }
     #clientDynamicContent .pos-products-panel { height: 75vh !important; min-height: 450px !important; max-height: 80vh !important; }
-    #clientDynamicContent .pos-cart-panel { max-height: 80vh !important; min-height: 450px !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 80vh) */
+    #clientDynamicContent .pos-cart-panel { max-height: none !important; min-height: 450px !important; }
     #clientDynamicContent .pos-products-grid { gap: 8px !important; padding: 6px !important; }
     #clientDynamicContent .pos-categories-grid { gap: 10px !important; padding: 8px !important; }
-    #clientDynamicContent .pos-cart-items { min-height: 300px !important; max-height: 400px !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 400px) */
+    #clientDynamicContent .pos-cart-items { min-height: 320px !important; max-height: none !important; }
     #clientDynamicContent .pos-steps-nav .pos-step { font-size: 20px !important; }
     #clientDynamicContent .pos-steps-nav .step-number { width: 22px !important; height: 22px !important; font-size: 20px !important; }
 }
@@ -1999,19 +2021,22 @@ button .fa-brands {
     #clientDynamicContent .pos-category-card .category-name { font-size: 16px !important; }
     #clientDynamicContent .pos-products-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; padding: 4px !important; }
     #clientDynamicContent .pos-categories-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; padding: 6px !important; }
-    #clientDynamicContent .pos-cart-items { min-height: 350px !important; max-height: 450px !important; }
+    /* ✅ MODIFIÉ : max-height:none */
+    #clientDynamicContent .pos-cart-items { min-height: 320px !important; max-height: none !important; }
     #clientDynamicContent .pos-steps-nav { min-height: 16px !important; max-height: 20px !important; padding: 0px 4px !important; margin-bottom: 2px !important; }
     #clientDynamicContent .pos-step { font-size: 20px !important; }
     #clientDynamicContent .step-number { width: 14px !important; height: 14px !important; font-size: 8px !important; }
     #clientDynamicContent .pos-row { flex-direction: row !important; gap: 4px !important; height: calc(100vh - 160px) !important; }
     #clientDynamicContent .pos-products-panel { width: 70% !important; max-width: 70% !important; flex: 0 0 70% !important; height: calc(100vh - 160px) !important; min-height: 300px !important; max-height: calc(100vh - 160px) !important; }
-    #clientDynamicContent .pos-cart-panel { position: sticky !important; top: 0 !important; width: 30% !important; min-width: 30% !important; max-width: 30% !important; flex: 0 0 30% !important; max-height: calc(100vh - 160px) !important; min-height: 400px !important; align-self: flex-start !important; }
+    /* ✅ MODIFIÉ : max-height calc(100vh - 100px) (au lieu de -160px) */
+    #clientDynamicContent .pos-cart-panel { position: sticky !important; top: 0 !important; width: 30% !important; min-width: 30% !important; max-width: 30% !important; flex: 0 0 30% !important; max-height: calc(100vh - 100px) !important; min-height: 400px !important; align-self: flex-start !important; }
 }
 
 @media(max-width: 700px) {
     #clientDynamicContent .pos-row { flex-direction: column !important; gap: 4px !important; height: auto !important; }
     #clientDynamicContent .pos-products-panel { width: 100% !important; max-width: 100% !important; min-width: 100% !important; flex: 1 !important; height: auto !important; min-height: 300px !important; max-height: 60vh !important; order: 1 !important; }
-    #clientDynamicContent .pos-cart-panel { width: 100% !important; max-width: 100% !important; min-width: 100% !important; height: auto !important; min-height: 150px !important; max-height: 35vh !important; order: 2 !important; margin-top: 4px !important; position: static !important; flex: none !important; }
+    /* ✅ MODIFIÉ : max-height:none + min-height:280px */
+    #clientDynamicContent .pos-cart-panel { width: 100% !important; max-width: 100% !important; min-width: 100% !important; height: auto !important; min-height: 280px !important; max-height: none !important; order: 2 !important; margin-top: 4px !important; position: static !important; flex: none !important; }
     #clientDynamicContent .pos-product-card { min-height: 115px !important; max-height: 140px !important; padding: 3px 2px !important; }
     #clientDynamicContent .pos-product-img { height: 60px !important; width: 80% !important; }
     #clientDynamicContent .pos-product-name { font-size: 10px !important; }
@@ -2024,13 +2049,15 @@ button .fa-brands {
     #clientDynamicContent .step-number { width: 18px !important; height: 18px !important; font-size: 10px !important; }
     #clientDynamicContent .pos-products-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 4px !important; padding: 3px !important; }
     #clientDynamicContent .pos-categories-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; padding: 4px !important; }
-    #clientDynamicContent .pos-cart-items { max-height: 200px !important; min-height: 60px !important; }
+    /* ✅ MODIFIÉ : max-height:none + min-height:220px */
+    #clientDynamicContent .pos-cart-items { max-height: none !important; min-height: 220px !important; }
     #clientDynamicContent .pos-payment-form { max-height: 300px !important; }
 }
 
 @media(max-width: 400px) {
     #clientDynamicContent .pos-products-panel { min-height: 280px !important; max-height: 55vh !important; }
-    #clientDynamicContent .pos-cart-panel { min-height: 140px !important; max-height: 35vh !important; }
+    /* ✅ MODIFIÉ : max-height:none + min-height:260px */
+    #clientDynamicContent .pos-cart-panel { min-height: 260px !important; max-height: none !important; }
     #clientDynamicContent .pos-products-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 3px !important; padding: 2px !important; }
     #clientDynamicContent .pos-product-card { min-height: 95px !important; max-height: 115px !important; }
     #clientDynamicContent .pos-product-img { height: 48px !important; width: 75% !important; }
@@ -2106,18 +2133,22 @@ button .fa-brands {
 @media(min-width: 1200px) {
     .pos-row { display: flex !important; flex-direction: row !important; gap: 12px !important; width: 100% !important; height: calc(100vh - 140px) !important; align-items: flex-start !important; }
     .pos-products-panel { width: 72% !important; min-width: 0 !important; max-width: 72% !important; flex: 0 0 72% !important; height: calc(100vh - 140px) !important; min-height: 500px !important; max-height: calc(100vh - 140px) !important; margin-top: 0 !important; order: 1 !important; }
-    .pos-cart-panel { position: sticky !important; top: 0 !important; width: 28% !important; min-width: 320px !important; max-width: 28% !important; flex: 0 0 28% !important; height: auto !important; max-height: calc(100vh - 140px) !important; min-height: 500px !important; margin-top: 0 !important; align-self: flex-start !important; order: 2 !important; }
+    /* ✅ MODIFIÉ : max-height calc(100vh - 100px) (au lieu de -140px) */
+    .pos-cart-panel { position: sticky !important; top: 0 !important; width: 28% !important; min-width: 320px !important; max-width: 28% !important; flex: 0 0 28% !important; height: auto !important; max-height: calc(100vh - 100px) !important; min-height: 500px !important; margin-top: 0 !important; align-self: flex-start !important; order: 2 !important; }
     .pos-products-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important; gap: 8px !important; padding: 6px !important; }
     .pos-categories-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 10px !important; padding: 8px !important; }
-    .pos-cart-items { min-height: 400px !important; max-height: 55vh !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 55vh) */
+    .pos-cart-items { min-height: 340px !important; max-height: none !important; }
     .pos-payment-form { max-height: 60vh !important; }
 }
 
 @media(min-width: 1024px) and (max-width: 1199px) {
     .pos-row { display: flex !important; flex-direction: row !important; gap: 10px !important; width: 100% !important; height: calc(100vh - 140px) !important; align-items: flex-start !important; }
     .pos-products-panel { width: 70% !important; min-width: 0 !important; max-width: 70% !important; flex: 0 0 70% !important; height: calc(100vh - 140px) !important; min-height: 450px !important; max-height: calc(100vh - 140px) !important; margin-top: 0 !important; order: 1 !important; }
-    .pos-cart-panel { position: sticky !important; top: 0 !important; width: 30% !important; min-width: 30% !important; max-width: 30% !important; flex: 0 0 30% !important; height: auto !important; max-height: calc(100vh - 140px) !important; min-height: 450px !important; margin-top: 0 !important; align-self: flex-start !important; order: 2 !important; }
-    .pos-cart-items { min-height: 350px !important; max-height: 50vh !important; }
+    /* ✅ MODIFIÉ : max-height calc(100vh - 100px) (au lieu de -140px) */
+    .pos-cart-panel { position: sticky !important; top: 0 !important; width: 30% !important; min-width: 30% !important; max-width: 30% !important; flex: 0 0 30% !important; height: auto !important; max-height: calc(100vh - 100px) !important; min-height: 450px !important; margin-top: 0 !important; align-self: flex-start !important; order: 2 !important; }
+    /* ✅ MODIFIÉ : max-height:none (au lieu de 50vh) */
+    .pos-cart-items { min-height: 320px !important; max-height: none !important; }
 }
 
 /* ============================================================
