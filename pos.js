@@ -15,7 +15,7 @@
 // ✅ BARRE CATÉGORIES SLIDE SUPPRIMÉE
 // ✅ BOUTONS GEMINI + MICRO
 // ✅ SUR PC : recherche + Tables + En ligne visibles automatiquement au départ
-// ✅ MOBILE : bouton "Afficher tout" (pas sur PC)
+// ✅ MOBILE : recherche + Tables + En ligne VISIBLES AUSSI
 // ✅ SHADOW inline sur steps Panier/Paiement
 // ✅ Formulaire paiement centré (max 600px)
 // ✅ Couleurs 100% bleues (aucun vert)
@@ -24,6 +24,7 @@
 // ✅ Responsive renforcé 320px → 4K
 // ✅ BOUTONS POS AGRANDIS (panier + validation paiement)
 // ✅ PANIER AGRANDI + BOUTON VALIDER TOUJOURS VISIBLE (sticky footer)
+// ✅ MOBILE : panier 95% largeur + marges propres + outils visibles
 
 var posCart = [];
 var posStep = 1;
@@ -1132,9 +1133,9 @@ if (cartKeys.length > 1) multiCartBar += '<button onclick="posResetAllCarts()" s
 multiCartBar += '</div>';
 
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
+// ✅ MODIFIÉ : panier 95% largeur sur mobile + centré
 var mobileCartStyle = '';
-// ✅ MODIFIÉ : hauteur bornée par le viewport (au lieu de 50vh) + overflow:hidden
-if (isMobile) mobileCartStyle = 'width:100% !important;max-height:calc(100vh - 140px) !important;min-height:280px !important;margin-top:4px !important;flex:1 !important;overflow:hidden !important;display:flex !important;flex-direction:column !important;';
+if (isMobile) mobileCartStyle = 'width:95% !important;max-width:95% !important;min-width:0 !important;margin:6px auto !important;max-height:calc(100vh - 120px) !important;min-height:280px !important;flex:1 !important;overflow:hidden !important;display:flex !important;flex-direction:column !important;';
 var gridCols = isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))';
 var gridGap = isMobile ? '8px' : '14px';
 var gridPadding = isMobile ? '4px' : '0';
@@ -1145,16 +1146,17 @@ var toggleToolsBtnHtml = isMobile
     ? ''  // pas de bouton sur mobile
     : '<div style="display:flex;justify-content:center;align-items:center;margin-bottom:4px;"><button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:999px;padding:8px 20px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;">' + (posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout') + '</button></div>';
 
-// 🎯 Sur PC : outils TOUJOURS visibles au départ
-var toolsDisplay = isMobile ? 'none' : (isPC ? 'flex' : (posToolsVisible ? 'flex' : 'none'));
+// ✅ MODIFIÉ : Outils TOUJOURS visibles (mobile ET PC)
+var toolsDisplay = 'flex';
 
 // ✅ MODIFIÉ : Panier min 3 articles visibles (280px PC / 220px mobile)
 var cartItemsMinHeight = isMobile ? '220px' : '280px';
 
-var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:10px;height:auto;padding-bottom:30px;">' +
+var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:'+(isMobile?'6px':'10px')+';height:auto;padding-bottom:'+(isMobile?'60px':'30px')+';padding-left:'+(isMobile?'4px':'0')+';padding-right:'+(isMobile?'4px':'0')+';">' +
 stepIndicator + multiCartBar +
 '<div class="pos-row" style="display:flex;flex-direction:column;gap:8px;width:100%;height:auto;">' +
-'<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:100%; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #EAECEF; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:350px; max-height:80vh; flex:8;">' +
+// ✅ MODIFIÉ : panneau produits 95% largeur sur mobile
+'<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:'+(isMobile?'95%':'100%')+'; max-width:'+(isMobile?'95%':'100%')+'; margin:'+(isMobile?'0 auto':'0')+'; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #EAECEF; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:'+(isMobile?'300px':'350px')+'; max-height:'+(isMobile?'55vh':'80vh')+'; flex:8;">' +
 '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;">' +
 toggleToolsBtnHtml +
 '<div id="posToolsContainer" style="display:'+toolsDisplay+';flex-direction:column;gap:8px;margin-bottom:4px;padding:'+(isMobile?'0':'8px 12px')+';background:'+(isMobile?'transparent':'#F7F8FA')+';border-radius:12px;border:'+(isMobile?'none':'1px solid #EAECEF')+';">' +
@@ -1168,15 +1170,13 @@ toggleToolsBtnHtml +
 '<button id="posMicBtn" title="Recherche vocale" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#6F767E;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
 '<button id="posGeminiBtn" title="Commande vocale Gemini (FR)" style="background:#8B5CF6;border:none;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#fff;" onclick="posOuvrirCommandeVocaleGemini()"><i class="fas fa-robot"></i></button>' +
 '</div>' +
-// Boutons Tables/En ligne : visibles sur PC, cachés sur mobile
-(!isMobile ?
+// ✅ MODIFIÉ : Boutons Tables/En ligne TOUJOURS visibles (mobile ET PC)
 '<div style="display:flex;gap:6px;width:100%;">' +
 (window.posIsClientMode ? '' :
-'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;">🍽️ Tables <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
-'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;">🌐 En ligne <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
+'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;flex:1;justify-content:center;">🍽️ Tables <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
+'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;flex:1;justify-content:center;">🌐 En ligne <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
 ) +
-'</div>'
-: '') +
+'</div>' +
 '</div></div>' +
 '<div class="pos-products-grid" id="posProductGrid" style="grid-template-columns:'+gridCols+';gap:'+gridGap+';padding:'+gridPadding+';overflow-x:hidden;overflow-y:auto;flex-wrap:wrap;align-content:start;flex:1;contain:layout paint;content-visibility:auto;"></div>' +
 '</div>' +
@@ -1533,11 +1533,11 @@ var produits = document.querySelector('.pos-products-panel');
 var panier = document.querySelector('.pos-cart-panel');
 if (row && produits && panier) {
 row.style.display = 'flex'; row.style.flexDirection = 'column'; row.style.flexWrap = 'nowrap';
-produits.style.width = '100%'; produits.style.maxWidth = '100%'; produits.style.minWidth = '100%';
-produits.style.height = 'auto'; produits.style.minHeight = '300px'; produits.style.maxHeight = '60vh'; produits.style.flex = '1';
-panier.style.width = '100%'; panier.style.maxWidth = '100%'; panier.style.minWidth = '100%';
-panier.style.height = 'auto'; panier.style.minHeight = '280px'; panier.style.maxHeight = 'calc(100vh - 140px)';
-panier.style.marginTop = '4px'; panier.style.position = 'static';
+produits.style.width = '95%'; produits.style.maxWidth = '95%'; produits.style.minWidth = '0'; produits.style.margin = '0 auto';
+produits.style.height = 'auto'; produits.style.minHeight = '300px'; produits.style.maxHeight = '55vh'; produits.style.flex = '1';
+panier.style.width = '95%'; panier.style.maxWidth = '95%'; panier.style.minWidth = '0'; panier.style.margin = '6px auto';
+panier.style.height = 'auto'; panier.style.minHeight = '280px'; panier.style.maxHeight = 'calc(100vh - 120px)';
+panier.style.position = 'static';
 }
 }
 }
@@ -2143,11 +2143,12 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 })();
 
 console.log('🚀 E-SOLUTION - POS V5');
-console.log('✅ Recherche + Tables/En ligne visibles sur PC au départ');
-console.log('✅ Bouton "Afficher tout" UNIQUEMENT sur tablette/PC');
+console.log('✅ Recherche + Tables/En ligne visibles sur PC ET mobile');
+console.log('✅ Panier 95% largeur sur mobile + marges propres');
 console.log('✅ Panier min-height 220px (3+ articles visibles)');
 console.log('✅ Clic "Panier" → scroll vers le panier');
 console.log('✅ Couleurs 100% bleues');
 console.log('✅ Responsive renforcé');
 console.log('✅ Boutons POS AGRANDIS (panier + validation paiement)');
 console.log('✅ PANIER AGRANDI + BOUTON VALIDER STICKY (toujours visible)');
+console.log('✅ MOBILE : outils visibles + panier 95% + marges propres');
