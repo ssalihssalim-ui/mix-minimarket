@@ -119,12 +119,7 @@ return true;
 } catch(e) { console.error('❌ Erreur forceUpdateClient:', e); return false; }
 }
 
-function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str).replace(/[&<>"']/g, function(m) {
-        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-    });
-}
+function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
 function toDate(val) { if(!val) return null; if(val.toDate) return val.toDate(); if(val.seconds) return new Date(val.seconds*1000); if(typeof val==='string') return new Date(val); if(val instanceof Date) return val; return null; }
 
 function buildProductIndex() { if(productIndexBuilt) return; productNameIndex={}; posProductsList.forEach(function(p){ if(!p.nom) return; p.nom.toLowerCase().split(' ').forEach(function(w){ if(w.length<2) return; if(!productNameIndex[w]) productNameIndex[w]=[]; productNameIndex[w].push(p); }); }); productIndexBuilt=true; }
@@ -1232,6 +1227,7 @@ h+='</div>' +
 '<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:'+(isMobile?'18px':'20px')+';font-weight:800;padding:14px 18px;border:none;background:#F7F8FA;border-radius:10px;margin:8px 0 12px 0;"><span style="color:#6F767E;">Total</span><span style="color:#1A1D1F;">'+t.toFixed(2)+' MAD</span></div>' +
 '<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'') + '><i class="fas fa-check-circle"></i> Valider</button>' +
 // ✅ MODIFIÉ : bouton flèche ↑ avec class pour déplacement dans <body>
+'<button class="pos-scroll-top-btn" onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><i class="fas fa-arrow-up"></i></button>' +
 '</div>';
 } else {
 var canCredit=posCurrentClient&&posCurrentClient.id;
@@ -1267,6 +1263,7 @@ h+='<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'
 }
 h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()"><i class="fas fa-check-circle"></i> Finaliser</button>' +
 // ✅ MODIFIÉ : bouton flèche ↑ avec class pour déplacement dans <body>
+'<button class="pos-scroll-top-btn" onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><i class="fas fa-arrow-up"></i></button>' +
 '</div>';
 }
 h+='</div></div></div></div>'; c.innerHTML=h;
@@ -2381,226 +2378,90 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 // ============================================================
 // ✅ BOUTON FLÈCHE ↑ — DÉPLACÉ DANS <body> (1ère couche absolue)
 // ============================================================
-// ============================================================
-// ✅ BOUTON FLÈCHE ↑ — VERSION CORRIGÉE (fonctionne vraiment)
-// ============================================================
-(
-    // ============================================================
-// ✅ BOUTON FLÈCHE ↑ — VERSION 3 (affiche TOUJOURS si scroll possible)
-// ============================================================
-(function posScrollTopButtonV3() {
-    var STYLE_ID = 'pos-scroll-top-fixed-style';
-    var BTN_ID = 'posScrollTopFixedBtn';
-
-    // 1) Style
-    if (!document.getElementById(STYLE_ID)) {
-        var style = document.createElement('style');
-        style.id = STYLE_ID;
-        style.textContent = `
-        #${BTN_ID} {
-            position: fixed !important;
-            top: 12px !important;
-            right: 12px !important;
-            width: 52px !important;
-            height: 52px !important;
-            border-radius: 50% !important;
-            background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
-            color: #FFFFFF !important;
-            border: 2px solid #FFFFFF !important;
-            font-size: 20px !important;
-            cursor: pointer !important;
-            display: none;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow:
-                0 6px 18px rgba(37,99,235,0.55),
-                0 3px 8px rgba(0,0,0,0.20),
-                0 0 0 3px rgba(59,130,246,0.25) !important;
-            z-index: 2147483647 !important;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease !important;
-            opacity: 0;
-        }
-        #${BTN_ID}.visible {
-            display: flex !important;
-            opacity: 1;
-        }
-        #${BTN_ID}:hover {
-            transform: scale(1.10) !important;
-            box-shadow:
-                0 8px 24px rgba(37,99,235,0.65),
-                0 4px 10px rgba(0,0,0,0.25),
-                0 0 0 3px rgba(59,130,246,0.35) !important;
-        }
-        #${BTN_ID}:active { transform: scale(0.94) !important; }
-        @media (max-width: 768px) {
-            #${BTN_ID} {
-                top: 8px !important; right: 8px !important;
-                width: 48px !important; height: 48px !important;
-                font-size: 17px !important;
-            }
-        }
-        @media (max-width: 380px) {
-            #${BTN_ID} {
-                top: 6px !important; right: 6px !important;
-                width: 44px !important; height: 44px !important;
-                font-size: 16px !important;
-            }
-        }
-        [data-theme="dark"] #${BTN_ID} {
-            border-color: #1C2333 !important;
-        }
-        `;
-        document.head.appendChild(style);
+(function moveScrollTopToBody() {
+    var STYLE = `
+    .pos-scroll-top-btn {
+        position: fixed !important;
+        top: 8px !important;
+        right: 8px !important;
+        left: auto !important;
+        bottom: auto !important;
+        width: 52px !important;
+        height: 52px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFFFFF !important;
+        font-size: 20px !important;
+        cursor: pointer !important;
+        box-shadow:
+            0 6px 18px rgba(37,99,235,0.55),
+            0 3px 8px rgba(0,0,0,0.20),
+            0 0 0 3px rgba(59,130,246,0.25) !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        pointer-events: auto !important;
+        transform: translateZ(0) !important;
+        will-change: transform !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        isolation: auto !important;
+        contain: none !important;
     }
-
-    // 2) Créer le bouton
-    var btn = document.getElementById(BTN_ID);
-    if (!btn) {
-        btn = document.createElement('button');
-        btn.id = BTN_ID;
-        btn.type = 'button';
-        btn.setAttribute('aria-label', 'Remonter en haut');
-        btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-        document.body.appendChild(btn);
+    .pos-scroll-top-btn:hover {
+        transform: translateZ(0) scale(1.10) !important;
+        box-shadow:
+            0 8px 24px rgba(37,99,235,0.65),
+            0 4px 10px rgba(0,0,0,0.25),
+            0 0 0 3px rgba(59,130,246,0.35) !important;
     }
-
-    // 3) Trouver LE conteneur scrollable réel
-    function findScrollableContainer() {
-        // Priorité 1 : #dynamicContent si scrollable
-        var dc = document.getElementById('dynamicContent');
-        if (dc && dc.scrollHeight > dc.clientHeight + 10) return dc;
-
-        // Priorité 2 : autres candidats
-        var candidates = [
-            document.querySelector('.main-content'),
-            document.querySelector('.content-area'),
-            document.querySelector('.page-content'),
-            document.scrollingElement || document.documentElement,
-            document.body
-        ];
-        for (var i = 0; i < candidates.length; i++) {
-            var el = candidates[i];
-            if (el && el.scrollHeight > el.clientHeight + 10) return el;
-        }
-        // Fallback : document
-        return document.scrollingElement || document.documentElement;
+    .pos-scroll-top-btn:active {
+        transform: translateZ(0) scale(0.94) !important;
     }
-
-    // 4) Calculer la position de scroll RÉELLE (tous conteneurs confondus)
-    function getScrollTop() {
-        var max = 0;
-        var dc = document.getElementById('dynamicContent');
-        if (dc) max = Math.max(max, dc.scrollTop || 0);
-
-        var main = document.querySelector('.main-content');
-        if (main) max = Math.max(max, main.scrollTop || 0);
-
-        max = Math.max(max, window.scrollY || window.pageYOffset || 0);
-        max = Math.max(max, (document.scrollingElement || document.documentElement).scrollTop || 0);
-        max = Math.max(max, document.body.scrollTop || 0);
-
-        return max;
-    }
-
-    // 5) Afficher/cacher
-    function updateVisibility() {
-        var scrollTop = getScrollTop();
-        if (scrollTop > 100) {
-            btn.classList.add('visible');
-        } else {
-            btn.classList.remove('visible');
+    @media (max-width: 768px) {
+        .pos-scroll-top-btn {
+            top: 6px !important;
+            right: 6px !important;
+            width: 48px !important;
+            height: 48px !important;
+            font-size: 17px !important;
         }
     }
-
-    // 6) Scroll vers le haut — TOUS les conteneurs possibles
-    function scrollToTop() {
-        var targets = [
-            document.getElementById('dynamicContent'),
-            document.querySelector('.main-content'),
-            document.querySelector('.content-area'),
-            document.querySelector('.page-content'),
-            document.scrollingElement || document.documentElement,
-            document.body
-        ];
-        targets.forEach(function(el) {
-            if (el && typeof el.scrollTo === 'function') {
-                try { el.scrollTo({ top: 0, behavior: 'smooth' }); }
-                catch (e) { el.scrollTop = 0; }
-            }
-        });
-        try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        catch (e) { window.scrollTo(0, 0); }
-
-        // Panneaux internes du POS
-        document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form').forEach(function(el) {
-            try { el.scrollTo({ top: 0, behavior: 'smooth' }); }
-            catch (e) { el.scrollTop = 0; }
-        });
-
-        // Feedback visuel
-        var cartPanel = document.querySelector('.pos-cart-panel');
-        if (cartPanel) {
-            cartPanel.style.transition = 'box-shadow 0.3s ease';
-            cartPanel.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.4)';
-            setTimeout(function() { cartPanel.style.boxShadow = ''; }, 800);
+    @media (max-width: 380px) {
+        .pos-scroll-top-btn {
+            top: 4px !important;
+            right: 4px !important;
+            width: 44px !important;
+            height: 44px !important;
+            font-size: 16px !important;
         }
     }
-
-    // 7) Attacher le clic
-    if (!btn.dataset.bound) {
-        btn.addEventListener('click', scrollToTop);
-        btn.dataset.bound = '1';
+    [data-theme="dark"] .pos-scroll-top-btn {
+        border-color: #1C2333 !important;
+        box-shadow:
+            0 6px 18px rgba(59,130,246,0.55),
+            0 3px 8px rgba(0,0,0,0.50),
+            0 0 0 3px rgba(59,130,246,0.30) !important;
     }
-
-    // 8) Écouter le scroll sur TOUS les conteneurs possibles (avec capture)
-    function attachScrollListeners() {
-        // Écoute window (bubble + capture)
-        window.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
-        document.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
-
-        // Écoute les conteneurs connus
-        var targets = [
-            document.getElementById('dynamicContent'),
-            document.querySelector('.main-content'),
-            document.querySelector('.content-area'),
-            document.querySelector('.page-content'),
-            document.body
-        ];
-        targets.forEach(function(el) {
-            if (el && !el.dataset.posScrollBound) {
-                el.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
-                el.dataset.posScrollBound = '1';
+    `;
+    if (!document.getElementById('pos-scroll-top-style')) {
+        var s = document.createElement('style');
+        s.id = 'pos-scroll-top-style';
+        s.textContent = STYLE;
+        document.head.appendChild(s);
+    }
+    function relocate() {
+        document.querySelectorAll('.pos-scroll-top-btn').forEach(function(btn) {
+            if (btn.parentElement !== document.body) {
+                document.body.appendChild(btn);
             }
         });
     }
-
-    attachScrollListeners();
-
-    // 9) Réattacher en cas de recréation du DOM (renderPOS, navigation…)
-    var observer = new MutationObserver(function() {
-        attachScrollListeners();
-        // S'assurer que le bouton est toujours dans <body>
-        if (btn.parentElement !== document.body) {
-            document.body.appendChild(btn);
-        }
-        updateVisibility();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // 10) Fallback : vérifier toutes les 500ms (au cas où)
-    setInterval(function() {
-        attachScrollListeners();
-        updateVisibility();
-    }, 500);
-
-    // 11) Afficher immédiatement si déjà scrollé
-    setTimeout(updateVisibility, 100);
-    updateVisibility();
-
-    console.log('✅ [POS] Bouton flèche ↑ V3 — écoute multi-conteneurs + MutationObserver');
+    setInterval(relocate, 500);
+    relocate();
 })();
-
-)();
+/////////
 // ============================================================
 // ✅ SUPPRESSION DU PAGE-HEADER SUR MOBILE (< 700px)
 // Ajout isolé — ne modifie AUCUNE autre partie du code
