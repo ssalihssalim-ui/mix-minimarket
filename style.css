@@ -4,6 +4,7 @@
 /* ⚠️ Aucune classe, aucun ID, aucun sélecteur n'a été changé */
 /* ✅ MODIFIÉ : outils visibles mobile + marges 0 + produits auto height */
 /* ✅ MODIFIÉ : recherche moderne + steps modernes + bouton flèche en haut */
+/* ✅ MODIFIÉ : bouton flèche en 1ère COUCHE ABSOLUE (z-index max) */
 
 :root {
     --white: #FFFFFF;
@@ -2229,344 +2230,97 @@ button .fa-brands {
 }
 
 /* ============================================================
-✅ FIX FINAL : Bouton flèche ↑ TOUT EN HAUT à droite
+✅✅✅ BOUTON FLÈCHE — 1ère COUCHE ABSOLUE (au-dessus de TOUT)
+   z-index max (2147483647 = int32 max) + translateZ(0) + isolation
+   → AUCUN élément ne peut passer au-dessus (modales, header, menu)
+   → ⚠️ Nécessite le script JS "moveScrollTopToBody" dans pos.js
+   pour sortir physiquement le bouton du stacking context
 ============================================================ */
+
+/* Bouton flèche universel — cible les 2 versions (classe + onclick) */
+.pos-scroll-top-btn,
 button[onclick*="scrollIntoView"] {
     position: fixed !important;
-    top: 12px !important;
-    right: 12px !important;
+    top: 8px !important;
+    right: 8px !important;
     left: auto !important;
     bottom: auto !important;
     width: 52px !important;
     height: 52px !important;
     border-radius: 50% !important;
-    background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
-    color: #fff !important;
-    border: none !important;
-    font-size: 22px !important;
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+    color: #FFFFFF !important;
+    border: 2px solid #FFFFFF !important;
+    font-size: 20px !important;
     cursor: pointer !important;
-    box-shadow: 0 6px 20px rgba(37,99,235,0.45) !important;
-    z-index: 99999 !important;
+    box-shadow:
+        0 6px 18px rgba(37,99,235,0.55),
+        0 3px 8px rgba(0,0,0,0.20),
+        0 0 0 3px rgba(59,130,246,0.25) !important;
+    z-index: 2147483647 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.2s ease !important;
-    transform: none !important;
+    pointer-events: auto !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    isolation: auto !important;
+    contain: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
+
+.pos-scroll-top-btn:hover,
 button[onclick*="scrollIntoView"]:hover {
-    transform: scale(1.08) translateY(-1px) !important;
-    box-shadow: 0 8px 24px rgba(37,99,235,0.55) !important;
+    transform: translateZ(0) scale(1.10) !important;
+    box-shadow:
+        0 8px 24px rgba(37,99,235,0.65),
+        0 4px 10px rgba(0,0,0,0.25),
+        0 0 0 3px rgba(59,130,246,0.35) !important;
 }
+
+.pos-scroll-top-btn:active,
 button[onclick*="scrollIntoView"]:active {
-    transform: scale(0.95) !important;
+    transform: translateZ(0) scale(0.94) !important;
 }
 
+/* Modales EN DESSOUS du bouton (bouton reste cliquable par-dessus) */
+.modal,
+.modal-overlay,
+#modalOverlay {
+    z-index: 9998 !important;
+}
+
+/* Mobile : plus petit mais 1ère couche absolue */
 @media (max-width: 768px) {
+    .pos-scroll-top-btn,
     button[onclick*="scrollIntoView"] {
-        top: 8px !important;
-        right: 8px !important;
-        width: 46px !important;
-        height: 46px !important;
-        font-size: 18px !important;
+        top: 6px !important;
+        right: 6px !important;
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 17px !important;
     }
 }
 
-/* ============================================================
-✅ MODERNE : Barre de recherche + outils POS (micro, Gemini, Tables, En ligne)
-============================================================ */
-
-#posToolsContainer {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
-    margin-bottom: 10px !important;
-    padding: 12px !important;
-    background: linear-gradient(135deg, #F8FAFC, #F1F5F9) !important;
-    border-radius: 16px !important;
-    border: 1px solid #E2E8F0 !important;
-    box-shadow: inset 0 1px 2px rgba(255,255,255,0.8), 0 1px 3px rgba(0,0,0,0.04) !important;
-}
-
-#posToolsContainer > div:first-child > div:first-child {
-    position: relative !important;
-    display: flex !important;
-    align-items: center !important;
-    background: #FFFFFF !important;
-    border: 1.5px solid #E2E8F0 !important;
-    border-radius: 14px !important;
-    padding: 0 14px !important;
-    height: 48px !important;
-    min-width: 200px !important;
-    flex: 1 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    transition: all 0.25s ease !important;
-}
-#posToolsContainer > div:first-child > div:first-child:focus-within {
-    border-color: #2563EB !important;
-    box-shadow: 0 0 0 4px rgba(37,99,235,0.12), 0 2px 8px rgba(37,99,235,0.10) !important;
-    background: #FFFFFF !important;
-}
-
-#posToolsContainer > div:first-child > div:first-child > i.fas.fa-search {
-    color: #64748B !important;
-    font-size: 16px !important;
-    margin-right: 10px !important;
-    transition: color 0.2s ease !important;
-}
-#posToolsContainer > div:first-child > div:first-child:focus-within > i.fas.fa-search {
-    color: #2563EB !important;
-}
-
-#posSearchInput {
-    display: flex !important;
-    flex: 1 !important;
-    border: none !important;
-    outline: none !important;
-    background: transparent !important;
-    font-size: 15px !important;
-    font-weight: 500 !important;
-    color: #0F172A !important;
-    padding: 0 !important;
-    height: 100% !important;
-}
-#posSearchInput::placeholder {
-    color: #94A3B8 !important;
-    font-weight: 400 !important;
-}
-
-#posSearchClearBtn {
-    display: none !important;
-    align-items: center !important;
-    justify-content: center !important;
-    position: absolute !important;
-    right: 10px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    width: 28px !important;
-    height: 28px !important;
-    border-radius: 50% !important;
-    background: #F1F5F9 !important;
-    border: none !important;
-    color: #64748B !important;
-    cursor: pointer !important;
-    font-size: 13px !important;
-    transition: all 0.15s ease !important;
-    padding: 0 !important;
-}
-#posSearchClearBtn:hover {
-    background: #E2E8F0 !important;
-    color: #EF4444 !important;
-}
-
-#posMicBtn, #posGeminiBtn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
-    border-radius: 14px !important;
-    border: 1.5px solid #E2E8F0 !important;
-    background: #FFFFFF !important;
-    color: #64748B !important;
-    cursor: pointer !important;
-    font-size: 16px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    transition: all 0.25s ease !important;
-    padding: 0 !important;
-}
-#posMicBtn:hover {
-    background: #EFF6FF !important;
-    border-color: #2563EB !important;
-    color: #2563EB !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(37,99,235,0.15) !important;
-}
-#posMicBtn:active { transform: scale(0.95) !important; }
-
-#posGeminiBtn {
-    background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
-    border: none !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 2px 8px rgba(139,92,246,0.35) !important;
-}
-#posGeminiBtn:hover {
-    background: linear-gradient(135deg, #7C3AED, #6D28D9) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 14px rgba(139,92,246,0.45) !important;
-}
-#posGeminiBtn:active { transform: scale(0.95) !important; }
-
-#posTablesBtn, #posEnLigneBtn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex: 1 !important;
-    gap: 8px !important;
-    padding: 11px 16px !important;
-    min-height: 44px !important;
-    border-radius: 12px !important;
-    border: 1.5px solid #E2E8F0 !important;
-    background: #FFFFFF !important;
-    color: #0F172A !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    cursor: pointer !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    transition: all 0.2s ease !important;
-}
-#posTablesBtn:hover, #posEnLigneBtn:hover {
-    background: #EFF6FF !important;
-    border-color: #2563EB !important;
-    color: #2563EB !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(37,99,235,0.12) !important;
-}
-#posTablesBtn:active, #posEnLigneBtn:active {
-    transform: scale(0.98) !important;
-}
-
-#posTablesBtn span, #posEnLigneBtn span {
-    background: linear-gradient(135deg, #EF4444, #DC2626) !important;
-    color: #FFFFFF !important;
-    border-radius: 999px !important;
-    padding: 2px 9px !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    min-width: 20px !important;
-    text-align: center !important;
-    box-shadow: 0 1px 3px rgba(239,68,68,0.35) !important;
-}
-
-@media (max-width: 700px) {
-    #posToolsContainer {
-        padding: 10px !important;
-        gap: 8px !important;
-        border-radius: 14px !important;
-    }
-    #posToolsContainer > div:first-child > div:first-child {
-        height: 44px !important;
-        border-radius: 12px !important;
-        padding: 0 12px !important;
-    }
-    #posSearchInput { font-size: 14px !important; }
-    #posMicBtn, #posGeminiBtn {
+@media (max-width: 380px) {
+    .pos-scroll-top-btn,
+    button[onclick*="scrollIntoView"] {
+        top: 4px !important;
+        right: 4px !important;
         width: 44px !important;
         height: 44px !important;
-        min-width: 44px !important;
-        border-radius: 12px !important;
-        font-size: 15px !important;
-    }
-    #posTablesBtn, #posEnLigneBtn {
-        padding: 9px 12px !important;
-        min-height: 40px !important;
-        font-size: 13px !important;
-        border-radius: 10px !important;
+        font-size: 16px !important;
     }
 }
 
-/* ============================================================
-✅ MODERNE : Steps "Panier / Paiement" (pill gradient moderne)
-============================================================ */
-
-.pos-steps-nav {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 10px !important;
-    padding: 8px 12px !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    margin-bottom: 14px !important;
-    min-height: auto !important;
-    max-height: none !important;
-    flex-wrap: wrap !important;
-}
-
-.pos-step {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    padding: 10px 22px !important;
-    border-radius: 999px !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    cursor: pointer !important;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    background: #FFFFFF !important;
-    color: #64748B !important;
-    border: 1.5px solid #E2E8F0 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    position: relative !important;
-}
-
-.pos-step:hover:not(.active) {
-    background: #F8FAFC !important;
-    border-color: #CBD5E1 !important;
-    color: #0F172A !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
-}
-
-.pos-step.active {
-    background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
-    color: #FFFFFF !important;
-    border-color: #2563EB !important;
-    box-shadow: 0 6px 20px rgba(37,99,235,0.35), 0 2px 4px rgba(37,99,235,0.15) !important;
-    transform: translateY(0) !important;
-}
-
-.pos-step .step-number,
-.pos-step span:first-child {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 26px !important;
-    height: 26px !important;
-    min-width: 26px !important;
-    border-radius: 50% !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-    background: #F1F5F9 !important;
-    color: #64748B !important;
-    transition: all 0.25s ease !important;
-    flex-shrink: 0 !important;
-    line-height: 1 !important;
-    padding: 0 !important;
-}
-
-.pos-step.active .step-number,
-.pos-step.active span:first-child {
-    background: rgba(255,255,255,0.28) !important;
-    color: #FFFFFF !important;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35) !important;
-}
-
-.pos-step span:last-child {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.2px !important;
-}
-
-@media (max-width: 700px) {
-    .pos-steps-nav {
-        padding: 6px 8px !important;
-        gap: 8px !important;
-        margin-bottom: 10px !important;
-    }
-    .pos-step {
-        padding: 8px 16px !important;
-        font-size: 13px !important;
-    }
-    .pos-step .step-number,
-    .pos-step span:first-child {
-        width: 22px !important;
-        height: 22px !important;
-        min-width: 22px !important;
-        font-size: 11px !important;
-    }
-    .pos-step span:last-child {
-        font-size: 13px !important;
-    }
+/* Dark mode */
+[data-theme="dark"] .pos-scroll-top-btn,
+[data-theme="dark"] button[onclick*="scrollIntoView"] {
+    border-color: #1C2333 !important;
+    box-shadow:
+        0 6px 18px rgba(59,130,246,0.55),
+        0 3px 8px rgba(0,0,0,0.50),
+        0 0 0 3px rgba(59,130,246,0.30) !important;
 }
