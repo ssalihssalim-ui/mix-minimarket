@@ -2384,11 +2384,15 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 // ============================================================
 // ✅ BOUTON FLÈCHE ↑ — VERSION CORRIGÉE (fonctionne vraiment)
 // ============================================================
-(function posScrollTopButtonFixed() {
+(
+    // ============================================================
+// ✅ BOUTON FLÈCHE ↑ — VERSION 3 (affiche TOUJOURS si scroll possible)
+// ============================================================
+(function posScrollTopButtonV3() {
     var STYLE_ID = 'pos-scroll-top-fixed-style';
     var BTN_ID = 'posScrollTopFixedBtn';
 
-    // 1) Injecter le style une seule fois
+    // 1) Style
     if (!document.getElementById(STYLE_ID)) {
         var style = document.createElement('style');
         style.id = STYLE_ID;
@@ -2405,7 +2409,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             border: 2px solid #FFFFFF !important;
             font-size: 20px !important;
             cursor: pointer !important;
-            display: none; /* caché par défaut, affiché au scroll */
+            display: none;
             align-items: center !important;
             justify-content: center !important;
             box-shadow:
@@ -2427,39 +2431,29 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
                 0 4px 10px rgba(0,0,0,0.25),
                 0 0 0 3px rgba(59,130,246,0.35) !important;
         }
-        #${BTN_ID}:active {
-            transform: scale(0.94) !important;
-        }
+        #${BTN_ID}:active { transform: scale(0.94) !important; }
         @media (max-width: 768px) {
             #${BTN_ID} {
-                top: 8px !important;
-                right: 8px !important;
-                width: 48px !important;
-                height: 48px !important;
+                top: 8px !important; right: 8px !important;
+                width: 48px !important; height: 48px !important;
                 font-size: 17px !important;
             }
         }
         @media (max-width: 380px) {
             #${BTN_ID} {
-                top: 6px !important;
-                right: 6px !important;
-                width: 44px !important;
-                height: 44px !important;
+                top: 6px !important; right: 6px !important;
+                width: 44px !important; height: 44px !important;
                 font-size: 16px !important;
             }
         }
         [data-theme="dark"] #${BTN_ID} {
             border-color: #1C2333 !important;
-            box-shadow:
-                0 6px 18px rgba(59,130,246,0.55),
-                0 3px 8px rgba(0,0,0,0.50),
-                0 0 0 3px rgba(59,130,246,0.30) !important;
         }
         `;
         document.head.appendChild(style);
     }
 
-    // 2) Créer le bouton une seule fois dans <body>
+    // 2) Créer le bouton
     var btn = document.getElementById(BTN_ID);
     if (!btn) {
         btn = document.createElement('button');
@@ -2470,96 +2464,143 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         document.body.appendChild(btn);
     }
 
-    // 3) Fonction de scroll CORRIGÉE
-    function scrollToTopPos() {
-        // A. Scroller le conteneur principal du POS
-        var container = document.getElementById('dynamicContent');
-        if (container) {
-            try {
-                container.scrollTo({ top: 0, behavior: 'smooth' });
-            } catch (e) {
-                container.scrollTop = 0;
-            }
-        }
+    // 3) Trouver LE conteneur scrollable réel
+    function findScrollableContainer() {
+        // Priorité 1 : #dynamicContent si scrollable
+        var dc = document.getElementById('dynamicContent');
+        if (dc && dc.scrollHeight > dc.clientHeight + 10) return dc;
 
-        // B. Scroller aussi la fenêtre (au cas où)
-        try {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } catch (e) {
-            window.scrollTo(0, 0);
+        // Priorité 2 : autres candidats
+        var candidates = [
+            document.querySelector('.main-content'),
+            document.querySelector('.content-area'),
+            document.querySelector('.page-content'),
+            document.scrollingElement || document.documentElement,
+            document.body
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+            var el = candidates[i];
+            if (el && el.scrollHeight > el.clientHeight + 10) return el;
         }
-
-        // C. Scroller les panneaux internes du POS (panier, produits)
-        document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form').forEach(function(el) {
-            try {
-                el.scrollTo({ top: 0, behavior: 'smooth' });
-            } catch (e) {
-                el.scrollTop = 0;
-            }
-        });
-
-        // D. Scroller vers les étapes Panier/Paiement
-        var stepsNav = document.querySelector('.pos-steps-nav');
-        if (stepsNav && stepsNav.scrollIntoView) {
-            try {
-                stepsNav.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } catch (e) {}
-        }
-
-        // E. Bonus : flash visuel sur le panier pour confirmer l'action
-        var cartPanel = document.querySelector('.pos-cart-panel');
-        if (cartPanel) {
-            cartPanel.style.transition = 'box-shadow 0.3s ease';
-            cartPanel.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.4)';
-            setTimeout(function() {
-                cartPanel.style.boxShadow = '';
-            }, 800);
-        }
+        // Fallback : document
+        return document.scrollingElement || document.documentElement;
     }
 
-    // 4) Attacher le listener (une seule fois, pas en inline)
-    if (!btn.dataset.bound) {
-        btn.addEventListener('click', scrollToTopPos);
-        btn.dataset.bound = '1';
+    // 4) Calculer la position de scroll RÉELLE (tous conteneurs confondus)
+    function getScrollTop() {
+        var max = 0;
+        var dc = document.getElementById('dynamicContent');
+        if (dc) max = Math.max(max, dc.scrollTop || 0);
+
+        var main = document.querySelector('.main-content');
+        if (main) max = Math.max(max, main.scrollTop || 0);
+
+        max = Math.max(max, window.scrollY || window.pageYOffset || 0);
+        max = Math.max(max, (document.scrollingElement || document.documentElement).scrollTop || 0);
+        max = Math.max(max, document.body.scrollTop || 0);
+
+        return max;
     }
 
-    // 5) Afficher/masquer le bouton selon le scroll
+    // 5) Afficher/cacher
     function updateVisibility() {
-        var container = document.getElementById('dynamicContent');
-        var scrollY = window.scrollY || window.pageYOffset || 0;
-        var containerScroll = container ? container.scrollTop : 0;
-
-        if (scrollY > 150 || containerScroll > 150) {
+        var scrollTop = getScrollTop();
+        if (scrollTop > 100) {
             btn.classList.add('visible');
         } else {
             btn.classList.remove('visible');
         }
     }
 
-    // Écouter le scroll de la fenêtre ET du conteneur
-    window.addEventListener('scroll', updateVisibility, { passive: true });
+    // 6) Scroll vers le haut — TOUS les conteneurs possibles
+    function scrollToTop() {
+        var targets = [
+            document.getElementById('dynamicContent'),
+            document.querySelector('.main-content'),
+            document.querySelector('.content-area'),
+            document.querySelector('.page-content'),
+            document.scrollingElement || document.documentElement,
+            document.body
+        ];
+        targets.forEach(function(el) {
+            if (el && typeof el.scrollTo === 'function') {
+                try { el.scrollTo({ top: 0, behavior: 'smooth' }); }
+                catch (e) { el.scrollTop = 0; }
+            }
+        });
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        catch (e) { window.scrollTo(0, 0); }
 
-    var container = document.getElementById('dynamicContent');
-    if (container && !container.dataset.scrollBound) {
-        container.addEventListener('scroll', updateVisibility, { passive: true });
-        container.dataset.scrollBound = '1';
+        // Panneaux internes du POS
+        document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form').forEach(function(el) {
+            try { el.scrollTo({ top: 0, behavior: 'smooth' }); }
+            catch (e) { el.scrollTop = 0; }
+        });
+
+        // Feedback visuel
+        var cartPanel = document.querySelector('.pos-cart-panel');
+        if (cartPanel) {
+            cartPanel.style.transition = 'box-shadow 0.3s ease';
+            cartPanel.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.4)';
+            setTimeout(function() { cartPanel.style.boxShadow = ''; }, 800);
+        }
     }
 
-    // Vérifier périodiquement que le conteneur est bien écouté (car #dynamicContent peut être recréé)
-    setInterval(function() {
-        var c = document.getElementById('dynamicContent');
-        if (c && !c.dataset.scrollBound) {
-            c.addEventListener('scroll', updateVisibility, { passive: true });
-            c.dataset.scrollBound = '1';
+    // 7) Attacher le clic
+    if (!btn.dataset.bound) {
+        btn.addEventListener('click', scrollToTop);
+        btn.dataset.bound = '1';
+    }
+
+    // 8) Écouter le scroll sur TOUS les conteneurs possibles (avec capture)
+    function attachScrollListeners() {
+        // Écoute window (bubble + capture)
+        window.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
+        document.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
+
+        // Écoute les conteneurs connus
+        var targets = [
+            document.getElementById('dynamicContent'),
+            document.querySelector('.main-content'),
+            document.querySelector('.content-area'),
+            document.querySelector('.page-content'),
+            document.body
+        ];
+        targets.forEach(function(el) {
+            if (el && !el.dataset.posScrollBound) {
+                el.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
+                el.dataset.posScrollBound = '1';
+            }
+        });
+    }
+
+    attachScrollListeners();
+
+    // 9) Réattacher en cas de recréation du DOM (renderPOS, navigation…)
+    var observer = new MutationObserver(function() {
+        attachScrollListeners();
+        // S'assurer que le bouton est toujours dans <body>
+        if (btn.parentElement !== document.body) {
+            document.body.appendChild(btn);
         }
         updateVisibility();
-    }, 1000);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    // Mettre à jour l'état au démarrage
+    // 10) Fallback : vérifier toutes les 500ms (au cas où)
+    setInterval(function() {
+        attachScrollListeners();
+        updateVisibility();
+    }, 500);
+
+    // 11) Afficher immédiatement si déjà scrollé
+    setTimeout(updateVisibility, 100);
     updateVisibility();
 
-    console.log('✅ [POS] Bouton flèche ↑ corrigé et fonctionnel');
+    console.log('✅ [POS] Bouton flèche ↑ V3 — écoute multi-conteneurs + MutationObserver');
 })();
+
+)();
 // ============================================================
 // ✅ SUPPRESSION DU PAGE-HEADER SUR MOBILE (< 700px)
 // Ajout isolé — ne modifie AUCUNE autre partie du code
