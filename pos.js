@@ -30,7 +30,7 @@
 // 🆕 AJUSTEMENTS MOBILE : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px
 // ✅ 💳 CRÉDIT CLIENT : loadClientCredits() reproduit EXACTEMENT le filtre d'Admin-Credits (aucune divergence)
 // 🆕 RESPONSIVE RENFORCÉ : tout s'adapte de 320px à 4K
-// 🎨 V4 : steps-nav TRANSPARENT sur fond gris + cartes blanches individuelles + qualité renforcée
+// 🎨 V4 : steps TRANSPARENT + shadow inline sur btn Panier/Paiement + formulaire paiement centré 600px + bouton "Afficher tout" masqué sur mobile + outils visibles sur PC + couleurs bleues uniquement
 
 var posCart = [];
 var posStep = 1;
@@ -1091,15 +1091,27 @@ function buildFullPOS(c){
 if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#2563EB;"></i><p>Chargement...</p></div>'; return; }
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var isMobile = window.innerWidth < 700;
+var isPC = window.innerWidth >= 1024;
 var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
 var stepSize = isMobile ? '14px' : '16px';
-var stepGap = isMobile ? '6px' : '10px';
 
-var stepIndicator = '<div class="pos-steps-nav">' +
-'<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" onclick="posNaviguerEtape(1)">' +
-'<span class="step-number">1</span><span style="font-size:'+stepSize+';font-weight:600;">Panier</span></div>' +
-'<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" onclick="posNaviguerEtape(2)">' +
-'<span class="step-number">2</span><span style="font-size:'+stepSize+';font-weight:600;">Paiement</span></div></div>';
+// 🆕 Sur PC : outils TOUJOURS visibles (pas de bouton toggle)
+if (isPC && !window._posToolsInitialized) {
+    posToolsVisible = true;
+    window._posToolsInitialized = true;
+}
+
+// 🆕 Shadow inline pour étape active (contourne le problème CSS)
+var stepActiveShadow = '0 4px 14px rgba(37, 99, 235, 0.4), 0 2px 4px rgba(37,99,235,0.2)';
+var stepInactiveShadow = '0 1px 2px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.02)';
+
+var stepIndicator = '<div class="pos-steps-nav" style="background:transparent;border:none;box-shadow:none;padding:0;gap:8px;">' +
+'<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" onclick="posNaviguerEtape(1)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 1 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 1 ? '#FFFFFF' : '#6F767E') + ';border:1px solid ' + (posStep === 1 ? '#2563EB' : '#EAECEF') + ';box-shadow:' + (posStep === 1 ? stepActiveShadow : stepInactiveShadow) + ';">' +
+'<span class="step-number" style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:' + (posStep === 1 ? 'rgba(255,255,255,0.28)' : '#F7F8FA') + ';color:' + (posStep === 1 ? '#FFFFFF' : '#9A9FA5') + ';">1</span>' +
+'<span>Panier</span></div>' +
+'<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" onclick="posNaviguerEtape(2)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 2 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 2 ? '#FFFFFF' : '#6F767E') + ';border:1px solid ' + (posStep === 2 ? '#2563EB' : '#EAECEF') + ';box-shadow:' + (posStep === 2 ? stepActiveShadow : stepInactiveShadow) + ';">' +
+'<span class="step-number" style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:' + (posStep === 2 ? 'rgba(255,255,255,0.28)' : '#F7F8FA') + ';color:' + (posStep === 2 ? '#FFFFFF' : '#9A9FA5') + ';">2</span>' +
+'<span>Paiement</span></div></div>';
 
 var multiCartBar = '<div class="pos-multi-carts-bar">';
 var cartCount = Object.keys(posMultiCarts).length;
@@ -1142,15 +1154,21 @@ var gridGap = isMobile ? '6px' : '14px';
 var gridPadding = isMobile ? '2px' : '0';
 var panelPadding = isMobile ? '8px' : '16px';
 
-var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:6px;height:auto;padding-bottom:30px;">' +
+// 🆕 Bouton "Afficher tout" SEULEMENT sur mobile
+var toggleToolsBtnHtml = isMobile
+    ? '<div style="display:flex;justify-content:center;align-items:center;margin-bottom:2px;"><button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:999px;padding:8px 20px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;">🔍 Afficher tout</button></div>'
+    : '';
+
+// 🆕 Sur PC : outils toujours visibles
+var toolsDisplay = isPC ? 'flex' : (posToolsVisible ? 'flex' : 'none');
+
+var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') + '" style="display:flex;flex-direction:column;gap:10px;height:auto;padding-bottom:30px;">' +
 stepIndicator + multiCartBar +
 '<div class="pos-row" style="display:flex;flex-direction:column;gap:8px;width:100%;height:auto;">' +
 '<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:100%; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #EAECEF; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:350px; max-height:80vh; flex:8;">' +
 '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;">' +
-'<div style="display:flex;justify-content:center;align-items:center;margin-bottom:2px;">' +
-'<button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:999px;padding:8px 20px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;">🔍 Afficher tout</button>' +
-'</div>' +
-'<div id="posToolsContainer" style="display:none;flex-direction:column;gap:4px;margin-bottom:4px;padding:8px 12px;background:#F7F8FA;border-radius:12px;border:1px solid #EAECEF;">' +
+toggleToolsBtnHtml +
+'<div id="posToolsContainer" style="display:'+toolsDisplay+';flex-direction:column;gap:4px;margin-bottom:4px;padding:8px 12px;background:#F7F8FA;border-radius:12px;border:1px solid #EAECEF;">' +
 '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
 '<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;padding:2px 12px;position:relative;height:'+(isMobile?'34px':'40px')+';">' +
 '<i class="fas fa-search" style="color:#9A9FA5;margin-right:6px;font-size:'+(isMobile?'13px':'15px')+';"></i>' +
@@ -1211,8 +1229,10 @@ h+='</div>' +
 var canCredit=posCurrentClient&&posCurrentClient.id;
 var creditDisplay = '';
 if (posCurrentClient && posCurrentClient.id) creditDisplay = '<div id="clientCreditDisplay" style="font-size:20px;font-weight:700;padding:2px 0;text-align:right;"></div>';
+
+// 🆕 FORMULAIRE DE PAIEMENT : centré horizontalement, max 600px
 h+='<div class="pos-cart-header" style="padding:14px 18px;border-bottom:1px solid #EAECEF;flex-shrink:0;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;"><i class="fas fa-credit-card" style="color:#2563EB;"></i> Paiement</h3></div>' +
-'<div class="pos-payment-form" style="padding:14px 18px;flex:1;overflow-y:auto;max-height:400px;">' +
+'<div class="pos-payment-form" style="padding:14px 18px;flex:1;overflow-y:auto;max-height:400px;width:100%;max-width:600px;margin:0 auto;box-sizing:border-box;">' +
 '<div style="margin-bottom:8px;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;flex-shrink:0;">Client</label>' +
 '<button onclick="posAjouterNouveauClient()" style="background:#8B5CF6;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:'+(isMobile?'11px':'0.75rem')+';font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0;"><i class="fas fa-plus" style="font-size:'+(isMobile?'10px':'0.7rem')+';"></i> Nouveau</button></div>' +
 '<div style="position:relative;">' +
@@ -1249,18 +1269,6 @@ if(posStep===1) {
 posViewMode = 'categories';
 posSelectedCategoryForView = null;
 filterProductGrid();
-if (window.innerWidth >= 1024 && !window._posToolsInitialized) { posToolsVisible = true; window._posToolsInitialized = true; }
-var toolsContainer = document.getElementById('posToolsContainer');
-var toggleBtn = document.getElementById('posToggleToolsBtn');
-if (toolsContainer) { toolsContainer.style.display = posToolsVisible ? 'flex' : 'none'; if (posToolsVisible) toolsContainer.classList.add('visible'); }
-if (toggleBtn) { toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout'; toggleBtn.style.background = posToolsVisible ? '#FF5B5B' : '#FFFFFF'; toggleBtn.style.color = posToolsVisible ? '#fff' : '#1A1D1F'; }
-if (posToolsVisible) {
-var searchInput = document.getElementById('posSearchInput'); if (searchInput) searchInput.style.display = 'flex';
-var micBtn = document.getElementById('posMicBtn'); if (micBtn) micBtn.style.display = 'flex';
-var geminiBtn = document.getElementById('posGeminiBtn'); if (geminiBtn) geminiBtn.style.display = 'flex';
-var tablesBtn = document.getElementById('posTablesBtn'); if (tablesBtn) tablesBtn.style.display = 'inline-flex';
-var enligneBtn = document.getElementById('posEnLigneBtn'); if (enligneBtn) enligneBtn.style.display = 'inline-flex';
-}
 }
 if(posStep===2) {
 setTimeout(function() {
@@ -1591,7 +1599,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 // ============================================================
 // 🎨 STYLE MINIMALISTE BLEU/BLANC
 // Fond gris plat + cartes blanches + bleu #2563EB
-// Cohérent avec admin-crud.js (pages Produits/Catégories/Clients/Fournisseurs)
 // ============================================================
 (function injectMinimalistStyle() {
     var STYLE_ID = 'pos-minimalist-styles';
@@ -1642,7 +1649,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         gap: 14px !important;
     }
 
-    /* ============ 🎯 STEPS TRANSPARENT SUR FOND GRIS ============ */
     .pos-steps-nav {
         display: flex !important;
         justify-content: center !important;
@@ -2351,8 +2357,5 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     console.log('🎨 [POS] Style minimaliste bleu/blanc V4 injecté');
 })();
 
-console.log('🚀 E-SOLUTION - POS chargé avec corrections');
-console.log('🎨 STYLE MINIMALISTE V4 : steps transparents + cartes blanches individuelles + qualité renforcée');
-console.log('🎨 PANIER V2 : nom en haut + boutons à droite + sous-total à droite');
-console.log('🆕 RESPONSIVE : 320px → 4K, cartes adaptatives, tout s\'ajuste');
-console.log('✅ 💳 CRÉDIT CLIENT : lit UNIQUEMENT VENTES avec le MÊME filtre qu\'Admin-Credits (statut!=payé, remaining>0.01, total>0) → plus de divergence entre POS et Admin-Credits');
+console.log('🚀 E-SOLUTION - POS chargé avec corrections V4');
+console.log('🎨 V4 : steps shadow inline + formulaire paiement centré 600px + bouton "Afficher tout" masqué sur mobile + outils PC visibles par défaut + couleurs bleues uniquement');
