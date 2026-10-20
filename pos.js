@@ -27,6 +27,7 @@
 // ✅ MOBILE : outils visibles + panier 100% largeur + bouton flèche en HAUT
 // ✅ DESIGN ASTRONAUTE : glassmorphism + glow + gradients + animations fluides
 // ✅ BOUTON FLÈCHE DÉPLACÉ DANS <body> → au-dessus de TOUT (modales incluses)
+// ✅ BORDURES RETIRÉES : design épuré, séparations par ombres/ombres intérieures uniquement
 
 var posCart = [];
 var posStep = 1;
@@ -626,11 +627,11 @@ grid.style.flexWrap = 'wrap';
 grid.style.alignContent = 'start';
 
 var html = '';
-html += '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;margin-bottom:6px;background:#F7F8FA;border-radius:10px;border:1px solid #EAECEF;">';
-html += '<button onclick="retournerCategories()" style="display:flex;align-items:center;gap:6px;background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:10px;padding:8px 16px;font-size:0.85rem;font-weight:600;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04);">';
+html += '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;margin-bottom:6px;background:#F7F8FA;border-radius:10px;">';
+html += '<button onclick="retournerCategories()" style="display:flex;align-items:center;gap:6px;background:#FFFFFF;color:#1A1D1F;border:none;border-radius:10px;padding:8px 16px;font-size:0.85rem;font-weight:600;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.06);">';
 html += '<i class="fas fa-arrow-left"></i> Retour aux catégories';
 html += '</button>';
-if (posSelectedCategoryForView) html += '<span style="font-weight:700;font-size:0.9rem;color:#2563EB;background:#EFF6FF;padding:6px 14px;border-radius:10px;border:1px solid #BFDBFE;">📂 ' + escapeHtml(posSelectedCategoryForView) + '</span>';
+if (posSelectedCategoryForView) html += '<span style="font-weight:700;font-size:0.9rem;color:#2563EB;background:#EFF6FF;padding:6px 14px;border-radius:10px;">📂 ' + escapeHtml(posSelectedCategoryForView) + '</span>';
 html += '</div>';
 
 if(totalProducts === 0){
@@ -654,8 +655,8 @@ if(posSearchQuery) dn = dn.replace(new RegExp('(' + posSearchQuery.replace(/[.*+
 var isMobile = window.innerWidth < 700;
 
 var cardStyle = isMobile ?
-'padding:6px 4px;min-height:145px;max-height:170px;aspect-ratio:1/1;border-radius:10px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
-'padding:12px 10px;min-height:190px;max-height:200px;aspect-ratio:1/1;border-radius:14px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
+'padding:6px 4px;min-height:145px;max-height:170px;aspect-ratio:1/1;border-radius:10px;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
+'padding:12px 10px;min-height:190px;max-height:200px;aspect-ratio:1/1;border-radius:14px;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
 
 var imgStyle = isMobile ?
 'height:70px;width:70px;margin-bottom:5px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;' :
@@ -729,9 +730,9 @@ var imgContent = '';
 if (cat.imageBase64) imgContent = '<img src="' + escapeHtml(cat.imageBase64) + '" loading="lazy" alt="' + escapeHtml(cat.nom) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
 else imgContent = '<i class="fas fa-folder" style="font-size:' + folderSize + ';color:#2563EB;"></i>';
 
-var cardStyle = 'min-height:' + cardMinHeight + ';max-height:' + cardMaxHeight + ';padding:8px 4px;border-radius:14px;border:1px solid #EAECEF;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;background:#FFFFFF;cursor:pointer;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);gap:2px;box-shadow:0 1px 3px rgba(0,0,0,0.04);';
+var cardStyle = 'min-height:' + cardMinHeight + ';max-height:' + cardMaxHeight + ';padding:8px 4px;border-radius:14px;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;background:#FFFFFF;cursor:pointer;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);gap:2px;box-shadow:0 1px 3px rgba(0,0,0,0.06);';
 
-var imgStyle = 'width:' + imgSize + ';height:' + imgSize + ';border-radius:50%;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;margin-bottom:2px;border:1px solid #EAECEF;';
+var imgStyle = 'width:' + imgSize + ';height:' + imgSize + ';border-radius:50%;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;margin-bottom:2px;border:none;';
 
 var nameStyle = 'font-size:' + nameSize + ';font-weight:700;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;color:#1A1D1F;margin-top:2px;line-height:1.2;display:block;';
 
@@ -749,9 +750,9 @@ grid.innerHTML = html;
 function selectionnerCategorie(catName) {
 document.querySelectorAll('.pos-category-card').forEach(function(card) {
 card.classList.remove('active');
-card.style.borderColor = '#EAECEF';
+card.style.borderColor = 'transparent';
 card.style.transform = 'translateY(0)';
-card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
 card.style.background = '#FFFFFF';
 card.style.color = '#1A1D1F';
 });
@@ -760,7 +761,7 @@ document.querySelectorAll('.pos-category-card').forEach(function(card) {
 var nameSpan = card.querySelector('span:first-of-type');
 if (nameSpan && nameSpan.textContent.trim() === catName) {
 card.classList.add('active');
-card.style.borderColor = '#2563EB';
+card.style.borderColor = 'transparent';
 card.style.background = '#2563EB';
 card.style.color = '#FFFFFF';
 card.style.transform = 'translateY(-2px)';
@@ -780,9 +781,9 @@ if (isOnPOSPage()) filterProductGrid();
 function retournerCategories() {
 document.querySelectorAll('.pos-category-card').forEach(function(card) {
 card.classList.remove('active');
-card.style.borderColor = '#EAECEF';
+card.style.borderColor = 'transparent';
 card.style.transform = 'translateY(0)';
-card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
 card.style.background = '#FFFFFF';
 card.style.color = '#1A1D1F';
 });
@@ -842,7 +843,7 @@ var h = '';
 if (posFilteredClients.length === 0) h = '<div style="padding:8px;color:#9A9FA5;text-align:center;font-size:14px;">Aucun</div>';
 else {
 posFilteredClients.forEach(function(c){
-h += '<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #EAECEF;font-size:14px;">' + escapeHtml(c.nom)+' '+escapeHtml(c.prenom) + ' <span style="color:#9A9FA5;font-size:12px;">('+(c.telephone||'')+')</span></div>';
+h += '<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #F1F5F9;font-size:14px;">' + escapeHtml(c.nom)+' '+escapeHtml(c.prenom) + ' <span style="color:#9A9FA5;font-size:12px;">('+(c.telephone||'')+')</span></div>';
 });
 }
 d.innerHTML = h;
@@ -934,7 +935,7 @@ sortedCats.forEach(function(cat) {
 h += '<div style="margin-bottom:14px;"><label style="font-weight:700;font-size:0.9rem;display:block;margin-bottom:4px;">🥫 ' + escapeHtml(cat) + '</label><div style="display:flex;flex-wrap:wrap;gap:8px;">';
 grouped[cat].forEach(function(ing) {
 var disabled = ing.stockDisponible <= 0 ? 'disabled' : '';
-h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #EAECEF;border-radius:10px;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + (ing.stockDisponible <= 0 ? 'opacity:0.5;' : '') + '">';
+h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + (ing.stockDisponible <= 0 ? 'opacity:0.5;' : '') + '">';
 h += '<input type="checkbox" class="pos-interdit-check" value="' + escapeHtml(ing.nom) + '" ' + disabled + ' checked> ' + escapeHtml(ing.nom);
 if (ing.unite) h += ' (' + escapeHtml(ing.unite) + ')';
 h += '</label>';
@@ -944,11 +945,11 @@ h += '</div></div>';
 }
 
 h += '<div style="margin-bottom:12px;"><label style="font-weight:700;font-size:0.9rem;">🌶️ Épices:</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">';
-posEpicesList.forEach(function(s, idx) { h += '<label style="padding:6px 12px;border:1px solid #EAECEF;border-radius:10px;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-epice" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>'; });
+posEpicesList.forEach(function(s, idx) { h += '<label style="padding:6px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-epice" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>'; });
 h += '</div></div>';
 
 h += '<div style="margin-bottom:12px;"><label style="font-weight:700;font-size:0.9rem;">🧂 Sel:</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">';
-posSelList.forEach(function(s, idx) { h += '<label style="padding:6px 12px;border:1px solid #EAECEF;border-radius:10px;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-sel" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>'; });
+posSelList.forEach(function(s, idx) { h += '<label style="padding:6px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:pointer;font-size:0.85rem;"><input type="radio" name="pos-sel" value="' + s + '" ' + (idx === 0 ? 'checked' : '') + '> ' + s + '</label>'; });
 h += '</div></div>';
 
 h += '<div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify-content:flex-end;"><button class="btn-cancel" onclick="closeModal()" style="font-size:0.9rem;padding:10px 20px;">Annuler</button><button class="btn-save" onclick="posConfirmOptions()" style="font-size:0.9rem;padding:10px 24px;"><i class="fas fa-check"></i> Ajouter au panier</button></div>';
@@ -1027,17 +1028,17 @@ var nameSize = isMobile ? '13px' : '0.80rem';
 var priceSize = isMobile ? '11px' : '0.70rem';
 var totalSize = isMobile ? '14px' : '0.85rem';
 
-html += '<div class="pos-cart-item" style="display:flex;flex-direction:column;padding:10px 8px;border-bottom:1px solid #EAECEF;gap:6px;background:#FFFFFF;border-radius:10px;margin-bottom:4px;">' +
+html += '<div class="pos-cart-item" style="display:flex;flex-direction:column;padding:10px 8px;border-bottom:none;gap:6px;background:#FFFFFF;border-radius:10px;margin-bottom:4px;">' +
 '<div style="width:100%;font-size:'+nameSize+';font-weight:700;color:#1A1D1F;line-height:1.4;word-break:break-word;white-space:normal;">'+escapeHtml(it.nom)+opts+'</div>' +
 '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;">' +
 '<div style="display:flex;flex-direction:column;gap:2px;min-width:60px;">' +
 '<span style="font-size:'+priceSize+';color:#6F767E;font-weight:500;">'+it.prixUnitaire.toFixed(2)+' MAD</span>' +
 '</div>' +
 '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:1px solid #EAECEF;background:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-minus"></i></button>' +
-'<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:1px solid #EAECEF;border-radius:10px;padding:4px 4px;background:#FFFFFF;color:#1A1D1F;-moz-appearance:textfield;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:1px solid #EAECEF;background:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-plus"></i></button>' +
-'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:transparent;border:none;color:#FF5B5B;cursor:pointer;padding:6px;font-size:0.85rem;transition:all 0.15s;border-radius:8px;"><i class="fas fa-trash-alt"></i></button>' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:none;background:#F8FAFC;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-minus"></i></button>' +
+'<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:none;background:#F8FAFC;border-radius:10px;padding:4px 4px;color:#1A1D1F;-moz-appearance:textfield;">' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:none;background:#F8FAFC;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-plus"></i></button>' +
+'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:#FEF2F2;border:none;color:#FF5B5B;cursor:pointer;padding:6px;font-size:0.85rem;transition:all 0.15s;border-radius:10px;"><i class="fas fa-trash-alt"></i></button>' +
 '</div>' +
 '<div style="min-width:70px;text-align:right;flex-shrink:0;">' +
 '<span style="font-size:'+totalSize+';font-weight:800;color:#2563EB;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
@@ -1094,10 +1095,10 @@ var stepInactiveShadow = '0 1px 2px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.02)
 var stepSize = isMobile ? '14px' : '16px';
 
 var stepIndicator = '<div class="pos-steps-nav" style="display:flex;justify-content:center;gap:8px;padding:0;background:transparent;border:none;box-shadow:none;margin-bottom:8px;">' +
-'<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" onclick="posNaviguerEtape(1)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 1 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 1 ? '#FFFFFF' : '#6F767E') + ';border:1px solid ' + (posStep === 1 ? '#2563EB' : '#EAECEF') + ';box-shadow:' + (posStep === 1 ? stepActiveShadow : stepInactiveShadow) + ';">' +
+'<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" onclick="posNaviguerEtape(1)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 1 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 1 ? '#FFFFFF' : '#6F767E') + ';border:none;box-shadow:' + (posStep === 1 ? stepActiveShadow : stepInactiveShadow) + ';">' +
 '<span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:' + (posStep === 1 ? 'rgba(255,255,255,0.28)' : '#F7F8FA') + ';color:' + (posStep === 1 ? '#FFFFFF' : '#9A9FA5') + ';">1</span>' +
 '<span>Panier</span></div>' +
-'<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" onclick="posNaviguerEtape(2)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 2 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 2 ? '#FFFFFF' : '#6F767E') + ';border:1px solid ' + (posStep === 2 ? '#2563EB' : '#EAECEF') + ';box-shadow:' + (posStep === 2 ? stepActiveShadow : stepInactiveShadow) + ';">' +
+'<div class="pos-step ' + (posStep === 2 ? 'active' : '') + '" onclick="posNaviguerEtape(2)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:'+stepSize+';transition:all 0.2s ease;background:' + (posStep === 2 ? '#2563EB' : '#FFFFFF') + ';color:' + (posStep === 2 ? '#FFFFFF' : '#6F767E') + ';border:none;box-shadow:' + (posStep === 2 ? stepActiveShadow : stepInactiveShadow) + ';">' +
 '<span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:' + (posStep === 2 ? 'rgba(255,255,255,0.28)' : '#F7F8FA') + ';color:' + (posStep === 2 ? '#FFFFFF' : '#9A9FA5') + ';">2</span>' +
 '<span>Paiement</span></div></div>';
 
@@ -1118,10 +1119,10 @@ var clientName = '';
 if (posMultiPaniersData[cid] && posMultiPaniersData[cid].client) clientName = posMultiPaniersData[cid].client.name || '';
 var displayName = clientName ? clientName.substring(0, 12) : '';
 var bgColor = isActive ? '#EFF6FF' : '#FFFFFF';
-var borderColor = isActive ? '#2563EB' : '#EAECEF';
+var borderColor = 'transparent';
 var textColor = isActive ? '#2563EB' : '#1A1D1F';
 var fontWeight = isActive ? '700' : '500';
-multiCartBar += '<div style="display:flex;align-items:center;gap:2px;border:1px solid ' + borderColor + ';border-radius:10px;background:' + bgColor + ';padding:4px 10px;">';
+multiCartBar += '<div style="display:flex;align-items:center;gap:2px;border:none;border-radius:10px;background:' + bgColor + ';padding:4px 10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">';
 multiCartBar += '<button onclick="posSwitchToCart(\'' + cid + '\')" style="background:none;border:none;cursor:pointer;font-weight:' + fontWeight + ';font-size:13px;color:' + textColor + ';padding:2px 4px;">' + cid + ' (' + count + ')</button>';
 if (displayName) multiCartBar += '<span style="font-size:10px;color:#9A9FA5;max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(displayName) + '</span>';
 if (count > 0) multiCartBar += '<span style="font-size:10px;color:#9A9FA5;">' + total.toFixed(0) + ' MAD</span>';
@@ -1146,7 +1147,7 @@ var panelPadding = isMobile ? '8px' : '16px';
 // 🎯 Bouton "Afficher tout" SEULEMENT sur PC/tablette (pas mobile)
 var toggleToolsBtnHtml = isMobile
     ? ''  // pas de bouton sur mobile
-    : '<div style="display:flex;justify-content:center;align-items:center;margin-bottom:4px;"><button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:999px;padding:8px 20px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;">' + (posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout') + '</button></div>';
+    : '<div style="display:flex;justify-content:center;align-items:center;margin-bottom:4px;"><button id="posToggleToolsBtn" onclick="posToggleTools()" style="background:#FFFFFF;color:#1A1D1F;border:none;border-radius:999px;padding:8px 20px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;margin:0 auto;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' + (posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout') + '</button></div>';
 
 // ✅ MODIFIÉ : Outils TOUJOURS visibles (mobile ET PC)
 var toolsDisplay = 'flex';
@@ -1158,37 +1159,37 @@ var h='<div class="pos-container' + (posStep===2 ? ' pos-container-full' : '') +
 stepIndicator + multiCartBar +
 '<div class="pos-row" style="display:flex;flex-direction:column;gap:8px;width:100%;height:auto;">' +
 // ✅ MODIFIÉ : panneau produits 100% largeur sur mobile
-'<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:100%; max-width:100%; margin:0; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #EAECEF; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:'+(isMobile?'300px':'350px')+'; max-height:'+(isMobile?'55vh':'80vh')+'; flex:8;">' +
+'<div class="pos-products-panel" style="' + productPanelDisplay + ' padding:'+panelPadding+'; width:100%; max-width:100%; margin:0; background:#FFFFFF; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:none; display:flex; flex-direction:column; height:auto; overflow:visible; min-height:'+(isMobile?'300px':'350px')+'; max-height:'+(isMobile?'55vh':'80vh')+'; flex:8;">' +
 '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;">' +
 toggleToolsBtnHtml +
 // ✅ MODIFIÉ : class="visible" + display:flex !important pour forcer l'affichage sur mobile
-'<div id="posToolsContainer" class="visible" style="display:flex !important;flex-direction:column;gap:8px;margin-bottom:4px;padding:'+(isMobile?'0':'8px 12px')+';background:'+(isMobile?'transparent':'#F7F8FA')+';border-radius:12px;border:'+(isMobile?'none':'1px solid #EAECEF')+';">' +
+'<div id="posToolsContainer" class="visible" style="display:flex !important;flex-direction:column;gap:8px;margin-bottom:4px;padding:'+(isMobile?'0':'8px 12px')+';background:'+(isMobile?'transparent':'#F7F8FA')+';border-radius:12px;border:none;">' +
 // 🔍 Barre de recherche TOUJOURS visible
 '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">' +
-'<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;padding:2px 12px;position:relative;height:'+(isMobile?'38px':'40px')+';">' +
+'<div style="flex:1;min-width:120px;display:flex;align-items:center;background:#FFFFFF;border:none;border-radius:10px;padding:2px 12px;position:relative;height:'+(isMobile?'38px':'40px')+';box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
 '<i class="fas fa-search" style="color:#9A9FA5;margin-right:6px;font-size:'+(isMobile?'13px':'15px')+';"></i>' +
 '<input type="text" id="posSearchInput" placeholder="🔍 Rechercher un produit..." value="'+escapeHtml(posSearchQuery)+'" onkeyup="posSearchProducts(this.value); updateClearButtonVisibility();" oninput="updateClearButtonVisibility();" style="border:none;outline:none;padding:0;width:100%;background:transparent;font-size:'+(isMobile?'13px':'15px')+';padding-right:28px;color:#1A1D1F;">' +
 '<button id="posSearchClearBtn" onclick="clearPosSearch()" style="display:'+(posSearchQuery ? 'flex' : 'none')+';position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:2px;color:#9A9FA5;font-size:'+(isMobile?'14px':'16px')+';align-items:center;justify-content:center;"><i class="fas fa-times-circle"></i></button>' +
 '</div>' +
-'<button id="posMicBtn" title="Recherche vocale" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#6F767E;" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
-'<button id="posGeminiBtn" title="Commande vocale Gemini (FR)" style="background:#8B5CF6;border:none;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#fff;" onclick="posOuvrirCommandeVocaleGemini()"><i class="fas fa-robot"></i></button>' +
+'<button id="posMicBtn" title="Recherche vocale" style="background:#FFFFFF;border:none;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#6F767E;box-shadow:0 1px 3px rgba(0,0,0,0.06);" onclick="posToggleVoiceSearch()"><i class="fas fa-microphone"></i></button>' +
+'<button id="posGeminiBtn" title="Commande vocale Gemini (FR)" style="background:#8B5CF6;border:none;border-radius:10px;width:'+(isMobile?'38px':'40px')+';height:'+(isMobile?'38px':'40px')+';cursor:pointer;font-size:'+(isMobile?'14px':'16px')+';display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 2px 8px rgba(139,92,246,0.30);" onclick="posOuvrirCommandeVocaleGemini()"><i class="fas fa-robot"></i></button>' +
 '</div>' +
 // ✅ MODIFIÉ : Boutons Tables/En ligne TOUJOURS visibles (mobile ET PC)
 '<div style="display:flex;gap:6px;width:100%;">' +
 (window.posIsClientMode ? '' :
-'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;flex:1;justify-content:center;">🍽️ Tables <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
-'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;flex:1;justify-content:center;">🌐 En ligne <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
+'<button id="posTablesBtn" onclick="posAfficherCommandesTables()" style="background:#FFFFFF;border:none;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;flex:1;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.06);">🍽️ Tables <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesTablesCount+'</span></button>' +
+'<button id="posEnLigneBtn" onclick="navigateTo(\'commandes\')" style="background:#FFFFFF;border:none;border-radius:999px;padding:8px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;color:#1A1D1F;cursor:pointer;flex:1;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.06);">🌐 En ligne <span style="background:#FF5B5B;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">'+posCommandesEnLigneCount+'</span></button>'
 ) +
 '</div>' +
 '</div></div>' +
 '<div class="pos-products-grid" id="posProductGrid" style="grid-template-columns:'+gridCols+';gap:'+gridGap+';padding:'+gridPadding+';overflow-x:hidden;overflow-y:auto;flex-wrap:wrap;align-content:start;flex:1;contain:layout paint;content-visibility:auto;"></div>' +
 '</div>' +
 // ✅ MODIFIÉ : max-height calc(100vh - 140px) + overflow:hidden (au lieu de 60vh)
-'<div class="pos-cart-panel" style="' + (isMobile ? mobileCartStyle : 'width:100%;background:#FFFFFF;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);border:1px solid #EAECEF;display:flex;flex-direction:column;margin-top:4px;max-height:calc(100vh - 140px);flex:2;min-height:380px;overflow:hidden;') + '">';
+'<div class="pos-cart-panel" style="' + (isMobile ? mobileCartStyle : 'width:100%;background:#FFFFFF;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:none;display:flex;flex-direction:column;margin-top:4px;max-height:calc(100vh - 140px);flex:2;min-height:380px;overflow:hidden;') + '">';
 
 if(posStep===1){
 // ✅ MODIFIÉ : header sticky (reste visible en haut du panier)
-h+='<div class="pos-cart-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #EAECEF;flex-shrink:0;background:#FFFFFF;position:sticky;top:0;z-index:2;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';cursor:pointer;margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;" onclick="scrollToCart()"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i> Panier <span class="pos-cart-badge" style="background:#2563EB;color:#fff;border-radius:999px;padding:2px 10px;font-size:'+(isMobile?'12px':'0.75rem')+';font-weight:700;">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()" style="font-size:'+(isMobile?'12px':'0.8rem')+';background:transparent;color:#FF5B5B;border:1px solid transparent;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:600;"><i class="fas fa-trash-alt"></i> Vider</button></div>' +
+h+='<div class="pos-cart-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border:none;flex-shrink:0;background:#FFFFFF;position:sticky;top:0;z-index:2;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';cursor:pointer;margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;" onclick="scrollToCart()"><i class="fas fa-shopping-cart" style="color:#2563EB;"></i> Panier <span class="pos-cart-badge" style="background:#2563EB;color:#fff;border-radius:999px;padding:2px 10px;font-size:'+(isMobile?'12px':'0.75rem')+';font-weight:700;">'+posCart.length+'</span></h3><button class="pos-clear-btn" onclick="posResetCart()" style="font-size:'+(isMobile?'12px':'0.8rem')+';background:transparent;color:#FF5B5B;border:none;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:600;"><i class="fas fa-trash-alt"></i> Vider</button></div>' +
 // ✅ MODIFIÉ : flex:1 1 auto + max-height:none (le parent gère la hauteur)
 '<div class="pos-cart-items" style="flex:1 1 auto;overflow-y:auto;padding:8px 12px;min-height:'+cartItemsMinHeight+';max-height:none;">';
 if(posCart.length===0){ h+='<div class="pos-cart-empty" style="text-align:center;padding:20px;color:#9A9FA5;"><i class="fas fa-shopping-basket" style="font-size:'+(isMobile?'22px':'28px')+';"></i><p style="font-size:'+(isMobile?'12px':'0.8rem')+';margin-top:8px;">Panier vide</p></div>'; }
@@ -1204,26 +1205,26 @@ var qtySize = isMobile ? '0.85rem' : '0.75rem';
 var nameSize = isMobile ? '13px' : '0.80rem';
 var priceSize = isMobile ? '11px' : '0.70rem';
 var totalSize = isMobile ? '14px' : '0.85rem';
-h += '<div class="pos-cart-item" style="display:flex;flex-direction:column;padding:10px 8px;border-bottom:1px solid #EAECEF;gap:6px;background:#FFFFFF;border-radius:10px;margin-bottom:4px;">' +
+h += '<div class="pos-cart-item" style="display:flex;flex-direction:column;padding:10px 8px;border-bottom:none;gap:6px;background:#FFFFFF;border-radius:10px;margin-bottom:4px;">' +
 '<div style="width:100%;font-size:'+nameSize+';font-weight:700;color:#1A1D1F;line-height:1.4;word-break:break-word;white-space:normal;">'+escapeHtml(it.nom)+opts+'</div>' +
 '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;">' +
 '<div style="display:flex;flex-direction:column;gap:2px;min-width:60px;"><span style="font-size:'+priceSize+';color:#6F767E;font-weight:500;">'+it.prixUnitaire.toFixed(2)+' MAD</span></div>' +
 '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:1px solid #EAECEF;background:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;"><i class="fas fa-minus"></i></button>' +
-'<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:1px solid #EAECEF;border-radius:10px;padding:4px 4px;background:#FFFFFF;color:#1A1D1F;-moz-appearance:textfield;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:1px solid #EAECEF;background:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;"><i class="fas fa-plus"></i></button>' +
-'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:transparent;border:none;color:#FF5B5B;cursor:pointer;padding:6px;font-size:0.85rem;border-radius:8px;"><i class="fas fa-trash-alt"></i></button>' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:none;background:#F8FAFC;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;"><i class="fas fa-minus"></i></button>' +
+'<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:none;background:#F8FAFC;border-radius:10px;padding:4px 4px;color:#1A1D1F;-moz-appearance:textfield;">' +
+'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:none;background:#F8FAFC;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;"><i class="fas fa-plus"></i></button>' +
+'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:#FEF2F2;border:none;color:#FF5B5B;cursor:pointer;padding:6px;font-size:0.85rem;border-radius:10px;"><i class="fas fa-trash-alt"></i></button>' +
 '</div>' +
 '<div style="min-width:70px;text-align:right;flex-shrink:0;"><span style="font-size:'+totalSize+';font-weight:800;color:#2563EB;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span></div>' +
 '</div></div>';
 }
 }
 h+='</div>' +
-'<div style="padding:8px 12px;display:flex;gap:6px;align-items:center;flex-shrink:0;border-top:1px solid #EAECEF;background:#FFFFFF;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:6px 10px;border:1px solid #EAECEF;border-radius:10px;font-size:'+(isMobile?'13px':'0.85rem')+';background:#FFFFFF;color:#1A1D1F;"></div>' +
+'<div style="padding:8px 12px;display:flex;gap:6px;align-items:center;flex-shrink:0;border:none;background:#FFFFFF;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Remise:</label><input type="number" id="posDiscountMAD" value="'+posDiscountMAD+'" min="0" step="0.01" onchange="posUpdateDiscountMAD(this.value)" style="width:80px;padding:6px 10px;border:none;background:#F8FAFC;border-radius:10px;font-size:'+(isMobile?'13px':'0.85rem')+';color:#1A1D1F;"></div>' +
 // ✅ MODIFIÉ : footer sticky (total + bouton Valider toujours visibles en bas)
 '<div class="pos-cart-footer" style="padding:0 12px 12px 12px;flex-shrink:0;background:#FFFFFF;position:sticky;bottom:0;z-index:2;">' +
 (posDiscountMAD>0?'<div style="display:flex;justify-content:space-between;font-size:'+(isMobile?'12px':'0.85rem')+';color:#6F767E;padding:4px 0;"><span>Sous-total</span><span>'+st.toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;color:#FF5B5B;font-size:'+(isMobile?'12px':'0.85rem')+';padding:4px 0;"><span>Remise</span><span>-'+posDiscountMAD.toFixed(2)+'</span></div>':'') +
-'<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:'+(isMobile?'18px':'20px')+';font-weight:800;padding:14px 18px;border:1px solid #EAECEF;background:#F7F8FA;border-radius:10px;margin:8px 0 12px 0;"><span style="color:#6F767E;">Total</span><span style="color:#1A1D1F;">'+t.toFixed(2)+' MAD</span></div>' +
+'<div class="pos-cart-total-row" style="display:flex;justify-content:space-between;font-size:'+(isMobile?'18px':'20px')+';font-weight:800;padding:14px 18px;border:none;background:#F7F8FA;border-radius:10px;margin:8px 0 12px 0;"><span style="color:#6F767E;">Total</span><span style="color:#1A1D1F;">'+t.toFixed(2)+' MAD</span></div>' +
 '<button class="pos-validate-btn" onclick="posGoToStep2()" '+(posCart.length===0?'disabled':'') + '><i class="fas fa-check-circle"></i> Valider</button>' +
 // ✅ MODIFIÉ : bouton flèche ↑ avec class pour déplacement dans <body>
 '<button class="pos-scroll-top-btn" onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><i class="fas fa-arrow-up"></i></button>' +
@@ -1234,31 +1235,31 @@ var creditDisplay = '';
 if (posCurrentClient && posCurrentClient.id) creditDisplay = '<div id="clientCreditDisplay" style="font-size:20px;font-weight:700;padding:2px 0;text-align:right;"></div>';
 
 // 🎯 Formulaire paiement centré 600px max
-h+='<div class="pos-cart-header" style="padding:14px 18px;border-bottom:1px solid #EAECEF;flex-shrink:0;background:#FFFFFF;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;"><i class="fas fa-credit-card" style="color:#2563EB;"></i> Paiement</h3></div>' +
+h+='<div class="pos-cart-header" style="padding:14px 18px;border:none;flex-shrink:0;background:#FFFFFF;"><h3 style="font-size:'+(isMobile?'16px':'1rem')+';margin:0;display:flex;align-items:center;gap:8px;color:#1A1D1F;"><i class="fas fa-credit-card" style="color:#2563EB;"></i> Paiement</h3></div>' +
 '<div class="pos-payment-form" style="padding:14px 18px;flex:1;overflow-y:auto;max-height:400px;width:100%;max-width:600px;margin:0 auto;box-sizing:border-box;">' +
 '<div style="margin-bottom:8px;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;flex-shrink:0;">Client</label>' +
 '<button onclick="posAjouterNouveauClient()" style="background:#8B5CF6;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:'+(isMobile?'11px':'0.75rem')+';font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0;"><i class="fas fa-plus" style="font-size:'+(isMobile?'10px':'0.7rem')+';"></i> Nouveau</button></div>' +
 '<div style="position:relative;">' +
-'<div style="display:flex;align-items:center;background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;padding:4px 10px;position:relative;">' +
+'<div style="display:flex;align-items:center;background:#FFFFFF;border:none;border-radius:10px;padding:4px 10px;position:relative;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
 '<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:6px 0;width:100%;background:transparent;font-size:16px !important;font-weight:700 !important;padding-right:24px;color:#1A1D1F;">' +
 '<button id="posClientClearBtn" onclick="clearClientSearch()" style="display:'+((posCurrentClient && posCurrentClient.name) ? 'flex' : 'none')+';position:absolute;right:4px;background:none;border:none;cursor:pointer;padding:2px;color:#9A9FA5;font-size:1rem;"><i class="fas fa-times-circle"></i></button>' +
 '</div>' +
-'<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #EAECEF;border-radius:0 0 10px 10px;max-height:150px;overflow-y:auto;z-index:50;"></div>' +
+'<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:none;border-radius:0 0 10px 10px;max-height:150px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>' +
 '</div>'+creditDisplay+'</div>' +
 '<div style="margin:8px 0;font-size:0.7rem;text-align:center;color:#9A9FA5;">— OU —</div>' +
-'<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px 10px;border:1px solid #EAECEF;border-radius:10px;font-size:'+(isMobile?'14px':'0.9rem')+';background:#FFFFFF;color:#1A1D1F;"></div>' +
-'<div style="margin-bottom:8px;"><div style="padding:10px 14px;background:#F7F8FA;border-radius:10px;border:1px solid #EAECEF;">' +
+'<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Table</label><input type="text" id="posTableNum" value="'+escapeHtml(posCurrentTable)+'" onchange="posSetTable(this.value)" style="width:100%;padding:8px 10px;border:none;background:#F8FAFC;border-radius:10px;font-size:'+(isMobile?'14px':'0.9rem')+';color:#1A1D1F;"></div>' +
+'<div style="margin-bottom:8px;"><div style="padding:10px 14px;background:#F7F8FA;border-radius:10px;border:none;">' +
 '<div style="font-size:'+(isMobile?'16px':'18px')+';font-weight:600;color:#6F767E;">Articles: '+posCart.length+'</div>' +
 (posDiscountMAD>0?'<div style="color:#FF5B5B;font-size:'+(isMobile?'14px':'16px')+';">Remise: -'+posDiscountMAD.toFixed(2)+'</div>':'') +
 '<div style="font-size:'+(isMobile?'18px':'20px')+';font-weight:800;color:#1A1D1F;margin-top:4px;">Total: '+t.toFixed(2)+' MAD</div></div></div>' +
-'<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px 10px;border:1px solid #EAECEF;border-radius:10px;font-size:'+(isMobile?'14px':'0.9rem')+';background:#FFFFFF;color:#1A1D1F;"></div>' +
+'<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Vendeur</label><input type="text" id="posVendeur" value="'+(window.currentUserData?escapeHtml(window.currentUserData.userData.prenom+' '+window.currentUserData.userData.nom):'')+'" style="width:100%;padding:8px 10px;border:none;background:#F8FAFC;border-radius:10px;font-size:'+(isMobile?'14px':'0.9rem')+';color:#1A1D1F;"></div>' +
 '<div style="margin-bottom:8px;"><div style="display:flex;gap:6px;">' +
 '<button class="pos-payment-btn '+(posPaymentMethod==='espece'?'active':'')+'" onclick="posSetPaymentMethod(\'espece\')" style="font-size:'+(isMobile?'13px':'0.9rem')+' !important;font-weight:700 !important;padding:10px 14px;height:auto;min-height:40px;flex:1;"><i class="fas fa-money-bill-wave"></i> Espèces</button>' +
 '<button class="pos-payment-btn '+(posPaymentMethod==='credit'?'active':'')+'" onclick="posSetPaymentMethod(\'credit\')" id="posCreditBtn" '+(canCredit?'':'disabled')+' style="font-size:'+(isMobile?'13px':'0.9rem')+' !important;font-weight:700 !important;padding:10px 14px;height:auto;min-height:40px;flex:1;"><i class="fas fa-credit-card"></i> Crédit</button>' +
 '<button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled')+' style="font-size:'+(isMobile?'13px':'0.9rem')+' !important;font-weight:700 !important;padding:10px 14px;height:auto;min-height:40px;flex:1;"><i class="fas fa-hand-holding-usd"></i> Partiel</button>' +
 '</div></div>';
 if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') {
-h+='<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:10px 14px;border:1px solid #EAECEF;border-radius:10px;font-size:22px !important;font-weight:700 !important;background:#FFFFFF;color:#1A1D1F;"><div id="posChangeDisplay" style="font-size:20px;font-weight:700;padding:4px 0;"></div></div>';
+h+='<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:10px 14px;border:none;background:#F8FAFC;border-radius:10px;font-size:22px !important;font-weight:700 !important;color:#1A1D1F;"><div id="posChangeDisplay" style="font-size:20px;font-weight:700;padding:4px 0;"></div></div>';
 }
 h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()"><i class="fas fa-check-circle"></i> Finaliser</button>' +
 // ✅ MODIFIÉ : bouton flèche ↑ avec class pour déplacement dans <body>
@@ -1486,7 +1487,7 @@ if (input && btn) btn.style.display = (input.value && input.value.length > 0) ? 
 function goBackToPOS(){ if(window.currentUserData&&(window.currentUserData.userData.role==='caissier'||window.currentUserData.userData.role==='admin')){ if(posCart.length>0&&posStep===1){ if(!confirm('⚠️ '+posCart.length+' article(s) dans le panier. Garder ?')) posResetCart(); } navigateTo('pos'); } }
 
 function posAjouterNouveauClient() {
-    var modalHtml = '<div style="padding:10px;"><h3 style="margin-bottom:15px;font-size:1.3rem;display:flex;align-items:center;gap:10px;"><i class="fas fa-user-plus" style="color:#2563EB;"></i> Ajouter un nouveau client</h3><p style="color:#6F767E;font-size:0.9rem;margin-bottom:15px;">Remplissez les informations ci-dessous. Seuls le nom et prénom sont obligatoires.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Prénom *</label><input type="text" id="posNewClientPrenom" placeholder="Prénom" style="width:100%;padding:12px;border:1px solid #EAECEF;border-radius:10px;font-size:1rem;"></div><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Nom *</label><input type="text" id="posNewClientNom" placeholder="Nom" style="width:100%;padding:12px;border:1px solid #EAECEF;border-radius:10px;font-size:1rem;"></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;"><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Téléphone</label><input type="text" id="posNewClientTelephone" placeholder="Téléphone" style="width:100%;padding:12px;border:1px solid #EAECEF;border-radius:10px;font-size:1rem;"></div><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Email</label><input type="email" id="posNewClientEmail" placeholder="Email" style="width:100%;padding:12px;border:1px solid #EAECEF;border-radius:10px;font-size:1rem;"></div></div><div style="margin-top:10px;"><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Adresse</label><input type="text" id="posNewClientAdresse" placeholder="Adresse" style="width:100%;padding:12px;border:1px solid #EAECEF;border-radius:10px;font-size:1rem;"></div><div style="display:flex;gap:12px;justify-content:flex-end;margin-top:18px;"><button class="btn-cancel" onclick="closeModal()" style="padding:12px 24px;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:1rem;background:#F7F8FA;">Annuler</button><button id="posConfirmNewClientBtn" style="background:#2563EB;color:#fff;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-weight:700;font-size:1rem;display:flex;align-items:center;gap:8px;"><i class="fas fa-check"></i> Ajouter</button></div></div>';
+    var modalHtml = '<div style="padding:10px;"><h3 style="margin-bottom:15px;font-size:1.3rem;display:flex;align-items:center;gap:10px;"><i class="fas fa-user-plus" style="color:#2563EB;"></i> Ajouter un nouveau client</h3><p style="color:#6F767E;font-size:0.9rem;margin-bottom:15px;">Remplissez les informations ci-dessous. Seuls le nom et prénom sont obligatoires.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Prénom *</label><input type="text" id="posNewClientPrenom" placeholder="Prénom" style="width:100%;padding:12px;border:none;background:#F8FAFC;border-radius:10px;font-size:1rem;"></div><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Nom *</label><input type="text" id="posNewClientNom" placeholder="Nom" style="width:100%;padding:12px;border:none;background:#F8FAFC;border-radius:10px;font-size:1rem;"></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;"><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Téléphone</label><input type="text" id="posNewClientTelephone" placeholder="Téléphone" style="width:100%;padding:12px;border:none;background:#F8FAFC;border-radius:10px;font-size:1rem;"></div><div><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Email</label><input type="email" id="posNewClientEmail" placeholder="Email" style="width:100%;padding:12px;border:none;background:#F8FAFC;border-radius:10px;font-size:1rem;"></div></div><div style="margin-top:10px;"><label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Adresse</label><input type="text" id="posNewClientAdresse" placeholder="Adresse" style="width:100%;padding:12px;border:none;background:#F8FAFC;border-radius:10px;font-size:1rem;"></div><div style="display:flex;gap:12px;justify-content:flex-end;margin-top:18px;"><button class="btn-cancel" onclick="closeModal()" style="padding:12px 24px;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:1rem;background:#F7F8FA;">Annuler</button><button id="posConfirmNewClientBtn" style="background:#2563EB;color:#fff;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-weight:700;font-size:1rem;display:flex;align-items:center;gap:8px;"><i class="fas fa-check"></i> Ajouter</button></div></div>';
     openModal('➕ Nouveau client', modalHtml);
     setTimeout(function() { var prenomInput = document.getElementById('posNewClientPrenom'); if (prenomInput) prenomInput.focus(); }, 300);
     document.getElementById('posConfirmNewClientBtn').addEventListener('click', function() { posConfirmerAjoutClient(); });
@@ -1623,6 +1624,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
 // ============================================================
 // 🎨 STYLE ASTRONAUTE MINIMALISTE (glassmorphism + glow + gradients)
+// ✅ BORDURES RETIRÉES : design épuré, séparations par ombres uniquement
 // ============================================================
 (function injectMinimalistStyle() {
     var STYLE_ID = 'pos-astronaut-styles';
@@ -1694,7 +1696,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
         border-radius: var(--r-radius) !important;
         box-shadow: var(--r-shadow-card), inset 0 1px 0 rgba(255,255,255,0.6) !important;
-        border: 1px solid rgba(226,232,240,0.8) !important;
+        border: none !important;
         margin-bottom: 14px !important;
     }
 
@@ -1704,6 +1706,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         padding: 4px 10px !important;
         background: rgba(255,255,255,0.6) !important;
         backdrop-filter: blur(8px) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
     }
 
     .pos-multi-carts-bar > div:hover {
@@ -1718,14 +1721,14 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: 0 6px 16px rgba(37,99,235,0.35) !important;
     }
 
-    /* ========== PANELS (glassmorphism subtil) ========== */
+    /* ========== PANELS (glassmorphism subtil, sans bordure) ========== */
     .pos-products-panel {
         background: rgba(255,255,255,0.92) !important;
         backdrop-filter: blur(10px) !important;
         -webkit-backdrop-filter: blur(10px) !important;
         border-radius: 18px !important;
         box-shadow: var(--r-shadow-card), inset 0 1px 0 rgba(255,255,255,0.8) !important;
-        border: 1px solid rgba(226,232,240,0.9) !important;
+        border: none !important;
         padding: 16px !important;
     }
 
@@ -1735,7 +1738,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         -webkit-backdrop-filter: blur(10px) !important;
         border-radius: 18px !important;
         box-shadow: var(--r-shadow-card), inset 0 1px 0 rgba(255,255,255,0.8) !important;
-        border: 1px solid rgba(226,232,240,0.9) !important;
+        border: none !important;
         overflow: hidden !important;
         transition: box-shadow 0.3s ease !important;
     }
@@ -1755,14 +1758,12 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         background: transparent !important;
     }
 
-    /* ========== CARTES PRODUITS (astronaute minimaliste) ========== */
+    /* ========== CARTES PRODUITS (astronaute minimaliste, sans bordure) ========== */
     .pos-product-card {
         background: linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%) !important;
-        border: 1px solid #E2E8F0 !important;
+        border: none !important;
         border-radius: 14px !important;
-        box-shadow:
-            0 1px 3px rgba(0,0,0,0.06),
-            0 0 0 0 rgba(37,99,235,0) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         cursor: pointer !important;
         overflow: hidden !important;
@@ -1772,30 +1773,11 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         position: relative !important;
     }
 
-    .pos-product-card::before {
-        content: '' !important;
-        position: absolute !important;
-        inset: 0 !important;
-        border-radius: 14px !important;
-        padding: 1px !important;
-        background: linear-gradient(135deg, rgba(37,99,235,0.0), rgba(37,99,235,0.0)) !important;
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-        -webkit-mask-composite: xor !important;
-        mask-composite: exclude !important;
-        pointer-events: none !important;
-        transition: background 0.25s ease !important;
-    }
-
     .pos-product-card:hover {
         transform: translateY(-4px) !important;
-        border-color: transparent !important;
         box-shadow:
             0 12px 28px rgba(37,99,235,0.18),
             0 4px 10px rgba(37,99,235,0.10) !important;
-    }
-
-    .pos-product-card:hover::before {
-        background: linear-gradient(135deg, #3B82F6, #8B5CF6) !important;
     }
 
     .pos-product-card:active {
@@ -1814,7 +1796,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border-radius: 10px !important;
         overflow: hidden !important;
         background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%) !important;
-        border: 1px solid #E2E8F0 !important;
+        border: none !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -1858,10 +1840,10 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         color: var(--r-text-3) !important;
     }
 
-    /* ========== CARTES CATÉGORIES (astronaute) ========== */
+    /* ========== CARTES CATÉGORIES (astronaute, sans bordure) ========== */
     .pos-category-card {
         background: linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%) !important;
-        border: 1px solid #E2E8F0 !important;
+        border: none !important;
         border-radius: 18px !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -1870,7 +1852,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     .pos-category-card:hover {
         transform: translateY(-4px) !important;
-        border-color: #BFDBFE !important;
         box-shadow:
             0 14px 32px rgba(37,99,235,0.18),
             0 4px 10px rgba(37,99,235,0.08) !important;
@@ -1878,7 +1859,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     .pos-category-card.active {
         background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%) !important;
-        border: 2px solid #2563EB !important;
+        border: none !important;
         color: #1D4ED8 !important;
         box-shadow:
             0 10px 28px rgba(37,99,235,0.30),
@@ -1888,17 +1869,15 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-category-card .category-image {
         border-radius: 50% !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-        border: 2px solid #E2E8F0 !important;
-        transition: transform 0.25s ease, border-color 0.25s ease !important;
+        border: none !important;
+        transition: transform 0.25s ease !important;
     }
 
     .pos-category-card:hover .category-image {
         transform: scale(1.05) !important;
-        border-color: #BFDBFE !important;
     }
 
     .pos-category-card.active .category-image {
-        border-color: #2563EB !important;
         box-shadow: 0 4px 16px rgba(37,99,235,0.30) !important;
     }
 
@@ -1931,7 +1910,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     /* ========== HEADER PANIER ========== */
     .pos-cart-header {
         background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%) !important;
-        border-bottom: 1px solid #E2E8F0 !important;
+        border: none !important;
     }
 
     .pos-cart-header h3 i {
@@ -1947,26 +1926,25 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: 0 2px 8px rgba(37,99,235,0.35) !important;
     }
 
-    /* ========== ARTICLES PANIER (glassmorphism) ========== */
+    /* ========== ARTICLES PANIER (glassmorphism, sans bordure) ========== */
     .pos-cart-item {
         background: rgba(255,255,255,0.9) !important;
         backdrop-filter: blur(4px) !important;
-        border: 1px solid #E2E8F0 !important;
+        border: none !important;
         border-radius: 12px !important;
         transition: all 0.2s ease !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
     }
 
     .pos-cart-item:hover {
-        border-color: #BFDBFE !important;
         box-shadow: 0 4px 12px rgba(37,99,235,0.10) !important;
         background: rgba(255,255,255,1) !important;
     }
 
-    /* ========== BOUTONS +/- QUANTITÉ (astronaute) ========== */
+    /* ========== BOUTONS +/- QUANTITÉ (astronaute, sans bordure) ========== */
     .pos-qty-btn {
         background: #F8FAFC !important;
-        border: 1.5px solid #E2E8F0 !important;
+        border: none !important;
         color: #64748B !important;
         border-radius: var(--r-radius-sm) !important;
         cursor: pointer !important;
@@ -1986,7 +1964,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-qty-btn:hover {
         background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
         color: #fff !important;
-        border-color: #2563EB !important;
         transform: scale(1.08) !important;
         box-shadow: 0 4px 12px rgba(37,99,235,0.35) !important;
     }
@@ -1995,14 +1972,14 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         transform: scale(0.92) !important;
     }
 
-    /* ========== INPUT QUANTITÉ ========== */
+    /* ========== INPUT QUANTITÉ (sans bordure) ========== */
     .pos-qty-input {
-        border: 1.5px solid #E2E8F0 !important;
+        border: none !important;
         border-radius: var(--r-radius-sm) !important;
         color: var(--r-text) !important;
         font-weight: 700 !important;
         text-align: center !important;
-        background: #FFFFFF !important;
+        background: #F8FAFC !important;
         width: 64px !important;
         min-width: 64px !important;
         height: 44px !important;
@@ -2013,11 +1990,11 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     .pos-qty-input:focus {
         outline: none !important;
-        border-color: var(--r-blue) !important;
+        background: #FFFFFF !important;
         box-shadow: var(--r-glow) !important;
     }
 
-    /* ========== BOUTON SUPPRIMER ARTICLE ========== */
+    /* ========== BOUTON SUPPRIMER ARTICLE (sans bordure) ========== */
     .pos-remove-btn {
         width: 44px !important;
         height: 44px !important;
@@ -2047,10 +2024,10 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         transform: scale(0.92) !important;
     }
 
-    /* ========== TOTAL ROW (glow bleu) ========== */
+    /* ========== TOTAL ROW (glow bleu, sans bordure) ========== */
     .pos-cart-total-row {
         background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%) !important;
-        border: 1.5px solid #BFDBFE !important;
+        border: none !important;
         border-radius: 12px !important;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.6) !important;
     }
@@ -2069,7 +2046,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         font-size: 1.15rem !important;
     }
 
-    /* ========== BOUTON VALIDER / FINALISER (astronaute) ========== */
+    /* ========== BOUTON VALIDER / FINALISER (astronaute, sans bordure) ========== */
     .pos-validate-btn,
     .pos-finalize-btn {
         background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%) !important;
@@ -2131,10 +2108,10 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         cursor: not-allowed !important;
     }
 
-    /* ========== BOUTONS PAIEMENT ========== */
+    /* ========== BOUTONS PAIEMENT (sans bordure) ========== */
     .pos-payment-btn {
-        background: #FFFFFF !important;
-        border: 1.5px solid #E2E8F0 !important;
+        background: #F8FAFC !important;
+        border: none !important;
         color: #64748B !important;
         border-radius: 12px !important;
         font-weight: 700 !important;
@@ -2150,8 +2127,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     }
 
     .pos-payment-btn:hover:not(:disabled) {
-        background: #F8FAFC !important;
-        border-color: #CBD5E1 !important;
+        background: #F1F5F9 !important;
         color: #0F172A !important;
         transform: translateY(-1px) !important;
     }
@@ -2159,36 +2135,33 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     .pos-payment-btn.active {
         background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
         color: #fff !important;
-        border-color: #2563EB !important;
         box-shadow: 0 6px 18px rgba(37,99,235,0.30) !important;
     }
 
     #posCreditBtn.active {
         background: linear-gradient(135deg, #F59E0B, #D97706) !important;
-        border-color: #F59E0B !important;
         color: #fff !important;
         box-shadow: 0 6px 18px rgba(245,158,11,0.35) !important;
     }
 
     #posPartielBtn.active {
         background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
-        border-color: #8B5CF6 !important;
         color: #fff !important;
         box-shadow: 0 6px 18px rgba(139,92,246,0.35) !important;
     }
 
-    /* ========== BOUTON MICRO / GEMINI ========== */
+    /* ========== BOUTON MICRO / GEMINI (sans bordure) ========== */
     #posMicBtn {
         background: #FFFFFF !important;
-        border: 1.5px solid #E2E8F0 !important;
+        border: none !important;
         color: #64748B !important;
         transition: all 0.2s ease !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
     }
 
     #posMicBtn:hover {
         background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
         color: #fff !important;
-        border-color: #2563EB !important;
         transform: scale(1.05) !important;
         box-shadow: 0 4px 12px rgba(37,99,235,0.30) !important;
     }
@@ -2207,21 +2180,21 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: 0 6px 16px rgba(139,92,246,0.45) !important;
     }
 
-    /* ========== BOUTONS TABLES / EN LIGNE ========== */
+    /* ========== BOUTONS TABLES / EN LIGNE (sans bordure) ========== */
     #posTablesBtn,
     #posEnLigneBtn {
         background: #FFFFFF !important;
-        border: 1.5px solid #E2E8F0 !important;
+        border: none !important;
         color: #0F172A !important;
         border-radius: 999px !important;
         font-weight: 600 !important;
         transition: all 0.2s ease !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
     }
 
     #posTablesBtn:hover,
     #posEnLigneBtn:hover {
         background: #EFF6FF !important;
-        border-color: #2563EB !important;
         color: #2563EB !important;
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 12px rgba(37,99,235,0.12) !important;
@@ -2236,20 +2209,19 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: 0 1px 3px rgba(239,68,68,0.35) !important;
     }
 
-    /* ========== BOUTON AFFICHER TOUT ========== */
+    /* ========== BOUTON AFFICHER TOUT (sans bordure) ========== */
     #posToggleToolsBtn {
         background: rgba(255,255,255,0.9) !important;
         color: var(--r-text) !important;
-        border: 1px solid #E2E8F0 !important;
+        border: none !important;
         border-radius: 999px !important;
         font-weight: 600 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
         transition: all 0.2s ease !important;
     }
 
     #posToggleToolsBtn:hover {
         background: #F8FAFC !important;
-        border-color: #CBD5E1 !important;
         transform: translateY(-1px) !important;
     }
 
@@ -2342,35 +2314,34 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         .pos-categories-grid { gap: 8px !important; }
     }
 
-    /* ========== DARK MODE ========== */
+    /* ========== DARK MODE (sans bordures) ========== */
     [data-theme="dark"] .pos-product-card,
     [data-theme="dark"] .pos-category-card {
         background: linear-gradient(135deg, #0D1117 0%, #161B22 100%) !important;
-        border-color: #30363D !important;
+        border: none !important;
     }
     [data-theme="dark"] .pos-product-card:hover,
     [data-theme="dark"] .pos-category-card:hover {
-        border-color: #2563EB !important;
         box-shadow: 0 12px 28px rgba(37,99,235,0.30) !important;
     }
     [data-theme="dark"] .pos-category-card.active {
         background: linear-gradient(135deg, #1C2333 0%, #1E293B 100%) !important;
-        border-color: #2563EB !important;
+        border: none !important;
     }
     [data-theme="dark"] .pos-cart-item {
         background: rgba(22,27,34,0.9) !important;
-        border-color: #30363D !important;
+        border: none !important;
     }
     [data-theme="dark"] .pos-cart-total-row {
         background: linear-gradient(135deg, #1C2333 0%, #1E293B 100%) !important;
-        border-color: #2563EB !important;
+        border: none !important;
     }
     [data-theme="dark"] .pos-cart-total-row span:last-child {
         color: #60A5FA !important;
     }
     [data-theme="dark"] .pos-qty-btn {
         background: #1C2333 !important;
-        border-color: #30363D !important;
+        border: none !important;
         color: #8B949E !important;
     }
     [data-theme="dark"] .pos-qty-btn:hover {
@@ -2379,7 +2350,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     }
     [data-theme="dark"] .pos-qty-input {
         background: #0D1117 !important;
-        border-color: #30363D !important;
+        border: none !important;
         color: #F0F6FC !important;
     }
     [data-theme="dark"] .pos-product-name,
@@ -2391,17 +2362,17 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     }
     [data-theme="dark"] .pos-multi-carts-bar {
         background: rgba(22,27,34,0.72) !important;
-        border-color: #30363D !important;
+        border: none !important;
     }
     [data-theme="dark"] .pos-products-panel,
     [data-theme="dark"] .pos-cart-panel {
         background: rgba(22,27,34,0.92) !important;
-        border-color: #30363D !important;
+        border: none !important;
     }
     `;
 
     document.head.appendChild(styles);
-    console.log('🚀 [POS] Style ASTRONAUTE injecté (glassmorphism + glow + gradients)');
+    console.log('🚀 [POS] Style ASTRONAUTE injecté (glassmorphism + glow + gradients, sans bordures)');
 })();
 
 // ============================================================
@@ -2491,8 +2462,9 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     relocate();
 })();
 
-console.log('🚀 E-SOLUTION - POS V5 ASTRONAUTE');
+console.log('🚀 E-SOLUTION - POS V5 ASTRONAUTE (sans bordures)');
 console.log('✅ Design glassmorphism + glow + gradients');
+console.log('✅ BORDURES RETIRÉES : séparations par ombres uniquement');
 console.log('✅ Recherche + Tables/En ligne visibles sur PC ET mobile');
 console.log('✅ Panier 100% largeur sur mobile + marges propres');
 console.log('✅ Bouton flèche ↑ DÉPLACÉ DANS <body> → 1ère couche absolue');
