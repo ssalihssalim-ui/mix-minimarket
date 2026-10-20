@@ -2280,11 +2280,11 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         }
         .pos-product-price,
         .pos-promo-price {
-            font-size: 12px !important;
+            font-size: 13px !important;
             font-weight: 800 !important;
         }
         .pos-product-name {
-            font-size: 10px !important;
+            font-size: 11px !important;
             font-weight: 600 !important;
         }
         .pos-qty-btn,
@@ -2505,6 +2505,103 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     `;
     document.head.appendChild(s);
     console.log('✅ [POS] page-header supprimé sur mobile (< 700px)');
+})();  
+// ============================================================
+// ✅ AGRANDIR LA ZONE UTILE SUR MOBILE (< 700px)
+// Supprime les marges/paddings latéraux qui réduisent la largeur
+// ⚠️ Bloc isolé — ne modifie AUCUNE autre partie du code
+// ============================================================
+(function posAgrandirZoneMobile() {
+    var STYLE_ID = 'pos-agrandir-zone-mobile';
+    if (document.getElementById(STYLE_ID)) return;
+
+    var s = document.createElement('style');
+    s.id = STYLE_ID;
+    s.textContent = `
+    @media (max-width: 700px) {
+
+        /* 1) Masquer le page-header (gain vertical) */
+        .page-header,
+        #pageHeader,
+        header.page-header,
+        .page-header-wrapper,
+        #pageHeaderWrapper {
+            display: none !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+        }
+
+        /* 2) Supprimer les paddings latéraux (gain horizontal) */
+        .main-content {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            padding-top: 4px !important;
+        }
+        #dynamicContent {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        }
+        .pos-container {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            gap: 4px !important;
+        }
+        .pos-row {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            gap: 4px !important;
+        }
+
+        /* 3) Panneaux produits et panier : pleine largeur, marge interne minimale */
+        .pos-products-panel,
+        .pos-cart-panel {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 100% !important;
+            padding-left: 3px !important;
+            padding-right: 3px !important;
+            border-radius: 10px !important;
+        }
+
+        /* 4) Panneau produits plus haut (plus de produits visibles) */
+        .pos-products-panel {
+            max-height: 65vh !important;
+            min-height: 350px !important;
+        }
+
+        /* 5) Grilles : gap réduit pour gagner de la place */
+        .pos-products-grid {
+            gap: 5px !important;
+            padding: 2px !important;
+        }
+        .pos-categories-grid {
+            gap: 5px !important;
+            padding: 2px !important;
+        }
+
+        /* 6) Panier : plus de hauteur pour les articles */
+        .pos-cart-items {
+            min-height: 240px !important;
+            padding-left: 6px !important;
+            padding-right: 6px !important;
+        }
+
+        body {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        }
+    }
+    `;
+    document.head.appendChild(s);
+    console.log('✅ [POS] Zone mobile agrandie (header masqué + marges supprimées)');
 })();
 console.log('🚀 E-SOLUTION - POS V5 ASTRONAUTE (sans bordures)');
 console.log('✅ Design glassmorphism + glow + gradients');
