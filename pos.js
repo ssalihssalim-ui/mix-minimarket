@@ -29,7 +29,8 @@
 // ✅ BOUTON FLÈCHE DÉPLACÉ DANS <body> → au-dessus de TOUT (modales incluses)
 // ✅ BORDURES RETIRÉES : design épuré, séparations par ombres/ombres intérieures uniquement
 // ✅ ÉPICES/SEL SUPPRIMÉS COMPLÈTEMENT
-// ✅ QUANTITÉ INGRÉDIENTS PERSONNALISABLE + STOCK DÉCRÉMENTÉ À LA BONNE QUANTITÉ
+// ✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE
+// ✅ QUANTITÉ ENTIER (pas de décimales)
 
 var posCart = [];
 var posStep = 1;
@@ -892,7 +893,7 @@ function posAddToCartOrOpenOptions(pid){
     posSaveMultiCarts(); 
 }
 
-// ✅ ÉPICES ET SEL SUPPRIMÉS COMPLÈTEMENT - Uniquement les ingrédients avec quantité
+// ✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE + NOMBRE ENTIER
 async function posOpenOptionsModal(pid) {
 var p = posProductsList.find(function(x) { return x.id === pid; });
 if (!p) return;
@@ -936,7 +937,7 @@ return a.localeCompare(b);
 
 posCurrentProductId = pid;
 var h = '<h4 style="font-size:1.2rem;margin-bottom:12px;">' + escapeHtml(p.nom) + '</h4>';
-h += '<p style="color:#6F767E;font-size:0.85rem;margin-bottom:12px;">Sélectionnez les ingrédients à conserver et leur quantité :</p>';
+h += '<p style="color:#6F767E;font-size:0.85rem;margin-bottom:12px;">Cochez les ingrédients à déduire du stock et indiquez leur quantité :</p>';
 
 if (sortedCats.length === 0) h += '<div style="color:#9A9FA5;padding:12px;">Aucun ingrédient pour ce produit</div>';
 else {
@@ -945,11 +946,13 @@ h += '<div style="margin-bottom:14px;"><label style="font-weight:700;font-size:0
 grouped[cat].forEach(function(ing) {
 var disabled = ing.stockDisponible <= 0 ? 'disabled' : '';
 var uniteLabel = ing.unite ? ' (' + escapeHtml(ing.unite) + ')' : '';
+// Checkbox DÉCOCHÉE par défaut
 h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + (ing.stockDisponible <= 0 ? 'opacity:0.5;' : '') + 'flex-wrap:wrap;">';
-h += '<input type="checkbox" class="pos-interdit-check" value="' + escapeHtml(ing.nom) + '" ' + disabled + ' checked>';
+h += '<input type="checkbox" class="pos-ingredient-check" value="' + escapeHtml(ing.nom) + '" data-stock-id="' + escapeHtml(ing.idStock || '') + '" data-unite="' + escapeHtml(ing.unite || '') + '" ' + disabled + ' onchange="posToggleIngredientQty(this)">';
 h += '<span style="min-width:60px;">' + escapeHtml(ing.nom) + uniteLabel + '</span>';
 h += '<span style="font-size:0.7rem;color:#9A9FA5;">dispo: ' + (ing.stockDisponible || 0) + '</span>';
-h += '<input type="number" class="pos-ingredient-qty" value="' + (ing.quantite || 1) + '" min="0.01" step="0.01" data-nom="' + escapeHtml(ing.nom) + '" data-stock-id="' + escapeHtml(ing.idStock || '') + '" data-unite="' + escapeHtml(ing.unite || '') + '" style="width:70px;padding:4px 6px;border:none;background:#FFFFFF;border-radius:8px;font-size:0.8rem;font-weight:700;text-align:center;" ' + disabled + '>';
+// Input quantity DÉSACTIVÉ par défaut (grisé) - nombre ENTIER
+h += '<input type="number" class="pos-ingredient-qty" value="' + (ing.quantite || 1) + '" min="1" step="1" data-nom="' + escapeHtml(ing.nom) + '" data-stock-id="' + escapeHtml(ing.idStock || '') + '" data-unite="' + escapeHtml(ing.unite || '') + '" style="width:70px;padding:4px 6px;border:none;background:#E5E7EB;border-radius:8px;font-size:0.8rem;font-weight:700;text-align:center;color:#9A9FA5;cursor:not-allowed;" disabled>';
 h += '</label>';
 });
 h += '</div></div>';
@@ -960,38 +963,69 @@ h += '<div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify
 openModal('Personnaliser - ' + escapeHtml(p.nom), h);
 }
 
-// ✅ ÉPICES ET SEL SUPPRIMÉS - Récupère uniquement les ingrédients avec quantités
+// ✅ Active/désactive l'input quantité selon la checkbox
+function posToggleIngredientQty(checkbox) {
+    var label = checkbox.closest('label');
+    if (!label) return;
+    var qtyInput = label.querySelector('.pos-ingredient-qty');
+    if (!qtyInput) return;
+    if (checkbox.checked) {
+        qtyInput.disabled = false;
+        qtyInput.style.background = '#FFFFFF';
+        qtyInput.style.color = '#0F172A';
+        qtyInput.style.cursor = 'text';
+        qtyInput.focus();
+        qtyInput.select();
+    } else {
+        qtyInput.disabled = true;
+        qtyInput.style.background = '#E5E7EB';
+        qtyInput.style.color = '#9A9FA5';
+        qtyInput.style.cursor = 'not-allowed';
+    }
+}
+
+// ✅ Récupère UNIQUEMENT les ingrédients COCHÉS avec leur quantité ENTIÈRE
 function posConfirmOptions() {
 var interdits = [];
-document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) { interdits.push(cb.value); });
-
-// Épices/Sel forcés à "Normal" car la modale ne les affiche plus
 var epice = 'Normal';
 var sel = 'Normal';
 
 var p = posProductsList.find(function(x) { return x.id === posCurrentProductId; });
 if (!p) { closeModal(); return; }
 
-var ingredientsExclus = [];
-document.querySelectorAll('.pos-interdit-check:checked').forEach(function(cb) {
-    ingredientsExclus.push(cb.value.toLowerCase().trim());
-});
-
 var ingredientsAvecQuantite = [];
-document.querySelectorAll('.pos-ingredient-qty').forEach(function(input) {
-    var nom = input.getAttribute('data-nom');
-    var stockId = input.getAttribute('data-stock-id');
-    var quantite = parseFloat(input.value) || 0;
-    var unite = input.getAttribute('data-unite') || '';
-    var checkbox = document.querySelector('.pos-interdit-check[value="' + nom.replace(/"/g, '\\"') + '"]');
-    var isChecked = checkbox ? checkbox.checked : true;
-    if (isChecked && quantite > 0 && stockId) {
-        ingredientsAvecQuantite.push({ nom: nom, idStock: stockId, quantite: quantite, unite: unite });
+var ingredientsExclus = [];
+
+document.querySelectorAll('.pos-ingredient-check').forEach(function(checkbox) {
+    var label = checkbox.closest('label');
+    if (!label) return;
+    var qtyInput = label.querySelector('.pos-ingredient-qty');
+    var nom = checkbox.value;
+    var stockId = checkbox.getAttribute('data-stock-id');
+    var unite = checkbox.getAttribute('data-unite') || '';
+    
+    if (checkbox.checked) {
+        // ✅ COCHÉ → déduire avec la quantité saisie (nombre entier)
+        var quantite = parseInt(qtyInput ? qtyInput.value : 1, 10);
+        if (isNaN(quantite) || quantite < 1) quantite = 1;
+        if (stockId && quantite > 0) {
+            ingredientsAvecQuantite.push({ nom: nom, idStock: stockId, quantite: quantite, unite: unite });
+        }
+    } else {
+        // ✅ DÉCOCHÉ → ne rien déduire
+        ingredientsExclus.push(nom.toLowerCase().trim());
     }
 });
 
 var ex = posCart.find(function(x) { return x.id === posCurrentProductId; });
-if (ex) { if (p.stock !== undefined && ex.quantite >= p.stock) { alert('Stock insuffisant'); closeModal(); return; } ex.quantite += 1; }
+if (ex) { 
+    if (p.stock !== undefined && ex.quantite >= p.stock) { alert('Stock insuffisant'); closeModal(); return; } 
+    ex.quantite += 1; 
+    ex.epice = 'Normal'; 
+    ex.sel = 'Normal';
+    ex.ingredientsAvecQuantite = ingredientsAvecQuantite;
+    ex.ingredientsExclus = ingredientsExclus;
+}
 else {
 var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
 posCart.push({id: p.id, nom: p.nom, prixUnitaire: pr, prixAchat: p.prixAchat || 0, prixPromo: p.prixPromo || 0, prixVente: p.prixVente || 0, quantite: 1, categorie: p.categorie || '', imageBase64: p.imageBase64 || '', sauces: [], interdits: interdits, epice: epice, sel: sel, ingredientsExclus: ingredientsExclus, ingredientsAvecQuantite: ingredientsAvecQuantite});
@@ -1063,8 +1097,6 @@ var isMobile = window.innerWidth < 700;
 for(var k=0;k<posCart.length;k++){
 var it=posCart[k], opts='';
 if(it.interdits&&it.interdits.length) opts+=' <span style="color:#FF5B5B;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>';
-if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#F59E0B;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>';
-if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#8B5CF6;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>';
 
 var btnSize = isMobile ? '28px' : '26px';
 var btnFontSize = isMobile ? '0.7rem' : '0.65rem';
@@ -1228,8 +1260,6 @@ else{
 for(var k=0;k<posCart.length;k++){
 var it=posCart[k], opts='';
 if(it.interdits&&it.interdits.length) opts+=' <span style="color:#FF5B5B;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>';
-if(it.epice&&it.epice!=='Normal') opts+=' <span style="color:#F59E0B;font-size:0.6rem;">🌶️'+escapeHtml(it.epice)+'</span>';
-if(it.sel&&it.sel!=='Normal') opts+=' <span style="color:#8B5CF6;font-size:0.6rem;">🧂'+escapeHtml(it.sel)+'</span>';
 var btnSize = isMobile ? '28px' : '26px';
 var btnFontSize = isMobile ? '0.7rem' : '0.65rem';
 var qtySize = isMobile ? '0.85rem' : '0.75rem';
@@ -1612,6 +1642,7 @@ window.posConfirmerAjoutClient = posConfirmerAjoutClient;
 window.posUpdateQtyInput = posUpdateQtyInput;
 window.updateCartTotalsOnly = updateCartTotalsOnly;
 window.scrollToCart = scrollToCart;
+window.posToggleIngredientQty = posToggleIngredientQty;
 
 function posAddMultipleProductsToCart(produitsList) {
     var ajoutCount = 0;
@@ -2692,5 +2723,5 @@ console.log('✅ Panier min-height 220px (3+ articles visibles)');
 console.log('✅ Boutons POS AGRANDIS + hover néon');
 console.log('✅ BOUTON VALIDER STICKY (toujours visible)');
 console.log('✅ ÉPICES ET SEL SUPPRIMÉS COMPLÈTEMENT');
-console.log('✅ Champ quantité par ingrédient dans la modale');
-console.log('✅ Stock décrémenté à la bonne quantité (2 sucres, 3 pièces, etc.)');
+console.log('✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE');
+console.log('✅ QUANTITÉ ENTIER (step=1, pas de décimales)');
