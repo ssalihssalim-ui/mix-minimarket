@@ -22,6 +22,7 @@
 // ✅ Panier minimum 3 articles visibles
 // ✅ Clic "Panier" → scroll vers le panier
 // ✅ Responsive renforcé 320px → 4K
+// ✅ BOUTONS POS AGRANDIS (panier + validation paiement)
 
 var posCart = [];
 var posStep = 1;
@@ -1814,6 +1815,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: none !important;
     }
 
+    /* ✅ BOUTONS +/- QUANTITÉ DANS LE PANIER — AGRANDIS */
     .pos-qty-btn {
         background: var(--r-card) !important;
         border: 1px solid var(--r-border) !important;
@@ -1823,14 +1825,28 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        transition: all 0.15s ease !important;
+        padding: 0 !important;
     }
 
     .pos-qty-btn:hover {
         background: var(--r-blue) !important;
         color: #fff !important;
         border-color: var(--r-blue) !important;
+        transform: scale(1.05) !important;
     }
 
+    .pos-qty-btn:active {
+        transform: scale(0.95) !important;
+    }
+
+    /* ✅ INPUT QUANTITÉ — AGRANDI */
     .pos-qty-input {
         border: 1px solid var(--r-border) !important;
         border-radius: var(--r-radius-sm) !important;
@@ -1838,12 +1854,46 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         font-weight: 700 !important;
         text-align: center !important;
         background: var(--r-card) !important;
+        width: 64px !important;
+        min-width: 64px !important;
+        height: 44px !important;
+        font-size: 17px !important;
+        padding: 6px 4px !important;
     }
 
     .pos-qty-input:focus {
         outline: none !important;
         border-color: var(--r-blue) !important;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+    }
+
+    /* ✅ BOUTON SUPPRIMER ARTICLE — AGRANDI */
+    .pos-remove-btn {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        font-size: 18px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        background: #FEF2F2 !important;
+        color: var(--r-red) !important;
+        border: none !important;
+        border-radius: var(--r-radius-sm) !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease !important;
+    }
+
+    .pos-remove-btn:hover {
+        background: var(--r-red) !important;
+        color: #fff !important;
+        transform: scale(1.05) !important;
+    }
+
+    .pos-remove-btn:active {
+        transform: scale(0.95) !important;
     }
 
     .pos-cart-total-row span:first-child {
@@ -1859,6 +1909,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         letter-spacing: -0.5px;
     }
 
+    /* ✅ BOUTON VALIDER (étape 1) — AGRANDI */
     .pos-validate-btn,
     .pos-finalize-btn {
         background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
@@ -1869,6 +1920,14 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: var(--r-shadow-blue) !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
+        width: 100% !important;
+        min-height: 60px !important;
+        padding: 16px 20px !important;
+        font-size: 1.15rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 10px !important;
     }
 
     .pos-validate-btn:hover:not(:disabled),
@@ -1878,6 +1937,11 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4) !important;
     }
 
+    .pos-validate-btn:active:not(:disabled),
+    .pos-finalize-btn:active:not(:disabled) {
+        transform: scale(0.98) !important;
+    }
+
     .pos-validate-btn:disabled {
         background: #E5E7EB !important;
         color: var(--r-text-3) !important;
@@ -1885,6 +1949,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         cursor: not-allowed !important;
     }
 
+    /* ✅ BOUTONS MÉTHODE DE PAIEMENT — AGRANDIS */
     .pos-payment-btn {
         background: var(--r-card) !important;
         border: 1.5px solid var(--r-border) !important;
@@ -1893,6 +1958,13 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         font-weight: 700 !important;
         transition: all 0.15s ease !important;
         cursor: pointer !important;
+        min-height: 56px !important;
+        padding: 14px 16px !important;
+        font-size: 1rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
     }
 
     .pos-payment-btn:hover:not(:disabled) {
@@ -2020,6 +2092,30 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             font-size: 10px !important;
             font-weight: 600 !important;
         }
+        /* Boutons mobiles restent confortables */
+        .pos-qty-btn,
+        .pos-remove-btn {
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            min-height: 40px !important;
+            font-size: 16px !important;
+        }
+        .pos-qty-input {
+            width: 56px !important;
+            min-width: 56px !important;
+            height: 40px !important;
+            font-size: 15px !important;
+        }
+        .pos-validate-btn,
+        .pos-finalize-btn {
+            min-height: 54px !important;
+            font-size: 1.05rem !important;
+        }
+        .pos-payment-btn {
+            min-height: 50px !important;
+            font-size: 0.95rem !important;
+        }
     }
     `;
 
@@ -2034,3 +2130,4 @@ console.log('✅ Panier min-height 220px (3+ articles visibles)');
 console.log('✅ Clic "Panier" → scroll vers le panier');
 console.log('✅ Couleurs 100% bleues');
 console.log('✅ Responsive renforcé');
+console.log('✅ Boutons POS AGRANDIS (panier + validation paiement)');
