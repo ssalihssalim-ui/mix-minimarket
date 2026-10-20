@@ -7,10 +7,10 @@
 // 🆕 ✅ Date de production + Durée de conservation + Date d'expiration par produit
 // 🆕 ✅ Durées par défaut intelligentes selon la catégorie
 // 🆕 ✅ Badges colorés (production = bleu, expiration = vert/orange/rouge)
-// 🆕 🎨 PAGE PRODUITS MODERNE style POS (bleu/blanc, cards)
-// 🆕 📷 Bouton "Scanner" sans mention Gemini
-// 🆕 ⚠️ Détection prix changé → alerte + confirmation
-// 🆕 💰 Total général affiché EN BAS du formulaire d'achat
+// 🆕 🎨 PAGE PRODUITS MODERNE (cards bleu/blanc)
+// 🆕 📷 Bouton Scanner (sans mention Gemini)
+// 🆕 ⚠️ Détection prix changé + confirmation
+// 🆕 💰 Total général en bas du formulaire d'achat
 // 🆕 🔍 Barre de recherche produit dans la liste d'achat
 
 // ====================================================
@@ -22,417 +22,132 @@ const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 window.productSearchQuery = window.productSearchQuery || '';
 
 // ====================================================
-//  🎨 STYLES INJECTÉS (produits modernes + achats pro)
+//  🎨 STYLES INJECTÉS
 // ====================================================
 function injectAdminCrudsStyles() {
     if (document.getElementById('admin-cruds-modern-styles')) return;
-    var css = `
-    <style id="admin-cruds-modern-styles">
-    :root {
-        --ac-blue-50:#EFF6FF; --ac-blue-100:#DBEAFE; --ac-blue-200:#BFDBFE;
-        --ac-blue-500:#3B82F6; --ac-blue-600:#2563EB; --ac-blue-700:#1D4ED8;
-        --ac-white:#FFFFFF; --ac-gray-50:#F8FAFC; --ac-gray-100:#F1F5F9;
-        --ac-gray-200:#E2E8F0; --ac-gray-400:#94A3B8; --ac-gray-500:#64748B;
-        --ac-gray-700:#334155; --ac-gray-900:#0F172A;
-        --ac-green:#10B981; --ac-red:#EF4444; --ac-orange:#F59E0B;
-        --ac-shadow-sm:0 1px 2px rgba(0,0,0,0.04);
-        --ac-shadow-md:0 4px 12px rgba(0,0,0,0.06);
-        --ac-shadow-lg:0 12px 32px rgba(0,0,0,0.08);
-        --ac-radius:12px; --ac-radius-lg:16px;
-    }
-
-    /* ========== PAGE PRODUITS MODERNE ========== */
-    .ac-products-page {
-        background: linear-gradient(180deg,#FAFBFC 0%,#F4F6F8 100%);
-        min-height:100vh; padding:24px;
-        font-family:'Inter',-apple-system,sans-serif;
-    }
-    .ac-products-header {
-        background:var(--ac-white); border-radius:var(--ac-radius-lg);
-        padding:24px 28px; box-shadow:var(--ac-shadow-sm);
-        border:1px solid rgba(0,0,0,0.04); margin-bottom:20px;
-        display:flex; justify-content:space-between; align-items:center;
-        flex-wrap:wrap; gap:16px;
-    }
-    .ac-products-header h2 {
-        font-size:24px; font-weight:800; color:var(--ac-gray-900);
-        letter-spacing:-0.5px; margin:0;
-        display:flex; align-items:center; gap:12px;
-    }
-    .ac-products-header h2 i {
-        background:linear-gradient(135deg,var(--ac-blue-500),var(--ac-blue-700));
-        color:white; padding:10px; border-radius:12px; font-size:18px;
-        box-shadow:0 4px 12px rgba(59,130,246,0.3);
-    }
-    .ac-products-actions {
-        display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-    }
-    .ac-btn-pro {
-        display:inline-flex; align-items:center; gap:8px;
-        padding:11px 20px; border:none; border-radius:10px;
-        font-size:14px; font-weight:600; cursor:pointer;
-        transition:all 0.2s ease; font-family:'Inter',sans-serif;
-        white-space:nowrap;
-    }
-    .ac-btn-pro:disabled { opacity:0.5; cursor:not-allowed; }
-    .ac-btn-pro-primary {
-        background:linear-gradient(135deg,var(--ac-blue-500),var(--ac-blue-600));
-        color:white; box-shadow:0 2px 8px rgba(59,130,246,0.3);
-    }
-    .ac-btn-pro-primary:hover:not(:disabled) {
-        transform:translateY(-2px); box-shadow:0 6px 16px rgba(59,130,246,0.4);
-    }
-    .ac-btn-pro-achat {
-        background:linear-gradient(135deg,var(--ac-green),#059669);
-        color:white; box-shadow:0 2px 8px rgba(16,185,129,0.3);
-    }
-    .ac-btn-pro-achat:hover:not(:disabled) {
-        transform:translateY(-2px); box-shadow:0 6px 16px rgba(16,185,129,0.4);
-    }
-    .ac-btn-pro-scan {
-        background:linear-gradient(135deg,#06B6D4,#0891B2);
-        color:white; box-shadow:0 2px 8px rgba(6,182,212,0.3);
-    }
-    .ac-btn-pro-scan:hover:not(:disabled) {
-        transform:translateY(-2px); box-shadow:0 6px 16px rgba(6,182,212,0.4);
-    }
-    .ac-btn-pro-ghost {
-        background:var(--ac-gray-100); color:var(--ac-gray-700);
-        border:1.5px solid var(--ac-gray-200);
-    }
-    .ac-btn-pro-ghost:hover:not(:disabled) {
-        background:var(--ac-gray-200); border-color:var(--ac-gray-400);
-    }
-    .ac-search-pro {
-        display:flex; align-items:center; gap:8px;
-        background:var(--ac-white); border:1.5px solid var(--ac-gray-200);
-        border-radius:12px; padding:4px 4px 4px 16px;
-        transition:all 0.2s ease; flex:1; min-width:240px;
-        box-shadow:var(--ac-shadow-sm);
-    }
-    .ac-search-pro:focus-within {
-        border-color:var(--ac-blue-500);
-        box-shadow:0 0 0 4px rgba(59,130,246,0.1);
-    }
-    .ac-search-pro i { color:var(--ac-gray-400); font-size:16px; }
-    .ac-search-pro input {
-        flex:1; border:none; background:transparent;
-        padding:10px 8px; font-size:15px; outline:none;
-        color:var(--ac-gray-900); font-family:'Inter',sans-serif;
-    }
-    .ac-search-pro input::placeholder { color:var(--ac-gray-400); }
-    .ac-filter-select {
-        padding:11px 14px; border:1.5px solid var(--ac-gray-200);
-        border-radius:10px; font-size:14px; font-weight:500;
-        font-family:'Inter',sans-serif; min-width:180px;
-        background:var(--ac-white); color:var(--ac-gray-900);
-        transition:all 0.2s ease; outline:none; cursor:pointer;
-    }
-    .ac-filter-select:focus {
-        border-color:var(--ac-blue-500);
-        box-shadow:0 0 0 4px rgba(59,130,246,0.1);
-    }
-
-    /* ========== GRILLE PRODUITS ========== */
-    .ac-products-grid {
-        display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-        gap:16px; margin-bottom:20px;
-    }
-    .ac-product-card {
-        background:var(--ac-white); border-radius:var(--ac-radius);
-        border:1px solid rgba(0,0,0,0.06); box-shadow:var(--ac-shadow-sm);
-        transition:all 0.25s ease; overflow:hidden;
-        display:flex; flex-direction:column; position:relative;
-    }
-    .ac-product-card:hover {
-        transform:translateY(-4px); box-shadow:var(--ac-shadow-lg);
-        border-color:var(--ac-blue-200);
-    }
-    .ac-product-card-image {
-        width:100%; height:140px;
-        background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-blue-100));
-        display:flex; align-items:center; justify-content:center;
-        font-size:48px; color:var(--ac-blue-500);
-        position:relative; overflow:hidden;
-    }
-    .ac-product-card-image img {
-        width:100%; height:100%; object-fit:cover;
-    }
-    .ac-product-badge {
-        position:absolute; top:10px; right:10px;
-        padding:4px 10px; border-radius:20px;
-        font-size:11px; font-weight:700; text-transform:uppercase;
-        letter-spacing:0.5px; background:var(--ac-blue-500); color:white;
-    }
-    .ac-product-badge.stock-low { background:var(--ac-orange); }
-    .ac-product-badge.stock-out { background:var(--ac-red); }
-    .ac-product-card-body {
-        padding:16px; flex:1; display:flex; flex-direction:column; gap:6px;
-    }
-    .ac-product-card-title {
-        font-size:15px; font-weight:700; color:var(--ac-gray-900);
-        margin:0; line-height:1.3;
-        display:-webkit-box; -webkit-line-clamp:2;
-        -webkit-box-orient:vertical; overflow:hidden;
-    }
-    .ac-product-card-category {
-        font-size:12px; font-weight:500; color:var(--ac-blue-600);
-        background:var(--ac-blue-50); padding:2px 8px;
-        border-radius:6px; align-self:flex-start;
-    }
-    .ac-product-card-price {
-        display:flex; justify-content:space-between; align-items:center;
-        margin-top:8px; padding-top:12px;
-        border-top:1px solid var(--ac-gray-100);
-    }
-    .ac-product-price-vente {
-        font-size:18px; font-weight:800; color:var(--ac-blue-600);
-        letter-spacing:-0.5px;
-    }
-    .ac-product-price-achat {
-        font-size:12px; color:var(--ac-gray-500);
-    }
-    .ac-product-card-stock {
-        display:flex; align-items:center; gap:6px;
-        font-size:12px; color:var(--ac-gray-500); margin-top:4px;
-    }
-    .ac-product-card-actions {
-        display:flex; gap:4px; padding:12px 16px;
-        background:var(--ac-gray-50); border-top:1px solid var(--ac-gray-100);
-    }
-    .ac-product-card-actions button {
-        flex:1; padding:8px; border:none; border-radius:8px;
-        font-size:12px; font-weight:600; cursor:pointer;
-        transition:all 0.2s ease;
-        display:flex; align-items:center; justify-content:center; gap:4px;
-    }
-    .ac-product-card-actions .edit {
-        background:var(--ac-blue-50); color:var(--ac-blue-700);
-    }
-    .ac-product-card-actions .edit:hover {
-        background:var(--ac-blue-500); color:white;
-    }
-    .ac-product-card-actions .delete {
-        background:#FEF2F2; color:var(--ac-red);
-    }
-    .ac-product-card-actions .delete:hover {
-        background:var(--ac-red); color:white;
-    }
-    .ac-empty-state {
-        text-align:center; padding:60px 20px; color:var(--ac-gray-500);
-    }
-    .ac-empty-state i {
-        font-size:64px; color:var(--ac-gray-200); margin-bottom:16px;
-    }
-    .ac-empty-state h3 {
-        font-size:18px; color:var(--ac-gray-700); margin:0 0 8px 0;
-    }
-    .ac-empty-state p { font-size:14px; margin:0; }
-
-    /* ========== MODAL ACHAT PRO ========== */
-    .ac-achat-overlay {
-        position:fixed; inset:0; background:rgba(15,23,42,0.65);
-        backdrop-filter:blur(6px); z-index:9999;
-        display:flex; align-items:center; justify-content:center;
-        padding:20px; animation:acFadeIn 0.2s ease;
-    }
-    @keyframes acFadeIn { from { opacity:0; } to { opacity:1; } }
-    .ac-achat-modal {
-        background:var(--ac-white); border-radius:var(--ac-radius-lg);
-        width:100%; max-width:1200px; height:90vh; max-height:90vh;
-        display:flex; flex-direction:column;
-        box-shadow:0 24px 64px rgba(0,0,0,0.25);
-        animation:acSlideUp 0.3s ease; overflow:hidden;
-    }
-    @keyframes acSlideUp {
-        from { transform:translateY(20px); opacity:0; }
-        to { transform:translateY(0); opacity:1; }
-    }
-    .ac-achat-header {
-        padding:20px 28px; border-bottom:1px solid var(--ac-gray-200);
-        display:flex; justify-content:space-between; align-items:center;
-        background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));
-    }
-    .ac-achat-header h3 {
-        font-size:20px; font-weight:800; color:var(--ac-gray-900);
-        margin:0; display:flex; align-items:center; gap:12px;
-        letter-spacing:-0.3px;
-    }
-    .ac-achat-header h3 i {
-        background:linear-gradient(135deg,var(--ac-blue-500),var(--ac-blue-700));
-        color:white; padding:10px; border-radius:12px; font-size:18px;
-        box-shadow:0 4px 12px rgba(59,130,246,0.3);
-    }
-    .ac-achat-close {
-        width:40px; height:40px; border-radius:50%;
-        border:none; background:var(--ac-gray-100);
-        color:var(--ac-gray-500); font-size:18px; cursor:pointer;
-        transition:all 0.2s ease;
-    }
-    .ac-achat-close:hover {
-        background:var(--ac-gray-200); color:var(--ac-gray-900);
-        transform:rotate(90deg);
-    }
-    .ac-achat-toolbar {
-        padding:16px 28px; background:var(--ac-gray-50);
-        border-bottom:1px solid var(--ac-gray-200);
-        display:flex; gap:12px; flex-wrap:wrap; align-items:center;
-    }
-    .ac-achat-toolbar .ac-fournisseur-select {
-        padding:11px 14px; border:1.5px solid var(--ac-gray-200);
-        border-radius:10px; font-size:14px; font-weight:500;
-        font-family:'Inter',sans-serif; min-width:280px;
-        background:var(--ac-white); color:var(--ac-gray-900);
-        transition:all 0.2s ease; outline:none; cursor:pointer;
-    }
-    .ac-achat-toolbar .ac-fournisseur-select:focus {
-        border-color:var(--ac-blue-500);
-        box-shadow:0 0 0 4px rgba(59,130,246,0.1);
-    }
-    .ac-achat-toolbar .ac-search-pro { min-width:240px; flex:1; }
-    .ac-achat-body {
-        flex:1; overflow-y:auto; padding:20px 28px; background:var(--ac-white);
-    }
-    .ac-achat-table {
-        width:100%; border-collapse:separate; border-spacing:0;
-        font-size:14px;
-    }
-    .ac-achat-table thead th {
-        position:sticky; top:0; background:var(--ac-gray-50);
-        padding:12px 10px; text-align:left;
-        font-size:11px; font-weight:700; color:var(--ac-gray-500);
-        text-transform:uppercase; letter-spacing:0.6px;
-        border-bottom:2px solid var(--ac-gray-200); z-index:2;
-    }
-    .ac-achat-table thead th.center { text-align:center; }
-    .ac-achat-table tbody td {
-        padding:12px 10px; border-bottom:1px solid var(--ac-gray-100);
-        vertical-align:middle; color:var(--ac-gray-700);
-    }
-    .ac-achat-table tbody tr { transition:background 0.15s ease; }
-    .ac-achat-table tbody tr:hover td { background:var(--ac-blue-50); }
-    .ac-achat-table tbody tr.has-changement td {
-        background:#FEF3C7 !important;
-    }
-    .ac-achat-table tbody tr.has-changement:hover td {
-        background:#FDE68A !important;
-    }
-    .ac-achat-table .ac-product-name {
-        font-weight:600; color:var(--ac-gray-900); font-size:14px;
-    }
-    .ac-achat-table .ac-product-id {
-        font-size:11px; color:var(--ac-gray-400);
-        font-family:'Monaco',monospace;
-    }
-    .ac-achat-table input[type="number"],
-    .ac-achat-table input[type="date"] {
-        width:100%; padding:8px 10px;
-        border:1.5px solid var(--ac-gray-200); border-radius:8px;
-        font-size:14px; font-family:'Inter',sans-serif;
-        color:var(--ac-gray-900); background:var(--ac-white);
-        transition:all 0.2s ease; outline:none; text-align:center;
-    }
-    .ac-achat-table input:focus {
-        border-color:var(--ac-blue-500);
-        box-shadow:0 0 0 3px rgba(59,130,246,0.1);
-    }
-    .ac-achat-table input.changed {
-        border-color:var(--ac-orange); background:#FFFBEB;
-    }
-    .ac-achat-table .ac-total-cell {
-        font-weight:800; color:var(--ac-blue-600);
-        font-size:15px; text-align:center;
-    }
-    .ac-achat-table .ac-price-old {
-        font-size:11px; color:var(--ac-gray-400);
-        text-decoration:line-through; display:block;
-    }
-    .ac-achat-table .ac-price-change-badge {
-        display:inline-flex; align-items:center; gap:4px;
-        padding:2px 8px; border-radius:6px;
-        font-size:11px; font-weight:700;
-        background:#FEF3C7; color:#92400E; margin-top:4px;
-    }
-    .ac-achat-table .ac-price-change-badge.up {
-        background:#FEE2E2; color:#991B1B;
-    }
-    .ac-achat-table .ac-price-change-badge.down {
-        background:#D1FAE5; color:#065F46;
-    }
-    .ac-achat-footer {
-        padding:20px 28px; border-top:2px solid var(--ac-gray-200);
-        background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));
-        display:flex; justify-content:space-between; align-items:center;
-        gap:16px; flex-wrap:wrap;
-    }
-    .ac-achat-totals {
-        display:flex; gap:24px; align-items:center; flex-wrap:wrap;
-    }
-    .ac-achat-total-block {
-        display:flex; flex-direction:column; gap:2px;
-    }
-    .ac-achat-total-block .label {
-        font-size:11px; font-weight:700; color:var(--ac-gray-500);
-        text-transform:uppercase; letter-spacing:0.5px;
-    }
-    .ac-achat-total-block .value {
-        font-size:22px; font-weight:800; color:var(--ac-gray-900);
-        letter-spacing:-0.5px;
-    }
-    .ac-achat-total-block .value.blue { color:var(--ac-blue-600); }
-    .ac-achat-total-block .value.green { color:var(--ac-green); }
-    .ac-achat-actions {
-        display:flex; gap:12px; align-items:center;
-    }
-    .ac-scan-overlay {
-        position:fixed; inset:0; background:rgba(15,23,42,0.85);
-        backdrop-filter:blur(8px); z-index:10000;
-        display:flex; align-items:center; justify-content:center;
-        flex-direction:column; gap:20px; color:white;
-    }
-    .ac-scan-overlay .spinner {
-        width:60px; height:60px;
-        border:4px solid rgba(255,255,255,0.2);
-        border-top-color:var(--ac-blue-500);
-        border-radius:50%; animation:acSpin 1s linear infinite;
-    }
-    @keyframes acSpin { to { transform:rotate(360deg); } }
-    .ac-scan-overlay p {
-        font-size:18px; font-weight:600; margin:0;
-    }
-
-    @media (max-width:768px) {
-        .ac-products-page { padding:12px; }
-        .ac-products-header {
-            padding:16px; flex-direction:column; align-items:stretch;
-        }
-        .ac-products-actions {
-            flex-direction:column; align-items:stretch;
-        }
-        .ac-search-pro { min-width:0; width:100%; }
-        .ac-products-grid { grid-template-columns:1fr; }
-        .ac-achat-modal {
-            max-width:100%; height:100vh; max-height:100vh; border-radius:0;
-        }
-        .ac-achat-toolbar {
-            padding:12px 16px; flex-direction:column; align-items:stretch;
-        }
-        .ac-achat-toolbar .ac-fournisseur-select,
-        .ac-achat-toolbar .ac-search-pro {
-            min-width:0; width:100%;
-        }
-        .ac-achat-body { padding:12px; }
-        .ac-achat-table { font-size:12px; }
-        .ac-achat-table thead th,
-        .ac-achat-table tbody td { padding:8px 4px; }
-        .ac-achat-footer {
-            padding:16px; flex-direction:column; align-items:stretch;
-        }
-        .ac-achat-totals { justify-content:space-between; }
-        .ac-achat-actions { flex-direction:column; }
-        .ac-achat-actions button { width:100%; }
-    }
-    </style>`;
+    var css = '';
+    css += '<style id="admin-cruds-modern-styles">';
+    css += ':root{';
+    css += '--ac-blue-50:#EFF6FF;--ac-blue-100:#DBEAFE;--ac-blue-200:#BFDBFE;';
+    css += '--ac-blue-500:#3B82F6;--ac-blue-600:#2563EB;--ac-blue-700:#1D4ED8;';
+    css += '--ac-white:#FFFFFF;--ac-gray-50:#F8FAFC;--ac-gray-100:#F1F5F9;';
+    css += '--ac-gray-200:#E2E8F0;--ac-gray-400:#94A3B8;--ac-gray-500:#64748B;';
+    css += '--ac-gray-700:#334155;--ac-gray-900:#0F172A;';
+    css += '--ac-green:#10B981;--ac-red:#EF4444;--ac-orange:#F59E0B;';
+    css += '--ac-shadow-sm:0 1px 2px rgba(0,0,0,0.04);';
+    css += '--ac-shadow-lg:0 12px 32px rgba(0,0,0,0.08);';
+    css += '--ac-radius:12px;--ac-radius-lg:16px;';
+    css += '}';
+    css += '.ac-products-page{background:linear-gradient(180deg,#FAFBFC 0%,#F4F6F8 100%);min-height:100vh;padding:24px;font-family:Inter,-apple-system,sans-serif;}';
+    css += '.ac-products-header{background:var(--ac-white);border-radius:var(--ac-radius-lg);padding:24px 28px;box-shadow:var(--ac-shadow-sm);border:1px solid rgba(0,0,0,0.04);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}';
+    css += '.ac-products-header h2{font-size:24px;font-weight:800;color:var(--ac-gray-900);letter-spacing:-0.5px;margin:0;display:flex;align-items:center;gap:12px;}';
+    css += '.ac-products-header h2 i{background:linear-gradient(135deg,var(--ac-blue-500),var(--ac-blue-700));color:white;padding:10px;border-radius:12px;font-size:18px;box-shadow:0 4px 12px rgba(59,130,246,0.3);}';
+    css += '.ac-products-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}';
+    css += '.ac-btn-pro{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s ease;font-family:Inter,sans-serif;white-space:nowrap;}';
+    css += '.ac-btn-pro:disabled{opacity:0.5;cursor:not-allowed;}';
+    css += '.ac-btn-pro-primary{background:linear-gradient(135deg,var(--ac-blue-500),var(--ac-blue-600));color:white;box-shadow:0 2px 8px rgba(59,130,246,0.3);}';
+    css += '.ac-btn-pro-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(59,130,246,0.4);}';
+    css += '.ac-btn-pro-achat{background:linear-gradient(135deg,var(--ac-green),#059669);color:white;box-shadow:0 2px 8px rgba(16,185,129,0.3);}';
+    css += '.ac-btn-pro-achat:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(16,185,129,0.4);}';
+    css += '.ac-btn-pro-scan{background:linear-gradient(135deg,#06B6D4,#0891B2);color:white;box-shadow:0 2px 8px rgba(6,182,212,0.3);}';
+    css += '.ac-btn-pro-scan:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(6,182,212,0.4);}';
+    css += '.ac-btn-pro-ghost{background:var(--ac-gray-100);color:var(--ac-gray-700);border:1.5px solid var(--ac-gray-200);}';
+    css += '.ac-btn-pro-ghost:hover:not(:disabled){background:var(--ac-gray-200);border-color:var(--ac-gray-400);}';
+    css += '.ac-search-pro{display:flex;align-items:center;gap:8px;background:var(--ac-white);border:1.5px solid var(--ac-gray-200);border-radius:12px;padding:4px 4px 4px 16px;transition:all 0.2s ease;flex:1;min-width:240px;box-shadow:var(--ac-shadow-sm);}';
+    css += '.ac-search-pro:focus-within{border-color:var(--ac-blue-500);box-shadow:0 0 0 4px rgba(59,130,246,0.1);}';
+    css += '.ac-search-pro i{color:var(--ac-gray-400);font-size:16px;}';
+    css += '.ac-search-pro input{flex:1;border:none;background:transparent;padding:10px 8px;font-size:15px;outline:none;color:var(--ac-gray-900);font-family:Inter,sans-serif;}';
+    css += '.ac-search-pro input::placeholder{color:var(--ac-gray-400);}';
+    css += '.ac-filter-select{padding:11px 14px;border:1.5px solid var(--ac-gray-200);border-radius:10px;font-size:14px;font-weight:500;font-family:Inter,sans-serif;min-width:180px;background:var(--ac-white);color:var(--ac-gray-900);transition:all 0.2s ease;outline:none;cursor:pointer;}';
+    css += '.ac-filter-select:focus{border-color:var(--ac-blue-500);box-shadow:0 0 0 4px rgba(59,130,246,0.1);}';
+    css += '.ac-products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:20px;}';
+    css += '.ac-product-card{background:var(--ac-white);border-radius:var(--ac-radius);border:1px solid rgba(0,0,0,0.06);box-shadow:var(--ac-shadow-sm);transition:all 0.25s ease;overflow:hidden;display:flex;flex-direction:column;position:relative;}';
+    css += '.ac-product-card:hover{transform:translateY(-4px);box-shadow:var(--ac-shadow-lg);border-color:var(--ac-blue-200);}';
+    css += '.ac-product-card-image{width:100%;height:140px;background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-blue-100));display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--ac-blue-500);position:relative;overflow:hidden;}';
+    css += '.ac-product-card-image img{width:100%;height:100%;object-fit:cover;}';
+    css += '.ac-product-badge{position:absolute;top:10px;right:10px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--ac-blue-500);color:white;}';
+    css += '.ac-product-badge.stock-low{background:var(--ac-orange);}';
+    css += '.ac-product-badge.stock-out{background:var(--ac-red);}';
+    css += '.ac-product-card-body{padding:16px;flex:1;display:flex;flex-direction:column;gap:6px;}';
+    css += '.ac-product-card-title{font-size:15px;font-weight:700;color:var(--ac-gray-900);margin:0;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
+    css += '.ac-product-card-category{font-size:12px;font-weight:500;color:var(--ac-blue-600);background:var(--ac-blue-50);padding:2px 8px;border-radius:6px;align-self:flex-start;}';
+    css += '.ac-product-card-price{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:12px;border-top:1px solid var(--ac-gray-100);}';
+    css += '.ac-product-price-vente{font-size:18px;font-weight:800;color:var(--ac-blue-600);letter-spacing:-0.5px;}';
+    css += '.ac-product-price-achat{font-size:12px;color:var(--ac-gray-500);}';
+    css += '.ac-product-card-stock{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ac-gray-500);margin-top:4px;}';
+    css += '.ac-product-card-actions{display:flex;gap:4px;padding:12px 16px;background:var(--ac-gray-50);border-top:1px solid var(--ac-gray-100);}';
+    css += '.ac-product-card-actions button{flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;justify-content:center;gap:4px;}';
+    css += '.ac-product-card-actions .edit{background:var(--ac-blue-50);color:var(--ac-blue-700);}';
+    css += '.ac-product-card-actions .edit:hover{background:var(--ac-blue-500);color:white;}';
+    css += '.ac-product-card-actions .delete{background:#FEF2F2;color:var(--ac-red);}';
+    css += '.ac-product-card-actions .delete:hover{background:var(--ac-red);color:white;}';
+    css += '.ac-empty-state{text-align:center;padding:60px 20px;color:var(--ac-gray-500);}';
+    css += '.ac-empty-state i{font-size:64px;color:var(--ac-gray-200);margin-bottom:16px;}';
+    css += '.ac-empty-state h3{font-size:18px;color:var(--ac-gray-700);margin:0 0 8px 0;}';
+    css += '.ac-empty-state p{font-size:14px;margin:0;}';
+    css += '.ac-achat-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;animation:acFadeIn 0.2s ease;}';
+    css += '@keyframes acFadeIn{from{opacity:0;}to{opacity:1;}}';
+    css += '.ac-achat-modal{background:var(--ac-white);border-radius:var(--ac-radius-lg);width:100%;max-width:1200px;height:90vh;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.25);animation:acSlideUp 0.3s ease;overflow:hidden;}';
+    css += '@keyframes acSlideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}';
+    css += '.ac-achat-header{padding:20px 28px;border-bottom:1px solid var(--ac-gray-200);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));}';
+    css += '.ac-achat-header h3{font-size:20px;font-weight:800;color:var(--ac-gray-900);margin:0;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
+    css += '.ac-achat-header h3 i{background:linear-gradient(135deg,var(--ac-blue-500),var(--ac-blue-700));color:white;padding:10px;border-radius:12px;font-size:18px;box-shadow:0 4px 12px rgba(59,130,246,0.3);}';
+    css += '.ac-achat-close{width:40px;height:40px;border-radius:50%;border:none;background:var(--ac-gray-100);color:var(--ac-gray-500);font-size:18px;cursor:pointer;transition:all 0.2s ease;}';
+    css += '.ac-achat-close:hover{background:var(--ac-gray-200);color:var(--ac-gray-900);transform:rotate(90deg);}';
+    css += '.ac-achat-toolbar{padding:16px 28px;background:var(--ac-gray-50);border-bottom:1px solid var(--ac-gray-200);display:flex;gap:12px;flex-wrap:wrap;align-items:center;}';
+    css += '.ac-achat-toolbar .ac-fournisseur-select{padding:11px 14px;border:1.5px solid var(--ac-gray-200);border-radius:10px;font-size:14px;font-weight:500;font-family:Inter,sans-serif;min-width:280px;background:var(--ac-white);color:var(--ac-gray-900);transition:all 0.2s ease;outline:none;cursor:pointer;}';
+    css += '.ac-achat-toolbar .ac-fournisseur-select:focus{border-color:var(--ac-blue-500);box-shadow:0 0 0 4px rgba(59,130,246,0.1);}';
+    css += '.ac-achat-toolbar .ac-search-pro{min-width:240px;flex:1;}';
+    css += '.ac-achat-body{flex:1;overflow-y:auto;padding:20px 28px;background:var(--ac-white);}';
+    css += '.ac-achat-table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;}';
+    css += '.ac-achat-table thead th{position:sticky;top:0;background:var(--ac-gray-50);padding:12px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--ac-gray-500);text-transform:uppercase;letter-spacing:0.6px;border-bottom:2px solid var(--ac-gray-200);z-index:2;}';
+    css += '.ac-achat-table thead th.center{text-align:center;}';
+    css += '.ac-achat-table tbody td{padding:12px 10px;border-bottom:1px solid var(--ac-gray-100);vertical-align:middle;color:var(--ac-gray-700);}';
+    css += '.ac-achat-table tbody tr{transition:background 0.15s ease;}';
+    css += '.ac-achat-table tbody tr:hover td{background:var(--ac-blue-50);}';
+    css += '.ac-achat-table tbody tr.has-changement td{background:#FEF3C7!important;}';
+    css += '.ac-achat-table tbody tr.has-changement:hover td{background:#FDE68A!important;}';
+    css += '.ac-achat-table .ac-product-name{font-weight:600;color:var(--ac-gray-900);font-size:14px;}';
+    css += '.ac-achat-table .ac-product-id{font-size:11px;color:var(--ac-gray-400);font-family:Monaco,monospace;}';
+    css += '.ac-achat-table input[type="number"],.ac-achat-table input[type="date"]{width:100%;padding:8px 10px;border:1.5px solid var(--ac-gray-200);border-radius:8px;font-size:14px;font-family:Inter,sans-serif;color:var(--ac-gray-900);background:var(--ac-white);transition:all 0.2s ease;outline:none;text-align:center;}';
+    css += '.ac-achat-table input:focus{border-color:var(--ac-blue-500);box-shadow:0 0 0 3px rgba(59,130,246,0.1);}';
+    css += '.ac-achat-table input.changed{border-color:var(--ac-orange);background:#FFFBEB;}';
+    css += '.ac-achat-table .ac-total-cell{font-weight:800;color:var(--ac-blue-600);font-size:15px;text-align:center;}';
+    css += '.ac-achat-table .ac-price-old{font-size:11px;color:var(--ac-gray-400);text-decoration:line-through;display:block;}';
+    css += '.ac-achat-table .ac-price-change-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#FEF3C7;color:#92400E;margin-top:4px;}';
+    css += '.ac-achat-table .ac-price-change-badge.up{background:#FEE2E2;color:#991B1B;}';
+    css += '.ac-achat-table .ac-price-change-badge.down{background:#D1FAE5;color:#065F46;}';
+    css += '.ac-achat-footer{padding:20px 28px;border-top:2px solid var(--ac-gray-200);background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}';
+    css += '.ac-achat-totals{display:flex;gap:24px;align-items:center;flex-wrap:wrap;}';
+    css += '.ac-achat-total-block{display:flex;flex-direction:column;gap:2px;}';
+    css += '.ac-achat-total-block .label{font-size:11px;font-weight:700;color:var(--ac-gray-500);text-transform:uppercase;letter-spacing:0.5px;}';
+    css += '.ac-achat-total-block .value{font-size:22px;font-weight:800;color:var(--ac-gray-900);letter-spacing:-0.5px;}';
+    css += '.ac-achat-total-block .value.blue{color:var(--ac-blue-600);}';
+    css += '.ac-achat-total-block .value.green{color:var(--ac-green);}';
+    css += '.ac-achat-actions{display:flex;gap:12px;align-items:center;}';
+    css += '.ac-scan-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;color:white;}';
+    css += '.ac-scan-overlay .spinner{width:60px;height:60px;border:4px solid rgba(255,255,255,0.2);border-top-color:var(--ac-blue-500);border-radius:50%;animation:acSpin 1s linear infinite;}';
+    css += '@keyframes acSpin{to{transform:rotate(360deg);}}';
+    css += '.ac-scan-overlay p{font-size:18px;font-weight:600;margin:0;}';
+    css += '@media (max-width:768px){';
+    css += '.ac-products-page{padding:12px;}';
+    css += '.ac-products-header{padding:16px;flex-direction:column;align-items:stretch;}';
+    css += '.ac-products-actions{flex-direction:column;align-items:stretch;}';
+    css += '.ac-search-pro{min-width:0;width:100%;}';
+    css += '.ac-products-grid{grid-template-columns:1fr;}';
+    css += '.ac-achat-modal{max-width:100%;height:100vh;max-height:100vh;border-radius:0;}';
+    css += '.ac-achat-toolbar{padding:12px 16px;flex-direction:column;align-items:stretch;}';
+    css += '.ac-achat-toolbar .ac-fournisseur-select,.ac-achat-toolbar .ac-search-pro{min-width:0;width:100%;}';
+    css += '.ac-achat-body{padding:12px;}';
+    css += '.ac-achat-table{font-size:12px;}';
+    css += '.ac-achat-table thead th,.ac-achat-table tbody td{padding:8px 4px;}';
+    css += '.ac-achat-footer{padding:16px;flex-direction:column;align-items:stretch;}';
+    css += '.ac-achat-totals{justify-content:space-between;}';
+    css += '.ac-achat-actions{flex-direction:column;}';
+    css += '.ac-achat-actions button{width:100%;}';
+    css += '}';
+    css += '</style>';
     document.head.insertAdjacentHTML('beforeend', css);
 }
 injectAdminCrudsStyles();
@@ -467,9 +182,7 @@ function deselectCategory(catName) {
 window.updateSelectedCategories = updateSelectedCategories;
 window.deselectCategory = deselectCategory;
 
-// ========== 🆕 DATES DE PRODUCTION / EXPIRATION ==========
-
-// ✅ Durées de conservation par défaut selon la catégorie (en jours)
+// ========== DATES DE PRODUCTION / EXPIRATION ==========
 var DUREES_CONSERVATION_DEFAUT = {
     'produits laitiers': 20, 'laitier': 20, 'laitiers': 20, 'lait': 15,
     'yaourt': 21, 'fromage': 30, 'beurre': 60, 'crème': 15, 'creme': 15,
@@ -660,7 +373,6 @@ async function loadCategories() {
         allCategoriesData = cached;
         renderCategoriesTable();
     }
-
     if (allCategoriesData.length === 0) {
         try {
             const snapshot = await db.collection('categories').get();
@@ -740,7 +452,6 @@ function saveCategory() {
         saveDocument('categories', d, function() {
             closeModal();
             refreshCurrentPage();
-
             if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
                 CacheDB.saveCollection('categories');
             }
@@ -798,35 +509,27 @@ function calculatePrixAchat() {
     document.getElementById('prodPA').value = prixAchat.toFixed(2);
 }
 
-// ==================== 🎨 PAGE PRODUITS MODERNE ====================
+// 🎨 PAGE PRODUITS MODERNE
 function loadProductsPage(c) {
     injectAdminCrudsStyles();
-    c.innerHTML = `
-    <div class="ac-products-page">
-        <div class="ac-products-header">
-            <h2><i class="fas fa-box"></i> Produits</h2>
-            <div class="ac-products-actions">
-                <div class="ac-search-pro">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="productSearchInput"
-                        placeholder="Rechercher un produit..."
-                        value="${escapeHtml(window.productSearchQuery || '')}"
-                        oninput="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">
-                </div>
-                <select id="categoryFilter" class="ac-filter-select" onchange="filterProducts()">
-                    <option value="">Toutes catégories</option>
-                </select>
-                <button class="ac-btn-pro ac-btn-pro-primary" onclick="openProductForm()">
-                    <i class="fas fa-plus"></i> Nouveau
-                </button>
-                <button class="ac-btn-pro ac-btn-pro-achat" onclick="openAchatModal()">
-                    <i class="fas fa-shopping-cart"></i> Effectuer des achats
-                </button>
-            </div>
-        </div>
-        <div id="productsGridContainer"></div>
-        <div id="productsPagination" style="margin-top:12px;"></div>
-    </div>`;
+    var html = '';
+    html += '<div class="ac-products-page">';
+    html += '  <div class="ac-products-header">';
+    html += '    <h2><i class="fas fa-box"></i> Produits</h2>';
+    html += '    <div class="ac-products-actions">';
+    html += '      <div class="ac-search-pro">';
+    html += '        <i class="fas fa-search"></i>';
+    html += '        <input type="text" id="productSearchInput" placeholder="Rechercher un produit..." value="' + escapeHtml(window.productSearchQuery || '') + '" oninput="window.productSearchQuery = this.value.trim().toLowerCase(); window.currentPages.products=1; renderProductsTable();">';
+    html += '      </div>';
+    html += '      <select id="categoryFilter" class="ac-filter-select" onchange="filterProducts()"><option value="">Toutes catégories</option></select>';
+    html += '      <button class="ac-btn-pro ac-btn-pro-primary" onclick="openProductForm()"><i class="fas fa-plus"></i> Nouveau</button>';
+    html += '      <button class="ac-btn-pro ac-btn-pro-achat" onclick="openAchatModal()"><i class="fas fa-shopping-cart"></i> Effectuer des achats</button>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '  <div id="productsGridContainer"></div>';
+    html += '  <div id="productsPagination" style="margin-top:12px;"></div>';
+    html += '</div>';
+    c.innerHTML = html;
     loadCategoriesInFilter();
     loadProducts();
 }
@@ -855,7 +558,6 @@ async function loadProducts() {
         window.allProductsData = cached;
         renderProductsTable();
     }
-
     try {
         const snapshot = await db.collection('products').get();
         window.allProductsData = [];
@@ -874,13 +576,13 @@ async function loadProducts() {
     } catch (e) { console.error(e); }
 }
 
-// 🎨 Rendu cards moderne
+// 🎨 Rendu cards SANS template literal imbriqué
 function renderProductsTable() {
     var container = document.getElementById('productsGridContainer');
     if (!container) return;
 
     var data = window.allProductsData.slice();
-    if (selectedCategoryFilter) {
+    if (typeof selectedCategoryFilter !== 'undefined' && selectedCategoryFilter) {
         data = data.filter(function(d) {
             if (d.categories && d.categories.length > 0) return d.categories.includes(selectedCategoryFilter);
             return d.categorie === selectedCategoryFilter;
@@ -899,21 +601,16 @@ function renderProductsTable() {
     var pageData = getPageData('products', data);
 
     if (pageData.length === 0) {
-        container.innerHTML = `
-        <div class="ac-empty-state">
-            <i class="fas fa-box-open"></i>
-            <h3>Aucun produit trouvé</h3>
-            <p>${window.productSearchQuery ? 'Essayez un autre mot-clé.' : 'Cliquez sur "Nouveau" pour ajouter votre premier produit.'}</p>
-        </div>`;
+        container.innerHTML = '<div class="ac-empty-state"><i class="fas fa-box-open"></i><h3>Aucun produit trouvé</h3><p>' + (window.productSearchQuery ? 'Essayez un autre mot-clé.' : 'Cliquez sur "Nouveau" pour ajouter votre premier produit.') + '</p></div>';
         document.getElementById('productsPagination').innerHTML = '';
         return;
     }
 
     var html = '<div class="ac-products-grid">';
-    pageData.forEach(function(d) {
-        var imageHtml = d.imageBase64
-            ? `<img src="${d.imageBase64}" alt="${escapeHtml(d.nom || '')}">`
-            : `<i class="fas fa-box"></i>`;
+    for (var i = 0; i < pageData.length; i++) {
+        var d = pageData[i];
+
+        var imageHtml = d.imageBase64 ? '<img src="' + d.imageBase64 + '" alt="' + escapeHtml(d.nom || '') + '">' : '<i class="fas fa-box"></i>';
 
         var stockBadge = '';
         if ((d.stock || 0) <= 0) {
@@ -924,39 +621,30 @@ function renderProductsTable() {
 
         var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories[0] : (d.categorie || 'Sans catégorie');
         var prixVente = (d.prixPromo && d.prixPromo > 0) ? d.prixPromo : (d.prixVente || 0);
-        var prixPromoHtml = (d.prixPromo && d.prixPromo > 0) ? `<span class="ac-product-price-achat" style="text-decoration:line-through;">${(d.prixVente || 0).toFixed(2)}</span>` : '';
+        var prixPromoHtml = (d.prixPromo && d.prixPromo > 0) ? '<span class="ac-product-price-achat" style="text-decoration:line-through;">' + (d.prixVente || 0).toFixed(2) + '</span>' : '';
+        var brandHtml = d.brand ? '<span style="font-size:12px;color:#64748B;">' + escapeHtml(d.brand) + '</span>' : '';
 
-        html += `
-        <div class="ac-product-card">
-            <div class="ac-product-card-image">
-                ${imageHtml}
-                ${stockBadge}
-            </div>
-            <div class="ac-product-card-body">
-                <h4 class="ac-product-card-title">${escapeHtml(d.nom || 'Sans nom')}</h4>
-                <span class="ac-product-card-category">${escapeHtml(categoriesDisplay)}</span>
-                ${d.brand ? `<span style="font-size:12px;color:#64748B;">${escapeHtml(d.brand)}</span>` : ''}
-                <div class="ac-product-card-stock">
-                    <i class="fas fa-cubes"></i> Stock: <strong>${d.stock || 0}</strong>
-                </div>
-                <div class="ac-product-card-price">
-                    <div>
-                        <div class="ac-product-price-vente">${prixVente.toFixed(2)} MAD</div>
-                        ${prixPromoHtml}
-                    </div>
-                    <div class="ac-product-price-achat">Achat: ${(d.prixAchat || 0).toFixed(2)}</div>
-                </div>
-            </div>
-            <div class="ac-product-card-actions">
-                <button class="edit" onclick="editDocument('products','${d.id}')">
-                    <i class="fas fa-edit"></i> Modifier
-                </button>
-                <button class="delete" onclick="deleteDocument('products','${d.id}')">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </div>`;
-    });
+        html += '<div class="ac-product-card">';
+        html += '  <div class="ac-product-card-image">' + imageHtml + stockBadge + '</div>';
+        html += '  <div class="ac-product-card-body">';
+        html += '    <h4 class="ac-product-card-title">' + escapeHtml(d.nom || 'Sans nom') + '</h4>';
+        html += '    <span class="ac-product-card-category">' + escapeHtml(categoriesDisplay) + '</span>';
+        html += '    ' + brandHtml;
+        html += '    <div class="ac-product-card-stock"><i class="fas fa-cubes"></i> Stock: <strong>' + (d.stock || 0) + '</strong></div>';
+        html += '    <div class="ac-product-card-price">';
+        html += '      <div>';
+        html += '        <div class="ac-product-price-vente">' + prixVente.toFixed(2) + ' MAD</div>';
+        html += '        ' + prixPromoHtml;
+        html += '      </div>';
+        html += '      <div class="ac-product-price-achat">Achat: ' + (d.prixAchat || 0).toFixed(2) + '</div>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '  <div class="ac-product-card-actions">';
+        html += '    <button class="edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i> Modifier</button>';
+        html += '    <button class="delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button>';
+        html += '  </div>';
+        html += '</div>';
+    }
     html += '</div>';
 
     container.innerHTML = html;
@@ -1120,9 +808,9 @@ function saveProduct() {
             description: document.getElementById('prodDesc').value,
             categories: selectedCategories,
             categorie: selectedCategories.length > 0 ? selectedCategories[0] : '',
-            dateProduction: document.getElementById('prodDateProduction')?.value || '',
-            dureeConservation: parseInt(document.getElementById('prodDureeConservation')?.value) || 0,
-            dateExpiration: document.getElementById('prodDateExpiration')?.value || '',
+            dateProduction: (document.getElementById('prodDateProduction') || {}).value || '',
+            dureeConservation: parseInt((document.getElementById('prodDureeConservation') || {}).value) || 0,
+            dateExpiration: (document.getElementById('prodDateExpiration') || {}).value || '',
             ingredients: ingredients,
             fournisseurId: fournisseurId,
             fournisseurNom: fournisseurNom
@@ -1133,7 +821,6 @@ function saveProduct() {
                 var idx = window.allProductsData.findIndex(function(x) { return x.id === editingId; });
                 if (idx !== -1) window.allProductsData[idx] = Object.assign({}, window.allProductsData[idx], d, { id: editingId });
                 closeModal(); renderProductsTable(); CacheDB.sync();
-
                 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
                     CacheDB.saveCollection('products');
                 }
@@ -1144,7 +831,6 @@ function saveProduct() {
                 d.id = newId;
                 window.allProductsData.push(d);
                 closeModal(); renderProductsTable(); CacheDB.sync();
-
                 if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
                     CacheDB.saveCollection('products');
                 }
@@ -1181,7 +867,6 @@ async function loadClients() {
         allClientsData = cached;
         renderClientsTable();
     }
-
     try {
         const snapshot = await db.collection('clients').get();
         allClientsData = [];
@@ -1251,7 +936,6 @@ function saveClient() {
     saveDocument('clients', d, function() {
         closeModal();
         loadClients();
-
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('clients');
         }
@@ -1280,7 +964,6 @@ async function loadFournisseurs() {
         allFournisseursData = cached;
         renderFournisseursTable();
     }
-
     try {
         const snapshot = await db.collection('fournisseurs').get();
         allFournisseursData = [];
@@ -1359,7 +1042,6 @@ function saveFournisseur() {
     saveDocument('fournisseurs', d, function() {
         closeModal();
         loadFournisseurs();
-
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
             CacheDB.saveCollection('fournisseurs');
         }
@@ -1391,66 +1073,35 @@ function openAchatModalForm() {
         options += '<option value="' + f.id + '">' + escapeHtml(label) + '</option>';
     });
 
-    var html = `
-        <div id="achatModalOverlay" class="ac-achat-overlay">
-            <div class="ac-achat-modal">
-                <div class="ac-achat-header">
-                    <h3><i class="fas fa-shopping-cart"></i> Effectuer des achats</h3>
-                    <button class="ac-achat-close" onclick="fermerAchatModal()" title="Fermer">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+    var html = '';
+    html += '<div id="achatModalOverlay" class="ac-achat-overlay">';
+    html += '  <div class="ac-achat-modal">';
+    html += '    <div class="ac-achat-header">';
+    html += '      <h3><i class="fas fa-shopping-cart"></i> Effectuer des achats</h3>';
+    html += '      <button class="ac-achat-close" onclick="fermerAchatModal()" title="Fermer"><i class="fas fa-times"></i></button>';
+    html += '    </div>';
+    html += '    <div class="ac-achat-toolbar">';
+    html += '      <select id="achatFournisseurSelect" class="ac-fournisseur-select" onchange="chargerProduitsFournisseurAchat()">' + options + '</select>';
+    html += '      <div class="ac-search-pro"><i class="fas fa-search"></i><input type="text" id="achatSearchInput" placeholder="Rechercher un produit..." oninput="onAchatSearch(this.value)"></div>';
+    html += '      <button class="ac-btn-pro ac-btn-pro-scan" onclick="ouvrirCameraFacture()" id="scanFactureBtn" disabled title="Scanner la facture"><i class="fas fa-camera"></i> Scanner</button>';
+    html += '    </div>';
+    html += '    <div class="ac-achat-body" id="achatModalBody">';
+    html += '      <div class="ac-empty-state"><i class="fas fa-truck"></i><h3>Sélectionnez un fournisseur</h3><p>Choisissez un fournisseur dans la liste ci-dessus pour voir ses produits.</p></div>';
+    html += '    </div>';
+    html += '    <div class="ac-achat-footer">';
+    html += '      <div class="ac-achat-totals">';
+    html += '        <div class="ac-achat-total-block"><span class="label">Produits</span><span class="value blue" id="achatTotalProduits">0</span></div>';
+    html += '        <div class="ac-achat-total-block"><span class="label">Quantité totale</span><span class="value" id="achatTotalQte">0</span></div>';
+    html += '        <div class="ac-achat-total-block"><span class="label">Total général</span><span class="value green" id="achatTotalGeneral">0.00 MAD</span></div>';
+    html += '      </div>';
+    html += '      <div class="ac-achat-actions">';
+    html += '        <button class="ac-btn-pro ac-btn-pro-ghost" onclick="fermerAchatModal()">Annuler</button>';
+    html += '        <button class="ac-btn-pro ac-btn-pro-achat" id="achatValiderBtn" onclick="validerAchats()" disabled><i class="fas fa-check"></i> Valider les achats</button>';
+    html += '      </div>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '</div>';
 
-                <div class="ac-achat-toolbar">
-                    <select id="achatFournisseurSelect" class="ac-fournisseur-select" onchange="chargerProduitsFournisseurAchat()">
-                        ${options}
-                    </select>
-
-                    <div class="ac-search-pro">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="achatSearchInput" placeholder="Rechercher un produit..."
-                            oninput="onAchatSearch(this.value)">
-                    </div>
-
-                    <button class="ac-btn-pro ac-btn-pro-scan" onclick="ouvrirCameraFacture()" id="scanFactureBtn" disabled
-                        title="Scanner la facture">
-                        <i class="fas fa-camera"></i> Scanner
-                    </button>
-                </div>
-
-                <div class="ac-achat-body" id="achatModalBody">
-                    <div class="ac-empty-state">
-                        <i class="fas fa-truck"></i>
-                        <h3>Sélectionnez un fournisseur</h3>
-                        <p>Choisissez un fournisseur dans la liste ci-dessus pour voir ses produits.</p>
-                    </div>
-                </div>
-
-                <div class="ac-achat-footer">
-                    <div class="ac-achat-totals">
-                        <div class="ac-achat-total-block">
-                            <span class="label">Produits</span>
-                            <span class="value blue" id="achatTotalProduits">0</span>
-                        </div>
-                        <div class="ac-achat-total-block">
-                            <span class="label">Quantité totale</span>
-                            <span class="value" id="achatTotalQte">0</span>
-                        </div>
-                        <div class="ac-achat-total-block">
-                            <span class="label">Total général</span>
-                            <span class="value green" id="achatTotalGeneral">0.00 MAD</span>
-                        </div>
-                    </div>
-                    <div class="ac-achat-actions">
-                        <button class="ac-btn-pro ac-btn-pro-ghost" onclick="fermerAchatModal()">Annuler</button>
-                        <button class="ac-btn-pro ac-btn-pro-achat" id="achatValiderBtn" onclick="validerAchats()" disabled>
-                            <i class="fas fa-check"></i> Valider les achats
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
     var oldOverlay = document.getElementById('achatModalOverlay');
     if (oldOverlay) oldOverlay.remove();
     document.body.insertAdjacentHTML('beforeend', html);
@@ -1474,12 +1125,7 @@ function chargerProduitsFournisseurAchat() {
 
     var body = document.getElementById('achatModalBody');
     if (!fournisseurId) {
-        if (body) body.innerHTML = `
-        <div class="ac-empty-state">
-            <i class="fas fa-truck"></i>
-            <h3>Sélectionnez un fournisseur</h3>
-            <p>Choisissez un fournisseur dans la liste ci-dessus.</p>
-        </div>`;
+        if (body) body.innerHTML = '<div class="ac-empty-state"><i class="fas fa-truck"></i><h3>Sélectionnez un fournisseur</h3><p>Choisissez un fournisseur dans la liste ci-dessus.</p></div>';
         fournisseurAchatSelectionne = null;
         produitsAchatList = [];
         achatLignes = [];
@@ -1522,12 +1168,7 @@ function afficherProduitsAchat() {
     if (!body) return;
 
     if (!produitsAchatList || produitsAchatList.length === 0) {
-        body.innerHTML = `
-        <div class="ac-empty-state">
-            <i class="fas fa-box-open"></i>
-            <h3>Aucun produit pour ce fournisseur</h3>
-            <p>Ajoutez des produits avec ce fournisseur d'abord.</p>
-        </div>`;
+        body.innerHTML = '<div class="ac-empty-state"><i class="fas fa-box-open"></i><h3>Aucun produit pour ce fournisseur</h3><p>Ajoutez des produits avec ce fournisseur d\'abord.</p></div>';
         updateAchatTotals();
         return;
     }
@@ -1540,34 +1181,26 @@ function afficherProduitsAchat() {
     }
 
     if (lignes.length === 0) {
-        body.innerHTML = `
-        <div class="ac-empty-state">
-            <i class="fas fa-search"></i>
-            <h3>Aucun produit trouvé</h3>
-            <p>Essayez un autre mot-clé.</p>
-        </div>`;
+        body.innerHTML = '<div class="ac-empty-state"><i class="fas fa-search"></i><h3>Aucun produit trouvé</h3><p>Essayez un autre mot-clé.</p></div>';
         updateAchatTotals();
         return;
     }
 
-    var html = `
-    <table class="ac-achat-table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Produit</th>
-                <th class="center">Stock</th>
-                <th class="center">Prix boîte actuel</th>
-                <th class="center">Qté achetée</th>
-                <th class="center">Nouveau prix</th>
-                <th class="center">Expiration</th>
-                <th class="center">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-    `;
+    var html = '';
+    html += '<table class="ac-achat-table">';
+    html += '<thead><tr>';
+    html += '<th>ID</th>';
+    html += '<th>Produit</th>';
+    html += '<th class="center">Stock</th>';
+    html += '<th class="center">Prix boîte actuel</th>';
+    html += '<th class="center">Qté achetée</th>';
+    html += '<th class="center">Nouveau prix</th>';
+    html += '<th class="center">Expiration</th>';
+    html += '<th class="center">Total</th>';
+    html += '</tr></thead><tbody>';
 
-    lignes.forEach(function(o) {
+    for (var k = 0; k < lignes.length; k++) {
+        var o = lignes[k];
         var l = o.ligne;
         var i = o.realIdx;
         var priceChanged = l.nouveauPrix > 0 && Math.abs(l.nouveauPrix - l.prixActuel) > 0.001;
@@ -1579,45 +1212,20 @@ function afficherProduitsAchat() {
             var diff = l.nouveauPrix - l.prixActuel;
             var direction = diff > 0 ? 'up' : 'down';
             var signe = diff > 0 ? '+' : '';
-            badgeHtml = `<span class="ac-price-change-badge ${direction}">
-                <i class="fas fa-arrow-${diff > 0 ? 'up' : 'down'}"></i>
-                ${signe}${diff.toFixed(2)} MAD
-            </span>`;
+            badgeHtml = '<span class="ac-price-change-badge ' + direction + '"><i class="fas fa-arrow-' + (diff > 0 ? 'up' : 'down') + '"></i> ' + signe + diff.toFixed(2) + ' MAD</span>';
         }
 
-        html += `
-        <tr class="${rowClass}">
-            <td><span class="ac-product-id">${(l.id || '').substring(0, 6)}</span></td>
-            <td>
-                <div class="ac-product-name">${escapeHtml(l.nom)}</div>
-                ${badgeHtml}
-            </td>
-            <td class="center">${l.stockActuel}</td>
-            <td class="center">
-                <span class="ac-price-old">${l.prixActuel.toFixed(2)} MAD</span>
-            </td>
-            <td class="center">
-                <input type="number" min="0" step="1"
-                    value="${l.quantite || 0}"
-                    oninput="onLigneQteChange(${i}, this.value)"
-                    style="width:80px;">
-            </td>
-            <td class="center">
-                <input type="number" min="0" step="0.01"
-                    class="${prixClass}"
-                    value="${l.nouveauPrix || 0}"
-                    oninput="onLignePrixChange(${i}, this.value)"
-                    style="width:100px;">
-            </td>
-            <td class="center">
-                <input type="date"
-                    value="${l.dateExpiration || ''}"
-                    onchange="onLigneDateChange(${i}, this.value)"
-                    style="width:140px;">
-            </td>
-            <td class="ac-total-cell" id="achatTotal_${i}">${(l.total || 0).toFixed(2)}</td>
-        </tr>`;
-    });
+        html += '<tr class="' + rowClass + '">';
+        html += '<td><span class="ac-product-id">' + (l.id || '').substring(0, 6) + '</span></td>';
+        html += '<td><div class="ac-product-name">' + escapeHtml(l.nom) + '</div>' + badgeHtml + '</td>';
+        html += '<td class="center">' + l.stockActuel + '</td>';
+        html += '<td class="center"><span class="ac-price-old">' + l.prixActuel.toFixed(2) + ' MAD</span></td>';
+        html += '<td class="center"><input type="number" min="0" step="1" value="' + (l.quantite || 0) + '" oninput="onLigneQteChange(' + i + ', this.value)" style="width:80px;"></td>';
+        html += '<td class="center"><input type="number" min="0" step="0.01" class="' + prixClass + '" value="' + (l.nouveauPrix || 0) + '" oninput="onLignePrixChange(' + i + ', this.value)" style="width:100px;"></td>';
+        html += '<td class="center"><input type="date" value="' + (l.dateExpiration || '') + '" onchange="onLigneDateChange(' + i + ', this.value)" style="width:140px;"></td>';
+        html += '<td class="ac-total-cell" id="achatTotal_' + i + '">' + (l.total || 0).toFixed(2) + '</td>';
+        html += '</tr>';
+    }
 
     html += '</tbody></table>';
     body.innerHTML = html;
@@ -1776,22 +1384,12 @@ async function scannerFacture(imgData) {
         var productNames = produitsAchatList.map(function(p) { return p.nom; });
         var productListStr = productNames.map(function(n) { return '"' + n.replace(/"/g, '\\"') + '"'; }).join(', ');
 
-        var prompt = `
-            Voici une photo d'une facture fournisseur.
-            La liste des produits existants pour ce fournisseur est : [${productListStr}].
-            Extrais de la facture les quantités ET les prix unitaires (par boîte) achetés pour chacun de ces produits.
-            Retourne UNIQUEMENT un tableau JSON où chaque objet a les propriétés :
-            - "nom" : exactement le nom du produit tel que dans la liste
-            - "quantite" : nombre entier
-            - "prix" : prix unitaire HT ou TTC si lisible (sinon null)
-
-            Exemple :
-            [
-                { "nom": "Coca-Cola 1.5L", "quantite": 5, "prix": 12.50 },
-                { "nom": "Fanta Orange", "quantite": 3, "prix": 11.00 }
-            ]
-            Si aucun produit n'est identifié, retourne un tableau vide [].
-        `;
+        var prompt = 'Voici une photo d\'une facture fournisseur. ' +
+            'La liste des produits existants pour ce fournisseur est : [' + productListStr + ']. ' +
+            'Extrais de la facture les quantités ET les prix unitaires (par boîte) achetés pour chacun de ces produits. ' +
+            'Retourne UNIQUEMENT un tableau JSON où chaque objet a les propriétés : "nom" (exactement le nom du produit tel que dans la liste), "quantite" (nombre entier), "prix" (prix unitaire HT ou TTC si lisible, sinon null). ' +
+            'Exemple : [{"nom":"Coca-Cola 1.5L","quantite":5,"prix":12.50},{"nom":"Fanta Orange","quantite":3,"prix":11.00}]. ' +
+            'Si aucun produit n\'est identifié, retourne un tableau vide [].';
 
         var response = await fetch(GEMINI_WORKER_URL, {
             method: 'POST',
@@ -1802,7 +1400,7 @@ async function scannerFacture(imgData) {
         var data = await response.json();
         if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
 
-        var rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        var rawText = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text || '';
         var cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         var produitsReconnus = [];
 
@@ -1879,7 +1477,10 @@ window.openAchatModal = openAchatModal;
 window.fermerAchatModal = fermerAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
 window.validerAchats = validerAchats;
-window.calculerTotalLigne = calculerTotalLigne;
+window.onLigneQteChange = onLigneQteChange;
+window.onLignePrixChange = onLignePrixChange;
+window.onLigneDateChange = onLigneDateChange;
+window.onAchatSearch = onAchatSearch;
 window.ouvrirCameraFacture = ouvrirCameraFacture;
 window.scannerFacture = scannerFacture;
 
