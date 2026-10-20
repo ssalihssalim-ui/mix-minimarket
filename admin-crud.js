@@ -5,6 +5,8 @@
 // ✅ Fix stock: conversion safe (Number) pour éviter [object Object]
 // ✅ Formulaires modernes responsive
 // ✅ Dates production / durée conservation / date expiration
+// ✅ 🆕 Tri des colonnes dans le tableau d'achat (asc/desc)
+// ✅ 🆕 Bouton "Commander" → WhatsApp fournisseur
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -12,6 +14,10 @@ window.productSearchQuery = window.productSearchQuery || '';
 window.fournisseurSearchQuery = window.fournisseurSearchQuery || '';
 window.clientSearchQuery = window.clientSearchQuery || '';
 window.categorieSearchQuery = window.categorieSearchQuery || '';
+
+// 🆕 État tri tableau achat
+var achatSortCol = 'nom';
+var achatSortDir = 'asc';
 
 // ====================================================
 //  🎨 STYLES INJECTÉS
@@ -46,6 +52,8 @@ function injectAdminCrudsStyles() {
     css += '.ac-btn-achat:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(16,185,129,0.4);}';
     css += '.ac-btn-scan{background:linear-gradient(135deg,#06B6D4,#0891B2);color:white;box-shadow:0 2px 8px rgba(6,182,212,0.3);}';
     css += '.ac-btn-scan:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(6,182,212,0.4);}';
+    css += '.ac-btn-whatsapp{background:linear-gradient(135deg,#25D366,#128C7E);color:white;box-shadow:0 2px 8px rgba(37,211,102,0.3);}';
+    css += '.ac-btn-whatsapp:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(37,211,102,0.4);}';
     css += '.ac-btn-ghost{background:var(--ac-gray-100);color:var(--ac-gray-700);border:1.5px solid var(--ac-gray-200);}';
     css += '.ac-btn-ghost:hover:not(:disabled){background:var(--ac-gray-200);border-color:var(--ac-gray-400);}';
     /* SEARCH */
@@ -219,7 +227,7 @@ injectAdminCrudsStyles();
 window.injectAdminCrudsStyles = injectAdminCrudsStyles;
 
 // ====================================================
-//  🧮 HELPERS (stats + conversion safe)
+//  🧮 HELPERS
 // ====================================================
 function acNum(v) {
     if (v === null || v === undefined) return 0;
@@ -274,7 +282,7 @@ window.openModernForm = openModernForm;
 window.closeModernForm = closeModernForm;
 
 // ====================================================
-//  📊 STATS CATÉGORIES
+//  📊 STATS
 // ====================================================
 function renderCategoriesStats(data) {
     var totalCat = (data || []).length;
@@ -295,10 +303,6 @@ function renderCategoriesStats(data) {
     html += acStatCard('Top catégorie', bestCat || '—', bestCat ? 'CA: ' + acFormatMAD(bestCA) : '', 'pink', 'fa-trophy');
     return html;
 }
-
-// ====================================================
-//  📊 STATS FOURNISSEURS
-// ====================================================
 function renderFournisseursStats(data) {
     var totalFour = (data || []).length;
     var totalCA = 0, avecCategories = 0;
@@ -318,10 +322,6 @@ function renderFournisseursStats(data) {
     html += acStatCard('Taux liaison', totalFour > 0 ? acFormatPct((avecCategories / totalFour) * 100) : '0 %', 'Four. → catégories', 'pink', 'fa-link');
     return html;
 }
-
-// ====================================================
-//  📊 STATS CLIENTS
-// ====================================================
 function renderClientsStats(data) {
     var totalClients = (data || []).length;
     var totalCA = 0, totalProfit = 0, points = 0;
@@ -341,10 +341,6 @@ function renderClientsStats(data) {
     html += acStatCard('Top client', bestClient || '—', bestClient ? 'CA: ' + acFormatMAD(bestCA) : '', 'pink', 'fa-crown');
     return html;
 }
-
-// ====================================================
-//  📊 STATS PRODUITS (avec fix stock Object)
-// ====================================================
 function renderProduitsStats(data) {
     var totalProduits = (data || []).length;
     var totalStock = 0, totalCA = 0, totalProfit = 0;
@@ -352,7 +348,6 @@ function renderProduitsStats(data) {
     var bestProduit = null, bestProfit = -Infinity;
     var now = new Date(); now.setHours(0,0,0,0);
     (data || []).forEach(function(p) {
-        // ✅ FIX: stock safe conversion (évite [object Object])
         var stock = acNum(p.stock);
         var ca = acNum(p.ca);
         var profit = acNum(p.profit);
@@ -604,7 +599,6 @@ function openCategoryForm(data) {
         body: body,
         onSave: 'saveCategory()'
     });
-    // Attacher listener checkbox
     setTimeout(function() {
         var cb = document.getElementById('catRecette');
         if (cb) cb.addEventListener('change', function() {
@@ -756,7 +750,6 @@ function renderProductsTable() {
     var html = '<div class="ac-grid">';
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
-        // ✅ FIX stock safe
         var stock = acNum(d.stock);
         var imageHtml = d.imageBase64 ? '<img src="' + d.imageBase64 + '" alt="' + escapeHtml(d.nom || '') + '">' : '<i class="fas fa-box"></i>';
         var stockBadge = '';
@@ -817,7 +810,6 @@ async function openProductForm(data) {
     var dy = data.disponible !== false ? 'selected' : '', dn = data.disponible === false ? 'selected' : '';
 
     var body = '';
-    // Section 1: Général
     body += '<div class="ac-form-section">';
     body += '  <h4 class="ac-form-section-title"><i class="fas fa-info-circle"></i> Informations générales</h4>';
     body += '  <div class="ac-form-grid">';
@@ -846,8 +838,6 @@ async function openProductForm(data) {
     body += '    </div>';
     body += '  </div>';
     body += '</div>';
-
-    // Section 2: Prix & Stock
     body += '<div class="ac-form-section">';
     body += '  <h4 class="ac-form-section-title"><i class="fas fa-coins"></i> Prix & Stock</h4>';
     body += '  <div class="ac-form-grid">';
@@ -885,8 +875,6 @@ async function openProductForm(data) {
     body += '    </div>';
     body += '  </div>';
     body += '</div>';
-
-    // Section 3: Dates
     body += '<div class="ac-form-section">';
     body += '  <h4 class="ac-form-section-title"><i class="fas fa-calendar"></i> Dates & Conservation</h4>';
     body += '  <div class="ac-form-grid cols-3">';
@@ -904,8 +892,6 @@ async function openProductForm(data) {
     body += '    </div>';
     body += '  </div>';
     body += '</div>';
-
-    // Section 4: Description
     body += '<div class="ac-form-section">';
     body += '  <h4 class="ac-form-section-title"><i class="fas fa-align-left"></i> Description & Recette</h4>';
     body += '  <div class="ac-form-grid cols-1">';
@@ -1321,7 +1307,7 @@ function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
 // ====================================================
-//  💰 ACHATS + SCAN
+//  💰 ACHATS + SCAN + WHATSAPP
 // ====================================================
 var fournisseurAchatSelectionne = null;
 var produitsAchatList = [];
@@ -1333,8 +1319,13 @@ function openAchatModal() {
         loadFournisseurs().then(function() { openAchatModalForm(); });
     } else openAchatModalForm();
 }
+
 function openAchatModalForm() {
     achatSearchFilter = '';
+    // ✅ Reset tri à l'ouverture
+    achatSortCol = 'nom';
+    achatSortDir = 'asc';
+
     var options = '<option value="">— Choisir un fournisseur —</option>';
     allFournisseursData.forEach(function(f) {
         var label = (f.nom || '') + (f.prenom ? ' ' + f.prenom : '') + (f.societe ? ' (' + f.societe + ')' : '');
@@ -1348,6 +1339,7 @@ function openAchatModalForm() {
     html += '      <select id="achatFournisseurSelect" onchange="chargerProduitsFournisseurAchat()">' + options + '</select>';
     html += '      <div class="ac-search" style="min-width:240px;flex:1;"><i class="fas fa-search"></i><input type="text" id="achatSearchInput" placeholder="Rechercher un produit..." oninput="onAchatSearch(this.value)"></div>';
     html += '      <button class="ac-btn ac-btn-scan" onclick="ouvrirCameraFacture()" id="scanFactureBtn" disabled><i class="fas fa-camera"></i> Scanner</button>';
+    html += '      <button class="ac-btn ac-btn-whatsapp" onclick="commanderWhatsAppFournisseur()" id="commanderBtn" disabled><i class="fab fa-whatsapp"></i> Commander</button>';
     html += '    </div>';
     html += '    <div class="ac-modal-body" id="achatModalBody"><div class="ac-empty"><i class="fas fa-truck"></i><h3>Sélectionnez un fournisseur</h3><p>Choisissez un fournisseur dans la liste ci-dessus pour voir ses produits.</p></div></div>';
     html += '    <div class="ac-modal-footer">';
@@ -1366,12 +1358,16 @@ function openAchatModalForm() {
     var old = document.getElementById('achatModalOverlay'); if (old) old.remove();
     document.body.insertAdjacentHTML('beforeend', html);
 }
+
 function fermerAchatModal() { var o = document.getElementById('achatModalOverlay'); if (o) o.remove(); achatSearchFilter = ''; }
+
 function chargerProduitsFournisseurAchat() {
     var select = document.getElementById('achatFournisseurSelect'); if (!select) return;
     var fid = select.value;
     var scanBtn = document.getElementById('scanFactureBtn');
+    var commanderBtn = document.getElementById('commanderBtn');
     if (scanBtn) scanBtn.disabled = !fid;
+    if (commanderBtn) commanderBtn.disabled = !fid;
     var body = document.getElementById('achatModalBody');
     if (!fid) {
         if (body) body.innerHTML = '<div class="ac-empty"><i class="fas fa-truck"></i><h3>Sélectionnez un fournisseur</h3><p>Choisissez un fournisseur dans la liste.</p></div>';
@@ -1388,7 +1384,27 @@ function chargerProduitsFournisseurAchat() {
     });
     afficherProduitsAchat();
 }
+
 function onAchatSearch(value) { achatSearchFilter = (value || '').toLowerCase().trim(); afficherProduitsAchat(); }
+
+// 🆕 Tri par clic sur l'en-tête
+function achatToggleSort(col) {
+    if (achatSortCol === col) {
+        achatSortDir = achatSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        achatSortCol = col;
+        achatSortDir = 'asc';
+    }
+    afficherProduitsAchat();
+}
+window.achatToggleSort = achatToggleSort;
+
+function achatSortIndicator(col) {
+    if (achatSortCol !== col) return '<i class="fas fa-sort" style="opacity:0.3;margin-left:4px;font-size:10px;"></i>';
+    return achatSortDir === 'asc' ? '<i class="fas fa-sort-up" style="margin-left:4px;color:#2563EB;"></i>' : '<i class="fas fa-sort-down" style="margin-left:4px;color:#2563EB;"></i>';
+}
+window.achatSortIndicator = achatSortIndicator;
+
 function afficherProduitsAchat() {
     var body = document.getElementById('achatModalBody'); if (!body) return;
     if (!produitsAchatList || produitsAchatList.length === 0) {
@@ -1398,8 +1414,39 @@ function afficherProduitsAchat() {
     var lignes = achatLignes.map(function(l, realIdx) { return { ligne: l, realIdx: realIdx }; });
     if (achatSearchFilter) lignes = lignes.filter(function(o) { return (o.ligne.nom || '').toLowerCase().indexOf(achatSearchFilter) !== -1; });
     if (lignes.length === 0) { body.innerHTML = '<div class="ac-empty"><i class="fas fa-search"></i><h3>Aucun produit trouvé</h3><p>Essayez un autre mot-clé.</p></div>'; updateAchatTotals(); return; }
+
+    // ✅ Tri
+    lignes.sort(function(a, b) {
+        var va, vb;
+        var col = achatSortCol;
+        var lA = a.ligne, lB = b.ligne;
+        if (col === 'nom') { va = (lA.nom || '').toLowerCase(); vb = (lB.nom || '').toLowerCase(); }
+        else if (col === 'id') { va = (lA.id || '').toLowerCase(); vb = (lB.id || '').toLowerCase(); }
+        else if (col === 'stock') { va = acNum(lA.stockActuel); vb = acNum(lB.stockActuel); }
+        else if (col === 'prixActuel') { va = acNum(lA.prixActuel); vb = acNum(lB.prixActuel); }
+        else if (col === 'quantite') { va = acNum(lA.quantite); vb = acNum(lB.quantite); }
+        else if (col === 'nouveauPrix') { va = acNum(lA.nouveauPrix); vb = acNum(lB.nouveauPrix); }
+        else if (col === 'dateExpiration') { va = lA.dateExpiration || ''; vb = lB.dateExpiration || ''; }
+        else if (col === 'total') { va = acNum(lA.total); vb = acNum(lB.total); }
+        else { va = (lA.nom || '').toLowerCase(); vb = (lB.nom || '').toLowerCase(); }
+        if (typeof va === 'string') {
+            var cmp = va.localeCompare(vb);
+            return achatSortDir === 'asc' ? cmp : -cmp;
+        } else {
+            return achatSortDir === 'asc' ? (va - vb) : (vb - va);
+        }
+    });
+
+    var thStyle = 'cursor:pointer;user-select:none;';
     var html = '<table class="ac-modal-table"><thead><tr>';
-    html += '<th>ID</th><th>Produit</th><th class="center">Stock</th><th class="center">Prix actuel</th><th class="center">Qté</th><th class="center">Nouveau prix</th><th class="center">Expiration</th><th class="center">Total</th>';
+    html += '<th style="' + thStyle + '" onclick="achatToggleSort(\'id\')">ID' + achatSortIndicator('id') + '</th>';
+    html += '<th style="' + thStyle + '" onclick="achatToggleSort(\'nom\')">Produit' + achatSortIndicator('nom') + '</th>';
+    html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'stock\')">Stock' + achatSortIndicator('stock') + '</th>';
+    html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'prixActuel\')">Prix actuel' + achatSortIndicator('prixActuel') + '</th>';
+    html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'quantite\')">Qté' + achatSortIndicator('quantite') + '</th>';
+    html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'nouveauPrix\')">Nouveau prix' + achatSortIndicator('nouveauPrix') + '</th>';
+    html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'dateExpiration\')">Expiration' + achatSortIndicator('dateExpiration') + '</th>';
+    html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'total\')">Total' + achatSortIndicator('total') + '</th>';
     html += '</tr></thead><tbody>';
     for (var k = 0; k < lignes.length; k++) {
         var o = lignes[k]; var l = o.ligne; var i = o.realIdx;
@@ -1428,6 +1475,7 @@ function afficherProduitsAchat() {
     body.innerHTML = html;
     updateAchatTotals();
 }
+
 function onLigneQteChange(index, value) {
     var l = achatLignes[index]; if (!l) return;
     l.quantite = acNum(value); l.total = l.quantite * (l.nouveauPrix || 0);
@@ -1454,6 +1502,7 @@ function updateAchatTotals() {
     if (elT) elT.textContent = totalGeneral.toFixed(2) + ' MAD';
     if (btn) btn.disabled = produits === 0;
 }
+
 async function validerAchats() {
     if (!fournisseurAchatSelectionne) { alert('Veuillez choisir un fournisseur.'); return; }
     var misesAJour = achatLignes.filter(function(l) { return l.quantite > 0; });
@@ -1498,6 +1547,59 @@ async function validerAchats() {
         if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) CacheDB.saveCollection('products');
     } catch(e) { console.error(e); alert('❌ Erreur : ' + e.message); }
 }
+
+// 🆕 COMMANDER via WhatsApp
+function commanderWhatsAppFournisseur() {
+    if (!fournisseurAchatSelectionne) {
+        alert('Choisissez un fournisseur d\'abord.');
+        return;
+    }
+    var lignesACommander = achatLignes.filter(function(l) { return acNum(l.quantite) > 0; });
+    if (lignesACommander.length === 0) {
+        alert('⚠️ Aucune quantité saisie.\n\nRemplissez la colonne "Qté" pour les produits à commander, puis cliquez sur "Commander".');
+        return;
+    }
+    var tel = (fournisseurAchatSelectionne.whatsapp || fournisseurAchatSelectionne.telephone || '').replace(/[^\d+]/g, '').trim();
+    if (!tel) {
+        alert('❌ Aucun numéro WhatsApp/Téléphone enregistré pour ce fournisseur.\n\nModifiez le fournisseur pour ajouter un numéro.');
+        return;
+    }
+    if (tel.startsWith('0')) tel = '212' + tel.substring(1);
+    if (!tel.startsWith('+')) tel = '+' + tel;
+
+    var fourNom = ((fournisseurAchatSelectionne.nom || '') + ' ' + (fournisseurAchatSelectionne.prenom || '')).trim() || 'Fournisseur';
+    var societe = fournisseurAchatSelectionne.societe || '';
+    var dateStr = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    var msg = '🛒 *COMMANDE DE FOURNITURE*\n';
+    msg += '━━━━━━━━━━━━━━━━━━━━━\n';
+    msg += '📅 Date : ' + dateStr + '\n';
+    msg += '👤 Fournisseur : ' + fourNom + '\n';
+    if (societe) msg += '🏢 Société : ' + societe + '\n';
+    msg += '━━━━━━━━━━━━━━━━━━━━━\n\n';
+    msg += '📦 *Produits commandés :*\n\n';
+
+    var totalQte = 0;
+    lignesACommander.forEach(function(l, idx) {
+        var q = acNum(l.quantite);
+        totalQte += q;
+        msg += (idx + 1) + '. *' + l.nom + '*\n';
+        msg += '   Quantité : *' + q + '*\n\n';
+    });
+
+    msg += '━━━━━━━━━━━━━━━━━━━━━\n';
+    msg += '📊 *Total : ' + lignesACommander.length + ' produit(s)* — *' + totalQte + ' unité(s)*\n';
+    msg += '━━━━━━━━━━━━━━━━━━━━━\n\n';
+    msg += '🙏 Merci de nous confirmer la disponibilité et le délai de livraison.\n';
+    msg += '📞 Cordialement,\n';
+    msg += 'Mixmax Minimarket';
+
+    var url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msg);
+    window.open(url, '_blank');
+    console.log('📱 [WhatsApp Commander] Envoi à :', tel, '—', lignesACommander.length, 'produit(s)');
+}
+window.commanderWhatsAppFournisseur = commanderWhatsAppFournisseur;
+
 function ouvrirCameraFacture() {
     if (!fournisseurAchatSelectionne) { alert('Choisissez un fournisseur d\'abord.'); return; }
     var input = document.createElement('input');
@@ -1581,9 +1683,11 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v3');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v4');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
 console.log('✅ 📊 Stats analyste sur chaque page');
 console.log('✅ 📷 Index prix + comparaison + confirmation');
+console.log('✅ 🔃 Tri des colonnes dans le tableau d\'achat (asc/desc)');
+console.log('✅ 📱 Bouton "Commander" → WhatsApp fournisseur');
