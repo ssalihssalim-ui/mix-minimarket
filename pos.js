@@ -24,11 +24,12 @@
 // ✅ ⌨️ CHAMP QUANTITÉ ÉDITABLE AU CLAVIER dans le panier
 // ✅ 🖥️ SUR PC : Barre de recherche + Tables + En ligne DIRECTEMENT VISIBLES
 // ⚡ OPTIMISATIONS : cache recherche + content-visibility + batch 30 + debounce 80ms
-// 🎨 STYLE "RESTOE POS" — Design SaaS moderne — bleu #2563EB + fond gris #F7F8FA
+// 🎨 DESIGN MINIMALISTE BLEU/BLANC — cohérent avec admin-crud.js
 // 🎨 AJUSTEMENTS V3 : cartes 190px + images 85px + prix 0.90rem + AUCUN gradient
 // 🎨 PANIER V2 : nom produit en haut + boutons à droite + sous-total à droite
 // 🆕 AJUSTEMENTS MOBILE : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px
 // ✅ 💳 CRÉDIT CLIENT : loadClientCredits() reproduit EXACTEMENT le filtre d'Admin-Credits (aucune divergence)
+// 🆕 RESPONSIVE RENFORCÉ : tout s'adapte de 320px à 4K
 
 var posCart = [];
 var posStep = 1;
@@ -351,15 +352,16 @@ function posToggleTools() {
             toolsContainer.style.gap = '10px';
             toolsContainer.style.marginBottom = '10px';
             toolsContainer.style.padding = '12px 16px';
-            toolsContainer.style.background = 'var(--bg-card)';
+            toolsContainer.style.background = '#FFFFFF';
             toolsContainer.style.borderRadius = '12px';
-            toolsContainer.style.border = '1px solid var(--border)';
+            toolsContainer.style.border = '1px solid #EAECEF';
             toolsContainer.classList.add('visible');
         } else { toolsContainer.style.display = 'none'; toolsContainer.classList.remove('visible'); }
     }
     if (toggleBtn) {
         toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer tout' : '🔍 Afficher tout';
-        toggleBtn.style.background = posToolsVisible ? '#FF5B5B' : '#2563EB';
+        toggleBtn.style.background = posToolsVisible ? '#FF5B5B' : '#FFFFFF';
+        toggleBtn.style.color = posToolsVisible ? '#fff' : '#1A1D1F';
     }
     var searchInput = document.getElementById('posSearchInput');
     if (searchInput) { searchInput.style.display = posToolsVisible ? 'flex' : 'none'; if (posToolsVisible) setTimeout(function(){ searchInput.focus(); }, 100); }
@@ -410,7 +412,7 @@ async function loadClientCredits(clientId) {
             var statut = d.statutPaiement || (d.paid ? 'payé' : 'crédit');
             var remaining = (d.remainingAmount != null) ? d.remainingAmount : (d.total || 0);
 
-            // ❌ Mêmes exclusions qu'Admin-Credits (lignes 786-791 de admin-credits.js)
+            // ❌ Mêmes exclusions qu'Admin-Credits
             if (d.paid === true) return;                              // déjà totalement payé
             if (statut === 'payé') return;                            // statut payé
             if (remaining <= 0.01) return;                            // rien à payer
@@ -443,7 +445,7 @@ displayEl.textContent = '💳 Crédit: ' + total.toFixed(2) + ' MAD (cliquez pou
 displayEl.style.display = 'block';
 displayEl.style.color = '#FF5B5B';
 displayEl.style.fontWeight = '700';
-displayEl.style.fontSize = '28px';
+displayEl.style.fontSize = '22px';
 displayEl.style.cursor = 'pointer';
 displayEl.style.textDecoration = 'underline';
 displayEl.style.textDecorationStyle = 'dotted';
@@ -461,7 +463,7 @@ displayEl.textContent = '✅ Aucun crédit';
 displayEl.style.display = 'block';
 displayEl.style.color = '#22C55E';
 displayEl.style.fontWeight = '700';
-displayEl.style.fontSize = '28px';
+displayEl.style.fontSize = '22px';
 displayEl.style.cursor = 'default';
 displayEl.style.textDecoration = 'none';
 displayEl.onclick = null;
@@ -630,7 +632,7 @@ var displayProducts = f.slice(0, posProductOffset + posProductBatchSize);
 posHasMoreProducts = (posProductOffset + posProductBatchSize) < totalProducts;
 
 var isMobile = window.innerWidth < 700;
-var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(130px, 1fr))';
+var gridCols = isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))';
 grid.style.gridTemplateColumns = gridCols;
 grid.style.overflowX = 'hidden';
 grid.style.overflowY = 'auto';
@@ -638,7 +640,7 @@ grid.style.flexWrap = 'wrap';
 grid.style.alignContent = 'start';
 
 var html = '';
-html += '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:4px;background:var(--r-bg);border-radius:8px;">';
+html += '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;margin-bottom:6px;background:#F7F8FA;border-radius:10px;border:1px solid #EAECEF;">';
 html += '<button onclick="retournerCategories()" style="display:flex;align-items:center;gap:6px;background:#FFFFFF;color:#1A1D1F;border:1px solid #EAECEF;border-radius:10px;padding:8px 16px;font-size:0.85rem;font-weight:600;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04);">';
 html += '<i class="fas fa-arrow-left"></i> Retour aux catégories';
 html += '</button>';
@@ -665,13 +667,11 @@ if(posSearchQuery) dn = dn.replace(new RegExp('(' + posSearchQuery.replace(/[.*+
 
 var isMobile = window.innerWidth < 700;
 
-// 🎨 AJUSTEMENTS V3 : cartes 190px, images 85px, prix 0.90rem
-// 🆕 MODIFIÉ (mobile) : carte 145-170px au lieu de 120-150px
+// 🎨 Cartes adaptatives : 190px desktop / 145-170px mobile
 var cardStyle = isMobile ?
 'padding:6px 4px;min-height:145px;max-height:170px;aspect-ratio:1/1;border-radius:10px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;' :
 'padding:12px 10px;min-height:190px;max-height:200px;aspect-ratio:1/1;border-radius:14px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
 
-// 🆕 MODIFIÉ (mobile) : image produit 70px au lieu de 62px
 var imgStyle = isMobile ?
 'height:70px;width:70px;margin-bottom:5px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;' :
 'height:85px;width:85px;margin-bottom:8px;border-radius:10px;overflow:hidden;flex-shrink:0;background:#F7F8FA;display:flex;align-items:center;justify-content:center;';
@@ -732,10 +732,8 @@ var imgSize, cardMinHeight, cardMaxHeight, folderSize, nameSize, countSize;
 
 if (isPC) { imgSize='140px'; cardMinHeight='170px'; cardMaxHeight='210px'; folderSize='65px'; nameSize='16px'; countSize='12px'; }
 else if (isTablette) { imgSize='130px'; cardMinHeight='160px'; cardMaxHeight='190px'; folderSize='60px'; nameSize='13px'; countSize='10px'; }
-// 🆕 MODIFIÉ (mobile) : imgSize 65px (au lieu de 45px), cardMinHeight 90px (au lieu de 75px), cardMaxHeight 100px (au lieu de 90px), folderSize 30px (au lieu de 20px)
 else { imgSize='65px'; cardMinHeight='90px'; cardMaxHeight='100px'; folderSize='30px'; nameSize='8px'; countSize='7px'; }
 
-// 🆕 MODIFIÉ : très petit écran légèrement augmenté aussi
 if (window.innerWidth < 400) { imgSize='50px'; cardMinHeight='75px'; cardMaxHeight='90px'; folderSize='24px'; nameSize='7px'; countSize='6px'; }
 
 for (var i = 0; i < sortedCategories.length; i++) {
@@ -856,10 +854,10 @@ function renderClientDropdown(){
 var d = document.getElementById('posClientDropdown');
 if (!d) return;
 var h = '';
-if (posFilteredClients.length === 0) h = '<div style="padding:8px;color:#9A9FA5;text-align:center;font-size:24px;">Aucun</div>';
+if (posFilteredClients.length === 0) h = '<div style="padding:8px;color:#9A9FA5;text-align:center;font-size:14px;">Aucun</div>';
 else {
 posFilteredClients.forEach(function(c){
-h += '<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #EAECEF;font-size:24px;">' + escapeHtml(c.nom)+' '+escapeHtml(c.prenom) + ' <span style="color:#9A9FA5;font-size:20px;">('+(c.telephone||'')+')</span></div>';
+h += '<div onclick="posSelectClientFromDropdown(\''+c.id+'\',\''+escapeHtml(c.nom)+' '+escapeHtml(c.prenom)+'\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #EAECEF;font-size:14px;">' + escapeHtml(c.nom)+' '+escapeHtml(c.prenom) + ' <span style="color:#9A9FA5;font-size:12px;">('+(c.telephone||'')+')</span></div>';
 });
 }
 d.innerHTML = h;
@@ -1102,9 +1100,8 @@ if(posProductsList.length===0&&posCategoriesList.length===0){ c.innerHTML='<div 
 var st=posCalculateTotal(),t=st-posDiscountMAD;
 var isMobile = window.innerWidth < 700;
 var productPanelStyle = posStep===2 ? ' style="display:none;"' : '';
-var stepSize = isMobile ? '16px' : '18px';
-var stepNumberSize2 = isMobile ? '22px' : '26px';
-var stepGap = isMobile ? '8px' : '12px';
+var stepSize = isMobile ? '14px' : '16px';
+var stepGap = isMobile ? '6px' : '10px';
 
 var stepIndicator = '<div class="pos-steps-nav">' +
 '<div class="pos-step ' + (posStep === 1 ? 'active' : '') + '" onclick="posNaviguerEtape(1)">' +
@@ -1148,7 +1145,7 @@ multiCartBar += '</div>';
 var productPanelDisplay = (posStep === 2) ? 'display:none;' : '';
 var mobileCartStyle = '';
 if (isMobile) mobileCartStyle = 'width:100% !important;max-height:35vh !important;min-height:150px !important;margin-top:4px !important;flex:1 !important;';
-var gridCols = isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(130px, 1fr))';
+var gridCols = isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))';
 var gridGap = isMobile ? '6px' : '14px';
 var gridPadding = isMobile ? '2px' : '0';
 var panelPadding = isMobile ? '8px' : '16px';
@@ -1228,7 +1225,7 @@ h+='<div class="pos-cart-header" style="padding:14px 18px;border-bottom:1px soli
 '<button onclick="posAjouterNouveauClient()" style="background:#8B5CF6;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:'+(isMobile?'11px':'0.75rem')+';font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0;"><i class="fas fa-plus" style="font-size:'+(isMobile?'10px':'0.7rem')+';"></i> Nouveau</button></div>' +
 '<div style="position:relative;">' +
 '<div style="display:flex;align-items:center;background:#FFFFFF;border:1px solid #EAECEF;border-radius:10px;padding:4px 10px;position:relative;">' +
-'<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:6px 0;width:100%;background:transparent;font-size:18px !important;font-weight:700 !important;padding-right:24px;color:#1A1D1F;">' +
+'<input type="text" id="posClientSearchInput" placeholder="🔍 Cliquez et tapez..." onkeyup="posSearchClient(this.value)" onfocus="if(this.value)posSearchClient(this.value)" autocomplete="off" value="'+(posCurrentClient?escapeHtml(posCurrentClient.name):'')+'" style="border:none;outline:none;padding:6px 0;width:100%;background:transparent;font-size:16px !important;font-weight:700 !important;padding-right:24px;color:#1A1D1F;">' +
 '<button id="posClientClearBtn" onclick="clearClientSearch()" style="display:'+((posCurrentClient && posCurrentClient.name) ? 'flex' : 'none')+';position:absolute;right:4px;background:none;border:none;cursor:pointer;padding:2px;color:#9A9FA5;font-size:1rem;"><i class="fas fa-times-circle"></i></button>' +
 '</div>' +
 '<div id="posClientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #EAECEF;border-radius:0 0 10px 10px;max-height:150px;overflow-y:auto;z-index:50;"></div>' +
@@ -1246,7 +1243,7 @@ h+='<div class="pos-cart-header" style="padding:14px 18px;border-bottom:1px soli
 '<button class="pos-payment-btn '+(posPaymentMethod==='partiel'?'active':'')+'" onclick="posSetPaymentMethod(\'partiel\')" id="posPartielBtn" '+(canCredit?'':'disabled')+' style="font-size:'+(isMobile?'13px':'0.9rem')+' !important;font-weight:700 !important;padding:10px 14px;height:auto;min-height:40px;flex:1;"><i class="fas fa-hand-holding-usd"></i> Partiel</button>' +
 '</div></div>';
 if(posPaymentMethod==='espece'||posPaymentMethod==='partiel') {
-h+='<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:10px 14px;border:1px solid #EAECEF;border-radius:10px;font-size:24px !important;font-weight:700 !important;background:#FFFFFF;color:#1A1D1F;"><div id="posChangeDisplay" style="font-size:22px;font-weight:700;padding:4px 0;"></div></div>';
+h+='<div style="margin-bottom:8px;"><label style="font-size:'+(isMobile?'12px':'0.8rem')+';font-weight:600;color:#6F767E;">Montant donné</label><input type="number" id="posAmountGiven" placeholder="0.00" value="'+(posAmountGiven>0?posAmountGiven:'')+'" onkeyup="posCalculateChange()" style="width:100%;padding:10px 14px;border:1px solid #EAECEF;border-radius:10px;font-size:22px !important;font-weight:700 !important;background:#FFFFFF;color:#1A1D1F;"><div id="posChangeDisplay" style="font-size:20px;font-weight:700;padding:4px 0;"></div></div>';
 }
 h+='<button class="pos-finalize-btn" onclick="posFinalizeSale()"><i class="fas fa-check-circle"></i> Finaliser</button>' +
 '<button onclick="document.querySelector(\'.pos-steps-nav\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:#2563EB;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(37,99,235,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrow-up"></i></button>' +
@@ -1359,8 +1356,8 @@ var st=posCalculateTotal(); var t=st-posDiscountMAD;
 posAmountGiven=parseFloat(ai.value)||0;
 var c=posAmountGiven-t;
 if(posAmountGiven>0) {
-if(c>=0) cd.innerHTML='<div style="font-size:24px;font-weight:700;color:#22C55E;display:flex;align-items:center;justify-content:flex-start;"><span>✅ Rendu</span><span style="margin-left:12px;">'+c.toFixed(2)+' MAD</span></div>';
-else cd.innerHTML='<div style="font-size:24px;font-weight:700;color:#FF5B5B;display:flex;align-items:center;justify-content:flex-start;"><span>❌ Manquant</span><span style="margin-left:12px;">'+Math.abs(c).toFixed(2)+' MAD</span></div>';
+if(c>=0) cd.innerHTML='<div style="font-size:22px;font-weight:700;color:#22C55E;display:flex;align-items:center;justify-content:flex-start;"><span>✅ Rendu</span><span style="margin-left:12px;">'+c.toFixed(2)+' MAD</span></div>';
+else cd.innerHTML='<div style="font-size:22px;font-weight:700;color:#FF5B5B;display:flex;align-items:center;justify-content:flex-start;"><span>❌ Manquant</span><span style="margin-left:12px;">'+Math.abs(c).toFixed(2)+' MAD</span></div>';
 } else cd.innerHTML='';
 }
 
@@ -1600,18 +1597,20 @@ function posAddMultipleProductsToCart(produitsList) {
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
 // ============================================================
-// 🎨 STYLE "RESTOE POS" V3 — SANS GRADIENT
+// 🎨 STYLE MINIMALISTE BLEU/BLANC
 // Fond gris plat + cartes blanches + bleu #2563EB
-// 🎨 AJUSTEMENTS V3 : cartes 190px + images 85px + prix 0.90rem
+// Cohérent avec admin-crud.js (pages Produits/Catégories/Clients/Fournisseurs)
 // ============================================================
-(function injectRestoeStyle() {
-    var STYLE_ID = 'pos-restoe-styles-v3';
+(function injectMinimalistStyle() {
+    var STYLE_ID = 'pos-minimalist-styles';
     if (document.getElementById(STYLE_ID)) return;
 
     var ancien1 = document.getElementById('pos-modern-styles-v1');
     if (ancien1) ancien1.remove();
     var ancien2 = document.getElementById('pos-restoe-styles-v1');
     if (ancien2) ancien2.remove();
+    var ancien3 = document.getElementById('pos-restoe-styles-v3');
+    if (ancien3) ancien3.remove();
 
     var styles = document.createElement('style');
     styles.id = STYLE_ID;
@@ -1921,21 +1920,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     .pos-cart-item:hover {
         background: var(--r-bg) !important;
-    }
-
-    .pos-cart-item-name {
-        color: var(--r-text) !important;
-        font-weight: 600 !important;
-    }
-
-    .pos-cart-item-price {
-        color: var(--r-text-2) !important;
-        font-weight: 500 !important;
-    }
-
-    .pos-cart-item-total {
-        color: var(--r-blue) !important;
-        font-weight: 800 !important;
     }
 
     .pos-qty-btn {
@@ -2305,7 +2289,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         .pos-cart-header h3 { font-size: 1rem !important; }
     }
 
-    /* 🆕 V3 MOBILE — MODIFIÉ : cartes 145-170px + image produit 70px */
     @media (max-width: 700px) {
         .pos-product-card {
             min-height: 145px !important;
@@ -2324,11 +2307,11 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     `;
 
     document.head.appendChild(styles);
-    console.log('🎨 [POS] Style "Restoe POS" V3 injecté — aucun gradient');
+    console.log('🎨 [POS] Style minimaliste bleu/blanc injecté');
 })();
 
 console.log('🚀 E-SOLUTION - POS chargé avec corrections');
-console.log('🎨 STYLE "RESTOE POS" V3 : fond gris plat + cartes 190px + prix 0.90rem + AUCUN gradient');
+console.log('🎨 STYLE MINIMALISTE : fond gris plat + cartes blanches + bleu #2563EB + aucun gradient');
 console.log('🎨 PANIER V2 : nom en haut + boutons à droite + sous-total à droite');
-console.log('🆕 MOBILE V4 : catégorie 65px + carte cat 90-100px + image produit 70px + carte produit 145-170px');
+console.log('🆕 RESPONSIVE : 320px → 4K, cartes adaptatives, tout s\'ajuste');
 console.log('✅ 💳 CRÉDIT CLIENT : lit UNIQUEMENT VENTES avec le MÊME filtre qu\'Admin-Credits (statut!=payé, remaining>0.01, total>0) → plus de divergence entre POS et Admin-Credits');
