@@ -1,4 +1,4 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6.3 - FIX CASSE + ACCENTS) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.4 - DESCRIPTION À GEMINI) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
@@ -10,7 +10,7 @@
 // ✅ 💾 Cache des commandes récentes
 // ✅ 📱 Détection PWA iPhone → message "Ouvrez dans Safari"
 // ✅ Panier temporaire minimal (boutons +/-/🗑) + ajout cumulatif
-// 🆕 v6.3 : FIX matching — tolère casse + accents + descriptions (Mini dia / Coca Cola zero)
+// 🆕 v6.4 : DESCRIPTION envoyée à Gemini — "mini dia", "gazeuse" fonctionnent maintenant
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
@@ -550,20 +550,25 @@ async function posEnvoyerTexteAAi(texte) {
             parsed = cachedResult.result;
             if (status) status.textContent = '⚡ Réponse du cache';
         } else {
-            var productNames = window.posProductsList.map(function(p) { return p.nom; }).filter(Boolean);
-            if (productNames.length === 0) throw new Error('Aucun produit valide');
+            // 🆕 v6.4 : Envoi du NOM + DESCRIPTION à Gemini
+            if (window.posProductsList.length === 0) throw new Error('Aucun produit valide');
 
-            var productListStr = productNames.slice(0, 300).map(function(n) {
-                return '"' + n.replace(/"/g, '\\"') + '"';
+            var productListStr = window.posProductsList.slice(0, 300).map(function(p) {
+                var nom = (p.nom || '').replace(/"/g, '\\"');
+                var desc = (p.description || '').substring(0, 40).replace(/"/g, '\\"');
+                if (desc) {
+                    return '"' + nom + ' (' + desc + ')"';
+                }
+                return '"' + nom + '"';
             }).join(', ');
 
-            // 🆕 v6.3 : prompt renforcé pour exiger copie-colle exacte du nom catalogue
+            // 🆕 v6.4 : prompt avec consigne explicite pour matcher sur la description
             var prompt = `Tu es un assistant de point de vente. Analyse la commande dictée en FRANÇAIS.
 
 PHRASE DITE :
 "${texte}"
 
-CATALOGUE DE PRODUITS DISPONIBLES (noms EXACTS, respecte la casse et les accents) :
+CATALOGUE DE PRODUITS DISPONIBLES (format "Nom (description courte)") :
 [${productListStr}]
 
 ═══════════════════════════════════════════════════════
@@ -577,7 +582,17 @@ CATALOGUE DE PRODUITS DISPONIBLES (noms EXACTS, respecte la casse et les accents
    - Mots darija en latin : "wahid"=1, "jouj"=2, "tlata"=3, "khamsa"=5, "sitta"=6, "sbaa"=7, "tmanya"=8, "tsaa"=9, "achra"=10
    Si aucune quantité n'est précisée, mets 1.
 
-⚠️ IMPORTANT : IGNORE COMPLÈTEMENT tout nom de personne ou de client mentionné (ex: "client Ahmed", "pour Fatima", "au nom de Youssef"). Ne retourne QUE les produits.
+🆕 IMPORTANT — MATCHER AUSSI SUR LA DESCRIPTION :
+- Chaque produit est au format "Nom (description courte)".
+- Si l'utilisateur dit un mot qui est dans la DESCRIPTION (pas le nom), tu dois quand même le matcher.
+- Exemple : si le catalogue dit "Chocolat (mini dia 100g)" et l'utilisateur dit "mini dia", 
+  retourne "Chocolat" (le nom SEUL, sans la description entre parenthèses).
+- Exemple : si le catalogue dit "Pepsi 33cl (boisson gazeuse)" et l'utilisateur dit "gazeuse",
+  retourne "Pepsi 33cl".
+- Exemple : si le catalogue dit "Coca-Cola Zéro (sans sucre)" et l'utilisateur dit "sans sucre",
+  retourne "Coca-Cola Zéro".
+
+⚠️ IGNORE COMPLÈTEMENT tout nom de personne ou de client mentionné (ex: "client Ahmed", "pour Fatima", "au nom de Youssef"). Ne retourne QUE les produits.
 
 MOTS À IGNORER : "ajouter", "au panier", "et", "puis", "avec", "s'il te plaît", "svp", "merci", "je veux", "donne-moi", "donne moi", "client", "pour", "au nom de".
 
@@ -610,20 +625,25 @@ Ex 6 : "Un croissant et deux cafés au nom de Youssef"
 Ex 7 : "Six msemen"
 → [{"nom": "Msemen", "quantite": 6}]
 
+Ex 8 : "3 mini dia et 2 sans sucre"
+→ [{"nom": "Chocolat", "quantite": 3}, {"nom": "Coca-Cola Zéro", "quantite": 2}]
+(match sur description)
+
 ═══════════════════════════════════════════════════════
 📤 FORMAT DE SORTIE (JSON ARRAY UNIQUEMENT) :
 ═══════════════════════════════════════════════════════
 
 [
-  { "nom": "Nom EXACT du produit du catalogue", "quantite": 3 }
+  { "nom": "Nom EXACT du produit du catalogue SANS la description", "quantite": 3 }
 ]
 
 ═══════════════════════════════════════════════════════
 ⚠️ RÈGLES STRICTES :
 ═══════════════════════════════════════════════════════
 
-- Le "nom" DOIT être une COPIE EXACTE, caractère pour caractère, d'un nom du CATALOGUE ci-dessus.
-- Si tu écris "Mini dia" mais que le catalogue dit "MINI DIA 100g", retourne "MINI DIA 100g" (le nom EXACT du catalogue).
+- Le "nom" DOIT être une COPIE EXACTE du NOM (sans la description entre parenthèses).
+- Si tu vois "Chocolat (mini dia 100g)" et que l'utilisateur dit "mini dia", retourne "Chocolat".
+- Si tu vois "Pepsi 33cl (boisson gazeuse)" et que l'utilisateur dit "gazeuse", retourne "Pepsi 33cl".
 - Ne change JAMAIS la casse, les accents, ou la ponctuation du nom du catalogue.
 - IGNORE COMPLÈTEMENT les noms de clients/personnes.
 - Ignore les produits non trouvés dans le catalogue.
@@ -720,7 +740,7 @@ Ex 7 : "Six msemen"
             var produit = null;
             var matchType = '';
 
-            // 🆕 v6.3 : ÉTAPE 1 — match exact dans TOUS les champs (nom + desc + brand + cat)
+            // ÉTAPE 1 — match exact dans TOUS les champs (nom + desc + brand + cat)
             produit = window.posProductsList.find(function(p) {
                 return posAiNormaliser(p.nom) === recNomNorm
                     || posAiNormaliser(p.description) === recNomNorm
@@ -729,7 +749,7 @@ Ex 7 : "Six msemen"
             });
             if (produit) matchType = 'exact (nom/desc/brand/cat)';
 
-            // 🆕 v6.3 : ÉTAPE 2 — match partiel dans TOUS les champs (nom + desc + brand + cat)
+            // ÉTAPE 2 — match partiel dans TOUS les champs (nom + desc + brand + cat)
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
                     var pNom = posAiNormaliser(p.nom);
@@ -1059,8 +1079,8 @@ window.posAiChangerQuantite = posAiChangerQuantite;
 window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
 window.posAiRafraichirPanier = posAiRafraichirPanier;
 
-console.log('🤖 POS-AI.js v6.3 chargé');
+console.log('🤖 POS-AI.js v6.4 chargé');
 console.log('   ✅ 2s silence');
 console.log('   ✅ Panier temporaire avec +/−/🗑');
 console.log('   ✅ Ajout cumulatif entre dictées');
-console.log('   🆕 v6.3 : matching amélioré (casse + accents + description)');
+console.log('   🆕 v6.4 : DESCRIPTION envoyée à Gemini — "mini dia", "gazeuse" fonctionnent maintenant');
