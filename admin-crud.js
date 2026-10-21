@@ -10,6 +10,7 @@
 // ✅ 🆕 Fix prix actuel sans barré + input float sans perte de focus
 // ✅ 🆕 Validation/Annulation individuelle des changements de prix
 // ✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)
+// ✅ 🆕 Fix scroll modal achat (footer toujours accessible)
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -113,15 +114,15 @@ function injectAdminCrudsStyles() {
     css += '.ac-empty i{font-size:64px;color:var(--ac-gray-200);margin-bottom:16px;}';
     css += '.ac-empty h3{font-size:18px;color:var(--ac-gray-700);margin:0 0 8px 0;}';
     css += '.ac-empty p{font-size:14px;margin:0;}';
-    /* MODAL ACHAT */
-    css += '.ac-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;}';
-    css += '.ac-modal{background:var(--ac-white);border-radius:var(--ac-radius-lg);width:100%;max-width:1200px;height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.25);overflow:hidden;}';
-    css += '.ac-modal-header{padding:20px 28px;border-bottom:1px solid var(--ac-gray-200);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));}';
+    /* MODAL ACHAT — ✅ SCROLL FIX */
+    css += '.ac-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}';
+    css += '.ac-modal{background:var(--ac-white);border-radius:var(--ac-radius-lg);width:100%;max-width:1200px;max-height:90vh;min-height:0;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.25);overflow:hidden;}';
+    css += '.ac-modal-header{padding:20px 28px;border-bottom:1px solid var(--ac-gray-200);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));flex-shrink:0;}';
     css += '.ac-modal-header h3{font-size:20px;font-weight:800;color:var(--ac-gray-900);margin:0;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
     css += '.ac-modal-header h3 i{background:linear-gradient(135deg,var(--ac-blue-500),var(--ac-blue-700));color:white;padding:10px;border-radius:12px;font-size:18px;}';
     css += '.ac-modal-close{width:40px;height:40px;border-radius:50%;border:none;background:var(--ac-gray-100);color:var(--ac-gray-500);font-size:18px;cursor:pointer;}';
     css += '.ac-modal-close:hover{background:var(--ac-gray-200);color:var(--ac-gray-900);}';
-    css += '.ac-modal-toolbar{padding:16px 28px;background:var(--ac-gray-50);border-bottom:1px solid var(--ac-gray-200);display:flex;gap:12px;flex-wrap:wrap;align-items:center;}';
+    css += '.ac-modal-toolbar{padding:16px 28px;background:var(--ac-gray-50);border-bottom:1px solid var(--ac-gray-200);display:flex;gap:12px;flex-wrap:wrap;align-items:center;flex-shrink:0;}';
     css += '.ac-modal-toolbar select{padding:11px 14px;border:1.5px solid var(--ac-gray-200);border-radius:10px;font-size:14px;font-weight:500;min-width:280px;background:var(--ac-white);color:var(--ac-gray-900);outline:none;cursor:pointer;}';
     css += '.ac-modal-toolbar select:focus{border-color:var(--ac-blue-500);box-shadow:0 0 0 4px rgba(59,130,246,0.1);}';
     css += '.ac-modal-body{flex:1;overflow-y:auto;padding:20px 28px;background:var(--ac-white);}';
@@ -139,7 +140,7 @@ function injectAdminCrudsStyles() {
     css += '.ac-modal-table .ac-price-change-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#FEF3C7;color:#92400E;margin-top:4px;}';
     css += '.ac-modal-table .ac-price-change-badge.up{background:#FEE2E2;color:#991B1B;}';
     css += '.ac-modal-table .ac-price-change-badge.down{background:#D1FAE5;color:#065F46;}';
-    css += '.ac-modal-footer{padding:20px 28px;border-top:2px solid var(--ac-gray-200);background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}';
+    css += '.ac-modal-footer{padding:20px 28px;border-top:2px solid var(--ac-gray-200);background:linear-gradient(135deg,var(--ac-blue-50),var(--ac-white));display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;flex-shrink:0;}';
     css += '.ac-modal-totals{display:flex;gap:24px;align-items:center;flex-wrap:wrap;}';
     css += '.ac-total-block{display:flex;flex-direction:column;gap:2px;}';
     css += '.ac-total-block .label{font-size:11px;font-weight:700;color:var(--ac-gray-500);text-transform:uppercase;letter-spacing:0.5px;}';
@@ -212,7 +213,7 @@ function injectAdminCrudsStyles() {
     css += '.ac-stats-grid{grid-template-columns:repeat(2,1fr);gap:8px;}';
     css += '.ac-stat-card{padding:12px;}';
     css += '.ac-stat-card .ac-stat-value{font-size:16px;}';
-    css += '.ac-modal{max-width:100%;height:100vh;border-radius:0;}';
+    css += '.ac-modal{max-width:100%;max-height:100vh;height:100vh;border-radius:0;}';
     css += '.ac-modal-toolbar{padding:12px 16px;flex-direction:column;align-items:stretch;}';
     css += '.ac-modal-toolbar select{min-width:0;width:100%;}';
     css += '.ac-modal-body{padding:12px;}';
@@ -1897,7 +1898,7 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v7');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v8');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
@@ -1909,3 +1910,4 @@ console.log('✅ 🆕 Prix actuel SANS barré');
 console.log('✅ 🆕 Input prix float sans perte de focus');
 console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix');
 console.log('✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)');
+console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
