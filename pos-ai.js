@@ -1,26 +1,25 @@
-// ==================== POS-AI.JS - E-SOLUTION (v7 - PANIER TEMPORAIRE CUMULATIF) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.2 - PANIER MINIMAL) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
-// ✅ ⚡ Micro qui s'arrête après 2 SECONDES de silence (v7)
+// ✅ ⚡ Micro qui s'arrête après 2 SECONDES de silence (v6.2)
 // ❌ 🔊 Synthèse vocale DÉSACTIVÉE (elle bloquait le micro sur iPhone)
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
 // ✅ 💾 Cache des commandes récentes
 // ✅ 📱 Détection PWA iPhone → message "Ouvrez dans Safari"
-// 🆕 v7 : PANIER TEMPORAIRE sous le micro + boutons +/-/🗑 + ajout cumulatif entre dictées
+// 🆕 v6.2 : Panier temporaire minimal (boutons +/-/🗑) + ajout cumulatif
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 const POS_AI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-// ⚡ Silence réduit à 2 secondes (v7 : était 3s)
+// ⚡ Silence 2 secondes (v6.2 : était 3s)
 const POS_AI_SILENCE_DURATION = 2000;
-const POS_AI_CACHE_KEY = 'posGeminiCache'; // conservé pour compatibilité du cache existant
+const POS_AI_CACHE_KEY = 'posGeminiCache';
 const POS_AI_CACHE_MAX_AGE = 7 * 24 * 3600000;
 
-// ❌ SYNTHÈSE VOCALE DÉSACTIVÉE DÉFINITIVEMENT (bloquait le micro sur iPhone)
 const POS_AI_TTS_ENABLED = false;
 
 // ==================== ÉTAT ====================
@@ -34,7 +33,7 @@ var posAiAbortController = null;
 var posAiCache = null;
 var posAiCompteurNoSpeech = 0;
 
-// 🆕 v7 : Panier temporaire cumulatif entre les dictées
+// 🆕 v6.2 : Panier temporaire cumulatif
 var posAiPanierTemporaire = [];
 
 // ==================== 📱 DÉTECTION PWA IPHONE ====================
@@ -64,7 +63,6 @@ function posAiNormaliser(texte) {
 function posAiParler(texte) {
     return;
 }
-
 window.posGeminiParler = posAiParler;
 
 // ==================== 💾 CACHE DES COMMANDES RÉCENTES ====================
@@ -133,7 +131,6 @@ function posOuvrirCommandeVocaleAi() {
         return;
     }
 
-    // 🔒 Vérification HTTPS (obligatoire pour le micro)
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
         alert(
             '🔒 Connexion non sécurisée détectée\n\n' +
@@ -143,7 +140,6 @@ function posOuvrirCommandeVocaleAi() {
         return;
     }
 
-    // 📱 Détection PWA iPhone
     if (posAiEstPwaIphone()) {
         alert(
             '📱 Mode PWA iPhone détecté\n\n' +
@@ -212,12 +208,11 @@ function posOuvrirCommandeVocaleAi() {
         </div>
     `;
     openModal('🎤 Commande vocale', html);
-    
-    // 🆕 v7 : Afficher le panier temporaire dès l'ouverture
+
     posAiRafraichirPanier();
 }
 
-// ==================== 🆕 v7 : AFFICHAGE DU PANIER TEMPORAIRE ====================
+// ==================== 🆕 v6.2 : AFFICHAGE DU PANIER ====================
 function posAiRafraichirPanier() {
     var container = document.getElementById('posAiPanierContainer');
     if (!container) return;
@@ -298,19 +293,17 @@ function posAiRafraichirPanier() {
     `;
 }
 
-// ==================== 🆕 v7 : CHANGER LA QUANTITÉ ====================
+// ==================== 🆕 v6.2 : CHANGER QUANTITÉ ====================
 function posAiChangerQuantite(index, delta) {
     if (!posAiPanierTemporaire || !posAiPanierTemporaire[index]) return;
     var item = posAiPanierTemporaire[index];
     var nouvelleQte = (item.quantite || 1) + delta;
 
-    // Ne pas descendre en dessous de 1
     if (nouvelleQte < 1) {
         posAiSupprimerDuPanier(index);
         return;
     }
 
-    // Vérifier le stock
     var produit = item.produit;
     if (produit && produit.stock !== undefined && nouvelleQte > produit.stock) {
         alert('⚠️ Stock insuffisant (max : ' + produit.stock + ')');
@@ -321,7 +314,7 @@ function posAiChangerQuantite(index, delta) {
     posAiRafraichirPanier();
 }
 
-// ==================== 🆕 v7 : SUPPRIMER UN PRODUIT ====================
+// ==================== 🆕 v6.2 : SUPPRIMER DU PANIER ====================
 function posAiSupprimerDuPanier(index) {
     if (!posAiPanierTemporaire || !posAiPanierTemporaire[index]) return;
     posAiPanierTemporaire.splice(index, 1);
@@ -339,7 +332,6 @@ function posDemarrerEcouteAi() {
     var transcriptBox = document.getElementById('posAiTranscript');
     var transcriptText = document.getElementById('posAiTranscriptText');
 
-    // 🔁 Si une écoute est déjà en cours → on l'arrête proprement
     if (posAiRecognition) {
         posAiManuallyStopped = true;
         if (posAiSilenceTimer) {
@@ -357,7 +349,6 @@ function posDemarrerEcouteAi() {
     posAiManuallyStopped = false;
     posAiCompteurNoSpeech = 0;
 
-    // ✅ CRÉATION D'UN NOUVEL OBJET À CHAQUE FOIS (contourne le bug iOS)
     posAiRecognition = new SpeechRecognition();
     posAiRecognition.lang = 'fr-FR';
     posAiRecognition.continuous = true;
@@ -411,21 +402,9 @@ function posDemarrerEcouteAi() {
 
     posAiRecognition.onstart = function() {
         console.log('🎙️ Micro démarré');
-        console.log('   - lang:', posAiRecognition.lang);
-        console.log('   - continuous:', posAiRecognition.continuous);
-        console.log('   - interimResults:', posAiRecognition.interimResults);
-        console.log('   - PWA iPhone ?', posAiEstPwaIphone());
-        console.log('   - HTTPS ?', location.protocol === 'https:');
-
-        if (navigator.permissions) {
-            navigator.permissions.query({ name: 'microphone' })
-                .then(function(p) { console.log('   - État micro:', p.state); })
-                .catch(function(e) { console.log('   - Impossible de vérifier:', e.message); });
-        }
     };
 
     posAiRecognition.onresult = function(event) {
-        console.log('📥 onresult appelé, résultats:', event.results.length);
         var interim = '';
         var finalText = '';
         for (var i = event.resultIndex; i < event.results.length; i++) {
@@ -440,18 +419,14 @@ function posDemarrerEcouteAi() {
     };
 
     posAiRecognition.onerror = function(event) {
-        console.error('❌ Erreur reconnaissance vocale :', event.error, '| message:', event.message);
+        console.error('❌ Erreur reconnaissance vocale :', event.error);
 
-        // ⚠️ Sur iPhone, "no-speech" arrive souvent alors qu'on a déjà du texte
         if (event.error === 'no-speech' && posAiTranscriptFinal.trim().length > 0) {
-            console.log('ℹ️ no-speech ignoré, on continue');
             return;
         }
 
-        // 🔄 Relance automatique si "no-speech" (max 2 fois)
         if (event.error === 'no-speech' && posAiCompteurNoSpeech < 2) {
             posAiCompteurNoSpeech++;
-            console.log('🔄 Relance auto n°' + posAiCompteurNoSpeech + ' après no-speech');
             posAiManuallyStopped = true;
             if (posAiSilenceTimer) {
                 clearTimeout(posAiSilenceTimer);
@@ -469,17 +444,17 @@ function posDemarrerEcouteAi() {
         var status = document.getElementById('posAiStatus');
         if (status) {
             if (event.error === 'no-speech') {
-                status.textContent = '🎙️ Aucune parole détectée. Vérifiez que le micro est bien autorisé et parlez plus fort.';
+                status.textContent = '🎙️ Aucune parole détectée.';
             } else if (event.error === 'not-allowed') {
-                status.textContent = '🔒 Micro bloqué. Autorisez le micro dans les réglages du navigateur.';
+                status.textContent = '🔒 Micro bloqué.';
             } else if (event.error === 'aborted') {
                 status.textContent = '⏹️ Écoute arrêtée';
             } else if (event.error === 'audio-capture') {
-                status.textContent = '🎤 Micro indisponible. Vérifiez qu\'aucune autre app ne l\'utilise.';
+                status.textContent = '🎤 Micro indisponible.';
             } else if (event.error === 'network') {
-                status.textContent = '🌐 Problème réseau. Vérifiez votre connexion.';
+                status.textContent = '🌐 Problème réseau.';
             } else {
-                status.textContent = '⚠️ Problème micro (' + event.error + '). Réessayez.';
+                status.textContent = '⚠️ Problème micro (' + event.error + ').';
             }
             status.style.color = '#ef4444';
         }
@@ -508,7 +483,7 @@ function posDemarrerEcouteAi() {
         if (finalText.length < 3) {
             var status = document.getElementById('posAiStatus');
             if (status) {
-                status.textContent = '🎙️ Aucune parole captée. Vérifiez le micro et parlez plus fort.';
+                status.textContent = '🎙️ Aucune parole captée.';
                 status.style.color = '#f59e0b';
             }
             return;
@@ -550,7 +525,6 @@ async function posEnvoyerTexteAAi(texte) {
     var resultBox = document.getElementById('posAiResult');
 
     console.log('🎤 Texte entendu :', texte);
-    console.log('📦 Produits :', (window.posProductsList || []).length);
 
     if (status) {
         status.textContent = '🤖 Analyse en cours...';
@@ -571,7 +545,7 @@ async function posEnvoyerTexteAAi(texte) {
         var parsed = null;
 
         if (cachedResult && cachedResult.result) {
-            console.log('⚡ Utilisation du cache (réponse instantanée)');
+            console.log('⚡ Utilisation du cache');
             parsed = cachedResult.result;
             if (status) status.textContent = '⚡ Réponse du cache';
         } else {
@@ -634,9 +608,6 @@ Ex 6 : "Un croissant et deux cafés au nom de Youssef"
 Ex 7 : "Six msemen"
 → [{"nom": "Msemen", "quantite": 6}]
 
-Ex 8 : "Khamsa coca et tlata croissants"
-→ [{"nom": "Coca Cola", "quantite": 5}, {"nom": "Croissant", "quantite": 3}]
-
 ═══════════════════════════════════════════════════════
 📤 FORMAT DE SORTIE (JSON ARRAY UNIQUEMENT) :
 ═══════════════════════════════════════════════════════
@@ -682,8 +653,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
             clearTimeout(timeoutId);
             posAiAbortController = null;
 
-            console.log('📥 Status HTTP :', response.status);
-
             if (!response.ok) {
                 var errText = await response.text();
                 throw new Error('HTTP ' + response.status + ' : ' + errText.substring(0, 200));
@@ -723,8 +692,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
 
         var produitsReconnus = Array.isArray(parsed) ? parsed : [];
 
-        console.log('🛒 Produits reconnus :', produitsReconnus);
-
         if (produitsReconnus.length === 0) {
             if (resultBox) {
                 resultBox.innerHTML = `<div style="padding:14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;color:#92400E;font-size:0.95rem;text-align:left;">
@@ -736,9 +703,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
             return;
         }
 
-        // ============================================================
-        // ✅ MATCHING INTELLIGENT DU PRODUIT
-        // ============================================================
         var produitsValides = [];
         var produitsNonTrouves = [];
 
@@ -749,18 +713,14 @@ Ex 8 : "Khamsa coca et tlata croissants"
             var recNomNorm = posAiNormaliser(recNom);
             var motsRecherche = recNomNorm.split(/\s+/).filter(function(m) { return m.length >= 3; });
 
-            console.log('🔍 Recherche produit :', recNom, '| mots:', motsRecherche);
-
             var produit = null;
             var matchType = '';
 
-            // 1️⃣ Match EXACT sur nom
             produit = window.posProductsList.find(function(p) {
                 return posAiNormaliser(p.nom) === recNomNorm;
             });
             if (produit) matchType = 'nom exact';
 
-            // 2️⃣ Match EXACT sur description/categorie/brand
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
                     return posAiNormaliser(p.description) === recNomNorm
@@ -770,7 +730,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
                 if (produit) matchType = 'desc/cat/brand exact';
             }
 
-            // 3️⃣ Match PARTIEL sur nom
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
                     var pNom = posAiNormaliser(p.nom);
@@ -779,7 +738,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
                 if (produit) matchType = 'nom partiel';
             }
 
-            // 4️⃣ Match PARTIEL sur description/categorie/brand
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
                     var pDesc = posAiNormaliser(p.description);
@@ -790,7 +748,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
                 if (produit) matchType = 'desc/cat/brand partiel';
             }
 
-            // 5️⃣ Match par MOTS-CLÉS pondéré
             if (!produit) {
                 var candidats = [];
                 window.posProductsList.forEach(function(p) {
@@ -801,19 +758,18 @@ Ex 8 : "Khamsa coca et tlata croissants"
                     var pCats = (p.categories || []).map(posAiNormaliser).join(' ');
 
                     var score = 0;
-                    var motsMatched = [];
 
                     motsRecherche.forEach(function(mot) {
-                        if (pNom.includes(mot)) { score += mot.length * 3; motsMatched.push(mot + '(nom)'); }
-                        else if (pDesc.includes(mot)) { score += mot.length * 2; motsMatched.push(mot + '(desc)'); }
-                        else if (pCat.includes(mot) || pCats.includes(mot)) { score += mot.length * 1.5; motsMatched.push(mot + '(cat)'); }
-                        else if (pBrand.includes(mot)) { score += mot.length * 1.5; motsMatched.push(mot + '(brand)'); }
+                        if (pNom.includes(mot)) { score += mot.length * 3; }
+                        else if (pDesc.includes(mot)) { score += mot.length * 2; }
+                        else if (pCat.includes(mot) || pCats.includes(mot)) { score += mot.length * 1.5; }
+                        else if (pBrand.includes(mot)) { score += mot.length * 1.5; }
                     });
 
                     if (pDesc.includes(recNomNorm)) score += 50;
 
                     if (score > 0) {
-                        candidats.push({ produit: p, score: score, mots: motsMatched });
+                        candidats.push({ produit: p, score: score });
                     }
                 });
 
@@ -823,7 +779,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
                     if (candidats[0].score >= 20) {
                         produit = candidats[0].produit;
                         matchType = 'mots-clés (score ' + candidats[0].score + ')';
-                        console.log('🎯 Trouvé via mots-clés :', produit.nom, '| score:', candidats[0].score);
                     } else {
                         produitsNonTrouves.push({
                             nomOriginal: recNom,
@@ -834,7 +789,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
                 }
             }
 
-            // 6️⃣ Recherche finale dans tous les champs
             if (!produit) {
                 var candidats2 = [];
                 window.posProductsList.forEach(function(p) {
@@ -863,7 +817,6 @@ Ex 8 : "Khamsa coca et tlata croissants"
             }
 
             if (produit) {
-                console.log('✅ Produit ajouté :', produit.nom, '| type:', matchType);
                 produitsValides.push({
                     produit: produit,
                     quantite: Math.max(1, parseInt(rec.quantite, 10) || 1),
@@ -871,12 +824,11 @@ Ex 8 : "Khamsa coca et tlata croissants"
                     matchType: matchType
                 });
             } else {
-                console.log('❌ Produit NON trouvé :', recNom);
                 produitsNonTrouves.push({ nomOriginal: recNom, suggestions: [] });
             }
         });
 
-        // 🆕 v7 : AJOUTER AU PANIER TEMPORAIRE (cumul)
+        // 🆕 v6.2 : Ajouter au panier temporaire (cumul)
         posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves);
 
     } catch(e) {
@@ -891,47 +843,38 @@ Ex 8 : "Khamsa coca et tlata croissants"
     }
 }
 
-// ==================== 🆕 v7 : AJOUTER AU PANIER TEMPORAIRE (cumul) ====================
+// ==================== 🆕 v6.2 : AJOUTER AU PANIER (cumul) ====================
 function posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves) {
     produitsNonTrouves = produitsNonTrouves || [];
 
     if (!produitsValides || produitsValides.length === 0) {
-        // Aucun produit reconnu : afficher les suggestions si possible
         var resultBox = document.getElementById('posAiResult');
         if (resultBox) {
             if (produitsNonTrouves.length > 0) {
                 posAfficherResultatAiVoice([], resultBox, produitsNonTrouves);
             } else {
                 resultBox.innerHTML = `<div style="padding:14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;color:#92400E;font-size:0.95rem;text-align:left;">
-                    ⚠️ <strong>Aucun produit reconnu.</strong><br>
-                    <em>Essayez : « Ajouter 3 Merindina et 2 Coca Cola »</em>
+                    ⚠️ <strong>Aucun produit reconnu.</strong>
                 </div>`;
             }
         }
         return;
     }
 
-    // 🆕 v7 : Ajouter OU cumuler avec les produits déjà dans le panier temporaire
     produitsValides.forEach(function(nouveau) {
         var existant = posAiPanierTemporaire.find(function(item) {
             return item.produit && item.produit.id === nouveau.produit.id;
         });
 
         if (existant) {
-            // Le produit existe déjà → on additionne les quantités
             existant.quantite = (existant.quantite || 1) + (nouveau.quantite || 1);
-            console.log('🔄 Cumul quantité :', existant.produit.nom, '→', existant.quantite);
         } else {
-            // Nouveau produit → on ajoute
             posAiPanierTemporaire.push(nouveau);
-            console.log('➕ Nouveau produit ajouté au panier :', nouveau.produit.nom);
         }
     });
 
-    // Rafraîchir le panier affiché
     posAiRafraichirPanier();
 
-    // Afficher les suggestions / alertes stock si nécessaire
     var resultBox = document.getElementById('posAiResult');
     if (resultBox && produitsNonTrouves.length > 0) {
         posAfficherResultatAiVoice(posAiPanierTemporaire, resultBox, produitsNonTrouves);
@@ -939,10 +882,9 @@ function posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves) {
         resultBox.style.display = 'none';
     }
 
-    // Afficher un message de succès
     var status = document.getElementById('posAiStatus');
     if (status) {
-        status.textContent = '✅ ' + produitsValides.length + ' produit(s) ajouté(s) au panier — cliquez sur 🎤 pour en ajouter d\'autres';
+        status.textContent = '✅ ' + produitsValides.length + ' produit(s) ajouté(s) — cliquez sur 🎤 pour en ajouter d\'autres';
         status.style.color = '#10B981';
     }
 }
@@ -954,7 +896,6 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
 
     produitsNonTrouves = produitsNonTrouves || [];
 
-    // 🆕 v7 : Vérifier les alertes stock sur le panier temporaire
     var alertesStock = [];
     (posAiPanierTemporaire || []).forEach(function(item) {
         var p = item.produit;
@@ -969,7 +910,6 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
         }
     });
 
-    // Suggestions si produits non trouvés
     var suggestionsHtml = '';
     if (produitsNonTrouves.length > 0) {
         var suggestionsItems = produitsNonTrouves.map(function(item) {
@@ -997,7 +937,6 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
         `;
     }
 
-    // Alertes stock
     var stockHtml = '';
     if (alertesStock.length > 0) {
         stockHtml = `
@@ -1012,7 +951,6 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
         `;
     }
 
-    // Si pas de suggestions ni d'alertes, ne rien afficher
     if (!suggestionsHtml && !stockHtml) {
         container.style.display = 'none';
         container.innerHTML = '';
@@ -1020,10 +958,7 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
     }
 
     container.style.display = 'block';
-    container.innerHTML = `
-        ${suggestionsHtml}
-        ${stockHtml}
-    `;
+    container.innerHTML = suggestionsHtml + stockHtml;
 }
 
 // ==================== 🎯 CHOISIR UNE SUGGESTION ====================
@@ -1036,17 +971,14 @@ function posAiChoisirSuggestion(nomProduit) {
         return;
     }
 
-    // 🆕 v7 : Ajouter au panier temporaire (cumul)
     posAiAjouterAuPanierTemporaire([{
         produit: produit,
         quantite: 1,
         nomOriginal: nomProduit
     }], []);
-
-    console.log('🎯 Suggestion ajoutée :', nomProduit);
 }
 
-// ==================== CONFIRMATION AJOUT AU PANIER (PRODUITS UNIQUEMENT) ====================
+// ==================== CONFIRMATION AJOUT AU PANIER ====================
 function posConfirmerAjoutAiVoice() {
     var produits = posAiPanierTemporaire;
     if (!produits || produits.length === 0) {
@@ -1063,7 +995,6 @@ function posConfirmerAjoutAiVoice() {
 
     closeModal();
 
-    // 🆕 v7 : Vider le panier temporaire après validation
     posAiPanierTemporaire = [];
     posAiProduitsEnAttente = [];
 
@@ -1084,7 +1015,6 @@ function posConfirmerAjoutAiVoice() {
 
 // ==================== ANNULATION ====================
 function posAnnulerAiVoice() {
-    // 🆕 v7 : Vider le panier temporaire
     posAiPanierTemporaire = [];
     posAiProduitsEnAttente = [];
 
@@ -1107,7 +1037,7 @@ function posAnnulerAiVoice() {
     closeModal();
 }
 
-// ==================== ALIAS DE COMPATIBILITÉ (anciens noms "Gemini") ====================
+// ==================== ALIAS DE COMPATIBILITÉ ====================
 window.posOuvrirCommandeVocaleGemini = posOuvrirCommandeVocaleAi;
 window.posDemarrerEcouteGemini = posDemarrerEcouteAi;
 window.posEnvoyerTexteAGemini = posEnvoyerTexteAAi;
@@ -1116,7 +1046,7 @@ window.posAnnulerGeminiVoice = posAnnulerAiVoice;
 window.posAfficherResultatGeminiVoice = posAfficherResultatAiVoice;
 window.posGeminiChoisirSuggestion = posAiChoisirSuggestion;
 
-// ==================== EXPOSITION GLOBALE (nouveaux noms) ====================
+// ==================== EXPOSITION GLOBALE ====================
 window.posOuvrirCommandeVocaleAi = posOuvrirCommandeVocaleAi;
 window.posDemarrerEcouteAi = posDemarrerEcouteAi;
 window.posEnvoyerTexteAAi = posEnvoyerTexteAAi;
@@ -1126,21 +1056,12 @@ window.posAfficherResultatAiVoice = posAfficherResultatAiVoice;
 window.posAiChoisirSuggestion = posAiChoisirSuggestion;
 window.posAiParler = posAiParler;
 
-// 🆕 v7 : Exposer les fonctions du panier temporaire
+// 🆕 v6.2 : Exposer les fonctions du panier
 window.posAiChangerQuantite = posAiChangerQuantite;
 window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
 window.posAiRafraichirPanier = posAiRafraichirPanier;
 
-console.log('🤖 POS-AI.js v7 chargé - PANIER TEMPORAIRE CUMULATIF');
-console.log('   ✅ 🎯 PRODUITS UNIQUEMENT (PAS de gestion client)');
-console.log('   ❌ 🔊 Synthèse vocale DÉSACTIVÉE (bloquait le micro iPhone)');
-console.log('   📱 Détection PWA iPhone → message "Ouvrez dans Safari"');
-console.log('   ⚡ Silence de 2s avant arrêt du micro');
-console.log('   🔄 Relance auto après no-speech (max 2 fois)');
-console.log('   🔒 Vérification HTTPS au démarrage');
-console.log('   🎯 Suggestions intelligentes si produit non trouvé');
-console.log('   🎨 Alertes stock bas automatiques');
-console.log('   💾 Cache des commandes récentes');
-console.log('   🆕 v7 : Panier temporaire sous le micro + boutons +/-/🗑');
-console.log('   🆕 v7 : Ajout cumulatif entre dictées (clic micro 2ᵉ fois = ajouter)');
-console.log('   🆕 v7 : Support darija en latin dans le prompt (khamsa, tlata...)');
+console.log('🤖 POS-AI.js v6.2 chargé');
+console.log('   ✅ 2s silence (était 3s)');
+console.log('   ✅ Panier temporaire avec +/−/🗑');
+console.log('   ✅ Ajout cumulatif entre dictées');
