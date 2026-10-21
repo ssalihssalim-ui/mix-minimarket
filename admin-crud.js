@@ -7,6 +7,9 @@
 // ✅ Dates production / durée conservation / date expiration
 // ✅ 🆕 Tri des colonnes dans le tableau d'achat (asc/desc)
 // ✅ 🆕 Bouton "Commander" → WhatsApp fournisseur
+// ✅ 🆕 Fix prix actuel sans barré + input float sans perte de focus
+// ✅ 🆕 Validation/Annulation individuelle des changements de prix
+// ✅ 🆕 Scan plus rapide (compression) + plus fiable (timeout + prompt)
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -125,6 +128,7 @@ function injectAdminCrudsStyles() {
     css += '.ac-modal-table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;}';
     css += '.ac-modal-table thead th{position:sticky;top:0;background:var(--ac-gray-50);padding:12px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--ac-gray-500);text-transform:uppercase;letter-spacing:0.6px;border-bottom:2px solid var(--ac-gray-200);z-index:2;}';
     css += '.ac-modal-table thead th.center{text-align:center;}';
+    css += '.ac-modal-table thead th.sort-active{background:#DBEAFE;color:#1D4ED8;}';
     css += '.ac-modal-table tbody td{padding:12px 10px;border-bottom:1px solid var(--ac-gray-100);vertical-align:middle;color:var(--ac-gray-700);}';
     css += '.ac-modal-table tbody tr.has-changement td{background:#FEF3C7!important;}';
     css += '.ac-modal-table .ac-product-name{font-weight:600;color:var(--ac-gray-900);font-size:14px;}';
@@ -132,7 +136,6 @@ function injectAdminCrudsStyles() {
     css += '.ac-modal-table input:focus{border-color:var(--ac-blue-500);box-shadow:0 0 0 3px rgba(59,130,246,0.1);}';
     css += '.ac-modal-table input.changed{border-color:var(--ac-orange);background:#FFFBEB;}';
     css += '.ac-modal-table .ac-total-cell{font-weight:800;color:var(--ac-blue-600);font-size:15px;text-align:center;}';
-    css += '.ac-modal-table .ac-price-old{font-size:11px;color:var(--ac-gray-400);text-decoration:line-through;display:block;}';
     css += '.ac-modal-table .ac-price-change-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#FEF3C7;color:#92400E;margin-top:4px;}';
     css += '.ac-modal-table .ac-price-change-badge.up{background:#FEE2E2;color:#991B1B;}';
     css += '.ac-modal-table .ac-price-change-badge.down{background:#D1FAE5;color:#065F46;}';
@@ -192,6 +195,12 @@ function injectAdminCrudsStyles() {
     css += '.ac-cat-check{padding:8px 14px;border:1.5px solid var(--ac-gray-200);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:var(--ac-white);display:inline-flex;align-items:center;gap:6px;}';
     css += '.ac-cat-check input{display:none;}';
     css += '.ac-cat-check.checked{background:var(--ac-blue-500);color:white;border-color:var(--ac-blue-600);}';
+    /* 🆕 styles boutons valider/annuler prix */
+    css += '.ac-price-action-btn{border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin:0 2px;font-size:12px;font-weight:700;}';
+    css += '.ac-price-action-btn.validate{background:#10B981;color:white;}';
+    css += '.ac-price-action-btn.validate:hover{background:#059669;}';
+    css += '.ac-price-action-btn.cancel{background:#EF4444;color:white;}';
+    css += '.ac-price-action-btn.cancel:hover{background:#DC2626;}';
 
     /* RESPONSIVE */
     css += '@media(max-width:768px){';
@@ -1380,7 +1389,7 @@ function chargerProduitsFournisseurAchat() {
     });
     produitsAchatList = produits;
     achatLignes = produits.map(function(p) {
-        return { id: p.id, nom: p.nom, stockActuel: acNum(p.stock), prixActuel: acNum(p.box_price), quantite: 0, nouveauPrix: acNum(p.box_price), dateExpiration: p.dateExpiration || '', total: 0, prixChange: false };
+        return { id: p.id, nom: p.nom, stockActuel: acNum(p.stock), prixActuel: acNum(p.box_price), quantite: 0, nouveauPrix: acNum(p.box_price), dateExpiration: p.dateExpiration || '', total: 0, prixChange: false, prixValideManuellement: false };
     });
     afficherProduitsAchat();
 }
@@ -1400,8 +1409,10 @@ function achatToggleSort(col) {
 window.achatToggleSort = achatToggleSort;
 
 function achatSortIndicator(col) {
-    if (achatSortCol !== col) return '<i class="fas fa-sort" style="opacity:0.3;margin-left:4px;font-size:10px;"></i>';
-    return achatSortDir === 'asc' ? '<i class="fas fa-sort-up" style="margin-left:4px;color:#2563EB;"></i>' : '<i class="fas fa-sort-down" style="margin-left:4px;color:#2563EB;"></i>';
+    if (achatSortCol !== col) return '<i class="fas fa-sort" style="opacity:0.35;margin-left:4px;font-size:11px;"></i>';
+    return achatSortDir === 'asc'
+        ? '<i class="fas fa-sort-up" style="margin-left:4px;color:#2563EB;font-size:13px;"></i>'
+        : '<i class="fas fa-sort-down" style="margin-left:4px;color:#2563EB;font-size:13px;"></i>';
 }
 window.achatSortIndicator = achatSortIndicator;
 
@@ -1438,15 +1449,21 @@ function afficherProduitsAchat() {
     });
 
     var thStyle = 'cursor:pointer;user-select:none;';
+    var thFor = function(col, label) {
+        var active = (achatSortCol === col) ? ' sort-active' : '';
+        return '<th style="' + thStyle + '" class="' + (active ? 'sort-active' : '') + '" onclick="achatToggleSort(\'' + col + '\')">' + label + achatSortIndicator(col) + '</th>';
+    };
+
     var html = '<table class="ac-modal-table"><thead><tr>';
     html += '<th style="' + thStyle + '" onclick="achatToggleSort(\'id\')">ID' + achatSortIndicator('id') + '</th>';
-    html += '<th style="' + thStyle + '" onclick="achatToggleSort(\'nom\')">Produit' + achatSortIndicator('nom') + '</th>';
+    html += thFor('nom', 'Produit');
     html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'stock\')">Stock' + achatSortIndicator('stock') + '</th>';
     html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'prixActuel\')">Prix actuel' + achatSortIndicator('prixActuel') + '</th>';
     html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'quantite\')">Qté' + achatSortIndicator('quantite') + '</th>';
     html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'nouveauPrix\')">Nouveau prix' + achatSortIndicator('nouveauPrix') + '</th>';
     html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'dateExpiration\')">Expiration' + achatSortIndicator('dateExpiration') + '</th>';
     html += '<th class="center" style="' + thStyle + '" onclick="achatToggleSort(\'total\')">Total' + achatSortIndicator('total') + '</th>';
+    html += '<th class="center">Action</th>';
     html += '</tr></thead><tbody>';
     for (var k = 0; k < lignes.length; k++) {
         var o = lignes[k]; var l = o.ligne; var i = o.realIdx;
@@ -1464,11 +1481,21 @@ function afficherProduitsAchat() {
         html += '<td><span style="font-size:11px;color:#94A3B8;font-family:monospace;">' + (l.id || '').substring(0, 6) + '</span></td>';
         html += '<td><div class="ac-product-name">' + escapeHtml(l.nom) + '</div>' + badgeHtml + '</td>';
         html += '<td class="center">' + l.stockActuel + '</td>';
-        html += '<td class="center"><span class="ac-price-old">' + l.prixActuel.toFixed(2) + ' MAD</span></td>';
+        // ✅ Prix actuel SANS barré
+        html += '<td class="center"><span style="font-size:13px;color:#64748B;font-weight:600;">' + l.prixActuel.toFixed(2) + ' MAD</span></td>';
         html += '<td class="center"><input type="number" min="0" step="1" value="' + (l.quantite || 0) + '" oninput="onLigneQteChange(' + i + ', this.value)" style="width:80px;"></td>';
         html += '<td class="center"><input type="number" min="0" step="0.01" class="' + prixClass + '" value="' + (l.nouveauPrix || 0) + '" oninput="onLignePrixChange(' + i + ', this.value)" style="width:100px;"></td>';
         html += '<td class="center"><input type="date" value="' + (l.dateExpiration || '') + '" onchange="onLigneDateChange(' + i + ', this.value)" style="width:140px;"></td>';
         html += '<td class="ac-total-cell" id="achatTotal_' + i + '">' + (l.total || 0).toFixed(2) + '</td>';
+        // ✅ Boutons valider / annuler prix
+        if (l.prixChange && l.nouveauPrix > 0) {
+            html += '<td class="center">';
+            html += '<button class="ac-price-action-btn validate" onclick="validerChangementPrix(' + i + ')" title="Garder le nouveau prix"><i class="fas fa-check"></i></button>';
+            html += '<button class="ac-price-action-btn cancel" onclick="annulerChangementPrix(' + i + ')" title="Revenir à l\'ancien prix"><i class="fas fa-times"></i></button>';
+            html += '</td>';
+        } else {
+            html += '<td class="center"><span style="color:#CBD5E1;font-size:11px;">—</span></td>';
+        }
         html += '</tr>';
     }
     html += '</tbody></table>';
@@ -1482,14 +1509,83 @@ function onLigneQteChange(index, value) {
     var cell = document.getElementById('achatTotal_' + index); if (cell) cell.textContent = l.total.toFixed(2);
     updateAchatTotals();
 }
+
+// ✅ Ne plus reconstruire le tableau à chaque frappe (garde le focus + les floats OK)
 function onLignePrixChange(index, value) {
     var l = achatLignes[index]; if (!l) return;
     var nouveau = acNum(value);
-    l.nouveauPrix = nouveau; l.prixChange = Math.abs(nouveau - l.prixActuel) > 0.001;
+    l.nouveauPrix = nouveau;
+    l.prixChange = Math.abs(nouveau - l.prixActuel) > 0.001 && !l.prixValideManuellement;
     l.total = (l.quantite || 0) * nouveau;
+
+    // Mettre à jour la cellule total
+    var cell = document.getElementById('achatTotal_' + index);
+    if (cell) cell.textContent = l.total.toFixed(2);
+
+    // Mettre à jour le badge + la couleur de ligne SANS reconstruire
+    var row = cell ? cell.closest('tr') : null;
+    if (row) {
+        if (l.prixChange) row.classList.add('has-changement');
+        else row.classList.remove('has-changement');
+
+        var productCell = row.querySelector('.ac-product-name');
+        if (productCell) {
+            var oldBadge = productCell.parentElement.querySelector('.ac-price-change-badge');
+            if (oldBadge) oldBadge.remove();
+            if (l.prixChange && l.nouveauPrix > 0) {
+                var diff = l.nouveauPrix - l.prixActuel;
+                var direction = diff > 0 ? 'up' : 'down';
+                var signe = diff > 0 ? '+' : '';
+                var badgeHtml = '<span class="ac-price-change-badge ' + direction + '">' +
+                    '<i class="fas fa-arrow-' + direction + '"></i> ' +
+                    signe + diff.toFixed(2) + ' MAD</span>';
+                productCell.parentElement.insertAdjacentHTML('beforeend', badgeHtml);
+            }
+        }
+
+        var input = row.querySelector('input[oninput*="onLignePrixChange"]');
+        if (input) {
+            if (l.prixChange) input.classList.add('changed');
+            else input.classList.remove('changed');
+        }
+
+        // Mettre à jour les boutons action
+        var actionCell = row.lastElementChild;
+        if (actionCell) {
+            if (l.prixChange && l.nouveauPrix > 0) {
+                actionCell.innerHTML = '<button class="ac-price-action-btn validate" onclick="validerChangementPrix(' + index + ')" title="Garder le nouveau prix"><i class="fas fa-check"></i></button>' +
+                    '<button class="ac-price-action-btn cancel" onclick="annulerChangementPrix(' + index + ')" title="Revenir à l\'ancien prix"><i class="fas fa-times"></i></button>';
+            } else {
+                actionCell.innerHTML = '<span style="color:#CBD5E1;font-size:11px;">—</span>';
+            }
+        }
+    }
+
+    updateAchatTotals();
+}
+
+// ✅ Validation individuelle du changement de prix
+function validerChangementPrix(index) {
+    var l = achatLignes[index]; if (!l) return;
+    l.prixValideManuellement = true;
+    l.prixChange = false;
     afficherProduitsAchat();
 }
+window.validerChangementPrix = validerChangementPrix;
+
+// ✅ Annulation individuelle → revient à l'ancien prix
+function annulerChangementPrix(index) {
+    var l = achatLignes[index]; if (!l) return;
+    l.nouveauPrix = l.prixActuel;
+    l.prixChange = false;
+    l.prixValideManuellement = false;
+    l.total = (l.quantite || 0) * l.nouveauPrix;
+    afficherProduitsAchat();
+}
+window.annulerChangementPrix = annulerChangementPrix;
+
 function onLigneDateChange(index, value) { var l = achatLignes[index]; if (!l) return; l.dateExpiration = value || ''; }
+
 function updateAchatTotals() {
     var produits = 0, qteTotale = 0, totalGeneral = 0;
     achatLignes.forEach(function(l) { if (l.quantite > 0) { produits++; qteTotale += l.quantite; totalGeneral += l.total || 0; } });
@@ -1612,24 +1708,73 @@ function ouvrirCameraFacture() {
     };
     input.click();
 }
+
+// 🆕 Compression d'image pour accélérer le scan
+function compresserImagePourScan(base64, maxWidth, quality) {
+    return new Promise(function(resolve) {
+        try {
+            var img = new Image();
+            img.onload = function() {
+                var ratio = Math.min(maxWidth / img.width, 1);
+                var canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * ratio);
+                canvas.height = Math.round(img.height * ratio);
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = function() { resolve(base64); };
+            img.src = base64;
+        } catch (e) { resolve(base64); }
+    });
+}
+window.compresserImagePourScan = compresserImagePourScan;
+
 async function scannerFacture(imgData) {
     var overlay = document.createElement('div');
     overlay.className = 'ac-scan-overlay';
     overlay.innerHTML = '<div class="spinner"></div><p>📷 Analyse de la facture...</p>';
     document.body.appendChild(overlay);
     try {
+        // ✅ Compression : 1200px max, qualité 70% → ~200 Ko au lieu de 5 Mo
+        var imgCompressee = await compresserImagePourScan(imgData, 1200, 0.7);
+        console.log('📷 Image compressée :', Math.round(imgCompressee.length / 1024), 'Ko (avant :', Math.round(imgData.length / 1024), 'Ko)');
+
         var productNames = produitsAchatList.map(function(p) { return p.nom; });
         var productListStr = productNames.map(function(n) { return '"' + n.replace(/"/g, '\\"') + '"'; }).join(', ');
         var idxProduit = (fournisseurAchatSelectionne && fournisseurAchatSelectionne.prixIndexProduit != null) ? fournisseurAchatSelectionne.prixIndexProduit : 0;
         var idxQte = (fournisseurAchatSelectionne && fournisseurAchatSelectionne.prixIndexQte != null) ? fournisseurAchatSelectionne.prixIndexQte : 1;
         var idxPrix = (fournisseurAchatSelectionne && fournisseurAchatSelectionne.prixIndexPrix != null) ? fournisseurAchatSelectionne.prixIndexPrix : 2;
-        var prompt = 'Voici une photo d\'une facture fournisseur. La liste des produits : [' + productListStr + ']. ' +
-            'Index colonnes (0=1ère) : PRODUIT=' + idxProduit + ', QUANTITÉ=' + idxQte + ', PRIX=' + idxPrix + '. ' +
-            'Retourne UNIQUEMENT un tableau JSON: [{"nom":"...","quantite":N,"prix":N}] ou [].';
+
+        var prompt = 'Tu es un expert en lecture de factures fournisseur marocaines (épicerie/tabac).\n\n';
+        prompt += 'CONTEXTE :\n';
+        prompt += '- Fournisseur : ' + (fournisseurAchatSelectionne.nom || '') + '\n';
+        prompt += '- Société : ' + (fournisseurAchatSelectionne.societe || 'N/A') + '\n\n';
+        prompt += 'LISTE PRODUITS CONNUS (utilise EXACTEMENT ces noms) :\n';
+        prompt += productListStr + '\n\n';
+        prompt += 'INSTRUCTIONS STRICTES :\n';
+        prompt += '1. Extrais UNIQUEMENT les produits qui correspondent à la liste ci-dessus.\n';
+        prompt += '2. Si un produit n\'est pas dans la liste, IGNORE-LE (ne l\'invente pas).\n';
+        prompt += '3. La quantité est le nombre de CARTONS/BOÎTES (pas d\'unités).\n';
+        prompt += '4. Le prix est le prix UNITAIRE de la BOÎTE (pas le total ligne).\n';
+        prompt += '5. Ignore : frais de livraison, remises globales, TVA, sous-total.\n';
+        prompt += '6. Index colonnes (0=1ère colonne) : PRODUIT=' + idxProduit + ', QUANTITÉ=' + idxQte + ', PRIX=' + idxPrix + '.\n';
+        prompt += '7. Si un prix est illisible, mets null (ne devine pas).\n\n';
+        prompt += 'FORMAT DE SORTIE (JSON pur, sans markdown) :\n';
+        prompt += '[{"nom":"NOM EXACT DU PRODUIT","quantite":N,"prix":N ou null}]\n\n';
+        prompt += 'Si aucun produit reconnu, retourne : []';
+
+        // ✅ Timeout 25s
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, 25000);
+
         var response = await fetch(GEMINI_WORKER_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt, imageBase64: imgData })
+            body: JSON.stringify({ prompt: prompt, imageBase64: imgCompressee }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
+
         var data = await response.json();
         if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
         var rawText = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text || '';
@@ -1641,10 +1786,33 @@ async function scannerFacture(imgData) {
             var m; while ((m = regex.exec(cleaned)) !== null) produitsReconnus.push({ nom: m[1].trim(), quantite: parseInt(m[2]), prix: m[3] ? parseFloat(m[3]) : null });
         }
         overlay.remove();
-        if (produitsReconnus.length === 0) { alert('Aucun produit reconnu.'); return; }
+
+        // ✅ Validation : ne garder que les produits qui existent vraiment
+        var produitsValides = [];
+        var produitsIgnores = [];
+        produitsReconnus.forEach(function(p) {
+            var existe = achatLignes.some(function(l) {
+                return (l.nom || '').toLowerCase().trim() === (p.nom || '').toLowerCase().trim();
+            });
+            if (existe) produitsValides.push(p);
+            else produitsIgnores.push(p);
+        });
+        produitsReconnus = produitsValides;
+
+        if (produitsReconnus.length === 0) {
+            var msgIgnore = '⚠️ Aucun produit de la liste n\'a été reconnu sur la facture.';
+            if (produitsIgnores.length > 0) {
+                msgIgnore += '\n\nProduits détectés mais ignorés (pas dans votre catalogue) :\n';
+                produitsIgnores.forEach(function(p) { msgIgnore += '• ' + p.nom + '\n'; });
+            }
+            msgIgnore += '\n\nVérifiez la netteté de la photo et que le bon fournisseur est sélectionné.';
+            alert(msgIgnore);
+            return;
+        }
+
         var prixChangés = [];
         produitsReconnus.forEach(function(p) {
-            var ligne = achatLignes.find(function(l) { var a = (l.nom || '').toLowerCase(); var b = (p.nom || '').toLowerCase(); return a.includes(b) || b.includes(a); });
+            var ligne = achatLignes.find(function(l) { var a = (l.nom || '').toLowerCase(); var b = (p.nom || '').toLowerCase(); return a === b || a.includes(b) || b.includes(a); });
             if (!ligne) return;
             ligne.quantite = acNum(p.quantite); ligne.total = ligne.quantite * (ligne.nouveauPrix || 0);
             if (p.prix && p.prix > 0) {
@@ -1654,13 +1822,26 @@ async function scannerFacture(imgData) {
             }
         });
         afficherProduitsAchat();
+
+        var msgFinal = '📊 RÉSULTAT DU SCAN\n\n';
+        msgFinal += '✅ Reconnus : ' + produitsReconnus.length + '\n';
+        msgFinal += '⚠️ Ignorés (pas dans catalogue) : ' + produitsIgnores.length + '\n';
+        msgFinal += '💰 Prix changés : ' + prixChangés.length + '\n';
         if (prixChangés.length > 0) {
-            var msg = '⚠️ PRIX CHANGÉS DÉTECTÉS :\n\n';
-            prixChangés.forEach(function(pc) { msg += '• ' + pc.nom + '\n  ' + pc.ancien.toFixed(2) + ' → ' + pc.nouveau.toFixed(2) + ' MAD\n'; });
-            msg += '\nVérifiez les lignes jaunes avant de valider.';
-            alert(msg);
-        } else { alert('✅ ' + produitsReconnus.length + ' produit(s) reconnu(s). Aucun changement de prix.'); }
-    } catch(e) { if (overlay.parentNode) overlay.remove(); console.error(e); alert('❌ Erreur scan : ' + e.message); }
+            msgFinal += '\nDétail des prix changés (lignes jaunes) :\n';
+            prixChangés.forEach(function(pc) { msgFinal += '• ' + pc.nom + ' : ' + pc.ancien.toFixed(2) + ' → ' + pc.nouveau.toFixed(2) + ' MAD\n'; });
+            msgFinal += '\nUtilisez les boutons ✅ / ❌ sur chaque ligne pour valider ou annuler individuellement.';
+        }
+        alert(msgFinal);
+    } catch(e) {
+        if (overlay.parentNode) overlay.remove();
+        console.error(e);
+        if (e.name === 'AbortError') {
+            alert('⏱️ Le scan a pris plus de 25 secondes.\n\nRéessayez avec une photo plus nette ou moins lourde.');
+        } else {
+            alert('❌ Erreur scan : ' + e.message);
+        }
+    }
 }
 
 window.openAchatModal = openAchatModal;
@@ -1683,7 +1864,7 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v4');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v5');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
@@ -1691,3 +1872,7 @@ console.log('✅ 📊 Stats analyste sur chaque page');
 console.log('✅ 📷 Index prix + comparaison + confirmation');
 console.log('✅ 🔃 Tri des colonnes dans le tableau d\'achat (asc/desc)');
 console.log('✅ 📱 Bouton "Commander" → WhatsApp fournisseur');
+console.log('✅ 🆕 Prix actuel SANS barré');
+console.log('✅ 🆕 Input prix float sans perte de focus');
+console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix');
+console.log('✅ 🆕 Scan rapide (compression) + fiable (timeout + prompt précis)');
