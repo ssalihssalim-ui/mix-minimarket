@@ -1,21 +1,22 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6.1 - SANS SON + SANS MENTION GEMINI) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v7 - PANIER TEMPORAIRE CUMULATIF) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
-// ✅ ⚡ Micro qui s'arrête après 3 SECONDES de silence
+// ✅ ⚡ Micro qui s'arrête après 2 SECONDES de silence (v7)
 // ❌ 🔊 Synthèse vocale DÉSACTIVÉE (elle bloquait le micro sur iPhone)
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
 // ✅ 💾 Cache des commandes récentes
 // ✅ 📱 Détection PWA iPhone → message "Ouvrez dans Safari"
+// 🆕 v7 : PANIER TEMPORAIRE sous le micro + boutons +/-/🗑 + ajout cumulatif entre dictées
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 const POS_AI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-// ⚡ Silence réduit à 3 secondes (pour laisser le temps de parler)
-const POS_AI_SILENCE_DURATION = 3000;
+// ⚡ Silence réduit à 2 secondes (v7 : était 3s)
+const POS_AI_SILENCE_DURATION = 2000;
 const POS_AI_CACHE_KEY = 'posGeminiCache'; // conservé pour compatibilité du cache existant
 const POS_AI_CACHE_MAX_AGE = 7 * 24 * 3600000;
 
@@ -32,6 +33,9 @@ var posAiManuallyStopped = false;
 var posAiAbortController = null;
 var posAiCache = null;
 var posAiCompteurNoSpeech = 0;
+
+// 🆕 v7 : Panier temporaire cumulatif entre les dictées
+var posAiPanierTemporaire = [];
 
 // ==================== 📱 DÉTECTION PWA IPHONE ====================
 function posAiEstPwaIphone() {
@@ -57,15 +61,10 @@ function posAiNormaliser(texte) {
 }
 
 // ==================== 🔊 SYNTHÈSE VOCALE — DÉSACTIVÉE ====================
-// ❌ Cette fonction ne fait plus rien. Elle est conservée uniquement pour
-// éviter les erreurs "is not a function" si du code externe l'appelle.
 function posAiParler(texte) {
-    // ❌ SYNTHÈSE VOCALE DÉSACTIVÉE — elle bloquait le micro sur iPhone
-    // Aucun son n'est émis. On ne fait rien.
     return;
 }
 
-// Alias pour compatibilité avec l'ancien nom
 window.posGeminiParler = posAiParler;
 
 // ==================== 💾 CACHE DES COMMANDES RÉCENTES ====================
@@ -186,7 +185,7 @@ function posOuvrirCommandeVocaleAi() {
                 <p style="margin:8px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Ajouter 3 Merindina et 2 Coca Cola »</p>
                 <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« 5 croissants et 1 café »</p>
                 <p style="margin:4px 0 0;color:#6D28D9;font-size:0.9rem;font-style:italic;">« Deux pizzas et un jus d'orange »</p>
-                <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 3 secondes de silence</p>
+                <p style="margin:10px 0 0;color:#7C3AED;font-size:0.8rem;font-weight:600;">⏱️ Le micro s'arrête après 2 secondes de silence</p>
             </div>
 
             <button id="posAiMicBtn" onclick="posDemarrerEcouteAi()"
@@ -207,13 +206,129 @@ function posOuvrirCommandeVocaleAi() {
                 <p id="posAiTranscriptText" style="margin:6px 0 0;font-style:italic;"></p>
             </div>
 
+            <div id="posAiPanierContainer" style="margin-top:16px;"></div>
+
             <div id="posAiResult" style="margin-top:16px;display:none;"></div>
         </div>
     `;
     openModal('🎤 Commande vocale', html);
+    
+    // 🆕 v7 : Afficher le panier temporaire dès l'ouverture
+    posAiRafraichirPanier();
 }
 
-// ==================== DÉMARRAGE ÉCOUTE (silence 3s) ====================
+// ==================== 🆕 v7 : AFFICHAGE DU PANIER TEMPORAIRE ====================
+function posAiRafraichirPanier() {
+    var container = document.getElementById('posAiPanierContainer');
+    if (!container) return;
+
+    if (!posAiPanierTemporaire || posAiPanierTemporaire.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    var totalGeneral = 0;
+    var lignesHtml = posAiPanierTemporaire.map(function(item, idx) {
+        var p = item.produit;
+        var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
+        var sousTotal = pr * item.quantite;
+        totalGeneral += sousTotal;
+
+        return `
+            <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:8px 6px;font-weight:600;color:#1e293b;font-size:0.85rem;text-align:left;">
+                    ${escapeHtml(p.nom)}
+                </td>
+                <td style="padding:6px;text-align:center;">
+                    <button onclick="posAiChangerQuantite(${idx}, -1)"
+                        style="width:26px;height:26px;border-radius:50%;border:none;
+                               background:#e2e8f0;color:#475569;cursor:pointer;
+                               font-weight:700;font-size:1rem;">−</button>
+                    <span style="display:inline-block;min-width:24px;text-align:center;
+                                 font-weight:700;color:#8B5CF6;">${item.quantite}</span>
+                    <button onclick="posAiChangerQuantite(${idx}, 1)"
+                        style="width:26px;height:26px;border-radius:50%;border:none;
+                               background:#8B5CF6;color:#fff;cursor:pointer;
+                               font-weight:700;font-size:1rem;">+</button>
+                </td>
+                <td style="padding:8px 6px;text-align:right;font-weight:700;color:#7C3AED;font-size:0.85rem;">
+                    ${sousTotal.toFixed(2)} MAD
+                </td>
+                <td style="padding:6px;text-align:center;">
+                    <button onclick="posAiSupprimerDuPanier(${idx})"
+                        style="width:28px;height:28px;border-radius:6px;border:none;
+                               background:#FEE2E2;color:#EF4444;cursor:pointer;
+                               font-weight:700;">🗑</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="padding:12px;background:#F5F3FF;border:2px solid #8B5CF6;border-radius:12px;text-align:left;">
+            <p style="margin:0 0 10px;color:#7C3AED;font-weight:700;font-size:1rem;">
+                🛒 Panier (${posAiPanierTemporaire.length} produit${posAiPanierTemporaire.length > 1 ? 's' : ''})
+            </p>
+            <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                <thead>
+                    <tr style="background:#EDE9FE;">
+                        <th style="padding:6px;text-align:left;color:#7C3AED;font-size:0.75rem;">Produit</th>
+                        <th style="padding:6px;text-align:center;color:#7C3AED;font-size:0.75rem;">Qté</th>
+                        <th style="padding:6px;text-align:right;color:#7C3AED;font-size:0.75rem;">Total</th>
+                        <th style="padding:6px;text-align:center;color:#7C3AED;font-size:0.75rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>${lignesHtml}</tbody>
+            </table>
+            <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:10px;border-top:2px solid #8B5CF6;">
+                <span style="font-weight:700;color:#5B21B6;font-size:1rem;">Total général :</span>
+                <span style="font-weight:800;color:#7C3AED;font-size:1.2rem;">${totalGeneral.toFixed(2)} MAD</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button onclick="posAnnulerAiVoice()"
+                    style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;">
+                    ❌ Annuler
+                </button>
+                <button onclick="posConfirmerAjoutAiVoice()"
+                    style="flex:2;padding:12px;background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 4px 14px rgba(139,92,246,0.3);">
+                    ✅ Valider le panier
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// ==================== 🆕 v7 : CHANGER LA QUANTITÉ ====================
+function posAiChangerQuantite(index, delta) {
+    if (!posAiPanierTemporaire || !posAiPanierTemporaire[index]) return;
+    var item = posAiPanierTemporaire[index];
+    var nouvelleQte = (item.quantite || 1) + delta;
+
+    // Ne pas descendre en dessous de 1
+    if (nouvelleQte < 1) {
+        posAiSupprimerDuPanier(index);
+        return;
+    }
+
+    // Vérifier le stock
+    var produit = item.produit;
+    if (produit && produit.stock !== undefined && nouvelleQte > produit.stock) {
+        alert('⚠️ Stock insuffisant (max : ' + produit.stock + ')');
+        return;
+    }
+
+    item.quantite = nouvelleQte;
+    posAiRafraichirPanier();
+}
+
+// ==================== 🆕 v7 : SUPPRIMER UN PRODUIT ====================
+function posAiSupprimerDuPanier(index) {
+    if (!posAiPanierTemporaire || !posAiPanierTemporaire[index]) return;
+    posAiPanierTemporaire.splice(index, 1);
+    posAiRafraichirPanier();
+}
+
+// ==================== DÉMARRAGE ÉCOUTE (silence 2s) ====================
 function posDemarrerEcouteAi() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -255,7 +370,7 @@ function posDemarrerEcouteAi() {
     }
     if (micIcon) micIcon.className = 'fas fa-stop';
     if (status) {
-        status.textContent = '🎙️ Je vous écoute... (parlez, puis attendez 3s)';
+        status.textContent = '🎙️ Je vous écoute... (parlez, puis attendez 2s)';
         status.style.color = '#8B5CF6';
         status.style.fontWeight = '700';
     }
@@ -287,7 +402,7 @@ function posDemarrerEcouteAi() {
 
         posAiSilenceTimer = setTimeout(function() {
             clearInterval(intervalCompteur);
-            console.log('⏱️ 3s de silence → arrêt auto');
+            console.log('⏱️ 2s de silence → arrêt auto');
             if (posAiRecognition) {
                 try { posAiRecognition.stop(); } catch(e) {}
             }
@@ -337,7 +452,7 @@ function posDemarrerEcouteAi() {
         if (event.error === 'no-speech' && posAiCompteurNoSpeech < 2) {
             posAiCompteurNoSpeech++;
             console.log('🔄 Relance auto n°' + posAiCompteurNoSpeech + ' après no-speech');
-            posAiManuallyStopped = true; // évite le déclenchement du onend
+            posAiManuallyStopped = true;
             if (posAiSilenceTimer) {
                 clearTimeout(posAiSilenceTimer);
                 posAiSilenceTimer = null;
@@ -483,6 +598,7 @@ CATALOGUE DE PRODUITS DISPONIBLES :
 2. Extrait la quantité pour chaque produit. Reconnais :
    - Chiffres : "1", "2", "3", "10"...
    - Mots français : "un"=1, "deux"=2, "trois"=3, "quatre"=4, "cinq"=5, "six"=6, "sept"=7, "huit"=8, "neuf"=9, "dix"=10
+   - Mots darija en latin : "wahid"=1, "jouj"=2, "tlata"=3, "khamsa"=5, "sitta"=6, "sbaa"=7, "tmanya"=8, "tsaa"=9, "achra"=10
    Si aucune quantité n'est précisée, mets 1.
 
 ⚠️ IMPORTANT : IGNORE COMPLÈTEMENT tout nom de personne ou de client mentionné (ex: "client Ahmed", "pour Fatima", "au nom de Youssef"). Ne retourne QUE les produits.
@@ -517,6 +633,9 @@ Ex 6 : "Un croissant et deux cafés au nom de Youssef"
 
 Ex 7 : "Six msemen"
 → [{"nom": "Msemen", "quantite": 6}]
+
+Ex 8 : "Khamsa coca et tlata croissants"
+→ [{"nom": "Coca Cola", "quantite": 5}, {"nom": "Croissant", "quantite": 3}]
 
 ═══════════════════════════════════════════════════════
 📤 FORMAT DE SORTIE (JSON ARRAY UNIQUEMENT) :
@@ -757,7 +876,8 @@ Ex 7 : "Six msemen"
             }
         });
 
-        posAfficherResultatAiVoice(produitsValides, resultBox, produitsNonTrouves);
+        // 🆕 v7 : AJOUTER AU PANIER TEMPORAIRE (cumul)
+        posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves);
 
     } catch(e) {
         console.error('❌ Erreur Voice:', e);
@@ -771,49 +891,85 @@ Ex 7 : "Six msemen"
     }
 }
 
-// ==================== AFFICHAGE RÉSULTAT (PRODUITS UNIQUEMENT) ====================
+// ==================== 🆕 v7 : AJOUTER AU PANIER TEMPORAIRE (cumul) ====================
+function posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves) {
+    produitsNonTrouves = produitsNonTrouves || [];
+
+    if (!produitsValides || produitsValides.length === 0) {
+        // Aucun produit reconnu : afficher les suggestions si possible
+        var resultBox = document.getElementById('posAiResult');
+        if (resultBox) {
+            if (produitsNonTrouves.length > 0) {
+                posAfficherResultatAiVoice([], resultBox, produitsNonTrouves);
+            } else {
+                resultBox.innerHTML = `<div style="padding:14px;background:#FEF3C7;border:2px solid #F59E0B;border-radius:10px;color:#92400E;font-size:0.95rem;text-align:left;">
+                    ⚠️ <strong>Aucun produit reconnu.</strong><br>
+                    <em>Essayez : « Ajouter 3 Merindina et 2 Coca Cola »</em>
+                </div>`;
+            }
+        }
+        return;
+    }
+
+    // 🆕 v7 : Ajouter OU cumuler avec les produits déjà dans le panier temporaire
+    produitsValides.forEach(function(nouveau) {
+        var existant = posAiPanierTemporaire.find(function(item) {
+            return item.produit && item.produit.id === nouveau.produit.id;
+        });
+
+        if (existant) {
+            // Le produit existe déjà → on additionne les quantités
+            existant.quantite = (existant.quantite || 1) + (nouveau.quantite || 1);
+            console.log('🔄 Cumul quantité :', existant.produit.nom, '→', existant.quantite);
+        } else {
+            // Nouveau produit → on ajoute
+            posAiPanierTemporaire.push(nouveau);
+            console.log('➕ Nouveau produit ajouté au panier :', nouveau.produit.nom);
+        }
+    });
+
+    // Rafraîchir le panier affiché
+    posAiRafraichirPanier();
+
+    // Afficher les suggestions / alertes stock si nécessaire
+    var resultBox = document.getElementById('posAiResult');
+    if (resultBox && produitsNonTrouves.length > 0) {
+        posAfficherResultatAiVoice(posAiPanierTemporaire, resultBox, produitsNonTrouves);
+    } else if (resultBox) {
+        resultBox.style.display = 'none';
+    }
+
+    // Afficher un message de succès
+    var status = document.getElementById('posAiStatus');
+    if (status) {
+        status.textContent = '✅ ' + produitsValides.length + ' produit(s) ajouté(s) au panier — cliquez sur 🎤 pour en ajouter d\'autres';
+        status.style.color = '#10B981';
+    }
+}
+
+// ==================== AFFICHAGE RÉSULTAT (SUGGESTIONS + ALERTES STOCK) ====================
 function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
     if (!container) container = document.getElementById('posAiResult');
     if (!container) return;
 
     produitsNonTrouves = produitsNonTrouves || [];
 
-    var totalGeneral = 0;
+    // 🆕 v7 : Vérifier les alertes stock sur le panier temporaire
     var alertesStock = [];
-
-    var lignesHtml = produits.map(function(item) {
+    (posAiPanierTemporaire || []).forEach(function(item) {
         var p = item.produit;
-        var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
-        var sousTotal = pr * item.quantite;
-        totalGeneral += sousTotal;
-
-        var stockHtml = '';
         if (p.stock !== undefined) {
             if (p.stock <= 0) {
-                stockHtml = '<span style="color:#EF4444;font-weight:700;font-size:0.75rem;margin-left:4px;">⛔ Rupture</span>';
                 alertesStock.push(p.nom + ' : rupture');
             } else if (p.stock < item.quantite) {
-                stockHtml = '<span style="color:#EF4444;font-weight:700;font-size:0.75rem;margin-left:4px;">⚠️ Stock: ' + p.stock + '</span>';
-                alertesStock.push(p.nom + ' : seulement ' + p.stock + ' en stock');
+                alertesStock.push(p.nom + ' : seulement ' + p.stock + ' en stock (demandé ' + item.quantite + ')');
             } else if (p.stock <= 5) {
-                stockHtml = '<span style="color:#F59E0B;font-weight:700;font-size:0.75rem;margin-left:4px;">⚡ ' + p.stock + ' rest.</span>';
+                alertesStock.push(p.nom + ' : ' + p.stock + ' restant(s)');
             }
         }
+    });
 
-        return `
-            <tr style="border-bottom:1px solid #e2e8f0;">
-                <td style="padding:8px 6px;font-weight:600;color:#1e293b;font-size:0.9rem;text-align:left;">
-                    ${escapeHtml(p.nom)}${stockHtml}
-                </td>
-                <td style="padding:8px 6px;text-align:center;color:#8B5CF6;font-weight:700;font-size:1rem;">×${item.quantite}</td>
-                <td style="padding:8px 6px;text-align:right;color:#64748b;font-size:0.85rem;">${pr.toFixed(2)} MAD</td>
-                <td style="padding:8px 6px;text-align:right;font-weight:700;color:#7C3AED;font-size:0.9rem;">${sousTotal.toFixed(2)} MAD</td>
-            </tr>
-        `;
-    }).join('');
-
-    posAiProduitsEnAttente = produits;
-
+    // Suggestions si produits non trouvés
     var suggestionsHtml = '';
     if (produitsNonTrouves.length > 0) {
         var suggestionsItems = produitsNonTrouves.map(function(item) {
@@ -841,6 +997,7 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
         `;
     }
 
+    // Alertes stock
     var stockHtml = '';
     if (alertesStock.length > 0) {
         stockHtml = `
@@ -855,39 +1012,17 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
         `;
     }
 
+    // Si pas de suggestions ni d'alertes, ne rien afficher
+    if (!suggestionsHtml && !stockHtml) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    container.style.display = 'block';
     container.innerHTML = `
-        <div style="padding:14px;background:#F5F3FF;border:2px solid #8B5CF6;border-radius:12px;text-align:left;">
-            <p style="margin:0 0 10px;color:#7C3AED;font-weight:700;font-size:1rem;">
-                ✅ ${produits.length} produit(s) reconnu(s) :
-            </p>
-            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-                <thead>
-                    <tr style="background:#EDE9FE;">
-                        <th style="padding:6px;text-align:left;color:#7C3AED;font-size:0.8rem;">Produit</th>
-                        <th style="padding:6px;text-align:center;color:#7C3AED;font-size:0.8rem;">Qté</th>
-                        <th style="padding:6px;text-align:right;color:#7C3AED;font-size:0.8rem;">Prix</th>
-                        <th style="padding:6px;text-align:right;color:#7C3AED;font-size:0.8rem;">Total</th>
-                    </tr>
-                </thead>
-                <tbody>${lignesHtml}</tbody>
-            </table>
-            <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:10px;border-top:2px solid #8B5CF6;">
-                <span style="font-weight:700;color:#5B21B6;font-size:1rem;">Total général :</span>
-                <span style="font-weight:800;color:#7C3AED;font-size:1.2rem;">${totalGeneral.toFixed(2)} MAD</span>
-            </div>
-            ${stockHtml}
-            ${suggestionsHtml}
-            <div style="display:flex;gap:10px;margin-top:16px;">
-                <button onclick="posAnnulerAiVoice()"
-                    style="flex:1;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;">
-                    ❌ Annuler
-                </button>
-                <button onclick="posConfirmerAjoutAiVoice()"
-                    style="flex:2;padding:12px;background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 4px 14px rgba(139,92,246,0.3);">
-                    ✅ Ajouter au panier
-                </button>
-            </div>
-        </div>
+        ${suggestionsHtml}
+        ${stockHtml}
     `;
 }
 
@@ -901,25 +1036,19 @@ function posAiChoisirSuggestion(nomProduit) {
         return;
     }
 
-    posAiProduitsEnAttente.push({
+    // 🆕 v7 : Ajouter au panier temporaire (cumul)
+    posAiAjouterAuPanierTemporaire([{
         produit: produit,
         quantite: 1,
         nomOriginal: nomProduit
-    });
+    }], []);
 
     console.log('🎯 Suggestion ajoutée :', nomProduit);
-
-    var resultBox = document.getElementById('posAiResult');
-    posAfficherResultatAiVoice(
-        posAiProduitsEnAttente,
-        resultBox,
-        []
-    );
 }
 
 // ==================== CONFIRMATION AJOUT AU PANIER (PRODUITS UNIQUEMENT) ====================
 function posConfirmerAjoutAiVoice() {
-    var produits = posAiProduitsEnAttente;
+    var produits = posAiPanierTemporaire;
     if (!produits || produits.length === 0) {
         alert('❌ Aucun produit à ajouter');
         return;
@@ -934,6 +1063,8 @@ function posConfirmerAjoutAiVoice() {
 
     closeModal();
 
+    // 🆕 v7 : Vider le panier temporaire après validation
+    posAiPanierTemporaire = [];
     posAiProduitsEnAttente = [];
 
     if (window.isOnPOSPage && window.isOnPOSPage()) {
@@ -953,6 +1084,8 @@ function posConfirmerAjoutAiVoice() {
 
 // ==================== ANNULATION ====================
 function posAnnulerAiVoice() {
+    // 🆕 v7 : Vider le panier temporaire
+    posAiPanierTemporaire = [];
     posAiProduitsEnAttente = [];
 
     if (posAiSilenceTimer) {
@@ -975,8 +1108,6 @@ function posAnnulerAiVoice() {
 }
 
 // ==================== ALIAS DE COMPATIBILITÉ (anciens noms "Gemini") ====================
-// Ces alias permettent au reste de l'application (pos.js, etc.) de continuer
-// à fonctionner sans modification, même si on a renommé les fonctions.
 window.posOuvrirCommandeVocaleGemini = posOuvrirCommandeVocaleAi;
 window.posDemarrerEcouteGemini = posDemarrerEcouteAi;
 window.posEnvoyerTexteAGemini = posEnvoyerTexteAAi;
@@ -995,13 +1126,21 @@ window.posAfficherResultatAiVoice = posAfficherResultatAiVoice;
 window.posAiChoisirSuggestion = posAiChoisirSuggestion;
 window.posAiParler = posAiParler;
 
-console.log('🤖 POS-AI.js v6.1 chargé - 100% FRANÇAIS + Micro 3s');
+// 🆕 v7 : Exposer les fonctions du panier temporaire
+window.posAiChangerQuantite = posAiChangerQuantite;
+window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
+window.posAiRafraichirPanier = posAiRafraichirPanier;
+
+console.log('🤖 POS-AI.js v7 chargé - PANIER TEMPORAIRE CUMULATIF');
 console.log('   ✅ 🎯 PRODUITS UNIQUEMENT (PAS de gestion client)');
 console.log('   ❌ 🔊 Synthèse vocale DÉSACTIVÉE (bloquait le micro iPhone)');
 console.log('   📱 Détection PWA iPhone → message "Ouvrez dans Safari"');
-console.log('   ⚡ Silence de 3s avant arrêt du micro');
+console.log('   ⚡ Silence de 2s avant arrêt du micro');
 console.log('   🔄 Relance auto après no-speech (max 2 fois)');
 console.log('   🔒 Vérification HTTPS au démarrage');
 console.log('   🎯 Suggestions intelligentes si produit non trouvé');
 console.log('   🎨 Alertes stock bas automatiques');
 console.log('   💾 Cache des commandes récentes');
+console.log('   🆕 v7 : Panier temporaire sous le micro + boutons +/-/🗑');
+console.log('   🆕 v7 : Ajout cumulatif entre dictées (clic micro 2ᵉ fois = ajouter)');
+console.log('   🆕 v7 : Support darija en latin dans le prompt (khamsa, tlata...)');
