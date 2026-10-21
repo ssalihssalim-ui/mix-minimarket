@@ -1,4 +1,4 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6.4 - DESCRIPTION À GEMINI) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.3.1 - DESCRIPTION DANS PROMPT) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
@@ -10,7 +10,7 @@
 // ✅ 💾 Cache des commandes récentes
 // ✅ 📱 Détection PWA iPhone → message "Ouvrez dans Safari"
 // ✅ Panier temporaire minimal (boutons +/-/🗑) + ajout cumulatif
-// 🆕 v6.4 : DESCRIPTION envoyée à Gemini — "mini dia", "gazeuse" fonctionnent maintenant
+// 🆕 v6.3.1 : la DESCRIPTION est envoyée à Gemini — cherchée exactement comme le nom
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
@@ -550,25 +550,24 @@ async function posEnvoyerTexteAAi(texte) {
             parsed = cachedResult.result;
             if (status) status.textContent = '⚡ Réponse du cache';
         } else {
-            // 🆕 v6.4 : Envoi du NOM + DESCRIPTION à Gemini
+            // 🆕 v6.3.1 : envoyer nom + description à Gemini (les 2 cherchés également)
             if (window.posProductsList.length === 0) throw new Error('Aucun produit valide');
 
             var productListStr = window.posProductsList.slice(0, 300).map(function(p) {
                 var nom = (p.nom || '').replace(/"/g, '\\"');
-                var desc = (p.description || '').substring(0, 40).replace(/"/g, '\\"');
+                var desc = (p.description || '').substring(0, 50).replace(/"/g, '\\"');
                 if (desc) {
-                    return '"' + nom + ' (' + desc + ')"';
+                    return '"' + nom + ' | ' + desc + '"';
                 }
                 return '"' + nom + '"';
             }).join(', ');
 
-            // 🆕 v6.4 : prompt avec consigne explicite pour matcher sur la description
             var prompt = `Tu es un assistant de point de vente. Analyse la commande dictée en FRANÇAIS.
 
 PHRASE DITE :
 "${texte}"
 
-CATALOGUE DE PRODUITS DISPONIBLES (format "Nom (description courte)") :
+CATALOGUE DE PRODUITS DISPONIBLES (format "Nom | Description") :
 [${productListStr}]
 
 ═══════════════════════════════════════════════════════
@@ -582,15 +581,14 @@ CATALOGUE DE PRODUITS DISPONIBLES (format "Nom (description courte)") :
    - Mots darija en latin : "wahid"=1, "jouj"=2, "tlata"=3, "khamsa"=5, "sitta"=6, "sbaa"=7, "tmanya"=8, "tsaa"=9, "achra"=10
    Si aucune quantité n'est précisée, mets 1.
 
-🆕 IMPORTANT — MATCHER AUSSI SUR LA DESCRIPTION :
-- Chaque produit est au format "Nom (description courte)".
-- Si l'utilisateur dit un mot qui est dans la DESCRIPTION (pas le nom), tu dois quand même le matcher.
-- Exemple : si le catalogue dit "Chocolat (mini dia 100g)" et l'utilisateur dit "mini dia", 
-  retourne "Chocolat" (le nom SEUL, sans la description entre parenthèses).
-- Exemple : si le catalogue dit "Pepsi 33cl (boisson gazeuse)" et l'utilisateur dit "gazeuse",
-  retourne "Pepsi 33cl".
-- Exemple : si le catalogue dit "Coca-Cola Zéro (sans sucre)" et l'utilisateur dit "sans sucre",
-  retourne "Coca-Cola Zéro".
+🆕 RÈGLE IMPORTANTE — LE NOM ET LA DESCRIPTION SONT ÉGAUX :
+- Chaque produit est présenté au format "Nom | Description".
+- Si l'utilisateur dit un mot qui est dans le NOM → match (comme avant)
+- Si l'utilisateur dit un mot qui est dans la DESCRIPTION → match AUSSI (nouveau)
+- Les deux sont traités EXACTEMENT PAREIL.
+- Ex : "Chocolat | mini dia 100g" — si l'utilisateur dit "mini dia" → retourner "Chocolat"
+- Ex : "Pepsi 33cl | boisson gazeuse" — si l'utilisateur dit "gazeuse" → retourner "Pepsi 33cl"
+- Ex : "Coca-Cola Zéro | sans sucre" — si l'utilisateur dit "sans sucre" → retourner "Coca-Cola Zéro"
 
 ⚠️ IGNORE COMPLÈTEMENT tout nom de personne ou de client mentionné (ex: "client Ahmed", "pour Fatima", "au nom de Youssef"). Ne retourne QUE les produits.
 
@@ -627,23 +625,24 @@ Ex 7 : "Six msemen"
 
 Ex 8 : "3 mini dia et 2 sans sucre"
 → [{"nom": "Chocolat", "quantite": 3}, {"nom": "Coca-Cola Zéro", "quantite": 2}]
-(match sur description)
+(match sur la description — exactement comme sur le nom)
 
 ═══════════════════════════════════════════════════════
 📤 FORMAT DE SORTIE (JSON ARRAY UNIQUEMENT) :
 ═══════════════════════════════════════════════════════
 
 [
-  { "nom": "Nom EXACT du produit du catalogue SANS la description", "quantite": 3 }
+  { "nom": "Nom EXACT du produit du catalogue (SANS la description après le |)", "quantite": 3 }
 ]
 
 ═══════════════════════════════════════════════════════
 ⚠️ RÈGLES STRICTES :
 ═══════════════════════════════════════════════════════
 
-- Le "nom" DOIT être une COPIE EXACTE du NOM (sans la description entre parenthèses).
-- Si tu vois "Chocolat (mini dia 100g)" et que l'utilisateur dit "mini dia", retourne "Chocolat".
-- Si tu vois "Pepsi 33cl (boisson gazeuse)" et que l'utilisateur dit "gazeuse", retourne "Pepsi 33cl".
+- Le "nom" DOIT être une COPIE EXACTE du NOM (partie avant le "|", sans la description).
+- Si tu vois "Chocolat | mini dia 100g" et que l'utilisateur dit "mini dia", retourne "Chocolat".
+- Si tu vois "Pepsi 33cl | boisson gazeuse" et que l'utilisateur dit "gazeuse", retourne "Pepsi 33cl".
+- Le NOM et la DESCRIPTION sont cherchés EXACTEMENT PAREIL. Aucune différence de priorité.
 - Ne change JAMAIS la casse, les accents, ou la ponctuation du nom du catalogue.
 - IGNORE COMPLÈTEMENT les noms de clients/personnes.
 - Ignore les produits non trouvés dans le catalogue.
@@ -1079,8 +1078,8 @@ window.posAiChangerQuantite = posAiChangerQuantite;
 window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
 window.posAiRafraichirPanier = posAiRafraichirPanier;
 
-console.log('🤖 POS-AI.js v6.4 chargé');
+console.log('🤖 POS-AI.js v6.3.1 chargé');
 console.log('   ✅ 2s silence');
 console.log('   ✅ Panier temporaire avec +/−/🗑');
 console.log('   ✅ Ajout cumulatif entre dictées');
-console.log('   🆕 v6.4 : DESCRIPTION envoyée à Gemini — "mini dia", "gazeuse" fonctionnent maintenant');
+console.log('   🆕 v6.3.1 : description envoyée à Gemini — cherchée EXACTEMENT comme le nom');
