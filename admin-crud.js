@@ -9,7 +9,7 @@
 // ✅ 🆕 Bouton "Commander" → WhatsApp fournisseur
 // ✅ 🆕 Fix prix actuel sans barré + input float sans perte de focus
 // ✅ 🆕 Validation/Annulation individuelle des changements de prix
-// ✅ 🆕 Scan plus rapide (compression) + plus fiable (timeout + prompt)
+// ✅ 🆕 Scan en PLEINE QUALITÉ (sans compression) + timeout 60s
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -1709,36 +1709,16 @@ function ouvrirCameraFacture() {
     input.click();
 }
 
-// 🆕 Compression d'image pour accélérer le scan
-function compresserImagePourScan(base64, maxWidth, quality) {
-    return new Promise(function(resolve) {
-        try {
-            var img = new Image();
-            img.onload = function() {
-                var ratio = Math.min(maxWidth / img.width, 1);
-                var canvas = document.createElement('canvas');
-                canvas.width = Math.round(img.width * ratio);
-                canvas.height = Math.round(img.height * ratio);
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                resolve(canvas.toDataURL('image/jpeg', quality));
-            };
-            img.onerror = function() { resolve(base64); };
-            img.src = base64;
-        } catch (e) { resolve(base64); }
-    });
-}
-window.compresserImagePourScan = compresserImagePourScan;
-
+// ✅ SCAN EN PLEINE QUALITÉ (sans compression) — timeout 60s
 async function scannerFacture(imgData) {
     var overlay = document.createElement('div');
     overlay.className = 'ac-scan-overlay';
     overlay.innerHTML = '<div class="spinner"></div><p>📷 Analyse de la facture...</p>';
     document.body.appendChild(overlay);
     try {
-        // ✅ Compression : 1200px max, qualité 70% → ~200 Ko au lieu de 5 Mo
-        var imgCompressee = await compresserImagePourScan(imgData, 1200, 0.7);
-        console.log('📷 Image compressée :', Math.round(imgCompressee.length / 1024), 'Ko (avant :', Math.round(imgData.length / 1024), 'Ko)');
+        // ✅ Image envoyée à l'IA en PLEINE QUALITÉ (aucune compression)
+        var imgPourAI = imgData;
+        console.log('📷 Image envoyée à l\'IA en pleine qualité :', Math.round(imgData.length / 1024), 'Ko');
 
         var productNames = produitsAchatList.map(function(p) { return p.nom; });
         var productListStr = productNames.map(function(n) { return '"' + n.replace(/"/g, '\\"') + '"'; }).join(', ');
@@ -1764,13 +1744,13 @@ async function scannerFacture(imgData) {
         prompt += '[{"nom":"NOM EXACT DU PRODUIT","quantite":N,"prix":N ou null}]\n\n';
         prompt += 'Si aucun produit reconnu, retourne : []';
 
-        // ✅ Timeout 25s
+        // ✅ Timeout 60s pour image pleine qualité
         var controller = new AbortController();
-        var timeoutId = setTimeout(function() { controller.abort(); }, 25000);
+        var timeoutId = setTimeout(function() { controller.abort(); }, 60000);
 
         var response = await fetch(GEMINI_WORKER_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt, imageBase64: imgCompressee }),
+            body: JSON.stringify({ prompt: prompt, imageBase64: imgPourAI }),
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -1837,7 +1817,7 @@ async function scannerFacture(imgData) {
         if (overlay.parentNode) overlay.remove();
         console.error(e);
         if (e.name === 'AbortError') {
-            alert('⏱️ Le scan a pris plus de 25 secondes.\n\nRéessayez avec une photo plus nette ou moins lourde.');
+            alert('⏱️ Le scan a pris plus de 60 secondes.\n\nVérifiez votre connexion internet ou réessayez avec une photo moins lourde.');
         } else {
             alert('❌ Erreur scan : ' + e.message);
         }
@@ -1864,7 +1844,7 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v5');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v6');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
@@ -1875,4 +1855,4 @@ console.log('✅ 📱 Bouton "Commander" → WhatsApp fournisseur');
 console.log('✅ 🆕 Prix actuel SANS barré');
 console.log('✅ 🆕 Input prix float sans perte de focus');
 console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix');
-console.log('✅ 🆕 Scan rapide (compression) + fiable (timeout + prompt précis)');
+console.log('✅ 🆕 Scan en PLEINE QUALITÉ (sans compression) + timeout 60s');
