@@ -1,21 +1,22 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6.2 - PANIER MINIMAL) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.3 - FIX CASSE + ACCENTS) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
 // ✅ Recherche PRODUIT dans : nom, description, categorie, brand, categories[]
-// ✅ ⚡ Micro qui s'arrête après 2 SECONDES de silence (v6.2)
+// ✅ ⚡ Micro qui s'arrête après 2 SECONDES de silence
 // ❌ 🔊 Synthèse vocale DÉSACTIVÉE (elle bloquait le micro sur iPhone)
 // ✅ 🎯 Suggestions intelligentes si produit non trouvé
 // ✅ 🎨 Alerte stock bas automatique
 // ✅ 💾 Cache des commandes récentes
 // ✅ 📱 Détection PWA iPhone → message "Ouvrez dans Safari"
-// 🆕 v6.2 : Panier temporaire minimal (boutons +/-/🗑) + ajout cumulatif
+// ✅ Panier temporaire minimal (boutons +/-/🗑) + ajout cumulatif
+// 🆕 v6.3 : FIX matching — tolère casse + accents + descriptions (Mini dia / Coca Cola zero)
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 const POS_AI_FAKE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-// ⚡ Silence 2 secondes (v6.2 : était 3s)
+// ⚡ Silence 2 secondes
 const POS_AI_SILENCE_DURATION = 2000;
 const POS_AI_CACHE_KEY = 'posGeminiCache';
 const POS_AI_CACHE_MAX_AGE = 7 * 24 * 3600000;
@@ -33,7 +34,7 @@ var posAiAbortController = null;
 var posAiCache = null;
 var posAiCompteurNoSpeech = 0;
 
-// 🆕 v6.2 : Panier temporaire cumulatif
+// Panier temporaire cumulatif
 var posAiPanierTemporaire = [];
 
 // ==================== 📱 DÉTECTION PWA IPHONE ====================
@@ -212,7 +213,7 @@ function posOuvrirCommandeVocaleAi() {
     posAiRafraichirPanier();
 }
 
-// ==================== 🆕 v6.2 : AFFICHAGE DU PANIER ====================
+// ==================== AFFICHAGE DU PANIER ====================
 function posAiRafraichirPanier() {
     var container = document.getElementById('posAiPanierContainer');
     if (!container) return;
@@ -293,7 +294,7 @@ function posAiRafraichirPanier() {
     `;
 }
 
-// ==================== 🆕 v6.2 : CHANGER QUANTITÉ ====================
+// ==================== CHANGER QUANTITÉ ====================
 function posAiChangerQuantite(index, delta) {
     if (!posAiPanierTemporaire || !posAiPanierTemporaire[index]) return;
     var item = posAiPanierTemporaire[index];
@@ -314,7 +315,7 @@ function posAiChangerQuantite(index, delta) {
     posAiRafraichirPanier();
 }
 
-// ==================== 🆕 v6.2 : SUPPRIMER DU PANIER ====================
+// ==================== SUPPRIMER DU PANIER ====================
 function posAiSupprimerDuPanier(index) {
     if (!posAiPanierTemporaire || !posAiPanierTemporaire[index]) return;
     posAiPanierTemporaire.splice(index, 1);
@@ -556,12 +557,13 @@ async function posEnvoyerTexteAAi(texte) {
                 return '"' + n.replace(/"/g, '\\"') + '"';
             }).join(', ');
 
+            // 🆕 v6.3 : prompt renforcé pour exiger copie-colle exacte du nom catalogue
             var prompt = `Tu es un assistant de point de vente. Analyse la commande dictée en FRANÇAIS.
 
 PHRASE DITE :
 "${texte}"
 
-CATALOGUE DE PRODUITS DISPONIBLES :
+CATALOGUE DE PRODUITS DISPONIBLES (noms EXACTS, respecte la casse et les accents) :
 [${productListStr}]
 
 ═══════════════════════════════════════════════════════
@@ -620,7 +622,9 @@ Ex 7 : "Six msemen"
 ⚠️ RÈGLES STRICTES :
 ═══════════════════════════════════════════════════════
 
-- Le "nom" doit correspondre EXACTEMENT à un nom du catalogue (copie-colle).
+- Le "nom" DOIT être une COPIE EXACTE, caractère pour caractère, d'un nom du CATALOGUE ci-dessus.
+- Si tu écris "Mini dia" mais que le catalogue dit "MINI DIA 100g", retourne "MINI DIA 100g" (le nom EXACT du catalogue).
+- Ne change JAMAIS la casse, les accents, ou la ponctuation du nom du catalogue.
 - IGNORE COMPLÈTEMENT les noms de clients/personnes.
 - Ignore les produits non trouvés dans le catalogue.
 - Si aucun produit trouvé, retourne [].
@@ -716,38 +720,31 @@ Ex 7 : "Six msemen"
             var produit = null;
             var matchType = '';
 
+            // 🆕 v6.3 : ÉTAPE 1 — match exact dans TOUS les champs (nom + desc + brand + cat)
             produit = window.posProductsList.find(function(p) {
-                return posAiNormaliser(p.nom) === recNomNorm;
+                return posAiNormaliser(p.nom) === recNomNorm
+                    || posAiNormaliser(p.description) === recNomNorm
+                    || posAiNormaliser(p.brand) === recNomNorm
+                    || posAiNormaliser(p.categorie) === recNomNorm;
             });
-            if (produit) matchType = 'nom exact';
+            if (produit) matchType = 'exact (nom/desc/brand/cat)';
 
-            if (!produit) {
-                produit = window.posProductsList.find(function(p) {
-                    return posAiNormaliser(p.description) === recNomNorm
-                        || posAiNormaliser(p.categorie) === recNomNorm
-                        || posAiNormaliser(p.brand) === recNomNorm;
-                });
-                if (produit) matchType = 'desc/cat/brand exact';
-            }
-
+            // 🆕 v6.3 : ÉTAPE 2 — match partiel dans TOUS les champs (nom + desc + brand + cat)
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
                     var pNom = posAiNormaliser(p.nom);
-                    return pNom.includes(recNomNorm) || recNomNorm.includes(pNom);
-                });
-                if (produit) matchType = 'nom partiel';
-            }
-
-            if (!produit) {
-                produit = window.posProductsList.find(function(p) {
                     var pDesc = posAiNormaliser(p.description);
-                    var pCat = posAiNormaliser(p.categorie);
                     var pBrand = posAiNormaliser(p.brand);
-                    return pDesc.includes(recNomNorm) || pCat.includes(recNomNorm) || pBrand.includes(recNomNorm);
+                    var pCat = posAiNormaliser(p.categorie);
+                    return pNom.includes(recNomNorm) || recNomNorm.includes(pNom)
+                        || pDesc.includes(recNomNorm) || recNomNorm.includes(pDesc)
+                        || pBrand.includes(recNomNorm)
+                        || pCat.includes(recNomNorm);
                 });
-                if (produit) matchType = 'desc/cat/brand partiel';
+                if (produit) matchType = 'partiel (nom/desc/brand/cat)';
             }
 
+            // ÉTAPE 3 — match par mots-clés pondéré
             if (!produit) {
                 var candidats = [];
                 window.posProductsList.forEach(function(p) {
@@ -789,6 +786,7 @@ Ex 7 : "Six msemen"
                 }
             }
 
+            // ÉTAPE 4 — recherche finale dans tous les champs
             if (!produit) {
                 var candidats2 = [];
                 window.posProductsList.forEach(function(p) {
@@ -828,7 +826,7 @@ Ex 7 : "Six msemen"
             }
         });
 
-        // 🆕 v6.2 : Ajouter au panier temporaire (cumul)
+        // Ajouter au panier temporaire (cumul)
         posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves);
 
     } catch(e) {
@@ -843,7 +841,7 @@ Ex 7 : "Six msemen"
     }
 }
 
-// ==================== 🆕 v6.2 : AJOUTER AU PANIER (cumul) ====================
+// ==================== AJOUTER AU PANIER (cumul) ====================
 function posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves) {
     produitsNonTrouves = produitsNonTrouves || [];
 
@@ -961,10 +959,10 @@ function posAfficherResultatAiVoice(produits, container, produitsNonTrouves) {
     container.innerHTML = suggestionsHtml + stockHtml;
 }
 
-// ==================== 🎯 CHOISIR UNE SUGGESTION ====================
+// ==================== CHOISIR UNE SUGGESTION ====================
 function posAiChoisirSuggestion(nomProduit) {
     var produit = window.posProductsList.find(function(p) {
-        return (p.nom || '').toLowerCase() === nomProduit.toLowerCase();
+        return posAiNormaliser(p.nom) === posAiNormaliser(nomProduit);
     });
     if (!produit) {
         alert('❌ Produit introuvable');
@@ -1056,12 +1054,13 @@ window.posAfficherResultatAiVoice = posAfficherResultatAiVoice;
 window.posAiChoisirSuggestion = posAiChoisirSuggestion;
 window.posAiParler = posAiParler;
 
-// 🆕 v6.2 : Exposer les fonctions du panier
+// Exposer les fonctions du panier
 window.posAiChangerQuantite = posAiChangerQuantite;
 window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
 window.posAiRafraichirPanier = posAiRafraichirPanier;
 
-console.log('🤖 POS-AI.js v6.2 chargé');
-console.log('   ✅ 2s silence (était 3s)');
+console.log('🤖 POS-AI.js v6.3 chargé');
+console.log('   ✅ 2s silence');
 console.log('   ✅ Panier temporaire avec +/−/🗑');
 console.log('   ✅ Ajout cumulatif entre dictées');
+console.log('   🆕 v6.3 : matching amélioré (casse + accents + description)');
