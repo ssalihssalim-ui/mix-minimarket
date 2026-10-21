@@ -9,7 +9,7 @@
 // ✅ 🆕 Bouton "Commander" → WhatsApp fournisseur
 // ✅ 🆕 Fix prix actuel sans barré + input float sans perte de focus
 // ✅ 🆕 Validation/Annulation individuelle des changements de prix
-// ✅ 🆕 Scan en PLEINE QUALITÉ (sans compression) + timeout 60s
+// ✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -1709,16 +1709,69 @@ function ouvrirCameraFacture() {
     input.click();
 }
 
-// ✅ SCAN EN PLEINE QUALITÉ (sans compression) — timeout 60s
+// ✅ Compression INTELLIGENTE : garde la qualité maximale tout en réduisant le poids
+// - Garde l'originale si elle est déjà < 2000px (aucune perte)
+// - Sinon réduit à 2000px max (ratio conservé, anti-crénelage)
+// - JPEG qualité 92% (visuellement identique à 100%)
+// - Améliore légèrement le contraste pour que les chiffres ressortent mieux
+function compresserSansPerteVisible(base64) {
+    return new Promise(function(resolve) {
+        try {
+            var img = new Image();
+            img.onload = function() {
+                var maxWidth = 2000;
+
+                // ✅ Image déjà petite → on garde TELLE QUELLE (aucune perte)
+                if (img.width <= maxWidth) {
+                    resolve(base64);
+                    return;
+                }
+
+                // ✅ Réduction proportionnelle
+                var ratio = maxWidth / img.width;
+                var canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * ratio);
+                canvas.height = Math.round(img.height * ratio);
+                var ctx = canvas.getContext('2d');
+
+                // Rendu de haute qualité
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // ✅ Amélioration légère du contraste (facultatif mais utile pour les chiffres)
+                try {
+                    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    var d = imageData.data;
+                    var c = 1.12; // +12% contraste
+                    var f = (259 * (c * 255 + 255)) / (255 * (259 - c * 255));
+                    for (var i = 0; i < d.length; i += 4) {
+                        d[i]     = Math.min(255, Math.max(0, f * (d[i]     - 128) + 128));
+                        d[i + 1] = Math.min(255, Math.max(0, f * (d[i + 1] - 128) + 128));
+                        d[i + 2] = Math.min(255, Math.max(0, f * (d[i + 2] - 128) + 128));
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                } catch (e) { /* si erreur, on continue sans contraste */ }
+
+                // ✅ Qualité 92% : visuellement identique à 100%, 2-3× plus léger
+                resolve(canvas.toDataURL('image/jpeg', 0.92));
+            };
+            img.onerror = function() { resolve(base64); };
+            img.src = base64;
+        } catch (e) { resolve(base64); }
+    });
+}
+window.compresserSansPerteVisible = compresserSansPerteVisible;
+
 async function scannerFacture(imgData) {
     var overlay = document.createElement('div');
     overlay.className = 'ac-scan-overlay';
     overlay.innerHTML = '<div class="spinner"></div><p>📷 Analyse de la facture...</p>';
     document.body.appendChild(overlay);
     try {
-        // ✅ Image envoyée à l'IA en PLEINE QUALITÉ (aucune compression)
-        var imgPourAI = imgData;
-        console.log('📷 Image envoyée à l\'IA en pleine qualité :', Math.round(imgData.length / 1024), 'Ko');
+        // ✅ Compression intelligente (sans perte visible pour l'IA)
+        var imgPourAI = await compresserSansPerteVisible(imgData);
+        console.log('📷 Image optimisée :', Math.round(imgPourAI.length / 1024), 'Ko (originale :', Math.round(imgData.length / 1024), 'Ko)');
 
         var productNames = produitsAchatList.map(function(p) { return p.nom; });
         var productListStr = productNames.map(function(n) { return '"' + n.replace(/"/g, '\\"') + '"'; }).join(', ');
@@ -1744,9 +1797,9 @@ async function scannerFacture(imgData) {
         prompt += '[{"nom":"NOM EXACT DU PRODUIT","quantite":N,"prix":N ou null}]\n\n';
         prompt += 'Si aucun produit reconnu, retourne : []';
 
-        // ✅ Timeout 60s pour image pleine qualité
+        // ✅ Timeout 30s (image plus légère → réponse plus rapide)
         var controller = new AbortController();
-        var timeoutId = setTimeout(function() { controller.abort(); }, 60000);
+        var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
 
         var response = await fetch(GEMINI_WORKER_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1817,7 +1870,7 @@ async function scannerFacture(imgData) {
         if (overlay.parentNode) overlay.remove();
         console.error(e);
         if (e.name === 'AbortError') {
-            alert('⏱️ Le scan a pris plus de 60 secondes.\n\nVérifiez votre connexion internet ou réessayez avec une photo moins lourde.');
+            alert('⏱️ Le scan a pris plus de 30 secondes.\n\nVérifiez votre connexion internet ou réessayez avec une photo moins lourde.');
         } else {
             alert('❌ Erreur scan : ' + e.message);
         }
@@ -1844,7 +1897,7 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v6');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v7');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
@@ -1855,4 +1908,4 @@ console.log('✅ 📱 Bouton "Commander" → WhatsApp fournisseur');
 console.log('✅ 🆕 Prix actuel SANS barré');
 console.log('✅ 🆕 Input prix float sans perte de focus');
 console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix');
-console.log('✅ 🆕 Scan en PLEINE QUALITÉ (sans compression) + timeout 60s');
+console.log('✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)');
