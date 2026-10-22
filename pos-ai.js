@@ -1,4 +1,4 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6.3.2 - FIX FOND BLANC MODAL) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.3.3 - FIX CONFLIT MICRO) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
@@ -12,6 +12,7 @@
 // ✅ Panier temporaire minimal (boutons +/-/🗑) + ajout cumulatif
 // 🆕 v6.3.1 : la DESCRIPTION est envoyée à Gemini — cherchée exactement comme le nom
 // 🆕 v6.3.2 : FIX fond du modal → blanc opaque (fin de la transparence)
+// 🆕 v6.3.3 : FIX conflit micro — arrêt automatique de POS-AUDIO au démarrage
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
@@ -39,14 +40,11 @@ var posAiCompteurNoSpeech = 0;
 var posAiPanierTemporaire = [];
 
 // ==================== 🆕 v6.3.2 : FIX FOND BLANC MODAL ====================
-// Injecte une règle CSS globale qui force le fond blanc opaque sur tous les modals
-// (corrige la transparence sur Safari/iOS et autres navigateurs)
 (function injecterFixFondModal() {
     if (document.getElementById('posAiFixFondModal')) return;
     var style = document.createElement('style');
     style.id = 'posAiFixFondModal';
     style.textContent = `
-        /* ✅ v6.3.2 : Fond blanc opaque sur les modals (fix transparence) */
         .modal-content,
         .ac-modal,
         .ac-form-modal,
@@ -61,16 +59,12 @@ var posAiPanierTemporaire = [];
             backdrop-filter: none !important;
             opacity: 1 !important;
         }
-        
-        /* Overlay sombre semi-transparent (le fond derrière) */
         .modal-overlay,
         .ac-modal-overlay,
         .ac-form-overlay,
         .modal-overlay.active {
             background-color: rgba(15, 23, 42, 0.65) !important;
         }
-        
-        /* Le contenu interne du modal reste blanc */
         .ac-modal-header,
         .ac-form-header,
         .ac-modal-body,
@@ -79,18 +73,64 @@ var posAiPanierTemporaire = [];
         .ac-form-footer {
             background-color: #FFFFFF !important;
         }
-        
         .ac-modal-body {
             background-color: #FFFFFF !important;
         }
-        
         .ac-form-body {
             background-color: #FAFBFC !important;
         }
     `;
     document.head.appendChild(style);
-    console.log('🎨 [pos-audio] Fix fond blanc modal injecté');
+    console.log('🎨 [pos-ai] Fix fond blanc modal injecté');
 })();
+
+// ==================== 🆕 v6.3.3 : FIX CONFLIT MICRO (arrêter POS-AUDIO) ====================
+function posAiArreterAudioSiActif() {
+    try {
+        console.log('🔍 [pos-ai] Vérification de POS-AUDIO avant démarrage...');
+        
+        // 1. Arrêter la fonction officielle de POS-AUDIO
+        if (typeof window.posStopVoiceSearch === 'function') {
+            console.log('🛑 [pos-ai] Arrêt de posStopVoiceSearch()');
+            window.posStopVoiceSearch();
+        }
+        
+        // 2. Arrêter voiceRecognition directement (variable globale de pos-audio.js)
+        if (typeof voiceRecognition !== 'undefined' && voiceRecognition) {
+            console.log('🛑 [pos-ai] Arrêt de voiceRecognition (pos-audio)');
+            try { voiceRecognition.abort(); } catch(e) { console.warn(e); }
+            try { voiceRecognition.stop(); } catch(e) { console.warn(e); }
+            voiceRecognition = null;
+        }
+        
+        // 3. Réinitialiser isRecording
+        if (typeof isRecording !== 'undefined' && isRecording) {
+            console.log('🛑 [pos-ai] isRecording = false');
+            isRecording = false;
+        }
+        
+        // 4. Cacher l'indicateur vocal s'il existe
+        if (typeof window.hideVoiceFlowIndicator === 'function') {
+            try { window.hideVoiceFlowIndicator(); } catch(e) {}
+        }
+        
+        // 5. Cacher le bouton micro de POS-AUDIO
+        var micBtnAudio = document.getElementById('posMicBtn');
+        if (micBtnAudio) {
+            micBtnAudio.innerHTML = '<i class="fas fa-microphone"></i>';
+            micBtnAudio.style.background = '#dcfce7';
+            micBtnAudio.style.borderColor = '#16a34a';
+        }
+        
+        // 6. Cacher voiceDisplay s'il existe
+        var voiceDisplay = document.getElementById('voiceDisplay');
+        if (voiceDisplay) voiceDisplay.style.display = 'none';
+        
+        console.log('✅ [pos-ai] POS-AUDIO arrêté avec succès');
+    } catch(e) {
+        console.warn('⚠️ [pos-ai] Erreur arrêt POS-AUDIO:', e);
+    }
+}
 
 // ==================== 📱 DÉTECTION PWA IPHONE ====================
 function posAiEstPwaIphone() {
@@ -182,6 +222,9 @@ function posAiStockerDansCache(texte, resultat) {
 function posOuvrirCommandeVocaleAi() {
     console.log('📦 Catalogue actuel :', (window.posProductsList || []).length, 'produits');
 
+    // 🆕 v6.3.3 : ARRÊTER POS-AUDIO AVANT TOUT
+    posAiArreterAudioSiActif();
+
     if (posAiEnCours) {
         alert('⏳ Une reconnaissance est déjà en cours...');
         return;
@@ -225,7 +268,6 @@ function posOuvrirCommandeVocaleAi() {
 
     posAiChargerCache();
 
-    // 🆕 v6.3.2 : le conteneur racine a un background:#FFFFFF explicite
     var html = `
         <div style="padding:10px; text-align:center; background:#FFFFFF;">
             <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;">
@@ -266,7 +308,6 @@ function posOuvrirCommandeVocaleAi() {
     `;
     openModal('🎤 Commande vocale', html);
 
-    // 🆕 v6.3.2 : forcer le fond blanc sur le conteneur du modal après ouverture
     setTimeout(function() {
         var modals = document.querySelectorAll('.ac-modal, .modal-content, [role="dialog"]');
         modals.forEach(function(m) {
@@ -389,6 +430,9 @@ function posAiSupprimerDuPanier(index) {
 
 // ==================== DÉMARRAGE ÉCOUTE (silence 2s) ====================
 function posDemarrerEcouteAi() {
+    // 🆕 v6.3.3 : ARRÊTER POS-AUDIO AVANT TOUT
+    posAiArreterAudioSiActif();
+
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
@@ -615,7 +659,6 @@ async function posEnvoyerTexteAAi(texte) {
             parsed = cachedResult.result;
             if (status) status.textContent = '⚡ Réponse du cache';
         } else {
-            // 🆕 v6.3.1 : envoyer nom + description à Gemini (les 2 cherchés également)
             if (window.posProductsList.length === 0) throw new Error('Aucun produit valide');
 
             var productListStr = window.posProductsList.slice(0, 300).map(function(p) {
@@ -804,7 +847,6 @@ Ex 8 : "3 mini dia et 2 sans sucre"
             var produit = null;
             var matchType = '';
 
-            // ÉTAPE 1 — match exact dans TOUS les champs (nom + desc + brand + cat)
             produit = window.posProductsList.find(function(p) {
                 return posAiNormaliser(p.nom) === recNomNorm
                     || posAiNormaliser(p.description) === recNomNorm
@@ -813,7 +855,6 @@ Ex 8 : "3 mini dia et 2 sans sucre"
             });
             if (produit) matchType = 'exact (nom/desc/brand/cat)';
 
-            // ÉTAPE 2 — match partiel dans TOUS les champs (nom + desc + brand + cat)
             if (!produit) {
                 produit = window.posProductsList.find(function(p) {
                     var pNom = posAiNormaliser(p.nom);
@@ -828,7 +869,6 @@ Ex 8 : "3 mini dia et 2 sans sucre"
                 if (produit) matchType = 'partiel (nom/desc/brand/cat)';
             }
 
-            // ÉTAPE 3 — match par mots-clés pondéré
             if (!produit) {
                 var candidats = [];
                 window.posProductsList.forEach(function(p) {
@@ -870,7 +910,6 @@ Ex 8 : "3 mini dia et 2 sans sucre"
                 }
             }
 
-            // ÉTAPE 4 — recherche finale dans tous les champs
             if (!produit) {
                 var candidats2 = [];
                 window.posProductsList.forEach(function(p) {
@@ -910,7 +949,6 @@ Ex 8 : "3 mini dia et 2 sans sucre"
             }
         });
 
-        // Ajouter au panier temporaire (cumul)
         posAiAjouterAuPanierTemporaire(produitsValides, produitsNonTrouves);
 
     } catch(e) {
@@ -1137,15 +1175,17 @@ window.posAnnulerAiVoice = posAnnulerAiVoice;
 window.posAfficherResultatAiVoice = posAfficherResultatAiVoice;
 window.posAiChoisirSuggestion = posAiChoisirSuggestion;
 window.posAiParler = posAiParler;
+window.posAiArreterAudioSiActif = posAiArreterAudioSiActif;
 
 // Exposer les fonctions du panier
 window.posAiChangerQuantite = posAiChangerQuantite;
 window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
 window.posAiRafraichirPanier = posAiRafraichirPanier;
 
-console.log('🤖 POS-AI.js v6.3.2 chargé');
+console.log('🤖 POS-AI.js v6.3.3 chargé');
 console.log('   ✅ 2s silence');
 console.log('   ✅ Panier temporaire avec +/−/🗑');
 console.log('   ✅ Ajout cumulatif entre dictées');
 console.log('   🆕 v6.3.1 : description envoyée à Gemini — cherchée EXACTEMENT comme le nom');
 console.log('   🆕 v6.3.2 : fix fond blanc modal (fini la transparence)');
+console.log('   🆕 v6.3.3 : fix conflit micro — arrêt auto de POS-AUDIO au démarrage');
