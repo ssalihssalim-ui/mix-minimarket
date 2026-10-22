@@ -1,4 +1,4 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6.3.3 - FIX CONFLIT MICRO) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.3.4 - FIX BOUCLE 2E CLIC MICRO) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
@@ -13,6 +13,7 @@
 // 🆕 v6.3.1 : la DESCRIPTION est envoyée à Gemini — cherchée exactement comme le nom
 // 🆕 v6.3.2 : FIX fond du modal → blanc opaque (fin de la transparence)
 // 🆕 v6.3.3 : FIX conflit micro — arrêt automatique de POS-AUDIO au démarrage
+// 🆕 v6.3.4 : FIX boucle 2ᵉ clic micro — destruction propre + garde anti-double-clic
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
@@ -89,13 +90,11 @@ function posAiArreterAudioSiActif() {
     try {
         console.log('🔍 [pos-ai] Vérification de POS-AUDIO avant démarrage...');
         
-        // 1. Arrêter la fonction officielle de POS-AUDIO
         if (typeof window.posStopVoiceSearch === 'function') {
             console.log('🛑 [pos-ai] Arrêt de posStopVoiceSearch()');
             window.posStopVoiceSearch();
         }
         
-        // 2. Arrêter voiceRecognition directement (variable globale de pos-audio.js)
         if (typeof voiceRecognition !== 'undefined' && voiceRecognition) {
             console.log('🛑 [pos-ai] Arrêt de voiceRecognition (pos-audio)');
             try { voiceRecognition.abort(); } catch(e) { console.warn(e); }
@@ -103,18 +102,15 @@ function posAiArreterAudioSiActif() {
             voiceRecognition = null;
         }
         
-        // 3. Réinitialiser isRecording
         if (typeof isRecording !== 'undefined' && isRecording) {
             console.log('🛑 [pos-ai] isRecording = false');
             isRecording = false;
         }
         
-        // 4. Cacher l'indicateur vocal s'il existe
         if (typeof window.hideVoiceFlowIndicator === 'function') {
             try { window.hideVoiceFlowIndicator(); } catch(e) {}
         }
         
-        // 5. Cacher le bouton micro de POS-AUDIO
         var micBtnAudio = document.getElementById('posMicBtn');
         if (micBtnAudio) {
             micBtnAudio.innerHTML = '<i class="fas fa-microphone"></i>';
@@ -122,7 +118,6 @@ function posAiArreterAudioSiActif() {
             micBtnAudio.style.borderColor = '#16a34a';
         }
         
-        // 6. Cacher voiceDisplay s'il existe
         var voiceDisplay = document.getElementById('voiceDisplay');
         if (voiceDisplay) voiceDisplay.style.display = 'none';
         
@@ -222,7 +217,6 @@ function posAiStockerDansCache(texte, resultat) {
 function posOuvrirCommandeVocaleAi() {
     console.log('📦 Catalogue actuel :', (window.posProductsList || []).length, 'produits');
 
-    // 🆕 v6.3.3 : ARRÊTER POS-AUDIO AVANT TOUT
     posAiArreterAudioSiActif();
 
     if (posAiEnCours) {
@@ -433,6 +427,12 @@ function posDemarrerEcouteAi() {
     // 🆕 v6.3.3 : ARRÊTER POS-AUDIO AVANT TOUT
     posAiArreterAudioSiActif();
 
+    // 🆕 v6.3.4 : GARDE ANTI DOUBLE-CLIC (si analyse en cours)
+    if (posAiEnCours) {
+        console.log('⏳ [pos-ai] Analyse en cours, ignorer le clic');
+        return;
+    }
+
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
@@ -442,13 +442,21 @@ function posDemarrerEcouteAi() {
     var transcriptBox = document.getElementById('posAiTranscript');
     var transcriptText = document.getElementById('posAiTranscriptText');
 
+    // 🆕 v6.3.4 : DÉTRUIRE L'ANCIEN OBJET PROPREMENT (plus de ghost)
     if (posAiRecognition) {
+        console.log('🛑 [pos-ai] Destruction propre de l\'ancien SpeechRecognition');
         posAiManuallyStopped = true;
         if (posAiSilenceTimer) {
             clearTimeout(posAiSilenceTimer);
             posAiSilenceTimer = null;
         }
+        try { posAiRecognition.abort(); } catch(e) {}
         try { posAiRecognition.stop(); } catch(e) {}
+        // Nettoyer TOUS les handlers pour empêcher les callbacks fantômes
+        try { posAiRecognition.onresult = null; } catch(e) {}
+        try { posAiRecognition.onerror = null; } catch(e) {}
+        try { posAiRecognition.onend = null; } catch(e) {}
+        try { posAiRecognition.onstart = null; } catch(e) {}
         posAiRecognition = null;
         posResetAiMicUI();
         if (status) status.textContent = 'Écoute arrêtée';
@@ -515,6 +523,12 @@ function posDemarrerEcouteAi() {
     };
 
     posAiRecognition.onresult = function(event) {
+        // 🆕 v6.3.4 : GARDE — ignorer si reconnaissance détruite entre temps
+        if (!posAiRecognition) {
+            console.log('⏭️ [pos-ai] onresult ignoré : reconnaissance déjà détruite');
+            return;
+        }
+
         var interim = '';
         var finalText = '';
         for (var i = event.resultIndex; i < event.results.length; i++) {
@@ -529,33 +543,38 @@ function posDemarrerEcouteAi() {
     };
 
     posAiRecognition.onerror = function(event) {
+        // 🆕 v6.3.4 : GARDE — ignorer si reconnaissance détruite entre temps
+        if (!posAiRecognition) {
+            console.log('⏭️ [pos-ai] onerror ignoré : reconnaissance déjà détruite');
+            return;
+        }
+
         console.error('❌ Erreur reconnaissance vocale :', event.error);
 
         if (event.error === 'no-speech' && posAiTranscriptFinal.trim().length > 0) {
             return;
         }
 
-        if (event.error === 'no-speech' && posAiCompteurNoSpeech < 2) {
-            posAiCompteurNoSpeech++;
-            posAiManuallyStopped = true;
+        // 🆕 v6.3.4 : SUPPRESSION DE LA RELANCE AUTO (cause de boucle au 2ᵉ clic)
+        if (event.error === 'no-speech') {
+            console.log('🎙️ [pos-ai] no-speech : arrêt définitif (pas de relance auto)');
+            var status = document.getElementById('posAiStatus');
+            if (status) {
+                status.textContent = '🎙️ Aucune parole détectée. Réessayez.';
+                status.style.color = '#f59e0b';
+            }
             if (posAiSilenceTimer) {
                 clearTimeout(posAiSilenceTimer);
                 posAiSilenceTimer = null;
             }
             posResetAiMicUI();
             posAiRecognition = null;
-
-            setTimeout(function() {
-                posDemarrerEcouteAi();
-            }, 500);
             return;
         }
 
         var status = document.getElementById('posAiStatus');
         if (status) {
-            if (event.error === 'no-speech') {
-                status.textContent = '🎙️ Aucune parole détectée.';
-            } else if (event.error === 'not-allowed') {
+            if (event.error === 'not-allowed') {
                 status.textContent = '🔒 Micro bloqué.';
             } else if (event.error === 'aborted') {
                 status.textContent = '⏹️ Écoute arrêtée';
@@ -577,6 +596,12 @@ function posDemarrerEcouteAi() {
     };
 
     posAiRecognition.onend = function() {
+        // 🆕 v6.3.4 : GARDE — ignorer si reconnaissance détruite entre temps
+        if (!posAiRecognition) {
+            console.log('⏭️ [pos-ai] onend ignoré : reconnaissance déjà détruite');
+            return;
+        }
+
         var finalText = posAiTranscriptFinal.trim();
         if (posAiSilenceTimer) {
             clearTimeout(posAiSilenceTimer);
@@ -613,6 +638,7 @@ function posDemarrerEcouteAi() {
         console.error('Impossible de démarrer la reconnaissance :', e);
         alert('❌ Erreur micro : ' + e.message);
         posResetAiMicUI();
+        posAiRecognition = null;
     }
 }
 
@@ -1145,7 +1171,12 @@ function posAnnulerAiVoice() {
 
     if (posAiRecognition) {
         posAiManuallyStopped = true;
+        try { posAiRecognition.abort(); } catch(e) {}
         try { posAiRecognition.stop(); } catch(e) {}
+        try { posAiRecognition.onresult = null; } catch(e) {}
+        try { posAiRecognition.onerror = null; } catch(e) {}
+        try { posAiRecognition.onend = null; } catch(e) {}
+        try { posAiRecognition.onstart = null; } catch(e) {}
         posAiRecognition = null;
     }
 
@@ -1182,10 +1213,11 @@ window.posAiChangerQuantite = posAiChangerQuantite;
 window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
 window.posAiRafraichirPanier = posAiRafraichirPanier;
 
-console.log('🤖 POS-AI.js v6.3.3 chargé');
+console.log('🤖 POS-AI.js v6.3.4 chargé');
 console.log('   ✅ 2s silence');
 console.log('   ✅ Panier temporaire avec +/−/🗑');
 console.log('   ✅ Ajout cumulatif entre dictées');
 console.log('   🆕 v6.3.1 : description envoyée à Gemini — cherchée EXACTEMENT comme le nom');
 console.log('   🆕 v6.3.2 : fix fond blanc modal (fini la transparence)');
 console.log('   🆕 v6.3.3 : fix conflit micro — arrêt auto de POS-AUDIO au démarrage');
+console.log('   🆕 v6.3.4 : fix boucle 2ᵉ clic micro — destruction propre + garde anti-double-clic');
