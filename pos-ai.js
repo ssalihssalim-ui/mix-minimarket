@@ -1,4 +1,4 @@
-// ==================== POS-AI.JS - E-SOLUTION (v6.3.1 - DESCRIPTION DANS PROMPT) ====================
+// ==================== POS-AI.JS - E-SOLUTION (v6.3.2 - FIX FOND BLANC MODAL) ====================
 // Module IA séparé pour le POS - Commande vocale
 // ✅ 100% FRANÇAIS
 // ✅ 🎯 Ajoute UNIQUEMENT les PRODUITS
@@ -11,6 +11,7 @@
 // ✅ 📱 Détection PWA iPhone → message "Ouvrez dans Safari"
 // ✅ Panier temporaire minimal (boutons +/-/🗑) + ajout cumulatif
 // 🆕 v6.3.1 : la DESCRIPTION est envoyée à Gemini — cherchée exactement comme le nom
+// 🆕 v6.3.2 : FIX fond du modal → blanc opaque (fin de la transparence)
 
 // ==================== 🔑 CONFIGURATION ====================
 const POS_AI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
@@ -36,6 +37,60 @@ var posAiCompteurNoSpeech = 0;
 
 // Panier temporaire cumulatif
 var posAiPanierTemporaire = [];
+
+// ==================== 🆕 v6.3.2 : FIX FOND BLANC MODAL ====================
+// Injecte une règle CSS globale qui force le fond blanc opaque sur tous les modals
+// (corrige la transparence sur Safari/iOS et autres navigateurs)
+(function injecterFixFondModal() {
+    if (document.getElementById('posAiFixFondModal')) return;
+    var style = document.createElement('style');
+    style.id = 'posAiFixFondModal';
+    style.textContent = `
+        /* ✅ v6.3.2 : Fond blanc opaque sur les modals (fix transparence) */
+        .modal-content,
+        .ac-modal,
+        .ac-form-modal,
+        .ac-modal-overlay > .ac-modal,
+        .ac-form-overlay > .ac-form-modal,
+        div[role="dialog"],
+        .modal > div,
+        .modal-content > div {
+            background-color: #FFFFFF !important;
+            background-image: none !important;
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            opacity: 1 !important;
+        }
+        
+        /* Overlay sombre semi-transparent (le fond derrière) */
+        .modal-overlay,
+        .ac-modal-overlay,
+        .ac-form-overlay,
+        .modal-overlay.active {
+            background-color: rgba(15, 23, 42, 0.65) !important;
+        }
+        
+        /* Le contenu interne du modal reste blanc */
+        .ac-modal-header,
+        .ac-form-header,
+        .ac-modal-body,
+        .ac-form-body,
+        .ac-modal-footer,
+        .ac-form-footer {
+            background-color: #FFFFFF !important;
+        }
+        
+        .ac-modal-body {
+            background-color: #FFFFFF !important;
+        }
+        
+        .ac-form-body {
+            background-color: #FAFBFC !important;
+        }
+    `;
+    document.head.appendChild(style);
+    console.log('🎨 [pos-audio] Fix fond blanc modal injecté');
+})();
 
 // ==================== 📱 DÉTECTION PWA IPHONE ====================
 function posAiEstPwaIphone() {
@@ -170,8 +225,9 @@ function posOuvrirCommandeVocaleAi() {
 
     posAiChargerCache();
 
+    // 🆕 v6.3.2 : le conteneur racine a un background:#FFFFFF explicite
     var html = `
-        <div style="padding:10px; text-align:center;">
+        <div style="padding:10px; text-align:center; background:#FFFFFF;">
             <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;">
                 <i class="fas fa-robot" style="font-size:2.5rem;color:#8B5CF6;"></i>
                 <h3 style="margin:0;font-size:1.3rem;color:#7C3AED;font-weight:700;">Commande vocale</h3>
@@ -209,6 +265,15 @@ function posOuvrirCommandeVocaleAi() {
         </div>
     `;
     openModal('🎤 Commande vocale', html);
+
+    // 🆕 v6.3.2 : forcer le fond blanc sur le conteneur du modal après ouverture
+    setTimeout(function() {
+        var modals = document.querySelectorAll('.ac-modal, .modal-content, [role="dialog"]');
+        modals.forEach(function(m) {
+            m.style.background = '#FFFFFF';
+            m.style.backgroundColor = '#FFFFFF';
+        });
+    }, 50);
 
     posAiRafraichirPanier();
 }
@@ -1078,8 +1143,9 @@ window.posAiChangerQuantite = posAiChangerQuantite;
 window.posAiSupprimerDuPanier = posAiSupprimerDuPanier;
 window.posAiRafraichirPanier = posAiRafraichirPanier;
 
-console.log('🤖 POS-AI.js v6.3.1 chargé');
+console.log('🤖 POS-AI.js v6.3.2 chargé');
 console.log('   ✅ 2s silence');
 console.log('   ✅ Panier temporaire avec +/−/🗑');
 console.log('   ✅ Ajout cumulatif entre dictées');
 console.log('   🆕 v6.3.1 : description envoyée à Gemini — cherchée EXACTEMENT comme le nom');
+console.log('   🆕 v6.3.2 : fix fond blanc modal (fini la transparence)');
