@@ -904,248 +904,6 @@ function posAddToCartOrOpenOptions(pid){
     posSaveMultiCarts(); 
 }
 
-// ✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE + NOMBRE ENTIER
-async function posOpenOptionsModal(pid) {
-var p = posProductsList.find(function(x) { return x.id === pid; });
-if (!p) return;
-if (p.stock !== undefined && p.stock <= 0) { alert('Rupture'); return; }
-try {
-var doc = await db.collection('products').doc(pid).get();
-if (doc.exists) posCurrentProductIngredients = doc.data().ingredients || [];
-else posCurrentProductIngredients = [];
-} catch(e) { posCurrentProductIngredients = []; }
-
-if (typeof allStockData === 'undefined' || allStockData.length === 0) {
-try {
-const snap = await db.collection('stock').orderBy('nom').get();
-allStockData = [];
-snap.forEach(function(d) { var dd = d.data(); dd.id = d.id; allStockData.push(dd); });
-} catch(e) {}
-}
-
-var grouped = {};
-posCurrentProductIngredients.forEach(function(ing) {
-var stockItem = allStockData.find(function(s) { return s.id === ing.idStock; });
-var cat = stockItem ? (stockItem.categorie || 'Ingrédients') : 'Ingrédients';
-if (!grouped[cat]) grouped[cat] = [];
-grouped[cat].push({
-    nom: ing.nom,
-    idStock: ing.idStock,
-    quantite: ing.quantite || 1,
-    unite: ing.unite || (stockItem ? (stockItem.unite || '') : ''),
-    stockDisponible: stockItem ? (stockItem.quantite || 0) : 0
-});
-});
-
-var order = ['Sauces', 'Légumes', 'Fruits', 'Viande', 'Poulet', 'Poisson', 'Ingrédients', 'Emballages', 'Sacs', 'Boîtes', 'Gobelets', 'Serviettes', 'Autre'];
-var sortedCats = Object.keys(grouped).sort(function(a, b) {
-var ia = order.indexOf(a), ib = order.indexOf(b);
-if (ia !== -1 && ib !== -1) return ia - ib;
-if (ia !== -1) return -1;
-if (ib !== -1) return 1;
-return a.localeCompare(b);
-});
-
-posCurrentProductId = pid;
-var h = '<h4 style="font-size:1.2rem;margin-bottom:12px;">' + escapeHtml(p.nom) + '</h4>';
-h += '<p style="color:#6F767E;font-size:0.85rem;margin-bottom:12px;">Cochez les ingrédients à déduire du stock et indiquez leur quantité :</p>';
-
-if (sortedCats.length === 0) h += '<div style="color:#9A9FA5;padding:12px;">Aucun ingrédient pour ce produit</div>';
-else {
-sortedCats.forEach(function(cat) {
-h += '<div style="margin-bottom:14px;"><label style="font-weight:700;font-size:0.9rem;display:block;margin-bottom:4px;">🥫 ' + escapeHtml(cat) + '</label><div style="display:flex;flex-wrap:wrap;gap:8px;">';
-grouped[cat].forEach(function(ing) {
-var disabled = ing.stockDisponible <= 0 ? 'disabled' : '';
-var uniteLabel = ing.unite ? ' (' + escapeHtml(ing.unite) + ')' : '';
-// Checkbox DÉCOCHÉE par défaut
-h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + (ing.stockDisponible <= 0 ? 'opacity:0.5;' : '') + 'flex-wrap:wrap;">';
-h += '<input type="checkbox" class="pos-ingredient-check" value="' + escapeHtml(ing.nom) + '" data-stock-id="' + escapeHtml(ing.idStock || '') + '" data-unite="' + escapeHtml(ing.unite || '') + '" ' + disabled + ' onchange="posToggleIngredientQty(this)">';
-h += '<span style="min-width:60px;">' + escapeHtml(ing.nom) + uniteLabel + '</span>';
-h += '<span style="font-size:0.7rem;color:#9A9FA5;">dispo: ' + (ing.stockDisponible || 0) + '</span>';
-// Input quantity DÉSACTIVÉ par défaut (grisé) - nombre ENTIER
-h += '<input type="number" class="pos-ingredient-qty" value="' + (ing.quantite || 1) + '" min="1" step="1" data-nom="' + escapeHtml(ing.nom) + '" data-stock-id="' + escapeHtml(ing.idStock || '') + '" data-unite="' + escapeHtml(ing.unite || '') + '" style="width:70px;padding:4px 6px;border:none;background:#E5E7EB;border-radius:8px;font-size:0.8rem;font-weight:700;text-align:center;color:#9A9FA5;cursor:not-allowed;" disabled>';
-h += '</label>';
-});
-h += '</div></div>';
-});
-}
-
-h += '<div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify-content:flex-end;"><button class="btn-cancel" onclick="closeModal()" style="font-size:0.9rem;padding:10px 20px;">Annuler</button><button class="btn-save" onclick="posConfirmOptions()" style="font-size:0.9rem;padding:10px 24px;"><i class="fas fa-check"></i> Ajouter au panier</button></div>';
-openModal('Personnaliser - ' + escapeHtml(p.nom), h);
-}
-
-// ✅ Active/désactive l'input quantité selon la checkbox
-function posToggleIngredientQty(checkbox) {
-    var label = checkbox.closest('label');
-    if (!label) return;
-    var qtyInput = label.querySelector('.pos-ingredient-qty');
-    if (!qtyInput) return;
-    if (checkbox.checked) {
-        qtyInput.disabled = false;
-        qtyInput.style.background = '#FFFFFF';
-        qtyInput.style.color = '#0F172A';
-        qtyInput.style.cursor = 'text';
-        qtyInput.focus();
-        qtyInput.select();
-    } else {
-        qtyInput.disabled = true;
-        qtyInput.style.background = '#E5E7EB';
-        qtyInput.style.color = '#9A9FA5';
-        qtyInput.style.cursor = 'not-allowed';
-    }
-}
-
-// ✅ Récupère UNIQUEMENT les ingrédients COCHÉS avec leur quantité ENTIÈRE
-function posConfirmOptions() {
-var interdits = [];
-var epice = 'Normal';
-var sel = 'Normal';
-
-var p = posProductsList.find(function(x) { return x.id === posCurrentProductId; });
-if (!p) { closeModal(); return; }
-
-var ingredientsAvecQuantite = [];
-var ingredientsExclus = [];
-
-document.querySelectorAll('.pos-ingredient-check').forEach(function(checkbox) {
-    var label = checkbox.closest('label');
-    if (!label) return;
-    var qtyInput = label.querySelector('.pos-ingredient-qty');
-    var nom = checkbox.value;
-    var stockId = checkbox.getAttribute('data-stock-id');
-    var unite = checkbox.getAttribute('data-unite') || '';
-    
-    if (checkbox.checked) {
-        // ✅ COCHÉ → déduire avec la quantité saisie (nombre entier)
-        var quantite = parseInt(qtyInput ? qtyInput.value : 1, 10);
-        if (isNaN(quantite) || quantite < 1) quantite = 1;
-        if (stockId && quantite > 0) {
-            ingredientsAvecQuantite.push({ nom: nom, idStock: stockId, quantite: quantite, unite: unite });
-        }
-    } else {
-        // ✅ DÉCOCHÉ → ne rien déduire
-        ingredientsExclus.push(nom.toLowerCase().trim());
-    }
-});
-
-var ex = posCart.find(function(x) { return x.id === posCurrentProductId; });
-if (ex) { 
-    if (p.stock !== undefined && ex.quantite >= p.stock) { alert('Stock insuffisant'); closeModal(); return; } 
-    ex.quantite += 1; 
-    ex.epice = 'Normal'; 
-    ex.sel = 'Normal';
-    ex.ingredientsAvecQuantite = ingredientsAvecQuantite;
-    ex.ingredientsExclus = ingredientsExclus;
-}
-else {
-var pr = p.prixPromo && p.prixPromo > 0 ? p.prixPromo : p.prixVente;
-posCart.push({id: p.id, nom: p.nom, prixUnitaire: pr, prixAchat: p.prixAchat || 0, prixPromo: p.prixPromo || 0, prixVente: p.prixVente || 0, quantite: 1, categorie: p.categorie || '', imageBase64: p.imageBase64 || '', sauces: [], interdits: interdits, epice: epice, sel: sel, ingredientsExclus: ingredientsExclus, ingredientsAvecQuantite: ingredientsAvecQuantite});
-}
-
-decrementerIngredientsStock(posCurrentProductId, ingredientsExclus, ingredientsAvecQuantite);
-if (typeof window.onProductAdded === 'function') window.onProductAdded(p.id);
-closeModal(); updateCartOnly();
-posMultiCarts[posCurrentCartId] = posCart.slice();
-posSauvegarderDonneesPanier(posCurrentCartId);
-posSaveMultiCarts();
-}
-
-// ✅ Décrémente avec les quantités personnalisées si fournies
-function decrementerIngredientsStock(productId, ingredientsExclus, ingredientsAvecQuantite) {
-    db.collection('products').doc(productId).get().then(function(doc) {
-        if (!doc.exists) return;
-        var ingredients = doc.data().ingredients || [];
-
-        if (ingredientsAvecQuantite && ingredientsAvecQuantite.length > 0) {
-            ingredientsAvecQuantite.forEach(function(customIng) {
-                if (!customIng.idStock || customIng.quantite <= 0) return;
-                db.collection('stock').doc(customIng.idStock).get().then(function(stockDoc) {
-                    if (!stockDoc.exists) return;
-                    var stockActuel = stockDoc.data().quantite || 0;
-                    var nouveauStock = Math.max(0, stockActuel - customIng.quantite);
-                    db.collection('stock').doc(customIng.idStock).update({
-                        quantite: nouveauStock,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }).then(function() {
-                        var stockItem = allStockData.find(function(s) { return s.id === customIng.idStock; });
-                        if (stockItem) { stockItem.quantite = nouveauStock; CacheDB.set('stock', customIng.idStock, stockItem); }
-                        if (typeof renderStockTable === 'function') renderStockTable();
-                    });
-                });
-            });
-            return;
-        }
-
-        ingredients.forEach(function(ing) {
-            var isExcluded = ingredientsExclus.some(function(excl) { return excl === ing.nom.toLowerCase().trim(); });
-            if (!isExcluded && ing.idStock) {
-                var quantite = ing.quantite || 1;
-                db.collection('stock').doc(ing.idStock).get().then(function(stockDoc) {
-                    if (!stockDoc.exists) return;
-                    var nouveauStock = Math.max(0, (stockDoc.data().quantite || 0) - quantite);
-                    db.collection('stock').doc(ing.idStock).update({ quantite: nouveauStock, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function() {
-                        var stockItem = allStockData.find(function(s) { return s.id === ing.idStock; });
-                        if (stockItem) { stockItem.quantite = nouveauStock; CacheDB.set('stock', ing.idStock, stockItem); }
-                        if (typeof renderStockTable === 'function') renderStockTable();
-                    });
-                });
-            }
-        });
-    });
-}
-
-// ==================== updateCartOnly() ====================
-function updateCartOnly(){
-if(!isOnPOSPage()) return;
-var ci=document.querySelector('.pos-cart-items');
-if(!ci) return;
-var html='';
-if(posCart.length===0) {
-html='<div class="pos-cart-empty" style="text-align:center;padding:20px;color:#9A9FA5;"><i class="fas fa-shopping-basket" style="font-size:28px;"></i><p style="font-size:0.85rem;margin-top:8px;">Panier vide</p></div>';
-} else {
-var isMobile = window.innerWidth < 700;
-
-for(var k=0;k<posCart.length;k++){
-var it=posCart[k], opts='';
-if(it.interdits&&it.interdits.length) opts+=' <span style="color:#FF5B5B;font-size:0.6rem;">🚫'+escapeHtml(it.interdits.join(','))+'</span>';
-
-var btnSize = isMobile ? '28px' : '26px';
-var btnFontSize = isMobile ? '0.7rem' : '0.65rem';
-var qtySize = isMobile ? '0.85rem' : '0.75rem';
-var nameSize = isMobile ? '13px' : '0.80rem';
-var priceSize = isMobile ? '11px' : '0.70rem';
-var totalSize = isMobile ? '14px' : '0.85rem';
-
-html += '<div class="pos-cart-item" style="display:flex;flex-direction:column;padding:10px 8px;border-bottom:none;gap:6px;background:#FFFFFF;border-radius:10px;margin-bottom:4px;">' +
-'<div style="width:100%;font-size:'+nameSize+';font-weight:700;color:#1A1D1F;line-height:1.4;word-break:break-word;white-space:normal;">'+escapeHtml(it.nom)+opts+'</div>' +
-'<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;">' +
-'<div style="display:flex;flex-direction:column;gap:2px;min-width:60px;">' +
-'<span style="font-size:'+priceSize+';color:#6F767E;font-weight:500;">'+it.prixUnitaire.toFixed(2)+' MAD</span>' +
-'</div>' +
-'<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',-1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:none;background:#F8FAFC;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-minus"></i></button>' +
-'<input type="number" class="pos-qty-input" value="'+it.quantite+'" min="1" onchange="posUpdateQtyInput('+k+', this.value)" onkeyup="posUpdateQtyInput('+k+', this.value)" onclick="this.select()" style="font-size:'+qtySize+';font-weight:700;width:50px;text-align:center;border:none;background:#F8FAFC;border-radius:10px;padding:4px 4px;color:#1A1D1F;-moz-appearance:textfield;">' +
-'<button class="pos-qty-btn" onclick="posUpdateQty('+k+',1)" style="width:'+btnSize+';height:'+btnSize+';border-radius:10px;border:none;background:#F8FAFC;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:'+btnFontSize+';color:#6F767E;transition:all 0.15s;"><i class="fas fa-plus"></i></button>' +
-'<button class="pos-remove-btn" onclick="posRemoveItem('+k+')" style="background:#FEF2F2;border:none;color:#FF5B5B;cursor:pointer;padding:6px;font-size:0.85rem;transition:all 0.15s;border-radius:10px;"><i class="fas fa-trash-alt"></i></button>' +
-'</div>' +
-'<div style="min-width:70px;text-align:right;flex-shrink:0;">' +
-'<span style="font-size:'+totalSize+';font-weight:800;color:#2563EB;">'+(it.prixUnitaire*it.quantite).toFixed(2)+' MAD</span>' +
-'</div>' +
-'</div></div>';
-}
-}
-ci.innerHTML=html;
-var badge=document.querySelector('.pos-cart-badge');
-if(badge) badge.textContent=posCart.length;
-var tr=document.querySelector('.pos-cart-total-row span:last-child');
-if(tr){
-var st=posCalculateTotal(),t=st-posDiscountMAD;
-tr.textContent=t.toFixed(2)+' MAD';
-}
-var vb=document.querySelector('.pos-validate-btn');
-if(vb) vb.disabled=posCart.length===0;
-}
-
 
 function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('factureCounter'))||0; factureCounter++; localStorage.setItem('factureCounter',factureCounter); return 'FACT-'+new Date().getFullYear()+'-'+String(factureCounter).padStart(5,'0'); }
 
@@ -1686,7 +1444,6 @@ function posAddMultipleProductsToCart(produitsList) {
     return { ajoutCount: ajoutCount, stockAlertes: stockAlertes };
 }
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
-
 
 // ============================================================
 // 🎨 STYLE ASTRONAUTE MINIMALISTE (glassmorphism + glow + gradients)
@@ -2525,6 +2282,15 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     // 🆕 v6 : scrollToTop renforcé pour remonter à 100%
     function scrollToTop() {
+        console.log('🔝 [scrollToTop] Remontée à 100% (forcée)...');
+
+        // 1️⃣ Annuler tout scroll smooth en cours (CAUSE DU BUG)
+        try {
+            document.documentElement.style.scrollBehavior = 'auto';
+            document.body.style.scrollBehavior = 'auto';
+        } catch(e) {}
+
+        // 2️⃣ Forcer scrollTop = 0 sur TOUS les conteneurs possibles
         var targets = [
             document.getElementById('dynamicContent'),
             document.querySelector('.main-content'),
@@ -2534,61 +2300,72 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             document.querySelector('.pos-row'),
             document.querySelector('.pos-products-panel'),
             document.querySelector('.pos-cart-panel'),
-            document.scrollingElement || document.documentElement,
-            document.body
+            document.querySelector('.pos-cart-items'),
+            document.querySelector('.pos-products-grid'),
+            document.body,
+            document.documentElement,
+            document.scrollingElement
         ];
 
         targets.forEach(function(el) {
             if (!el) return;
             try {
                 el.scrollTop = 0;
-                if (typeof el.scrollTo === 'function') {
-                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                }
-            } catch(e) {
-                try { el.scrollTop = 0; } catch(e2) {}
-            }
-        });
-
-        // Remonter aussi la fenêtre principale
-        try { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
-        catch(e) { window.scrollTo(0, 0); }
-
-        try { window.pageYOffset = 0; } catch(e) {}
-        try { document.documentElement.scrollTop = 0; } catch(e) {}
-        try { document.body.scrollTop = 0; } catch(e) {}
-
-        // Remonter aussi les scrolls internes (panier, produits, formulaire paiement)
-        document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form, #posPanierContainer').forEach(function(el) {
-            try {
-                el.scrollTop = 0;
-                if (typeof el.scrollTo === 'function') {
-                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                }
+                el.scrollLeft = 0;
             } catch(e) {}
         });
 
-        // 🆕 2e scroll forcé à 500ms (au cas où le smooth s'arrête à mi-chemin)
+        // 3️⃣ Forcer window scroll (INSTANTANÉ, pas smooth)
+        try { window.scrollTo(0, 0); } catch(e) {}
+        try { window.pageYOffset = 0; } catch(e) {}
+
+        // 4️⃣ 2e passage forcé immédiat
         setTimeout(function() {
+            targets.forEach(function(el) {
+                if (!el) return;
+                try { el.scrollTop = 0; el.scrollLeft = 0; } catch(e) {}
+            });
             try { window.scrollTo(0, 0); } catch(e) {}
-            try { document.documentElement.scrollTop = 0; } catch(e) {}
-            try { document.body.scrollTop = 0; } catch(e) {}
+            console.log('   → 2e passage forcé');
+        }, 0);
 
-            var dc = document.getElementById('dynamicContent');
-            if (dc) dc.scrollTop = 0;
-            var main = document.querySelector('.main-content');
-            if (main) main.scrollTop = 0;
-            var mc = document.querySelector('.pos-container');
-            if (mc) mc.scrollTop = 0;
-        }, 500);
+        // 5️⃣ 3e passage forcé à 50ms
+        setTimeout(function() {
+            targets.forEach(function(el) {
+                if (!el) return;
+                try { el.scrollTop = 0; } catch(e) {}
+            });
+            try { window.scrollTo(0, 0); } catch(e) {}
+            console.log('   → 3e passage forcé (50ms)');
+        }, 50);
 
-        // Feedback visuel sur le panier
+        // 6️⃣ 4e passage forcé à 150ms
+        setTimeout(function() {
+            targets.forEach(function(el) {
+                if (!el) return;
+                try { el.scrollTop = 0; } catch(e) {}
+            });
+            try { window.scrollTo(0, 0); } catch(e) {}
+            console.log('   → 4e passage forcé (150ms)');
+        }, 150);
+
+        // 7️⃣ Rétablir scrollBehavior smooth après
+        setTimeout(function() {
+            try {
+                document.documentElement.style.scrollBehavior = '';
+                document.body.style.scrollBehavior = '';
+            } catch(e) {}
+        }, 600);
+
+        // 8️⃣ Feedback visuel
         var cartPanel = document.querySelector('.pos-cart-panel');
         if (cartPanel) {
             cartPanel.style.transition = 'box-shadow 0.3s ease';
             cartPanel.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.4)';
             setTimeout(function() { cartPanel.style.boxShadow = ''; }, 800);
         }
+
+        console.log('✅ [scrollToTop] Terminé');
     }
 
     if (!btn.dataset.bound) {
