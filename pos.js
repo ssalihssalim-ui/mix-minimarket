@@ -903,6 +903,7 @@ function posAddToCartOrOpenOptions(pid){
     posSauvegarderDonneesPanier(posCurrentCartId); 
     posSaveMultiCarts(); 
 }
+
 // ✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE + NOMBRE ENTIER
 async function posOpenOptionsModal(pid) {
 var p = posProductsList.find(function(x) { return x.id === pid; });
@@ -1144,6 +1145,8 @@ tr.textContent=t.toFixed(2)+' MAD';
 var vb=document.querySelector('.pos-validate-btn');
 if(vb) vb.disabled=posCart.length===0;
 }
+
+
 function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('factureCounter'))||0; factureCounter++; localStorage.setItem('factureCounter',factureCounter); return 'FACT-'+new Date().getFullYear()+'-'+String(factureCounter).padStart(5,'0'); }
 
 function renderPOS(){
@@ -1683,6 +1686,8 @@ function posAddMultipleProductsToCart(produitsList) {
     return { ajoutCount: ajoutCount, stockAlertes: stockAlertes };
 }
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
+
+
 // ============================================================
 // 🎨 STYLE ASTRONAUTE MINIMALISTE (glassmorphism + glow + gradients)
 // ✅ BORDURES RETIRÉES : design épuré, séparations par ombres uniquement
