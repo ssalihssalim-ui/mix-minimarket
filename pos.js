@@ -904,7 +904,6 @@ function posAddToCartOrOpenOptions(pid){
     posSaveMultiCarts(); 
 }
 
-
 // ✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE + NOMBRE ENTIER
 async function posOpenOptionsModal(pid) {
 var p = posProductsList.find(function(x) { return x.id === pid; });
@@ -1687,6 +1686,7 @@ function posAddMultipleProductsToCart(produitsList) {
     return { ajoutCount: ajoutCount, stockAlertes: stockAlertes };
 }
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
+
 
 // ============================================================
 // 🎨 STYLE ASTRONAUTE MINIMALISTE (glassmorphism + glow + gradients)
@@ -2525,15 +2525,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
     // 🆕 v6 : scrollToTop renforcé pour remonter à 100%
     function scrollToTop() {
-        console.log('🔝 [scrollToTop] Remontée à 100% (forcée)...');
-
-        // 1️⃣ Annuler tout scroll smooth en cours (CAUSE DU BUG)
-        try {
-            document.documentElement.style.scrollBehavior = 'auto';
-            document.body.style.scrollBehavior = 'auto';
-        } catch(e) {}
-
-        // 2️⃣ Forcer scrollTop = 0 sur TOUS les conteneurs possibles
         var targets = [
             document.getElementById('dynamicContent'),
             document.querySelector('.main-content'),
@@ -2543,72 +2534,61 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             document.querySelector('.pos-row'),
             document.querySelector('.pos-products-panel'),
             document.querySelector('.pos-cart-panel'),
-            document.querySelector('.pos-cart-items'),
-            document.querySelector('.pos-products-grid'),
-            document.body,
-            document.documentElement,
-            document.scrollingElement
+            document.scrollingElement || document.documentElement,
+            document.body
         ];
 
         targets.forEach(function(el) {
             if (!el) return;
             try {
                 el.scrollTop = 0;
-                el.scrollLeft = 0;
+                if (typeof el.scrollTo === 'function') {
+                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                }
+            } catch(e) {
+                try { el.scrollTop = 0; } catch(e2) {}
+            }
+        });
+
+        // Remonter aussi la fenêtre principale
+        try { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
+        catch(e) { window.scrollTo(0, 0); }
+
+        try { window.pageYOffset = 0; } catch(e) {}
+        try { document.documentElement.scrollTop = 0; } catch(e) {}
+        try { document.body.scrollTop = 0; } catch(e) {}
+
+        // Remonter aussi les scrolls internes (panier, produits, formulaire paiement)
+        document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form, #posPanierContainer').forEach(function(el) {
+            try {
+                el.scrollTop = 0;
+                if (typeof el.scrollTo === 'function') {
+                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                }
             } catch(e) {}
         });
 
-        // 3️⃣ Forcer window scroll (INSTANTANÉ, pas smooth)
-        try { window.scrollTo(0, 0); } catch(e) {}
-        try { window.pageYOffset = 0; } catch(e) {}
-
-        // 4️⃣ 2e passage forcé immédiat
+        // 🆕 2e scroll forcé à 500ms (au cas où le smooth s'arrête à mi-chemin)
         setTimeout(function() {
-            targets.forEach(function(el) {
-                if (!el) return;
-                try { el.scrollTop = 0; el.scrollLeft = 0; } catch(e) {}
-            });
             try { window.scrollTo(0, 0); } catch(e) {}
-            console.log('   → 2e passage forcé');
-        }, 0);
+            try { document.documentElement.scrollTop = 0; } catch(e) {}
+            try { document.body.scrollTop = 0; } catch(e) {}
 
-        // 5️⃣ 3e passage forcé à 50ms
-        setTimeout(function() {
-            targets.forEach(function(el) {
-                if (!el) return;
-                try { el.scrollTop = 0; } catch(e) {}
-            });
-            try { window.scrollTo(0, 0); } catch(e) {}
-            console.log('   → 3e passage forcé (50ms)');
-        }, 50);
+            var dc = document.getElementById('dynamicContent');
+            if (dc) dc.scrollTop = 0;
+            var main = document.querySelector('.main-content');
+            if (main) main.scrollTop = 0;
+            var mc = document.querySelector('.pos-container');
+            if (mc) mc.scrollTop = 0;
+        }, 500);
 
-        // 6️⃣ 4e passage forcé à 150ms
-        setTimeout(function() {
-            targets.forEach(function(el) {
-                if (!el) return;
-                try { el.scrollTop = 0; } catch(e) {}
-            });
-            try { window.scrollTo(0, 0); } catch(e) {}
-            console.log('   → 4e passage forcé (150ms)');
-        }, 150);
-
-        // 7️⃣ Rétablir scrollBehavior smooth après
-        setTimeout(function() {
-            try {
-                document.documentElement.style.scrollBehavior = '';
-                document.body.style.scrollBehavior = '';
-            } catch(e) {}
-        }, 600);
-
-        // 8️⃣ Feedback visuel
+        // Feedback visuel sur le panier
         var cartPanel = document.querySelector('.pos-cart-panel');
         if (cartPanel) {
             cartPanel.style.transition = 'box-shadow 0.3s ease';
             cartPanel.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.4)';
             setTimeout(function() { cartPanel.style.boxShadow = ''; }, 800);
         }
-
-        console.log('✅ [scrollToTop] Terminé');
     }
 
     if (!btn.dataset.bound) {
