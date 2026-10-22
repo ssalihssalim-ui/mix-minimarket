@@ -31,6 +31,8 @@
 // ✅ ÉPICES/SEL SUPPRIMÉS COMPLÈTEMENT
 // ✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE
 // ✅ QUANTITÉ ENTIER (pas de décimales)
+// 🆕 v6 : Recherche → retour auto aux catégories (recherche sur TOUS les produits)
+// 🆕 v6 : Bouton flèche ↑ remonte à 100% (top:0 forcé + smooth + scrolls internes)
 
 var posCart = [];
 var posStep = 1;
@@ -560,17 +562,26 @@ if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButto
 }
 }
 
+// 🆕 v6 : RECHERCHE → RETOUR AUTOMATIQUE AUX CATÉGORIES (recherche sur TOUS les produits)
 function posSearchProducts(query){
-clearTimeout(window._searchTimeout);
-window._searchTimeout = setTimeout(function(){
-posProductOffset = 0;
-posSearchQuery = query.toLowerCase().trim();
-if (posViewMode === 'categories' && posSearchQuery.length > 0) { posViewMode = 'products'; posSelectedCategoryForView = null; }
-if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
-    if (typeof fastSearch === 'function') posSearchCache[posSearchQuery] = fastSearch(posSearchQuery).slice();
-}
-if(isOnPOSPage()) filterProductGrid();
-}, 80);
+    clearTimeout(window._searchTimeout);
+    window._searchTimeout = setTimeout(function(){
+        posProductOffset = 0;
+        posSearchQuery = query.toLowerCase().trim();
+
+        // 🆕 CORRECTION 1 : dès que l'utilisateur TAPE, on REVIENT aux catégories
+        // pour chercher sur TOUS les produits (pas seulement la catégorie active)
+        if (posSearchQuery.length > 0) {
+            posViewMode = 'products';
+            posSelectedCategoryForView = null;   // efface la catégorie sélectionnée
+            posSelectedCategory = 'all';          // remet le filtre catégorie à "tous"
+        }
+
+        if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
+            if (typeof fastSearch === 'function') posSearchCache[posSearchQuery] = fastSearch(posSearchQuery).slice();
+        }
+        if(isOnPOSPage()) filterProductGrid();
+    }, 80);
 }
 
 function clearPosSearch() {
@@ -2408,8 +2419,8 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 })();
 
 // ============================================================
-// ✅ BOUTON FLÈCHE ↑ — VERSION CORRIGÉE (fonctionne vraiment)
-// ============================================================
+// ✅ BOUTON FLÈCHE ↑ — VERSION CORRIGÉE (remonte à 100%)
+// 🆕 v6 : top:0 forcé + smooth + scrolls internes + 2e scroll à 500ms// ============================================================
 (function posScrollTopButtonFixed() {
     var STYLE_ID = 'pos-scroll-top-fixed-style';
     var BTN_ID = 'posScrollTopFixedBtn';
@@ -2510,29 +2521,66 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         }
     }
 
+    // 🆕 v6 : scrollToTop renforcé pour remonter à 100%
     function scrollToTop() {
         var targets = [
             document.getElementById('dynamicContent'),
             document.querySelector('.main-content'),
             document.querySelector('.content-area'),
             document.querySelector('.page-content'),
+            document.querySelector('.pos-container'),
+            document.querySelector('.pos-row'),
+            document.querySelector('.pos-products-panel'),
+            document.querySelector('.pos-cart-panel'),
             document.scrollingElement || document.documentElement,
             document.body
         ];
+
         targets.forEach(function(el) {
-            if (el && typeof el.scrollTo === 'function') {
-                try { el.scrollTo({ top: 0, behavior: 'smooth' }); }
-                catch (e) { el.scrollTop = 0; }
+            if (!el) return;
+            try {
+                el.scrollTop = 0;
+                if (typeof el.scrollTo === 'function') {
+                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                }
+            } catch(e) {
+                try { el.scrollTop = 0; } catch(e2) {}
             }
         });
-        try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        catch (e) { window.scrollTo(0, 0); }
 
-        document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form').forEach(function(el) {
-            try { el.scrollTo({ top: 0, behavior: 'smooth' }); }
-            catch (e) { el.scrollTop = 0; }
+        // Remonter aussi la fenêtre principale
+        try { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
+        catch(e) { window.scrollTo(0, 0); }
+
+        try { window.pageYOffset = 0; } catch(e) {}
+        try { document.documentElement.scrollTop = 0; } catch(e) {}
+        try { document.body.scrollTop = 0; } catch(e) {}
+
+        // Remonter aussi les scrolls internes (panier, produits, formulaire paiement)
+        document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form, #posPanierContainer').forEach(function(el) {
+            try {
+                el.scrollTop = 0;
+                if (typeof el.scrollTo === 'function') {
+                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                }
+            } catch(e) {}
         });
 
+        // 🆕 2e scroll forcé à 500ms (au cas où le smooth s'arrête à mi-chemin)
+        setTimeout(function() {
+            try { window.scrollTo(0, 0); } catch(e) {}
+            try { document.documentElement.scrollTop = 0; } catch(e) {}
+            try { document.body.scrollTop = 0; } catch(e) {}
+
+            var dc = document.getElementById('dynamicContent');
+            if (dc) dc.scrollTop = 0;
+            var main = document.querySelector('.main-content');
+            if (main) main.scrollTop = 0;
+            var mc = document.querySelector('.pos-container');
+            if (mc) mc.scrollTop = 0;
+        }, 500);
+
+        // Feedback visuel sur le panier
         var cartPanel = document.querySelector('.pos-cart-panel');
         if (cartPanel) {
             cartPanel.style.transition = 'box-shadow 0.3s ease';
@@ -2583,7 +2631,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     setTimeout(updateVisibility, 100);
     updateVisibility();
 
-    console.log('✅ [POS] Bouton flèche ↑ corrigé et fonctionnel');
+    console.log('✅ [POS] Bouton flèche ↑ corrigé et fonctionnel (remonte à 100%)');
 })();
 
 /////////
@@ -2713,15 +2761,17 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     document.head.appendChild(s);
     console.log('✅ [POS] Zone mobile agrandie (header masqué + marges supprimées)');
 })();
-console.log('🚀 E-SOLUTION - POS V5 ASTRONAUTE (sans bordures)');
+console.log('🚀 E-SOLUTION - POS V6 ASTRONAUTE (sans bordures)');
 console.log('✅ Design glassmorphism + glow + gradients');
 console.log('✅ BORDURES RETIRÉES : séparations par ombres uniquement');
 console.log('✅ Recherche + Tables/En ligne visibles sur PC ET mobile');
 console.log('✅ Panier 100% largeur sur mobile + marges propres');
-console.log('✅ Bouton flèche ↑ corrigé (5 conteneurs écoutés + MutationObserver)');
+console.log('✅ Bouton flèche ↑ corrigé (remonte à 100% + smooth + 2e scroll)');
 console.log('✅ Panier min-height 220px (3+ articles visibles)');
 console.log('✅ Boutons POS AGRANDIS + hover néon');
 console.log('✅ BOUTON VALIDER STICKY (toujours visible)');
 console.log('✅ ÉPICES ET SEL SUPPRIMÉS COMPLÈTEMENT');
 console.log('✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE');
 console.log('✅ QUANTITÉ ENTIER (step=1, pas de décimales)');
+console.log('🆕 v6 : Recherche → retour auto aux catégories (recherche sur TOUS les produits)');
+console.log('🆕 v6 : Bouton flèche ↑ remonte à 100% (top:0 forcé + smooth + 2e scroll)');
