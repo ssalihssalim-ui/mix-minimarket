@@ -11,7 +11,7 @@
 // ✅ 🆕 Validation/Annulation individuelle des changements de prix
 // ✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)
 // ✅ 🆕 Fix scroll modal achat (footer toujours accessible)
-// ✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression
+// ✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -1318,7 +1318,6 @@ function saveFournisseur() {
 }
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
-
 
 
 // ====================================================
