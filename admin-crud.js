@@ -292,6 +292,7 @@ function closeModernForm() {
 window.openModernForm = openModernForm;
 window.closeModernForm = closeModernForm;
 
+
 // ====================================================
 //  📊 STATS
 // ====================================================
@@ -1318,6 +1319,8 @@ function saveFournisseur() {
 function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(function(doc) { if (doc.exists) { editingId = id; currentCollection = 'fournisseurs'; openFournisseurForm(doc.data()); } }); }
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
+
+
 // ====================================================
 //  💰 ACHATS + SCAN + WHATSAPP
 // ====================================================
@@ -1334,7 +1337,6 @@ function openAchatModal() {
 
 function openAchatModalForm() {
     achatSearchFilter = '';
-    // ✅ Reset tri à l'ouverture
     achatSortCol = 'nom';
     achatSortDir = 'asc';
 
@@ -1399,7 +1401,6 @@ function chargerProduitsFournisseurAchat() {
 
 function onAchatSearch(value) { achatSearchFilter = (value || '').toLowerCase().trim(); afficherProduitsAchat(); }
 
-// 🆕 Tri par clic sur l'en-tête
 function achatToggleSort(col) {
     if (achatSortCol === col) {
         achatSortDir = achatSortDir === 'asc' ? 'desc' : 'asc';
@@ -1429,7 +1430,6 @@ function afficherProduitsAchat() {
     if (achatSearchFilter) lignes = lignes.filter(function(o) { return (o.ligne.nom || '').toLowerCase().indexOf(achatSearchFilter) !== -1; });
     if (lignes.length === 0) { body.innerHTML = '<div class="ac-empty"><i class="fas fa-search"></i><h3>Aucun produit trouvé</h3><p>Essayez un autre mot-clé.</p></div>'; updateAchatTotals(); return; }
 
-    // ✅ Tri
     lignes.sort(function(a, b) {
         var va, vb;
         var col = achatSortCol;
@@ -1484,13 +1484,11 @@ function afficherProduitsAchat() {
         html += '<td><span style="font-size:11px;color:#94A3B8;font-family:monospace;">' + (l.id || '').substring(0, 6) + '</span></td>';
         html += '<td><div class="ac-product-name">' + escapeHtml(l.nom) + '</div>' + badgeHtml + '</td>';
         html += '<td class="center">' + l.stockActuel + '</td>';
-        // ✅ Prix actuel SANS barré
         html += '<td class="center"><span style="font-size:13px;color:#64748B;font-weight:600;">' + l.prixActuel.toFixed(2) + ' MAD</span></td>';
         html += '<td class="center"><input type="number" min="0" step="1" value="' + (l.quantite || 0) + '" oninput="onLigneQteChange(' + i + ', this.value)" style="width:80px;"></td>';
         html += '<td class="center"><input type="number" min="0" step="0.01" class="' + prixClass + '" value="' + (l.nouveauPrix || 0) + '" oninput="onLignePrixChange(' + i + ', this.value)" style="width:100px;"></td>';
         html += '<td class="center"><input type="date" value="' + (l.dateExpiration || '') + '" onchange="onLigneDateChange(' + i + ', this.value)" style="width:140px;"></td>';
         html += '<td class="ac-total-cell" id="achatTotal_' + i + '">' + (l.total || 0).toFixed(2) + '</td>';
-        // ✅ Boutons valider / annuler prix
         if (l.prixChange && l.nouveauPrix > 0) {
             html += '<td class="center">';
             html += '<button class="ac-price-action-btn validate" onclick="validerChangementPrix(' + i + ')" title="Garder le nouveau prix"><i class="fas fa-check"></i></button>';
@@ -1513,7 +1511,6 @@ function onLigneQteChange(index, value) {
     updateAchatTotals();
 }
 
-// ✅ Ne plus reconstruire le tableau à chaque frappe (garde le focus + les floats OK)
 function onLignePrixChange(index, value) {
     var l = achatLignes[index]; if (!l) return;
     var nouveau = acNum(value);
@@ -1521,11 +1518,9 @@ function onLignePrixChange(index, value) {
     l.prixChange = Math.abs(nouveau - l.prixActuel) > 0.001 && !l.prixValideManuellement;
     l.total = (l.quantite || 0) * nouveau;
 
-    // Mettre à jour la cellule total
     var cell = document.getElementById('achatTotal_' + index);
     if (cell) cell.textContent = l.total.toFixed(2);
 
-    // Mettre à jour le badge + la couleur de ligne SANS reconstruire
     var row = cell ? cell.closest('tr') : null;
     if (row) {
         if (l.prixChange) row.classList.add('has-changement');
@@ -1552,7 +1547,6 @@ function onLignePrixChange(index, value) {
             else input.classList.remove('changed');
         }
 
-        // Mettre à jour les boutons action
         var actionCell = row.lastElementChild;
         if (actionCell) {
             if (l.prixChange && l.nouveauPrix > 0) {
@@ -1567,7 +1561,6 @@ function onLignePrixChange(index, value) {
     updateAchatTotals();
 }
 
-// ✅ Validation individuelle du changement de prix
 function validerChangementPrix(index) {
     var l = achatLignes[index]; if (!l) return;
     l.prixValideManuellement = true;
@@ -1576,7 +1569,6 @@ function validerChangementPrix(index) {
 }
 window.validerChangementPrix = validerChangementPrix;
 
-// ✅ Annulation individuelle → revient à l'ancien prix
 function annulerChangementPrix(index) {
     var l = achatLignes[index]; if (!l) return;
     l.nouveauPrix = l.prixActuel;
@@ -1639,7 +1631,6 @@ async function validerAchats() {
             } else if (item.dateExpiration) updateData.dateExpiration = item.dateExpiration;
             batch.update(prodRef, updateData);
 
-            // ✅ HISTORISATION : enregistrer l'achat dans la collection "achats"
             var achatRef = db.collection('achats').doc();
             batch.set(achatRef, {
                 produitId: item.id,
@@ -1667,7 +1658,6 @@ async function validerAchats() {
     } catch(e) { console.error(e); alert('❌ Erreur : ' + e.message); }
 }
 
-// 🆕 COMMANDER via WhatsApp
 function commanderWhatsAppFournisseur() {
     if (!fournisseurAchatSelectionne) {
         alert('Choisissez un fournisseur d\'abord.');
@@ -1732,41 +1722,28 @@ function ouvrirCameraFacture() {
     input.click();
 }
 
-// ✅ Compression INTELLIGENTE : garde la qualité maximale tout en réduisant le poids
-// - Garde l'originale si elle est déjà < 2000px (aucune perte)
-// - Sinon réduit à 2000px max (ratio conservé, anti-crénelage)
-// - JPEG qualité 92% (visuellement identique à 100%)
-// - Améliore légèrement le contraste pour que les chiffres ressortent mieux
 function compresserSansPerteVisible(base64) {
     return new Promise(function(resolve) {
         try {
             var img = new Image();
             img.onload = function() {
                 var maxWidth = 2000;
-
-                // ✅ Image déjà petite → on garde TELLE QUELLE (aucune perte)
                 if (img.width <= maxWidth) {
                     resolve(base64);
                     return;
                 }
-
-                // ✅ Réduction proportionnelle
                 var ratio = maxWidth / img.width;
                 var canvas = document.createElement('canvas');
                 canvas.width = Math.round(img.width * ratio);
                 canvas.height = Math.round(img.height * ratio);
                 var ctx = canvas.getContext('2d');
-
-                // Rendu de haute qualité
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                // ✅ Amélioration légère du contraste (facultatif mais utile pour les chiffres)
                 try {
                     var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     var d = imageData.data;
-                    var c = 1.12; // +12% contraste
+                    var c = 1.12;
                     var f = (259 * (c * 255 + 255)) / (255 * (259 - c * 255));
                     for (var i = 0; i < d.length; i += 4) {
                         d[i]     = Math.min(255, Math.max(0, f * (d[i]     - 128) + 128));
@@ -1774,9 +1751,7 @@ function compresserSansPerteVisible(base64) {
                         d[i + 2] = Math.min(255, Math.max(0, f * (d[i + 2] - 128) + 128));
                     }
                     ctx.putImageData(imageData, 0, 0);
-                } catch (e) { /* si erreur, on continue sans contraste */ }
-
-                // ✅ Qualité 92% : visuellement identique à 100%, 2-3× plus léger
+                } catch (e) { }
                 resolve(canvas.toDataURL('image/jpeg', 0.92));
             };
             img.onerror = function() { resolve(base64); };
@@ -1792,7 +1767,6 @@ async function scannerFacture(imgData) {
     overlay.innerHTML = '<div class="spinner"></div><p>📷 Analyse de la facture...</p>';
     document.body.appendChild(overlay);
     try {
-        // ✅ Compression intelligente (sans perte visible pour l'IA)
         var imgPourAI = await compresserSansPerteVisible(imgData);
         console.log('📷 Image optimisée :', Math.round(imgPourAI.length / 1024), 'Ko (originale :', Math.round(imgData.length / 1024), 'Ko)');
 
@@ -1820,7 +1794,6 @@ async function scannerFacture(imgData) {
         prompt += '[{"nom":"NOM EXACT DU PRODUIT","quantite":N,"prix":N ou null}]\n\n';
         prompt += 'Si aucun produit reconnu, retourne : []';
 
-        // ✅ Timeout 30s (image plus légère → réponse plus rapide)
         var controller = new AbortController();
         var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
 
@@ -1843,7 +1816,6 @@ async function scannerFacture(imgData) {
         }
         overlay.remove();
 
-        // ✅ Validation : ne garder que les produits qui existent vraiment
         var produitsValides = [];
         var produitsIgnores = [];
         produitsReconnus.forEach(function(p) {
@@ -1912,12 +1884,12 @@ function openListeAchatsModal() {
 
     var html = '';
     html += '<div id="modalListeAchats" class="ac-modal-overlay">';
-    html += '  <div class="ac-modal" style="max-width:1200px;">';
+    html += '  <div class="ac-modal" style="max-width:none;width:90vw;height:90vh;max-height:90vh;">';
     html += '    <div class="ac-modal-header">';
     html += '      <h3><i class="fas fa-list-alt"></i> Liste des achats fournisseurs</h3>';
     html += '      <button class="ac-modal-close" onclick="fermerListeAchats()"><i class="fas fa-times"></i></button>';
     html += '    </div>';
-    html += '    <div class="ac-modal-toolbar" style="gap:6px;">';
+    html += '    <div class="ac-modal-toolbar" style="gap:6px;flex-wrap:wrap;">';
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="0"   onclick="filtrerAchats(0)">Aujourd\'hui</button>';
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="3"   onclick="filtrerAchats(3)">3 jours</button>';
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="7"   onclick="filtrerAchats(7)">1 semaine</button>';
@@ -1926,6 +1898,9 @@ function openListeAchatsModal() {
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="180" onclick="filtrerAchats(180)">6 mois</button>';
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="365" onclick="filtrerAchats(365)">1 an</button>';
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="-1"  onclick="filtrerAchats(-1)">Tout</button>';
+    html += '      <select id="filtreAchatFournisseur" class="ac-form-select" style="margin-left:auto;min-width:220px;padding:8px 12px;" onchange="filtrerAchats(_achatsFiltreJours)">';
+    html += '        <option value="">Tous les fournisseurs</option>';
+    html += '      </select>';
     html += '    </div>';
     html += '    <div class="ac-modal-body" id="achatsListeBody">';
     html += '      <div class="ac-empty"><i class="fas fa-spinner fa-spin"></i><h3>Chargement…</h3></div>';
@@ -1966,22 +1941,47 @@ async function filtrerAchats(nbJours) {
     body.innerHTML = '<div class="ac-empty"><i class="fas fa-spinner fa-spin"></i><h3>Chargement…</h3></div>';
 
     try {
-        var snap = await db.collection('achats').orderBy('date', 'desc').limit(1000).get();
-        _achatsCache = [];
-        snap.forEach(function(d) {
-            var data = d.data();
-            data.id = d.id;
-            _achatsCache.push(data);
-        });
+        if (_achatsCache.length === 0) {
+            var snap = await db.collection('achats').orderBy('date', 'desc').limit(1000).get();
+            _achatsCache = [];
+            snap.forEach(function(d) {
+                var data = d.data();
+                data.id = d.id;
+                _achatsCache.push(data);
+            });
+        }
+
+        var selectFour = document.getElementById('filtreAchatFournisseur');
+        if (selectFour && selectFour.options.length <= 1) {
+            var fournisseursUniques = {};
+            _achatsCache.forEach(function(a) {
+                var nom = a.fournisseurNom || a.fournisseurSociete || '';
+                if (nom && !fournisseursUniques[nom]) fournisseursUniques[nom] = true;
+            });
+            Object.keys(fournisseursUniques).sort().forEach(function(nom) {
+                var opt = document.createElement('option');
+                opt.value = nom;
+                opt.textContent = nom;
+                selectFour.appendChild(opt);
+            });
+        }
 
         var lignes = _achatsCache;
         if (nbJours > 0) {
             var limite = new Date();
             limite.setDate(limite.getDate() - nbJours);
             limite.setHours(0, 0, 0, 0);
-            lignes = _achatsCache.filter(function(a) {
+            lignes = lignes.filter(function(a) {
                 var dt = a.date && a.date.toDate ? a.date.toDate() : (a.date ? new Date(a.date) : null);
                 return dt && dt >= limite;
+            });
+        }
+
+        var fourSel = selectFour ? selectFour.value : '';
+        if (fourSel) {
+            lignes = lignes.filter(function(a) {
+                var nom = a.fournisseurNom || a.fournisseurSociete || '';
+                return nom === fourSel;
             });
         }
 
@@ -1992,28 +1992,83 @@ async function filtrerAchats(nbJours) {
     }
 }
 
+var _achatsSortCol = 'date';
+var _achatsSortDir = 'desc';
+
+function _achatsToggleSort(col) {
+    if (_achatsSortCol === col) {
+        _achatsSortDir = _achatsSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        _achatsSortCol = col;
+        _achatsSortDir = 'asc';
+    }
+    filtrerAchats(_achatsFiltreJours);
+}
+
+function _achatsSortIndicator(col) {
+    if (_achatsSortCol !== col) return '<i class="fas fa-sort" style="opacity:0.35;margin-left:4px;font-size:11px;"></i>';
+    return _achatsSortDir === 'asc'
+        ? '<i class="fas fa-sort-up" style="margin-left:4px;color:#2563EB;font-size:13px;"></i>'
+        : '<i class="fas fa-sort-down" style="margin-left:4px;color:#2563EB;font-size:13px;"></i>';
+}
+
 function afficherListeAchats(lignes) {
     var body = document.getElementById('achatsListeBody');
     if (!body) return;
 
     if (lignes.length === 0) {
         body.innerHTML = '<div class="ac-empty"><i class="fas fa-inbox"></i><h3>Aucun achat sur cette période</h3><p>Les achats effectués via le bouton « Achats » apparaîtront ici.</p></div>';
-        var elL = document.getElementById('achatsTotalLignes');
-        var elM = document.getElementById('achatsTotalMontant');
-        if (elL) elL.textContent = '0';
-        if (elM) elM.textContent = '0.00 MAD';
+        var elL0 = document.getElementById('achatsTotalLignes');
+        var elM0 = document.getElementById('achatsTotalMontant');
+        if (elL0) elL0.textContent = '0';
+        if (elM0) elM0.textContent = '0.00 MAD';
         return;
     }
 
+    lignes = lignes.slice().sort(function(a, b) {
+        var va, vb;
+        var col = _achatsSortCol;
+        if (col === 'date') {
+            var da = a.date && a.date.toDate ? a.date.toDate() : new Date(a.date);
+            var db = b.date && b.date.toDate ? b.date.toDate() : new Date(b.date);
+            va = da.getTime(); vb = db.getTime();
+        } else if (col === 'produit') {
+            va = (a.produitNom || '').toLowerCase(); vb = (b.produitNom || '').toLowerCase();
+        } else if (col === 'fournisseur') {
+            va = (a.fournisseurNom || a.fournisseurSociete || '').toLowerCase();
+            vb = (b.fournisseurNom || b.fournisseurSociete || '').toLowerCase();
+        } else if (col === 'quantite') {
+            va = acNum(a.quantite); vb = acNum(b.quantite);
+        } else if (col === 'prix') {
+            va = acNum(a.prixAchat); vb = acNum(b.prixAchat);
+        } else if (col === 'total') {
+            va = acNum(a.total); vb = acNum(b.total);
+        } else {
+            va = 0; vb = 0;
+        }
+        if (typeof va === 'string') {
+            var cmp = va.localeCompare(vb);
+            return _achatsSortDir === 'asc' ? cmp : -cmp;
+        }
+        return _achatsSortDir === 'asc' ? (va - vb) : (vb - va);
+    });
+
+    var thStyle = 'cursor:pointer;user-select:none;';
+    var thFor = function(col, label, center) {
+        var active = (_achatsSortCol === col) ? ' sort-active' : '';
+        var cls = 'center' === center ? 'center ' : '';
+        return '<th style="' + thStyle + '" class="' + cls + active + '" onclick="_achatsToggleSort(\'' + col + '\')">' + label + _achatsSortIndicator(col) + '</th>';
+    };
+
     var total = 0;
     var html = '<table class="ac-modal-table"><thead><tr>';
-    html += '<th>Date</th>';
-    html += '<th>Heure</th>';
-    html += '<th>Produit</th>';
-    html += '<th>Fournisseur</th>';
-    html += '<th class="center">Qté</th>';
-    html += '<th class="center">Prix achat</th>';
-    html += '<th class="center">Total</th>';
+    html += thFor('date', 'Date');
+    html += '<th style="' + thStyle + '">Heure</th>';
+    html += thFor('produit', 'Produit');
+    html += thFor('fournisseur', 'Fournisseur');
+    html += thFor('quantite', 'Qté', 'center');
+    html += thFor('prix', 'Prix achat', 'center');
+    html += thFor('total', 'Total', 'center');
     html += '<th class="center">Opérateur</th>';
     html += '</tr></thead><tbody>';
 
@@ -2048,6 +2103,8 @@ function afficherListeAchats(lignes) {
     if (elM) elM.textContent = total.toFixed(2) + ' MAD';
 }
 
+window._achatsToggleSort = _achatsToggleSort;
+
 function imprimerListeAchats() {
     var body = document.getElementById('achatsListeBody');
     if (!body) return;
@@ -2077,6 +2134,9 @@ function imprimerListeAchats() {
     setTimeout(function() { w.print(); }, 400);
 }
 
+// ====================================================
+//  🌐 EXPORTS GLOBAUX (window.xxx)
+// ====================================================
 window.openListeAchatsModal = openListeAchatsModal;
 window.fermerListeAchats = fermerListeAchats;
 window.filtrerAchats = filtrerAchats;
@@ -2115,4 +2175,4 @@ console.log('✅ 🆕 Input prix float sans perte de focus');
 console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix');
 console.log('✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)');
 console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
-console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression');
+console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur');
