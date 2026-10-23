@@ -420,6 +420,7 @@ function applyDepensesStyles() {
     document.head.appendChild(s);
 }
 
+
 // ==================== KPI ====================
 function updateKPI() {
     var totalDepenses = (window.filteredDepenses || allDepensesData).reduce(function(s, d) { return s + (d.montant || 0); }, 0);
@@ -780,6 +781,7 @@ function renderPersonnelTable() {
     }
     document.getElementById('personnelPagination').innerHTML = pagHTML;
 }
+
 
 // ==================== FORMULAIRES ====================
 function openStockForm(data) {
