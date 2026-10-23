@@ -12,6 +12,7 @@
 // ✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)
 // ✅ 🆕 Fix scroll modal achat (footer toujours accessible)
 // ✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur
+// ✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -1877,10 +1878,15 @@ async function scannerFacture(imgData) {
 // ====================================================
 var _achatsCache = [];
 var _achatsFiltreJours = 0;
+var _achatSearchQuery = '';
+var _achatsLignesFiltrees = [];
 
 function openListeAchatsModal() {
     var old = document.getElementById('modalListeAchats');
     if (old) old.remove();
+
+    _achatSearchQuery = '';
+    _achatsLignesFiltrees = [];
 
     var html = '';
     html += '<div id="modalListeAchats" class="ac-modal-overlay">';
@@ -1898,7 +1904,8 @@ function openListeAchatsModal() {
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="180" onclick="filtrerAchats(180)">6 mois</button>';
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="365" onclick="filtrerAchats(365)">1 an</button>';
     html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="-1"  onclick="filtrerAchats(-1)">Tout</button>';
-    html += '      <select id="filtreAchatFournisseur" class="ac-form-select" style="margin-left:auto;min-width:220px;padding:8px 12px;" onchange="filtrerAchats(_achatsFiltreJours)">';
+    html += '      <div class="ac-search" style="margin-left:auto;min-width:260px;flex:1;max-width:340px;"><i class="fas fa-search"></i><input type="text" id="achatSearchListeInput" placeholder="Rechercher un produit..." oninput="_achatSearchQuery=this.value.trim().toLowerCase();afficherListeAchatsFiltres();"></div>';
+    html += '      <select id="filtreAchatFournisseur" class="ac-form-select" style="min-width:220px;padding:8px 12px;" onchange="afficherListeAchatsFiltres()">';
     html += '        <option value="">Tous les fournisseurs</option>';
     html += '      </select>';
     html += '    </div>';
@@ -1985,12 +1992,24 @@ async function filtrerAchats(nbJours) {
             });
         }
 
-        afficherListeAchats(lignes);
+        _achatsLignesFiltrees = lignes;
+        afficherListeAchatsFiltres();
     } catch(e) {
         console.error(e);
         body.innerHTML = '<div class="ac-empty"><i class="fas fa-exclamation-triangle"></i><h3>Erreur</h3><p>' + escapeHtml(e.message) + '</p></div>';
     }
 }
+
+function afficherListeAchatsFiltres() {
+    var lignes = _achatsLignesFiltrees || [];
+    if (_achatSearchQuery) {
+        lignes = lignes.filter(function(a) {
+            return (a.produitNom || '').toLowerCase().indexOf(_achatSearchQuery) !== -1;
+        });
+    }
+    afficherListeAchats(lignes);
+}
+window.afficherListeAchatsFiltres = afficherListeAchatsFiltres;
 
 var _achatsSortCol = 'date';
 var _achatsSortDir = 'desc';
@@ -2070,6 +2089,7 @@ function afficherListeAchats(lignes) {
     html += thFor('prix', 'Prix achat', 'center');
     html += thFor('total', 'Total', 'center');
     html += '<th class="center">Opérateur</th>';
+    html += '<th class="center">Actions</th>';
     html += '</tr></thead><tbody>';
 
     lignes.forEach(function(a) {
@@ -2091,6 +2111,10 @@ function afficherListeAchats(lignes) {
         html += '<td class="center">' + prix.toFixed(2) + '</td>';
         html += '<td class="center" style="font-weight:700;color:#2563EB;">' + ligneTotal.toFixed(2) + '</td>';
         html += '<td class="center" style="font-size:11px;color:#94A3B8;">' + escapeHtml(a.operateur || '—') + '</td>';
+        html += '<td class="center" style="white-space:nowrap;">';
+        html += '<button class="ac-price-action-btn validate" onclick="modifierAchat(\'' + a.id + '\')" title="Modifier"><i class="fas fa-edit"></i></button>';
+        html += '<button class="ac-price-action-btn cancel" onclick="supprimerAchat(\'' + a.id + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>';
+        html += '</td>';
         html += '</tr>';
     });
 
@@ -2102,6 +2126,46 @@ function afficherListeAchats(lignes) {
     if (elL) elL.textContent = lignes.length;
     if (elM) elM.textContent = total.toFixed(2) + ' MAD';
 }
+
+function modifierAchat(id) {
+    var a = _achatsCache.find(function(x) { return x.id === id; });
+    if (!a) { alert('Achat introuvable'); return; }
+    var qte = prompt('Quantité (boîtes) :', acNum(a.quantite));
+    if (qte === null) return;
+    qte = acNum(qte);
+    if (qte <= 0) { alert('Quantité invalide'); return; }
+    var prix = prompt('Prix achat unitaire (MAD) :', acNum(a.prixAchat).toFixed(2));
+    if (prix === null) return;
+    prix = acNum(prix);
+    if (prix < 0) { alert('Prix invalide'); return; }
+    var nouveauTotal = qte * prix;
+
+    db.collection('achats').doc(id).update({
+        quantite: qte,
+        prixAchat: prix,
+        total: nouveauTotal
+    }).then(function() {
+        a.quantite = qte;
+        a.prixAchat = prix;
+        a.total = nouveauTotal;
+        afficherListeAchatsFiltres();
+        alert('✅ Achat modifié');
+    }).catch(function(e) { alert('❌ Erreur : ' + e.message); });
+}
+window.modifierAchat = modifierAchat;
+
+function supprimerAchat(id) {
+    var a = _achatsCache.find(function(x) { return x.id === id; });
+    if (!a) { alert('Achat introuvable'); return; }
+    if (!confirm('Supprimer cet achat ?\n\n' + (a.produitNom || '') + ' — Qté : ' + acNum(a.quantite) + ' — Total : ' + acNum(a.total).toFixed(2) + ' MAD\n\n⚠️ Le stock ne sera PAS ajusté automatiquement.')) return;
+    db.collection('achats').doc(id).delete().then(function() {
+        _achatsCache = _achatsCache.filter(function(x) { return x.id !== id; });
+        _achatsLignesFiltrees = _achatsLignesFiltrees.filter(function(x) { return x.id !== id; });
+        afficherListeAchatsFiltres();
+        alert('🗑️ Achat supprimé');
+    }).catch(function(e) { alert('❌ Erreur : ' + e.message); });
+}
+window.supprimerAchat = supprimerAchat;
 
 window._achatsToggleSort = _achatsToggleSort;
 
@@ -2141,6 +2205,9 @@ window.openListeAchatsModal = openListeAchatsModal;
 window.fermerListeAchats = fermerListeAchats;
 window.filtrerAchats = filtrerAchats;
 window.imprimerListeAchats = imprimerListeAchats;
+window.modifierAchat = modifierAchat;
+window.supprimerAchat = supprimerAchat;
+window.afficherListeAchatsFiltres = afficherListeAchatsFiltres;
 
 window.openAchatModal = openAchatModal;
 window.fermerAchatModal = fermerAchatModal;
@@ -2176,4 +2243,4 @@ console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix
 console.log('✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)');
 console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
 console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur');
-
+console.log('✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats');
