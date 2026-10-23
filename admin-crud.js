@@ -1320,6 +1320,7 @@ function editFournisseur(id) { db.collection('fournisseurs').doc(id).get().then(
 function deleteFournisseur(id) { if (confirm('Supprimer ce fournisseur ?')) { CacheDB.write('fournisseurs', id, null, 'delete').then(function() { alert('Supprimé'); loadFournisseurs(); CacheDB.sync(); }); } }
 
 
+
 // ====================================================
 //  💰 ACHATS + SCAN + WHATSAPP
 // ====================================================
@@ -2175,3 +2176,4 @@ console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix
 console.log('✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)');
 console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
 console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur');
+
