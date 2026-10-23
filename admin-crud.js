@@ -11,6 +11,7 @@
 // ✅ 🆕 Validation/Annulation individuelle des changements de prix
 // ✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)
 // ✅ 🆕 Fix scroll modal achat (footer toujours accessible)
+// ✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -699,6 +700,7 @@ function loadProductsPage(c) {
     html += '      <select id="categoryFilter" class="ac-form-select" style="padding:11px 14px;min-width:180px;cursor:pointer;" onchange="filterProducts()"><option value="">Toutes catégories</option></select>';
     html += '      <button class="ac-btn ac-btn-primary" onclick="openProductForm()"><i class="fas fa-plus"></i> Nouveau</button>';
     html += '      <button class="ac-btn ac-btn-achat" onclick="openAchatModal()"><i class="fas fa-shopping-cart"></i> Achats</button>';
+    html += '      <button class="ac-btn ac-btn-primary" style="background:linear-gradient(135deg,#8B5CF6,#6D28D9);" onclick="openListeAchatsModal()"><i class="fas fa-list-alt"></i> Liste des achats</button>';
     html += '    </div>';
     html += '  </div>';
     html += '  <div class="ac-stats-grid" id="productsStatsGrid"></div>';
@@ -1636,6 +1638,26 @@ async function validerAchats() {
                 updateData.dateExpiration = ne.toISOString().split('T')[0];
             } else if (item.dateExpiration) updateData.dateExpiration = item.dateExpiration;
             batch.update(prodRef, updateData);
+
+            // ✅ HISTORISATION : enregistrer l'achat dans la collection "achats"
+            var achatRef = db.collection('achats').doc();
+            batch.set(achatRef, {
+                produitId: item.id,
+                produitNom: item.nom,
+                fournisseurId: fournisseurAchatSelectionne.id,
+                fournisseurNom: ((fournisseurAchatSelectionne.nom || '') + ' ' + (fournisseurAchatSelectionne.prenom || '')).trim(),
+                fournisseurSociete: fournisseurAchatSelectionne.societe || '',
+                quantite: acNum(item.quantite),
+                unite: 'boîte',
+                stockAjoute: stockToAdd,
+                prixAchat: acNum(item.nouveauPrix),
+                prixAvant: acNum(item.prixActuel),
+                total: acNum(item.quantite) * acNum(item.nouveauPrix),
+                dateExpiration: updateData.dateExpiration || null,
+                date: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                operateur: (firebase.auth().currentUser && firebase.auth().currentUser.email) || 'admin'
+            });
         }
         await batch.commit();
         alert('✅ Stock et prix mis à jour !');
@@ -1878,6 +1900,188 @@ async function scannerFacture(imgData) {
     }
 }
 
+// ====================================================
+//  📋 LISTE DES ACHATS FOURNISSEURS (historique)
+// ====================================================
+var _achatsCache = [];
+var _achatsFiltreJours = 0;
+
+function openListeAchatsModal() {
+    var old = document.getElementById('modalListeAchats');
+    if (old) old.remove();
+
+    var html = '';
+    html += '<div id="modalListeAchats" class="ac-modal-overlay">';
+    html += '  <div class="ac-modal" style="max-width:1200px;">';
+    html += '    <div class="ac-modal-header">';
+    html += '      <h3><i class="fas fa-list-alt"></i> Liste des achats fournisseurs</h3>';
+    html += '      <button class="ac-modal-close" onclick="fermerListeAchats()"><i class="fas fa-times"></i></button>';
+    html += '    </div>';
+    html += '    <div class="ac-modal-toolbar" style="gap:6px;">';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="0"   onclick="filtrerAchats(0)">Aujourd\'hui</button>';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="3"   onclick="filtrerAchats(3)">3 jours</button>';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="7"   onclick="filtrerAchats(7)">1 semaine</button>';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="15"  onclick="filtrerAchats(15)">15 jours</button>';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="30"  onclick="filtrerAchats(30)">1 mois</button>';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="180" onclick="filtrerAchats(180)">6 mois</button>';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="365" onclick="filtrerAchats(365)">1 an</button>';
+    html += '      <button class="ac-btn ac-btn-ghost filtre-achat-btn" data-jours="-1"  onclick="filtrerAchats(-1)">Tout</button>';
+    html += '    </div>';
+    html += '    <div class="ac-modal-body" id="achatsListeBody">';
+    html += '      <div class="ac-empty"><i class="fas fa-spinner fa-spin"></i><h3>Chargement…</h3></div>';
+    html += '    </div>';
+    html += '    <div class="ac-modal-footer">';
+    html += '      <div class="ac-modal-totals">';
+    html += '        <div class="ac-total-block"><span class="label">Lignes</span><span class="value blue" id="achatsTotalLignes">0</span></div>';
+    html += '        <div class="ac-total-block"><span class="label">Total période</span><span class="value green" id="achatsTotalMontant">0.00 MAD</span></div>';
+    html += '      </div>';
+    html += '      <div class="ac-modal-actions">';
+    html += '        <button class="ac-btn ac-btn-primary" onclick="imprimerListeAchats()"><i class="fas fa-print"></i> Imprimer</button>';
+    html += '        <button class="ac-btn ac-btn-ghost" onclick="fermerListeAchats()">Fermer</button>';
+    html += '      </div>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '</div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    filtrerAchats(0);
+}
+
+function fermerListeAchats() {
+    var o = document.getElementById('modalListeAchats');
+    if (o) o.remove();
+}
+
+async function filtrerAchats(nbJours) {
+    _achatsFiltreJours = nbJours;
+    document.querySelectorAll('.filtre-achat-btn').forEach(function(b) {
+        var isActif = parseInt(b.dataset.jours) === nbJours;
+        b.style.background = isActif ? 'linear-gradient(135deg,#3B82F6,#2563EB)' : '';
+        b.style.color = isActif ? 'white' : '';
+        b.style.borderColor = isActif ? '#2563EB' : '';
+    });
+
+    var body = document.getElementById('achatsListeBody');
+    if (!body) return;
+    body.innerHTML = '<div class="ac-empty"><i class="fas fa-spinner fa-spin"></i><h3>Chargement…</h3></div>';
+
+    try {
+        var snap = await db.collection('achats').orderBy('date', 'desc').limit(1000).get();
+        _achatsCache = [];
+        snap.forEach(function(d) {
+            var data = d.data();
+            data.id = d.id;
+            _achatsCache.push(data);
+        });
+
+        var lignes = _achatsCache;
+        if (nbJours > 0) {
+            var limite = new Date();
+            limite.setDate(limite.getDate() - nbJours);
+            limite.setHours(0, 0, 0, 0);
+            lignes = _achatsCache.filter(function(a) {
+                var dt = a.date && a.date.toDate ? a.date.toDate() : (a.date ? new Date(a.date) : null);
+                return dt && dt >= limite;
+            });
+        }
+
+        afficherListeAchats(lignes);
+    } catch(e) {
+        console.error(e);
+        body.innerHTML = '<div class="ac-empty"><i class="fas fa-exclamation-triangle"></i><h3>Erreur</h3><p>' + escapeHtml(e.message) + '</p></div>';
+    }
+}
+
+function afficherListeAchats(lignes) {
+    var body = document.getElementById('achatsListeBody');
+    if (!body) return;
+
+    if (lignes.length === 0) {
+        body.innerHTML = '<div class="ac-empty"><i class="fas fa-inbox"></i><h3>Aucun achat sur cette période</h3><p>Les achats effectués via le bouton « Achats » apparaîtront ici.</p></div>';
+        var elL = document.getElementById('achatsTotalLignes');
+        var elM = document.getElementById('achatsTotalMontant');
+        if (elL) elL.textContent = '0';
+        if (elM) elM.textContent = '0.00 MAD';
+        return;
+    }
+
+    var total = 0;
+    var html = '<table class="ac-modal-table"><thead><tr>';
+    html += '<th>Date</th>';
+    html += '<th>Heure</th>';
+    html += '<th>Produit</th>';
+    html += '<th>Fournisseur</th>';
+    html += '<th class="center">Qté</th>';
+    html += '<th class="center">Prix achat</th>';
+    html += '<th class="center">Total</th>';
+    html += '<th class="center">Opérateur</th>';
+    html += '</tr></thead><tbody>';
+
+    lignes.forEach(function(a) {
+        var dt = a.date && a.date.toDate ? a.date.toDate() : (a.date ? new Date(a.date) : new Date());
+        var dateStr = dt.toLocaleDateString('fr-FR');
+        var heureStr = dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        var qte = acNum(a.quantite);
+        var prix = acNum(a.prixAchat);
+        var ligneTotal = acNum(a.total) || (qte * prix);
+        total += ligneTotal;
+        var four = a.fournisseurNom || a.fournisseurSociete || '—';
+
+        html += '<tr>';
+        html += '<td>' + dateStr + '</td>';
+        html += '<td>' + heureStr + '</td>';
+        html += '<td><div class="ac-product-name">' + escapeHtml(a.produitNom || '—') + '</div></td>';
+        html += '<td>' + escapeHtml(four) + '</td>';
+        html += '<td class="center">' + qte + '</td>';
+        html += '<td class="center">' + prix.toFixed(2) + '</td>';
+        html += '<td class="center" style="font-weight:700;color:#2563EB;">' + ligneTotal.toFixed(2) + '</td>';
+        html += '<td class="center" style="font-size:11px;color:#94A3B8;">' + escapeHtml(a.operateur || '—') + '</td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    body.innerHTML = html;
+
+    var elL = document.getElementById('achatsTotalLignes');
+    var elM = document.getElementById('achatsTotalMontant');
+    if (elL) elL.textContent = lignes.length;
+    if (elM) elM.textContent = total.toFixed(2) + ' MAD';
+}
+
+function imprimerListeAchats() {
+    var body = document.getElementById('achatsListeBody');
+    if (!body) return;
+    var labels = {
+        0: 'Aujourd\'hui', 3: '3 derniers jours', 7: '1 semaine', 15: '15 jours',
+        30: '1 mois', 180: '6 mois', 365: '1 an', '-1': 'Tout l\'historique'
+    };
+    var titre = 'Liste des achats — ' + (labels[_achatsFiltreJours] || '');
+    var totalTxt = document.getElementById('achatsTotalMontant');
+    var w = window.open('', '_blank');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + titre + '</title>');
+    w.document.write('<style>body{font-family:system-ui,Arial;padding:24px;color:#0F172A;}');
+    w.document.write('h1{font-size:20px;margin:0 0 4px;} h2{font-size:13px;color:#64748B;font-weight:500;margin:0 0 20px;}');
+    w.document.write('table{width:100%;border-collapse:collapse;font-size:12px;}');
+    w.document.write('th{background:#1E40AF;color:white;padding:8px 6px;text-align:left;font-size:11px;text-transform:uppercase;}');
+    w.document.write('td{padding:6px;border-bottom:1px solid #E2E8F0;}');
+    w.document.write('tr:nth-child(even){background:#F8FAFC;}');
+    w.document.write('.total{margin-top:16px;text-align:right;font-size:15px;font-weight:800;color:#2563EB;}');
+    w.document.write('@media print{body{padding:0;} th{background:#1E40AF !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}');
+    w.document.write('</style></head><body>');
+    w.document.write('<h1>📋 ' + titre + '</h1>');
+    w.document.write('<h2>Mixmax Minimarket — Édité le ' + new Date().toLocaleString('fr-FR') + '</h2>');
+    w.document.write(body.innerHTML);
+    if (totalTxt) w.document.write('<div class="total">TOTAL PÉRIODE : ' + totalTxt.textContent + '</div>');
+    w.document.write('</body></html>');
+    w.document.close();
+    setTimeout(function() { w.print(); }, 400);
+}
+
+window.openListeAchatsModal = openListeAchatsModal;
+window.fermerListeAchats = fermerListeAchats;
+window.filtrerAchats = filtrerAchats;
+window.imprimerListeAchats = imprimerListeAchats;
+
 window.openAchatModal = openAchatModal;
 window.fermerAchatModal = fermerAchatModal;
 window.chargerProduitsFournisseurAchat = chargerProduitsFournisseurAchat;
@@ -1911,3 +2115,4 @@ console.log('✅ 🆕 Input prix float sans perte de focus');
 console.log('✅ 🆕 Validation/Annulation individuelle des changements de prix');
 console.log('✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité perçue)');
 console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
+console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression');
