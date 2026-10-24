@@ -985,7 +985,6 @@ window.dcpScheduleAlarms = async function() {
 
     console.log('🔔 ' + window._dcpAlarmTimers.length + ' alarme(s) programmée(s)');
 };
-
 // ==================== MODAL & CRUD ====================
 function openModal(t, b) {
 var titleEl = document.getElementById('modalTitle');
