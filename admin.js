@@ -3,7 +3,7 @@
 // ✅ 🆕 Alertes intelligentes sur le dashboard (Stock / Expiration / Prévisions ventes)
 // 🎨 Dashboard minimaliste — UNE SEULE COULEUR D'ACCENT (#2563EB), aligné sur le POS
 // 📱 100% responsive
-// 🆕 📅 Calendrier professionnel intégré (météo 7j + fêtes marocaines + événements)
+// 🆕 📅 Calendrier (météo 7j + fêtes marocaines + événements)
 
 // ==================== VARIABLES GLOBALES ====================
 window.editingId = window.editingId || null;
@@ -628,250 +628,69 @@ function injectAdminStyles() {
         }
 
         /* ============================================================ */
-        /* 📅 CALENDRIER + MÉTÉO + ÉVÉNEMENTS                            */
+        /* 🆕 📅 CALENDRIER — styles                                      */
         /* ============================================================ */
-
-        .dc-overlay {
-            position: fixed; inset: 0; background: rgba(15,23,42,0.65);
-            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-            z-index: 10001; display: flex; align-items: center; justify-content: center;
-            padding: 20px; overflow-y: auto; animation: dcFadeIn 0.2s ease;
-        }
-        @keyframes dcFadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .dc-modal {
-            background: #FFFFFF; border-radius: 20px; width: 100%; max-width: 900px;
-            max-height: 92vh; display: flex; flex-direction: column;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.25); overflow: hidden;
-            animation: dcSlideUp 0.3s cubic-bezier(0.4,0,0.2,1);
-        }
-        @keyframes dcSlideUp {
-            from { transform: translateY(30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .dc-header {
-            padding: 20px 28px; display: flex; justify-content: space-between;
-            align-items: center; background: linear-gradient(135deg, #EFF6FF, #FFFFFF);
-            border-bottom: 1px solid #E2E8F0; flex-shrink: 0;
-        }
-        .dc-header h3 {
-            font-size: 20px; font-weight: 800; color: #0F172A; margin: 0;
-            display: flex; align-items: center; gap: 12px; letter-spacing: -0.3px;
-        }
-        .dc-header h3 i {
-            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
-            color: white; padding: 10px; border-radius: 12px; font-size: 18px;
-            box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-        }
-        .dc-close {
-            width: 40px; height: 40px; border-radius: 50%; border: none;
-            background: #F1F5F9; color: #64748B; font-size: 18px; cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .dc-close:hover { background: #E2E8F0; color: #0F172A; transform: rotate(90deg); }
-
-        .dc-body {
-            flex: 1; overflow-y: auto; padding: 20px 28px;
-            background: #F8FAFC; display: flex; flex-direction: column; gap: 20px;
-        }
-
-        .dc-weather {
-            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
-            border-radius: 16px; padding: 18px 20px; color: #FFFFFF;
-            box-shadow: 0 6px 20px rgba(37,99,235,0.35);
-        }
-        .dc-weather-title {
-            font-size: 12px; font-weight: 800; letter-spacing: 1px;
-            text-transform: uppercase; opacity: 0.9; margin-bottom: 12px;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .dc-weather-days {
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
-        }
-        .dc-weather-day {
-            text-align: center; padding: 10px 6px; border-radius: 10px;
-            background: rgba(255,255,255,0.12); transition: all 0.2s ease;
-        }
-        .dc-weather-day:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
-        .dc-weather-day .dname {
-            font-size: 10px; font-weight: 700; opacity: 0.85; text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+        .dc-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.65); backdrop-filter: blur(6px); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+        .dc-modal { background: #FFFFFF; border-radius: 20px; width: 100%; max-width: 900px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.25); overflow: hidden; }
+        .dc-header { padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #EFF6FF, #FFFFFF); border-bottom: 1px solid #E2E8F0; flex-shrink: 0; }
+        .dc-header h3 { font-size: 20px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 12px; }
+        .dc-header h3 i { background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white; padding: 10px; border-radius: 12px; font-size: 18px; }
+        .dc-close { width: 40px; height: 40px; border-radius: 50%; border: none; background: #F1F5F9; color: #64748B; font-size: 18px; cursor: pointer; }
+        .dc-close:hover { background: #E2E8F0; color: #0F172A; }
+        .dc-body { flex: 1; overflow-y: auto; padding: 20px 28px; background: #F8FAFC; display: flex; flex-direction: column; gap: 20px; }
+        .dc-weather { background: linear-gradient(135deg, #3B82F6, #1D4ED8); border-radius: 16px; padding: 18px 20px; color: #FFFFFF; box-shadow: 0 6px 20px rgba(37,99,235,0.35); }
+        .dc-weather-title { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; opacity: 0.9; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .dc-weather-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .dc-weather-day { text-align: center; padding: 10px 6px; border-radius: 10px; background: rgba(255,255,255,0.12); }
+        .dc-weather-day .dname { font-size: 10px; font-weight: 700; opacity: 0.85; text-transform: uppercase; }
         .dc-weather-day .dicon { font-size: 22px; margin: 4px 0; }
         .dc-weather-day .dtemp { font-size: 13px; font-weight: 800; }
         .dc-weather-day .dtemp-min { font-size: 10px; opacity: 0.75; font-weight: 600; }
-
-        .dc-calendar-section {
-            background: #FFFFFF; border-radius: 16px; padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E2E8F0;
-        }
-        .dc-cal-nav {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 16px;
-        }
-        .dc-cal-title {
-            font-size: 18px; font-weight: 800; color: #0F172A;
-            text-transform: capitalize;
-        }
+        .dc-calendar-section { background: #FFFFFF; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; }
+        .dc-cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .dc-cal-title { font-size: 18px; font-weight: 800; color: #0F172A; text-transform: capitalize; }
         .dc-cal-arrows { display: flex; gap: 6px; }
-        .dc-cal-arrows button {
-            width: 36px; height: 36px; border-radius: 10px; border: none;
-            background: #EFF6FF; color: #2563EB; cursor: pointer;
-            transition: all 0.2s ease; font-size: 14px;
-        }
+        .dc-cal-arrows button { width: 36px; height: 36px; border-radius: 10px; border: none; background: #EFF6FF; color: #2563EB; cursor: pointer; font-size: 14px; }
         .dc-cal-arrows button:hover { background: #2563EB; color: white; }
-
-        .dc-cal-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
-        }
-        .dc-cal-dow {
-            text-align: center; font-size: 11px; font-weight: 800;
-            color: #64748B; padding: 8px 0; text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .dc-cal-day {
-            aspect-ratio: 1; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; border-radius: 10px;
-            cursor: pointer; transition: all 0.15s ease; font-size: 14px;
-            font-weight: 600; color: #0F172A; position: relative;
-            border: 1.5px solid transparent; user-select: none;
-        }
+        .dc-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .dc-cal-dow { text-align: center; font-size: 11px; font-weight: 800; color: #64748B; padding: 8px 0; text-transform: uppercase; }
+        .dc-cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: #0F172A; position: relative; border: 1.5px solid transparent; user-select: none; }
         .dc-cal-day:hover { background: #EFF6FF; border-color: #BFDBFE; }
         .dc-cal-day.other-month { color: #CBD5E1; font-weight: 500; }
-        .dc-cal-day.today {
-            background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.35);
-        }
-        .dc-cal-day.selected {
-            background: #DBEAFE; border-color: #2563EB; color: #1D4ED8;
-        }
-        .dc-cal-day.in-range {
-            background: #BFDBFE; color: #1E40AF;
-        }
-        .dc-cal-day.holiday::after {
-            content: ''; position: absolute; bottom: 4px; left: 50%;
-            transform: translateX(-50%); width: 5px; height: 5px;
-            border-radius: 50%; background: #EF4444;
-        }
-        .dc-cal-day.has-event::before {
-            content: ''; position: absolute; top: 4px; right: 4px;
-            width: 6px; height: 6px; border-radius: 50%; background: #10B981;
-        }
-        .dc-cal-day.today.holiday::after { background: #FCA5A5; }
-
-        .dc-events-section {
-            background: #FFFFFF; border-radius: 16px; padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E2E8F0;
-        }
-        .dc-events-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 14px; padding-bottom: 12px;
-            border-bottom: 2px solid #F1F5F9;
-        }
-        .dc-events-header h4 {
-            font-size: 15px; font-weight: 800; color: #0F172A; margin: 0;
-            display: flex; align-items: center; gap: 8px;
-        }
+        .dc-cal-day.today { background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white; }
+        .dc-cal-day.selected { background: #DBEAFE; border-color: #2563EB; color: #1D4ED8; }
+        .dc-cal-day.in-range { background: #BFDBFE; color: #1E40AF; }
+        .dc-cal-day.holiday::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: #EF4444; }
+        .dc-cal-day.has-event::before { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: #10B981; }
+        .dc-events-section { background: #FFFFFF; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; }
+        .dc-events-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 2px solid #F1F5F9; }
+        .dc-events-header h4 { font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px; }
         .dc-events-header h4 i { color: #8B5CF6; }
-        .dc-add-btn {
-            background: linear-gradient(135deg, #10B981, #059669);
-            color: white; border: none; border-radius: 10px; padding: 8px 16px;
-            font-size: 13px; font-weight: 700; cursor: pointer;
-            display: flex; align-items: center; gap: 6px;
-            box-shadow: 0 2px 8px rgba(16,185,129,0.3); transition: all 0.2s ease;
-        }
-        .dc-add-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,185,129,0.4); }
-
-        .dc-events-list {
-            display: flex; flex-direction: column; gap: 8px;
-            max-height: 260px; overflow-y: auto;
-        }
-        .dc-event-item {
-            display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-            background: #F8FAFC; border-radius: 12px;
-            border-left: 4px solid #8B5CF6; transition: all 0.2s ease;
-        }
-        .dc-event-item:hover { background: #F1F5F9; transform: translateX(4px); }
+        .dc-add-btn { background: linear-gradient(135deg, #10B981, #059669); color: white; border: none; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .dc-add-btn:hover { transform: translateY(-2px); }
+        .dc-events-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+        .dc-event-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #F8FAFC; border-radius: 12px; border-left: 4px solid #8B5CF6; }
         .dc-event-item.holiday { border-left-color: #EF4444; background: #FEF2F2; }
-        .dc-event-item.holiday:hover { background: #FEE2E2; }
         .dc-event-icon { font-size: 22px; flex-shrink: 0; }
         .dc-event-content { flex: 1; min-width: 0; }
-        .dc-event-title {
-            font-size: 14px; font-weight: 700; color: #0F172A;
-            margin: 0 0 2px 0; overflow: hidden; text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .dc-event-date {
-            font-size: 11px; color: #64748B; font-weight: 600;
-            display: flex; align-items: center; gap: 4px;
-        }
-        .dc-event-delete {
-            background: #FEF2F2; color: #EF4444; border: none;
-            border-radius: 8px; padding: 6px 10px; cursor: pointer;
-            font-size: 12px; transition: all 0.2s ease;
-        }
+        .dc-event-title { font-size: 14px; font-weight: 700; color: #0F172A; margin: 0 0 2px 0; }
+        .dc-event-date { font-size: 11px; color: #64748B; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .dc-event-delete { background: #FEF2F2; color: #EF4444; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
         .dc-event-delete:hover { background: #EF4444; color: white; }
-        .dc-empty-events {
-            text-align: center; padding: 30px 20px; color: #94A3B8;
-            font-size: 13px;
-        }
+        .dc-empty-events { text-align: center; padding: 30px 20px; color: #94A3B8; font-size: 13px; }
         .dc-empty-events i { font-size: 32px; color: #CBD5E1; margin-bottom: 8px; display: block; }
-
-        .dc-form-overlay {
-            position: absolute; inset: 0; background: rgba(15,23,42,0.6);
-            z-index: 10; display: flex; align-items: center; justify-content: center;
-            padding: 20px; border-radius: 20px;
-        }
-        .dc-form {
-            background: white; border-radius: 16px; padding: 24px;
-            width: 100%; max-width: 440px;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.25);
-            animation: dcSlideUp 0.3s ease;
-        }
-        .dc-form h4 {
-            font-size: 17px; font-weight: 800; color: #0F172A;
-            margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;
-        }
-        .dc-form h4 i {
-            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
-            color: white; padding: 8px; border-radius: 10px; font-size: 14px;
-        }
+        .dc-form-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.6); z-index: 10; display: flex; align-items: center; justify-content: center; padding: 20px; border-radius: 20px; }
+        .dc-form { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 440px; }
+        .dc-form h4 { font-size: 17px; font-weight: 800; color: #0F172A; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; }
+        .dc-form h4 i { background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white; padding: 8px; border-radius: 10px; font-size: 14px; }
         .dc-form-group { margin-bottom: 12px; }
-        .dc-form-label {
-            font-size: 11px; font-weight: 800; color: #64748B;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            display: block; margin-bottom: 6px;
-        }
-        .dc-form-input, .dc-form-textarea, .dc-form-select {
-            width: 100%; padding: 10px 12px; border: 1.5px solid #E2E8F0;
-            border-radius: 10px; font-size: 14px; font-family: inherit;
-            color: #0F172A; outline: none; transition: all 0.2s ease;
-            box-sizing: border-box;
-        }
-        .dc-form-input:focus, .dc-form-textarea:focus, .dc-form-select:focus {
-            border-color: #8B5CF6; box-shadow: 0 0 0 4px rgba(139,92,246,0.1);
-        }
+        .dc-form-label { font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; display: block; margin-bottom: 6px; }
+        .dc-form-input, .dc-form-textarea, .dc-form-select { width: 100%; padding: 10px 12px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-size: 14px; font-family: inherit; color: #0F172A; outline: none; box-sizing: border-box; }
+        .dc-form-input:focus, .dc-form-textarea:focus, .dc-form-select:focus { border-color: #8B5CF6; box-shadow: 0 0 0 4px rgba(139,92,246,0.1); }
         .dc-form-textarea { resize: vertical; min-height: 60px; }
-        .dc-form-actions {
-            display: flex; gap: 10px; justify-content: flex-end;
-            margin-top: 18px;
-        }
-        .dc-form-btn-cancel {
-            background: #F1F5F9; color: #64748B; border: none;
-            border-radius: 10px; padding: 10px 20px; font-weight: 700;
-            cursor: pointer; transition: all 0.2s ease; font-size: 13px;
-        }
-        .dc-form-btn-cancel:hover { background: #E2E8F0; }
-        .dc-form-btn-save {
-            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
-            color: white; border: none; border-radius: 10px;
-            padding: 10px 20px; font-weight: 700; cursor: pointer;
-            transition: all 0.2s ease; font-size: 13px;
-            box-shadow: 0 2px 8px rgba(139,92,246,0.3);
-        }
-        .dc-form-btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(139,92,246,0.4); }
-
+        .dc-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+        .dc-form-btn-cancel { background: #F1F5F9; color: #64748B; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; cursor: pointer; font-size: 13px; }
+        .dc-form-btn-save { background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; cursor: pointer; font-size: 13px; }
         @media (max-width: 640px) {
             .dc-modal { max-width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; }
             .dc-weather-days { grid-template-columns: repeat(4, 1fr); }
@@ -884,10 +703,8 @@ function injectAdminStyles() {
     document.head.appendChild(style);
 }
 
-
-
-
-// ==================== 📅 CALENDRIER + MÉTÉO + ÉVÉNEMENTS ====================
+// ==================== 🆕 📅 CALENDRIER — fonctions ====================
+window.dcState = window.dcState || { currentDate: new Date(), selectedDates: [], events: [], weather: null };
 const DC_WEATHER_LAT = 33.5731;
 const DC_WEATHER_LON = -7.5898;
 const DC_WEATHER_CITY = 'Casablanca';
@@ -902,78 +719,24 @@ const DC_FETES_FIXES = [
     { month: 8, day: 20, name: 'Révolution du Roi et du Peuple', icon: '🎖️' },
     { month: 8, day: 21, name: 'Fête de la Jeunesse', icon: '🎉' },
     { month: 11, day: 6, name: 'Marche Verte', icon: '🟢' },
-    { month: 11, day: 18, name: 'Fête de l\'Indépendance', icon: '🇲🇦' },
+    { month: 11, day: 18, name: 'Fête de l\'Indépendance', icon: '🇲🇦' }
 ];
-
 const DC_FETES_RELIGIEUSES = {
-    2024: [
-        { month: 3, day: 11, name: 'Aïd Al-Fitr', icon: '🌙' },
-        { month: 6, day: 17, name: 'Aïd Al-Adha', icon: '🐑' },
-        { month: 7, day: 8, name: '1er Moharram', icon: '🌙' },
-        { month: 9, day: 16, name: 'Aïd Al-Mawlid', icon: '🌙' },
-    ],
-    2025: [
-        { month: 3, day: 31, name: 'Aïd Al-Fitr', icon: '🌙' },
-        { month: 6, day: 7, name: 'Aïd Al-Adha', icon: '🐑' },
-        { month: 6, day: 27, name: '1er Moharram', icon: '🌙' },
-        { month: 9, day: 5, name: 'Aïd Al-Mawlid', icon: '🌙' },
-    ],
-    2026: [
-        { month: 3, day: 20, name: 'Aïd Al-Fitr', icon: '🌙' },
-        { month: 5, day: 27, name: 'Aïd Al-Adha', icon: '🐑' },
-        { month: 6, day: 16, name: '1er Moharram', icon: '🌙' },
-        { month: 8, day: 25, name: 'Aïd Al-Mawlid', icon: '🌙' },
-    ],
-    2027: [
-        { month: 3, day: 10, name: 'Aïd Al-Fitr', icon: '🌙' },
-        { month: 5, day: 17, name: 'Aïd Al-Adha', icon: '🐑' },
-        { month: 6, day: 5, name: '1er Moharram', icon: '🌙' },
-        { month: 8, day: 14, name: 'Aïd Al-Mawlid', icon: '🌙' },
-    ],
+    2024: [{ month: 3, day: 11, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 6, day: 17, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 7, day: 8, name: '1er Moharram', icon: '🌙' }, { month: 9, day: 16, name: 'Aïd Al-Mawlid', icon: '🌙' }],
+    2025: [{ month: 3, day: 31, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 6, day: 7, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 6, day: 27, name: '1er Moharram', icon: '🌙' }, { month: 9, day: 5, name: 'Aïd Al-Mawlid', icon: '🌙' }],
+    2026: [{ month: 3, day: 20, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 5, day: 27, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 6, day: 16, name: '1er Moharram', icon: '🌙' }, { month: 8, day: 25, name: 'Aïd Al-Mawlid', icon: '🌙' }],
+    2027: [{ month: 3, day: 10, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 5, day: 17, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 6, day: 5, name: '1er Moharram', icon: '🌙' }, { month: 8, day: 14, name: 'Aïd Al-Mawlid', icon: '🌙' }]
 };
-
-const DC_WMO_ICONS = {
-    0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
-    45: '🌫️', 48: '🌫️',
-    51: '🌦️', 53: '🌦️', 55: '🌧️',
-    61: '🌧️', 63: '🌧️', 65: '🌧️',
-    71: '🌨️', 73: '🌨️', 75: '❄️',
-    80: '🌦️', 81: '🌧️', 82: '⛈️',
-    95: '⛈️', 96: '⛈️', 99: '⛈️',
-};
-const DC_WMO_NAMES = {
-    0: 'Ciel dégagé', 1: 'Peu nuageux', 2: 'Partiellement nuageux', 3: 'Couvert',
-    45: 'Brouillard', 48: 'Brouillard givrant',
-    51: 'Bruine légère', 53: 'Bruine modérée', 55: 'Bruine dense',
-    61: 'Pluie faible', 63: 'Pluie modérée', 65: 'Pluie forte',
-    71: 'Neige légère', 73: 'Neige modérée', 75: 'Neige forte',
-    80: 'Averses faibles', 81: 'Averses modérées', 82: 'Averses violentes',
-    95: 'Orage', 96: 'Orage avec grêle', 99: 'Orage violent',
-};
-
-window.dcState = window.dcState || {
-    currentDate: new Date(),
-    selectedDates: [],
-    events: [],
-    weather: null,
-};
+const DC_WMO_ICONS = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '🌨️', 73: '🌨️', 75: '❄️', 80: '🌦️', 81: '🌧️', 82: '⛈️', 95: '⛈️', 96: '⛈️', 99: '⛈️' };
+const DC_WMO_NAMES = { 0: 'Ciel dégagé', 1: 'Peu nuageux', 2: 'Partiellement nuageux', 3: 'Couvert', 45: 'Brouillard', 48: 'Brouillard givrant', 51: 'Bruine légère', 53: 'Bruine modérée', 55: 'Bruine dense', 61: 'Pluie faible', 63: 'Pluie modérée', 65: 'Pluie forte', 71: 'Neige légère', 73: 'Neige modérée', 75: 'Neige forte', 80: 'Averses faibles', 81: 'Averses modérées', 82: 'Averses violentes', 95: 'Orage', 96: 'Orage avec grêle', 99: 'Orage violent' };
 
 function dcGetHolidaysForYear(year) {
-    const list = DC_FETES_FIXES.map(f => ({ ...f, year, isHoliday: true }));
-    if (DC_FETES_RELIGIEUSES[year]) {
-        DC_FETES_RELIGIEUSES[year].forEach(f => list.push({ ...f, year, isHoliday: true }));
-    }
+    const list = DC_FETES_FIXES.map(f => Object.assign({}, f, { year: year, isHoliday: true }));
+    if (DC_FETES_RELIGIEUSES[year]) DC_FETES_RELIGIEUSES[year].forEach(f => list.push(Object.assign({}, f, { year: year, isHoliday: true })));
     return list;
 }
-
-function dcGetHolidayForDate(year, month, day) {
-    return dcGetHolidaysForYear(year).find(h => h.month === month && h.day === day);
-}
-
-function dcFormatDateKey(y, m, d) {
-    return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-}
-
+function dcGetHolidayForDate(year, month, day) { return dcGetHolidaysForYear(year).find(h => h.month === month && h.day === day); }
+function dcFormatDateKey(y, m, d) { return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
 function dcGetEventsForDate(dateKey) {
     return window.dcState.events.filter(e => {
         if (e.date === dateKey) return true;
@@ -981,390 +744,1320 @@ function dcGetEventsForDate(dateKey) {
         return false;
     });
 }
-
 async function dcFetchWeather() {
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${DC_WEATHER_LAT}&longitude=${DC_WEATHER_LON}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Africa%2FCasablanca&forecast_days=7`;
-        const res = await fetch(url);
+        var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + DC_WEATHER_LAT + '&longitude=' + DC_WEATHER_LON + '&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Africa%2FCasablanca&forecast_days=7';
+        var res = await fetch(url);
         if (!res.ok) throw new Error('Weather API failed');
-        const data = await res.json();
+        var data = await res.json();
         return data.daily;
-    } catch (e) {
-        console.warn('Météo indisponible:', e);
-        return null;
-    }
+    } catch (e) { console.warn('Météo indisponible:', e); return null; }
 }
-
 function dcRenderWeather(daily, container) {
-    if (!daily || !daily.time) {
-        container.innerHTML = '<div style="opacity:0.7;font-size:12px;">🌍 Météo indisponible</div>';
-        return;
-    }
-    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-    let html = '<div class="dc-weather-title"><i class="fas fa-map-marker-alt"></i> Météo · ' + DC_WEATHER_CITY + ' (7 jours)</div>';
-    html += '<div class="dc-weather-days">';
-    for (let i = 0; i < daily.time.length; i++) {
-        const d = new Date(daily.time[i]);
-        const dayName = days[d.getDay()];
-        const code = daily.weather_code[i];
-        const tmax = Math.round(daily.temperature_2m_max[i]);
-        const tmin = Math.round(daily.temperature_2m_min[i]);
-        const icon = DC_WMO_ICONS[code] || '🌡️';
-        const label = DC_WMO_NAMES[code] || '';
-        html += '<div class="dc-weather-day" title="' + label + '">';
-        html += '<div class="dname">' + dayName + '</div>';
-        html += '<div class="dicon">' + icon + '</div>';
-        html += '<div class="dtemp">' + tmax + '°</div>';
-        html += '<div class="dtemp-min">' + tmin + '°</div>';
-        html += '</div>';
+    if (!daily || !daily.time) { container.innerHTML = '<div style="opacity:0.7;font-size:12px;">🌍 Météo indisponible</div>'; return; }
+    var days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    var html = '<div class="dc-weather-title"><i class="fas fa-map-marker-alt"></i> Météo · ' + DC_WEATHER_CITY + ' (7 jours)</div><div class="dc-weather-days">';
+    for (var i = 0; i < daily.time.length; i++) {
+        var d = new Date(daily.time[i]);
+        var code = daily.weather_code[i];
+        var tmax = Math.round(daily.temperature_2m_max[i]);
+        var tmin = Math.round(daily.temperature_2m_min[i]);
+        var icon = DC_WMO_ICONS[code] || '🌡️';
+        html += '<div class="dc-weather-day" title="' + (DC_WMO_NAMES[code] || '') + '"><div class="dname">' + days[d.getDay()] + '</div><div class="dicon">' + icon + '</div><div class="dtemp">' + tmax + '°</div><div class="dtemp-min">' + tmin + '°</div></div>';
     }
     html += '</div>';
     container.innerHTML = html;
 }
-
 async function dcLoadEvents() {
     if (typeof db !== 'undefined' && db) {
         try {
-            const snap = await db.collection(DC_COLLECTION).orderBy('date', 'asc').get();
-            const events = [];
-            snap.forEach(d => events.push({ id: d.id, ...d.data() }));
+            var snap = await db.collection(DC_COLLECTION).orderBy('date', 'asc').get();
+            var events = [];
+            snap.forEach(d => events.push(Object.assign({ id: d.id }, d.data())));
             localStorage.setItem('dc_events_cache', JSON.stringify(events));
             return events;
-        } catch (e) {
-            console.warn('Firestore events indisponible, fallback localStorage', e);
-        }
+        } catch (e) { console.warn('Firestore events fallback', e); }
     }
-    try {
-        return JSON.parse(localStorage.getItem('dc_events_cache') || '[]');
-    } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem('dc_events_cache') || '[]'); } catch (e) { return []; }
 }
-
 async function dcSaveEvent(ev) {
     if (typeof db !== 'undefined' && db) {
-        try {
-            const ref = await db.collection(DC_COLLECTION).add(ev);
-            return { id: ref.id, ...ev };
-        } catch (e) {
-            console.warn('Save event Firestore failed, fallback localStorage', e);
-        }
+        try { var ref = await db.collection(DC_COLLECTION).add(ev); return Object.assign({ id: ref.id }, ev); }
+        catch (e) { console.warn('Save event fallback', e); }
     }
-    const all = JSON.parse(localStorage.getItem('dc_events_cache') || '[]');
+    var all = JSON.parse(localStorage.getItem('dc_events_cache') || '[]');
     ev.id = 'local_' + Date.now();
     all.push(ev);
     localStorage.setItem('dc_events_cache', JSON.stringify(all));
     return ev;
 }
-
 async function dcDeleteEvent(id) {
     if (typeof db !== 'undefined' && db && !id.startsWith('local_')) {
-        try {
-            await db.collection(DC_COLLECTION).doc(id).delete();
-            return true;
-        } catch (e) {
-            console.warn('Delete event Firestore failed', e);
-        }
+        try { await db.collection(DC_COLLECTION).doc(id).delete(); return true; }
+        catch (e) { console.warn('Delete event fallback', e); }
     }
-    const all = JSON.parse(localStorage.getItem('dc_events_cache') || '[]');
+    var all = JSON.parse(localStorage.getItem('dc_events_cache') || '[]');
     localStorage.setItem('dc_events_cache', JSON.stringify(all.filter(e => e.id !== id)));
     return true;
 }
-
 function dcRenderCalendar() {
-    const st = window.dcState;
-    const y = st.currentDate.getFullYear();
-    const m = st.currentDate.getMonth();
-    const today = new Date();
-    const todayKey = dcFormatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
-
-    const firstDay = new Date(y, m, 1);
-    const lastDay = new Date(y, m + 1, 0);
-    const startWeekday = (firstDay.getDay() + 6) % 7;
-    const daysInMonth = lastDay.getDate();
-    const prevLastDay = new Date(y, m, 0).getDate();
-
-    const monthName = st.currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-
-    let html = '';
-    html += '<div class="dc-cal-nav">';
-    html += '<div class="dc-cal-title">' + monthName + '</div>';
-    html += '<div class="dc-cal-arrows">';
-    html += '<button onclick="dcNavMonth(-1)"><i class="fas fa-chevron-left"></i></button>';
-    html += '<button onclick="dcNavToday()" title="Aujourd\'hui" style="width:auto;padding:0 12px;font-size:12px;font-weight:800;">Auj.</button>';
-    html += '<button onclick="dcNavMonth(1)"><i class="fas fa-chevron-right"></i></button>';
-    html += '</div></div>';
-
+    var st = window.dcState;
+    var y = st.currentDate.getFullYear();
+    var m = st.currentDate.getMonth();
+    var today = new Date();
+    var todayKey = dcFormatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+    var firstDay = new Date(y, m, 1);
+    var lastDay = new Date(y, m + 1, 0);
+    var startWeekday = (firstDay.getDay() + 6) % 7;
+    var daysInMonth = lastDay.getDate();
+    var prevLastDay = new Date(y, m, 0).getDate();
+    var monthName = st.currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    var html = '<div class="dc-cal-nav"><div class="dc-cal-title">' + monthName + '</div><div class="dc-cal-arrows"><button onclick="dcNavMonth(-1)"><i class="fas fa-chevron-left"></i></button><button onclick="dcNavToday()" style="width:auto;padding:0 12px;font-size:12px;font-weight:800;">Auj.</button><button onclick="dcNavMonth(1)"><i class="fas fa-chevron-right"></i></button></div></div>';
     html += '<div class="dc-cal-grid">';
-    ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].forEach(dow => {
-        html += '<div class="dc-cal-dow">' + dow + '</div>';
-    });
-
-    for (let i = startWeekday - 1; i >= 0; i--) {
-        html += '<div class="dc-cal-day other-month">' + (prevLastDay - i) + '</div>';
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dateKey = dcFormatDateKey(y, m, d);
-        const isToday = dateKey === todayKey;
-        const isSelected = st.selectedDates.includes(dateKey);
-        const isInRange = st.selectedDates.length === 2 &&
-            dateKey >= st.selectedDates[0] && dateKey <= st.selectedDates[1];
-        const holiday = dcGetHolidayForDate(y, m + 1, d);
-        const hasEvent = dcGetEventsForDate(dateKey).length > 0;
-
-        let cls = 'dc-cal-day';
+    ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].forEach(dow => { html += '<div class="dc-cal-dow">' + dow + '</div>'; });
+    for (var i = startWeekday - 1; i >= 0; i--) html += '<div class="dc-cal-day other-month">' + (prevLastDay - i) + '</div>';
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateKey = dcFormatDateKey(y, m, d);
+        var isToday = dateKey === todayKey;
+        var isSelected = st.selectedDates.indexOf(dateKey) !== -1;
+        var isInRange = st.selectedDates.length === 2 && dateKey >= st.selectedDates[0] && dateKey <= st.selectedDates[1];
+        var holiday = dcGetHolidayForDate(y, m + 1, d);
+        var hasEvent = dcGetEventsForDate(dateKey).length > 0;
+        var cls = 'dc-cal-day';
         if (isToday) cls += ' today';
         if (isSelected) cls += ' selected';
         else if (isInRange) cls += ' in-range';
         if (holiday) cls += ' holiday';
         if (hasEvent) cls += ' has-event';
-
-        let title = '';
+        var title = '';
         if (holiday) title = holiday.name;
-        const evs = dcGetEventsForDate(dateKey);
+        var evs = dcGetEventsForDate(dateKey);
         if (evs.length) title += (title ? ' · ' : '') + evs.map(e => e.title).join(', ');
-
         html += '<div class="' + cls + '" data-date="' + dateKey + '" onclick="dcToggleDate(\'' + dateKey + '\')" title="' + title + '">' + d + '</div>';
     }
-
-    const totalCells = startWeekday + daysInMonth;
-    const remaining = (7 - (totalCells % 7)) % 7;
-    for (let i = 1; i <= remaining; i++) {
-        html += '<div class="dc-cal-day other-month">' + i + '</div>';
-    }
+    var totalCells = startWeekday + daysInMonth;
+    var remaining = (7 - (totalCells % 7)) % 7;
+    for (var j = 1; j <= remaining; j++) html += '<div class="dc-cal-day other-month">' + j + '</div>';
     html += '</div>';
     return html;
 }
-
 function dcRenderEventsList() {
-    const st = window.dcState;
-    const events = [];
-    const y = st.currentDate.getFullYear();
-    const m = st.currentDate.getMonth();
-
+    var st = window.dcState;
+    var events = [];
+    var y = st.currentDate.getFullYear();
+    var m = st.currentDate.getMonth();
     dcGetHolidaysForYear(y).forEach(h => {
-        if (h.month === m + 1) {
-            events.push({
-                isHoliday: true,
-                title: h.name,
-                icon: h.icon,
-                dateKey: dcFormatDateKey(y, m, h.day),
-                dateLabel: h.day + ' ' + st.currentDate.toLocaleDateString('fr-FR', { month: 'long' }),
-            });
-        }
+        if (h.month === m + 1) events.push({ isHoliday: true, title: h.name, icon: h.icon, dateKey: dcFormatDateKey(y, m, h.day), dateLabel: h.day + ' ' + st.currentDate.toLocaleDateString('fr-FR', { month: 'long' }) });
     });
-
     st.events.forEach(e => {
-        const parts = e.date.split('-');
-        const ey = Number(parts[0]), em = Number(parts[1]);
-        if (ey === y && (em - 1) === m) {
-            events.push({
-                id: e.id,
-                isHoliday: false,
-                title: e.title,
-                icon: e.icon || '📌',
-                dateKey: e.date,
-                dateLabel: new Date(e.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
-                endDate: e.endDate,
-            });
-        }
+        var parts = e.date.split('-');
+        var ey = Number(parts[0]), em = Number(parts[1]);
+        if (ey === y && (em - 1) === m) events.push({ id: e.id, isHoliday: false, title: e.title, icon: e.icon || '📌', dateKey: e.date, dateLabel: new Date(e.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }), endDate: e.endDate });
     });
-
     events.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-
-    let html = '';
-    if (events.length === 0) {
-        html += '<div class="dc-empty-events"><i class="fas fa-calendar-day"></i>Aucun événement ce mois</div>';
-    } else {
+    var html = '';
+    if (events.length === 0) html += '<div class="dc-empty-events"><i class="fas fa-calendar-day"></i>Aucun événement ce mois</div>';
+    else {
         events.forEach(ev => {
-            html += '<div class="dc-event-item' + (ev.isHoliday ? ' holiday' : '') + '">';
-            html += '<div class="dc-event-icon">' + ev.icon + '</div>';
-            html += '<div class="dc-event-content">';
-            html += '<p class="dc-event-title">' + escapeHtml(ev.title) + '</p>';
-            html += '<div class="dc-event-date"><i class="fas fa-calendar"></i> ' + ev.dateLabel;
-            if (ev.endDate && ev.endDate !== ev.dateKey) {
-                html += ' → ' + new Date(ev.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-            }
+            html += '<div class="dc-event-item' + (ev.isHoliday ? ' holiday' : '') + '"><div class="dc-event-icon">' + ev.icon + '</div><div class="dc-event-content"><p class="dc-event-title">' + escapeHtml(ev.title) + '</p><div class="dc-event-date"><i class="fas fa-calendar"></i> ' + ev.dateLabel;
+            if (ev.endDate && ev.endDate !== ev.dateKey) html += ' → ' + new Date(ev.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
             html += '</div></div>';
-            if (!ev.isHoliday && ev.id) {
-                html += '<button class="dc-event-delete" onclick="dcDeleteEventHandler(\'' + ev.id + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>';
-            }
+            if (!ev.isHoliday && ev.id) html += '<button class="dc-event-delete" onclick="dcDeleteEventHandler(\'' + ev.id + '\')"><i class="fas fa-trash"></i></button>';
             html += '</div>';
         });
     }
     return html;
 }
-
 function dcRefresh() {
-    const calContainer = document.getElementById('dcCalendarContainer');
-    const eventsContainer = document.getElementById('dcEventsContainer');
-    if (calContainer) calContainer.innerHTML = dcRenderCalendar();
-    if (eventsContainer) eventsContainer.innerHTML = dcRenderEventsList();
+    var c = document.getElementById('dcCalendarContainer');
+    var e = document.getElementById('dcEventsContainer');
+    if (c) c.innerHTML = dcRenderCalendar();
+    if (e) e.innerHTML = dcRenderEventsList();
 }
 window.dcRefresh = dcRefresh;
-
-window.dcNavMonth = function (delta) {
-    window.dcState.currentDate.setMonth(window.dcState.currentDate.getMonth() + delta);
-    dcRefresh();
-};
-
-window.dcNavToday = function () {
-    window.dcState.currentDate = new Date();
-    dcRefresh();
-};
-
+window.dcNavMonth = function (delta) { window.dcState.currentDate.setMonth(window.dcState.currentDate.getMonth() + delta); dcRefresh(); };
+window.dcNavToday = function () { window.dcState.currentDate = new Date(); dcRefresh(); };
 window.dcToggleDate = function (dateKey) {
-    const st = window.dcState;
-    const idx = st.selectedDates.indexOf(dateKey);
-    if (idx !== -1) {
-        st.selectedDates.splice(idx, 1);
-    } else {
-        if (st.selectedDates.length >= 2) {
-            st.selectedDates = [dateKey];
-        } else {
-            st.selectedDates.push(dateKey);
-            st.selectedDates.sort();
-        }
-    }
+    var st = window.dcState;
+    var idx = st.selectedDates.indexOf(dateKey);
+    if (idx !== -1) st.selectedDates.splice(idx, 1);
+    else { if (st.selectedDates.length >= 2) st.selectedDates = [dateKey]; else { st.selectedDates.push(dateKey); st.selectedDates.sort(); } }
     dcRefresh();
 };
-
 window.dcDeleteEventHandler = async function (id) {
     if (!confirm('Supprimer cet événement ?')) return;
     await dcDeleteEvent(id);
     window.dcState.events = window.dcState.events.filter(e => e.id !== id);
     dcRefresh();
 };
-
 window.dcOpenAddForm = function () {
-    const overlay = document.getElementById('dcFormOverlay');
+    var overlay = document.getElementById('dcFormOverlay');
     if (overlay) return;
-
-    let defaultDate = '';
+    var defaultDate = '';
     if (window.dcState.selectedDates.length > 0) defaultDate = window.dcState.selectedDates[0];
-    else {
-        const t = new Date();
-        defaultDate = dcFormatDateKey(t.getFullYear(), t.getMonth(), t.getDate());
-    }
-    const endDate = window.dcState.selectedDates.length === 2 ? window.dcState.selectedDates[1] : '';
-
-    const formHtml = `
-    <div id="dcFormOverlay" class="dc-form-overlay" onclick="if(event.target.id==='dcFormOverlay')dcCloseForm()">
-        <div class="dc-form" onclick="event.stopPropagation()">
-            <h4><i class="fas fa-plus"></i> Nouvel événement</h4>
-            <div class="dc-form-group">
-                <label class="dc-form-label">Titre *</label>
-                <input type="text" id="dcEvTitle" class="dc-form-input" placeholder="Ex: Livraison fournisseur" maxlength="80">
-            </div>
-            <div class="dc-form-group">
-                <label class="dc-form-label">Date début *</label>
-                <input type="date" id="dcEvDate" class="dc-form-input" value="${defaultDate}">
-            </div>
-            <div class="dc-form-group">
-                <label class="dc-form-label">Date fin (optionnel)</label>
-                <input type="date" id="dcEvEndDate" class="dc-form-input" value="${endDate}">
-            </div>
-            <div class="dc-form-group">
-                <label class="dc-form-label">Icône</label>
-                <select id="dcEvIcon" class="dc-form-select">
-                    <option value="📌">📌 Épingle</option>
-                    <option value="🎉">🎉 Fête</option>
-                    <option value="🚚">🚚 Livraison</option>
-                    <option value="📦">📦 Stock</option>
-                    <option value="💰">💰 Paiement</option>
-                    <option value="📊">📊 Réunion</option>
-                    <option value="⚠️">⚠️ Important</option>
-                    <option value="🛒">🛒 Commande</option>
-                    <option value="🎂">🎂 Anniversaire</option>
-                    <option value="🏖️">🏖️ Congé</option>
-                </select>
-            </div>
-            <div class="dc-form-group">
-                <label class="dc-form-label">Description (optionnel)</label>
-                <textarea id="dcEvDesc" class="dc-form-textarea" placeholder="Détails..." maxlength="300"></textarea>
-            </div>
-            <div class="dc-form-actions">
-                <button class="dc-form-btn-cancel" onclick="dcCloseForm()">Annuler</button>
-                <button class="dc-form-btn-save" onclick="dcSaveFormHandler()"><i class="fas fa-check"></i> Enregistrer</button>
-            </div>
-        </div>
-    </div>`;
+    else { var t = new Date(); defaultDate = dcFormatDateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
+    var endDate = window.dcState.selectedDates.length === 2 ? window.dcState.selectedDates[1] : '';
+    var formHtml = '<div id="dcFormOverlay" class="dc-form-overlay" onclick="if(event.target.id===\'dcFormOverlay\')dcCloseForm()"><div class="dc-form" onclick="event.stopPropagation()"><h4><i class="fas fa-plus"></i> Nouvel événement</h4><div class="dc-form-group"><label class="dc-form-label">Titre *</label><input type="text" id="dcEvTitle" class="dc-form-input" placeholder="Ex: Livraison fournisseur" maxlength="80"></div><div class="dc-form-group"><label class="dc-form-label">Date début *</label><input type="date" id="dcEvDate" class="dc-form-input" value="' + defaultDate + '"></div><div class="dc-form-group"><label class="dc-form-label">Date fin (optionnel)</label><input type="date" id="dcEvEndDate" class="dc-form-input" value="' + endDate + '"></div><div class="dc-form-group"><label class="dc-form-label">Icône</label><select id="dcEvIcon" class="dc-form-select"><option value="📌">📌 Épingle</option><option value="🎉">🎉 Fête</option><option value="🚚">🚚 Livraison</option><option value="📦">📦 Stock</option><option value="💰">💰 Paiement</option><option value="📊">📊 Réunion</option><option value="⚠️">⚠️ Important</option><option value="🛒">🛒 Commande</option><option value="🎂">🎂 Anniversaire</option><option value="🏖️">🏖️ Congé</option></select></div><div class="dc-form-group"><label class="dc-form-label">Description (optionnel)</label><textarea id="dcEvDesc" class="dc-form-textarea" placeholder="Détails..." maxlength="300"></textarea></div><div class="dc-form-actions"><button class="dc-form-btn-cancel" onclick="dcCloseForm()">Annuler</button><button class="dc-form-btn-save" onclick="dcSaveFormHandler()"><i class="fas fa-check"></i> Enregistrer</button></div></div></div>';
     document.querySelector('.dc-modal').insertAdjacentHTML('beforeend', formHtml);
-    setTimeout(() => document.getElementById('dcEvTitle').focus(), 100);
+    setTimeout(function () { document.getElementById('dcEvTitle').focus(); }, 100);
 };
-
-window.dcCloseForm = function () {
-    const overlay = document.getElementById('dcFormOverlay');
-    if (overlay) overlay.remove();
-};
-
+window.dcCloseForm = function () { var o = document.getElementById('dcFormOverlay'); if (o) o.remove(); };
 window.dcSaveFormHandler = async function () {
-    const title = document.getElementById('dcEvTitle').value.trim();
-    const date = document.getElementById('dcEvDate').value;
-    const endDate = document.getElementById('dcEvEndDate').value;
-    const icon = document.getElementById('dcEvIcon').value;
-    const description = document.getElementById('dcEvDesc').value.trim();
-
+    var title = document.getElementById('dcEvTitle').value.trim();
+    var date = document.getElementById('dcEvDate').value;
+    var endDate = document.getElementById('dcEvEndDate').value;
+    var icon = document.getElementById('dcEvIcon').value;
+    var description = document.getElementById('dcEvDesc').value.trim();
     if (!title) { alert('Le titre est obligatoire'); return; }
     if (!date) { alert('La date de début est obligatoire'); return; }
     if (endDate && endDate < date) { alert('La date de fin doit être après la date de début'); return; }
-
-    const ev = {
-        title,
-        date,
-        endDate: endDate || null,
-        icon,
-        description,
-        createdAt: new Date().toISOString(),
-    };
-    const saved = await dcSaveEvent(ev);
+    var ev = { title: title, date: date, endDate: endDate || null, icon: icon, description: description, createdAt: new Date().toISOString() };
+    var saved = await dcSaveEvent(ev);
     window.dcState.events.push(saved);
     dcCloseForm();
     window.dcState.selectedDates = [];
     dcRefresh();
 };
-
-window.dcCloseCalendar = function () {
-    const el = document.getElementById('dcOverlay');
-    if (el) el.remove();
-};
-
+window.dcCloseCalendar = function () { var el = document.getElementById('dcOverlay'); if (el) el.remove(); };
 window.openDashboardCalendar = async function () {
-    const old = document.getElementById('dcOverlay');
+    var old = document.getElementById('dcOverlay');
     if (old) old.remove();
-
-    const html = `
-    <div id="dcOverlay" class="dc-overlay" onclick="if(event.target.id==='dcOverlay')dcCloseCalendar()">
-        <div class="dc-modal" onclick="event.stopPropagation()">
-            <div class="dc-header">
-                <h3><i class="fas fa-calendar-alt"></i> Calendrier & Événements</h3>
-                <button class="dc-close" onclick="dcCloseCalendar()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="dc-body">
-                <div class="dc-weather" id="dcWeatherContainer">
-                    <div class="dc-weather-title"><i class="fas fa-spinner fa-spin"></i> Chargement météo...</div>
-                </div>
-                <div class="dc-calendar-section">
-                    <div id="dcCalendarContainer"></div>
-                </div>
-                <div class="dc-events-section">
-                    <div class="dc-events-header">
-                        <h4><i class="fas fa-star"></i> Événements & fêtes du mois</h4>
-                        <button class="dc-add-btn" onclick="dcOpenAddForm()"><i class="fas fa-plus"></i> Ajouter</button>
-                    </div>
-                    <div class="dc-events-list" id="dcEventsContainer"></div>
-                </div>
-            </div>
-        </div>
-    </div>`;
+    var html = '<div id="dcOverlay" class="dc-overlay" onclick="if(event.target.id===\'dcOverlay\')dcCloseCalendar()"><div class="dc-modal" onclick="event.stopPropagation()"><div class="dc-header"><h3><i class="fas fa-calendar-alt"></i> Calendrier & Événements</h3><button class="dc-close" onclick="dcCloseCalendar()"><i class="fas fa-times"></i></button></div><div class="dc-body"><div class="dc-weather" id="dcWeatherContainer"><div class="dc-weather-title"><i class="fas fa-spinner fa-spin"></i> Chargement météo...</div></div><div class="dc-calendar-section"><div id="dcCalendarContainer"></div></div><div class="dc-events-section"><div class="dc-events-header"><h4><i class="fas fa-star"></i> Événements & fêtes du mois</h4><button class="dc-add-btn" onclick="dcOpenAddForm()"><i class="fas fa-plus"></i> Ajouter</button></div><div class="dc-events-list" id="dcEventsContainer"></div></div></div></div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
-
     window.dcState.events = await dcLoadEvents();
     dcRefresh();
-
-    const weather = await dcFetchWeather();
+    var weather = await dcFetchWeather();
     window.dcState.weather = weather;
-    const wc = document.getElementById('dcWeatherContainer');
+    var wc = document.getElementById('dcWeatherContainer');
     if (wc) dcRenderWeather(weather, wc);
 };
 
-console.log('📅 Dashboard Calendar intégré');
+// ==================== MODAL & CRUD ====================
+function openModal(t, b) {
+var titleEl = document.getElementById('modalTitle');
+var bodyEl = document.getElementById('modalBody');
+var overlayEl = document.getElementById('modalOverlay');
+if (titleEl) titleEl.textContent = t;
+if (bodyEl) bodyEl.innerHTML = b;
+if (overlayEl) overlayEl.classList.remove('hidden');
+}
+
+function closeModal() {
+var overlay = document.getElementById('modalOverlay');
+if (overlay) overlay.classList.add('hidden');
+window.editingId = null;
+window.currentCollection = '';
+window.editCategoryData = null;
+}
+
+function fileToBase64(file, callback, maxWidth, maxHeight, quality) {
+if (!file) { callback(null); return; }
+maxWidth = maxWidth || 600;
+maxHeight = maxHeight || 600;
+quality = quality || 0.6;
+if (!file.type.startsWith('image/')) {
+var reader = new FileReader();
+reader.onload = function(e) { callback(e.target.result); };
+reader.readAsDataURL(file);
+return;
+}
+var reader = new FileReader();
+reader.onload = function(e) {
+var img = new Image();
+img.onload = function() {
+var width = img.width, height = img.height;
+if (width > maxWidth || height > maxHeight) {
+var ratio = Math.min(maxWidth / width, maxHeight / height);
+width = Math.floor(width * ratio);
+height = Math.floor(height * ratio);
+}
+var canvas = document.createElement('canvas');
+canvas.width = width;
+canvas.height = height;
+var ctx = canvas.getContext('2d');
+ctx.drawImage(img, 0, 0, width, height);
+var compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+callback(compressedBase64);
+};
+img.src = e.target.result;
+};
+reader.readAsDataURL(file);
+}
+
+function previewImage(inp, pid) {
+var p = document.getElementById(pid);
+if (!p) return;
+if (inp.files && inp.files[0]) {
+var r = new FileReader();
+r.onload = function(e) { p.innerHTML = '<img src="' + e.target.result + '" style="max-width:100px;margin-top:5px;border-radius:8px;">'; };
+r.readAsDataURL(inp.files[0]);
+}
+}
+
+async function saveDocument(cn, data, cb) {
+try {
+let resultId;
+if (window.editingId) {
+data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+resultId = await CacheDB.write(cn, window.editingId, data, 'update');
+} else {
+data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+resultId = await CacheDB.write(cn, null, data, 'add');
+}
+if (cb) cb(resultId);
+CacheDB.sync();
+} catch (err) { alert('Erreur: ' + err.message); }
+}
+
+async function deleteDocument(cn, id) {
+if (confirm('Confirmer la suppression ?')) {
+await CacheDB.write(cn, id, null, 'delete');
+if (cn === 'categories') {
+window.allCategoriesData = window.allCategoriesData.filter(function(x) { return x.id !== id; });
+renderCategoriesTable();
+} else if (cn === 'products') {
+window.allProductsData = window.allProductsData.filter(function(x) { return x.id !== id; });
+renderProductsTable();
+} else if (cn === 'clients') {
+window.allClientsData = window.allClientsData.filter(function(x) { return x.id !== id; });
+renderClientsTable();
+} else {
+if (typeof refreshCurrentPage === 'function') refreshCurrentPage();
+}
+alert('Supprimé');
+CacheDB.sync();
+}
+}
+
+function refreshCurrentPage() {
+var t = document.getElementById('pageTitle')?.textContent || '';
+var m = { 'Catégories': 'categories', 'Produits': 'products', 'Clients': 'clients', 'Fournisseurs': 'fournisseurs', 'Dépenses': 'depenses', 'Ventes': 'ventes', 'Crédits': 'credits', 'Commandes en ligne': 'commandes' };
+if (typeof navigateTo === 'function') navigateTo(m[t] || 'dashboard');
+}
+
+function editDocument(cn, id) {
+db.collection(cn).doc(id).get().then(function(doc) {
+if (doc.exists) { window.editingId = id; window.currentCollection = cn; openEditForm(cn, doc.data()); }
+}).catch(e => console.error(e));
+}
+
+function openEditForm(cn, data) {
+if (cn === 'categories') openCategoryForm(data);
+else if (cn === 'products') openProductForm(data);
+else if (cn === 'clients') openClientForm(data);
+else if (cn === 'fournisseurs') openFournisseurForm(data);
+else if (cn === 'depenses') openDepenseForm(data);
+}
+
+// ==================== SYSTÈME DE TRI ====================
+function sortTableData(tableName, field, loadFn) {
+if (!window.sortOrders[tableName]) window.sortOrders[tableName] = {};
+if (!window.sortOrders[tableName][field]) window.sortOrders[tableName][field] = 'asc';
+else window.sortOrders[tableName][field] = window.sortOrders[tableName][field] === 'asc' ? 'desc' : 'asc';
+Object.keys(window.sortOrders[tableName]).forEach(function(k) { if (k !== field) window.sortOrders[tableName][k] = null; });
+if (typeof loadFn === 'string') window[loadFn]();
+else if (typeof loadFn === 'function') loadFn();
+}
+
+function getSortIcon(tableName, field) {
+if (!window.sortOrders[tableName] || !window.sortOrders[tableName][field]) return '<i class="fas fa-sort" style="font-size:0.5rem;margin-left:2px;opacity:0.3;cursor:pointer;"></i>';
+return window.sortOrders[tableName][field] === 'asc' ? '<i class="fas fa-sort-up" style="font-size:0.55rem;margin-left:2px;color:#A67C52;"></i>' : '<i class="fas fa-sort-down" style="font-size:0.55rem;margin-left:2px;color:#A67C52;"></i>';
+}
+
+function applySort(tableName, data, defaultField) {
+if (!window.sortOrders[tableName]) window.sortOrders[tableName] = {};
+var activeField = Object.keys(window.sortOrders[tableName]).find(function(k) { return window.sortOrders[tableName][k]; });
+if (!activeField) activeField = defaultField;
+var order = window.sortOrders[tableName][activeField] || 'asc';
+return data.sort(function(a, b) {
+var va = a[activeField], vb = b[activeField];
+if (va === undefined || va === null) va = '';
+if (vb === undefined || vb === null) vb = '';
+if (typeof va === 'number' && typeof vb === 'number') return order === 'asc' ? va - vb : vb - va;
+va = String(va).toLowerCase();
+vb = String(vb).toLowerCase();
+if (order === 'asc') return va > vb ? 1 : (va < vb ? -1 : 0);
+else return va < vb ? 1 : (va > vb ? -1 : 0);
+});
+}
+
+function makeSortableHeader(tableName, field, label, loadFnName) {
+return '<th onclick="sortTableData(\'' + tableName + '\',\'' + field + '\', \'' + loadFnName + '\')" style="cursor:pointer;white-space:nowrap;">' + label + ' ' + getSortIcon(tableName, field) + '</th>';
+}
+
+// ==================== PAGINATION ====================
+function getPaginationHTML(tableName, totalItems) {
+var totalPages = Math.ceil(totalItems / window.itemsPerPage);
+if (totalPages <= 1) return '';
+var page = window.currentPages[tableName] || 1;
+var html = '<div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:15px; flex-wrap:wrap;">';
+html += '<button onclick="changePage(\'' + tableName + '\', ' + (page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + ' style="padding:8px 16px; border:1px solid #e2e8f0; border-radius:8px; background:white; cursor:pointer;">« Précédent</button>';
+html += '<span style="font-weight:600;">Page ' + page + ' / ' + totalPages + '</span>';
+html += '<button onclick="changePage(\'' + tableName + '\', ' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled' : '') + ' style="padding:8px 16px; border:1px solid #e2e8f0; border-radius:8px; background:white; cursor:pointer;">Suivant »</button>';
+html += '</div>';
+return html;
+}
+
+function changePage(tableName, newPage) {
+var renderFunctions = {
+categories: function() { if (typeof window.renderCategoriesTable === 'function') window.renderCategoriesTable(); },
+products: function() { if (typeof window.renderProductsTable === 'function') window.renderProductsTable(); },
+clients: function() { if (typeof window.renderClientsTable === 'function') window.renderClientsTable(); },
+fournisseurs: function() { if (typeof window.renderFournisseursTable === 'function') window.renderFournisseursTable(); },
+depenses: function() { if (typeof window.renderDepensesTable === 'function') window.renderDepensesTable(); },
+commandes: function() { if (typeof window.renderCommandesTable === 'function') window.renderCommandesTable(); },
+ventes: function() { if (typeof window.renderVentesTable === 'function') window.renderVentesTable(); },
+credits: function() { if (typeof window.renderCreditsTable === 'function') window.renderCreditsTable(); },
+users: function() { if (typeof window.renderUsersTable === 'function') window.renderUsersTable(); }
+};
+var dataArrays = {
+categories: window.allCategoriesData, products: window.allProductsData, clients: window.allClientsData,
+fournisseurs: window.allFournisseursData, depenses: window.allDepensesData,
+commandes: window.filteredCommandes || window.allCommandesData,
+ventes: window.filteredVentes || window.allVentesData,
+credits: window.filteredCredits || window.allCreditsData,
+users: window.filteredUsers || window.allUsersData
+};
+var totalItems = (dataArrays[tableName] || []).length;
+var totalPages = Math.ceil(totalItems / window.itemsPerPage);
+if (newPage < 1 || newPage > totalPages) return;
+window.currentPages[tableName] = newPage;
+if (renderFunctions[tableName]) renderFunctions[tableName]();
+}
+
+function getPageData(tableName, dataArray) {
+var page = window.currentPages[tableName] || 1;
+var start = (page - 1) * window.itemsPerPage;
+return dataArray.slice(start, start + window.itemsPerPage);
+}
+
+// ==================== FILTRES ====================
+function getPeriodOptions(selected) {
+var periods = [
+{ value: 'all', text: 'Toutes les dates' }, { value: 'today', text: 'Aujourd\'hui' },
+{ value: '7', text: '7 jours' }, { value: '30', text: '30 jours' },
+{ value: '90', text: '3 mois' }, { value: '365', text: '1 an' }
+];
+return periods.map(p => '<option value="' + p.value + '" ' + (selected == p.value ? 'selected' : '') + '>' + p.text + '</option>').join('');
+}
+
+function filterByPeriod(data, period) {
+if (!period || period === 'all') return data;
+var now = Date.now();
+if (period === 'today') {
+var today = new Date(); today.setHours(0,0,0,0);
+return data.filter(function(d) { return d.createdAt && d.createdAt.seconds * 1000 >= today.getTime(); });
+}
+var days = parseInt(period);
+if (isNaN(days)) return data;
+var cutoff = now - days * 86400000;
+return data.filter(function(d) { return d.createdAt && d.createdAt.seconds && d.createdAt.seconds * 1000 >= cutoff; });
+}
+
+function filterBySearch(data, query, fields) {
+if (!query) return data;
+var q = query.toLowerCase().trim();
+return data.filter(function(d) {
+for (var i = 0; i < fields.length; i++) {
+var val = fields[i];
+if (val.startsWith('items.')) {
+var itemField = val.split('.')[1];
+if (d.items && Array.isArray(d.items)) {
+for (var j = 0; j < d.items.length; j++) {
+if (d.items[j][itemField] && String(d.items[j][itemField]).toLowerCase().indexOf(q) !== -1) return true;
+}
+}
+} else {
+if (d[val] && String(d[val]).toLowerCase().indexOf(q) !== -1) return true;
+}
+}
+return false;
+});
+}
+
+// ==================== DASHBOARD PRO MINIMALISTE ====================
+function loadDashboardPage(c) {
+    injectAdminStyles();
+    var userRole = (window.currentUserData && window.currentUserData.userData && window.currentUserData.userData.role) ? window.currentUserData.userData.role : 'admin';
+    var userName = (window.currentUserData && window.currentUserData.userData) ? (window.currentUserData.userData.prenom || 'Utilisateur') : 'Utilisateur';
+
+    // === Bandeau bienvenue sobre ===
+    var welcomeHTML =
+        '<div class="dash-welcome">' +
+            '<div>' +
+                '<h1>Bonjour, ' + escapeHtml(userName) + ' 👋</h1>' +
+                '<p>Voici votre tableau de bord E-SOLUTION POS</p>' +
+            '</div>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
+                '<button onclick="openDashboardCalendar()" style="background:linear-gradient(135deg,#8B5CF6,#6D28D9);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;"><i class="fas fa-calendar-alt"></i> Calendrier</button>' +
+                '<div class="dash-welcome-badge">' +
+                    '<i class="fas fa-shield-halved"></i> ' +
+                    '<span>' + (userRole === 'admin' ? 'Administrateur' : userRole === 'caissier' ? 'Caissier' : 'Client') + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    // === KPI Cards épurées ===
+    var kpiHTML = '<div class="dash-kpi-grid">' +
+        '<div class="dash-kpi">' +
+            '<div class="dash-kpi-icon"><i class="fas fa-money-bill-wave"></i></div>' +
+            '<span class="dash-kpi-label">CA du jour</span>' +
+            '<span class="dash-kpi-value" id="kpiCaJour">0 MAD</span>' +
+        '</div>' +
+        '<div class="dash-kpi">' +
+            '<div class="dash-kpi-icon"><i class="fas fa-shopping-cart"></i></div>' +
+            '<span class="dash-kpi-label">Ventes du jour</span>' +
+            '<span class="dash-kpi-value" id="kpiVentesJour">0</span>' +
+        '</div>' +
+        '<div class="dash-kpi">' +
+            '<div class="dash-kpi-icon"><i class="fas fa-box"></i></div>' +
+            '<span class="dash-kpi-label">Produits</span>' +
+            '<span class="dash-kpi-value" id="productsCount">0</span>' +
+        '</div>' +
+        '<div class="dash-kpi">' +
+            '<div class="dash-kpi-icon"><i class="fas fa-users"></i></div>' +
+            '<span class="dash-kpi-label">Clients</span>' +
+            '<span class="dash-kpi-value" id="clientsCount">0</span>' +
+        '</div>' +
+        '<div class="dash-kpi">' +
+            '<div class="dash-kpi-icon"><i class="fas fa-credit-card"></i></div>' +
+            '<span class="dash-kpi-label">Crédits impayés</span>' +
+            '<span class="dash-kpi-value" id="kpiCreditsImpayes">0 MAD</span>' +
+        '</div>' +
+    '</div>';
+
+    // === Alertes intelligentes ===
+    var alertsHTML = '<div class="smart-alert-grid">' +
+        '<div class="smart-alert-card stock">' +
+            '<div class="smart-alert-header">' +
+                '<div class="smart-alert-icon"><i class="fas fa-box"></i></div>' +
+                '<h4>Alertes Stock</h4>' +
+            '</div>' +
+            '<div id="alertStockContent"><i class="fas fa-spinner fa-spin" style="color:#94a3b8;"></i> Chargement...</div>' +
+        '</div>' +
+        '<div class="smart-alert-card expiration">' +
+            '<div class="smart-alert-header">' +
+                '<div class="smart-alert-icon"><i class="fas fa-calendar-check"></i></div>' +
+                '<h4>Alertes Expiration</h4>' +
+            '</div>' +
+            '<div id="alertExpContent"><i class="fas fa-spinner fa-spin" style="color:#94a3b8;"></i> Chargement...</div>' +
+        '</div>' +
+        '<div class="smart-alert-card forecast">' +
+            '<div class="smart-alert-header">' +
+                '<div class="smart-alert-icon"><i class="fas fa-chart-line"></i></div>' +
+                '<h4>Prévisions de ventes</h4>' +
+            '</div>' +
+            '<div id="alertPrevContent"><i class="fas fa-spinner fa-spin" style="color:#94a3b8;"></i> Chargement...</div>' +
+        '</div>' +
+    '</div>';
+
+    // === Navigation ===
+    var navItemsAdmin = [
+        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente' },
+        { page: 'calendrier', icon: 'fa-calendar-alt', label: 'Calendrier', desc: 'Événements & météo' },
+        { page: 'statistiques', icon: 'fa-chart-bar', label: 'Statistiques', desc: 'Analyses' },
+        { page: 'clients', icon: 'fa-users', label: 'Clients', desc: 'Gérer' },
+        { page: 'fournisseurs', icon: 'fa-truck', label: 'Fournisseurs', desc: 'Gérer' },
+        { page: 'products', icon: 'fa-box', label: 'Produits', desc: 'Gérer' },
+        { page: 'categories', icon: 'fa-layer-group', label: 'Catégories', desc: 'Gérer' },
+        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique' },
+        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer' },
+        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer' },
+        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'En ligne' },
+        { page: 'options', icon: 'fa-cog', label: 'Options', desc: 'Paramètres' }
+    ];
+
+    var navItemsCaissier = [
+        { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente' },
+        { page: 'ventes', icon: 'fa-shopping-cart', label: 'Ventes', desc: 'Historique' },
+        { page: 'credits', icon: 'fa-credit-card', label: 'Crédits', desc: 'Gérer' },
+        { page: 'depenses', icon: 'fa-money-bill-wave', label: 'Dépenses', desc: 'Gérer' },
+        { page: 'commandes', icon: 'fa-shopping-basket', label: 'Commandes', desc: 'En ligne' }
+    ];
+    var navItems = (userRole === 'caissier') ? navItemsCaissier : navItemsAdmin;
+
+    var quickHTML = '<div class="dash-section">' +
+        '<div class="dash-section-header">' +
+            '<div>' +
+                '<h3 class="dash-section-title"><i class="fas fa-th-large"></i> Accès rapide</h3>' +
+                '<p class="dash-section-subtitle">Naviguez vers vos modules en un clic</p>' +
+            '</div>' +
+        '</div>' +
+        '<div class="quick-access-grid">';
+
+    navItems.forEach(function(item) {
+        var clickAction = (item.page === 'calendrier') ? 'openDashboardCalendar()' : ('navigateTo(\'' + item.page + '\')');
+        quickHTML += '<div class="qa-tile" onclick="' + clickAction + '">' +
+            '<div class="qa-tile-icon"><i class="fas ' + item.icon + '"></i></div>' +
+            '<div class="qa-tile-label">' + item.label + '</div>' +
+            '<div class="qa-tile-desc">' + item.desc + '</div>' +
+        '</div>';
+    });
+
+    quickHTML += '</div></div>';
+
+    // === Inscriptions en attente ===
+    var pendingHTML = '<div class="dash-section">' +
+        '<div class="dash-section-header">' +
+            '<div>' +
+                '<h3 class="dash-section-title"><i class="fas fa-bell"></i> Inscriptions en attente</h3>' +
+                '<p class="dash-section-subtitle">Validez ou refusez les nouvelles demandes</p>' +
+            '</div>' +
+            '<button class="dash-btn-refresh" onclick="loadPendingRegistrations()">' +
+                '<i class="fas fa-sync"></i> Actualiser' +
+            '</button>' +
+        '</div>' +
+        '<div id="pendingRegistrations">Chargement...</div>' +
+    '</div>';
+
+    c.innerHTML = welcomeHTML + kpiHTML + alertsHTML + quickHTML + pendingHTML;
+
+    loadDashboardStats();
+    loadSmartAlerts();
+    loadPendingRegistrations();
+
+    if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+        setTimeout(function() { CacheDB.saveAll(); }, 500);
+    }
+}
+
+// ==================== 🧠 ALERTES INTELLIGENTES ====================
+async function loadSmartAlerts() {
+    try {
+        var produits = window.allProductsData || [];
+        if (produits.length === 0) {
+            try {
+                var snapP = await db.collection('products').get();
+                produits = [];
+                snapP.forEach(function(d) { var dd = d.data(); dd.id = d.id; produits.push(dd); });
+            } catch(e) {}
+        }
+
+        var ventes30j = [];
+        try {
+            var cutoff30 = new Date(Date.now() - 30 * 86400000);
+            var snapVentes = await db.collection('ventes').where('createdAt', '>=', cutoff30).get();
+            snapVentes.forEach(function(d) { ventes30j.push(d.data()); });
+        } catch(e) {
+            try {
+                var snapVAll = await db.collection('ventes').get();
+                var cutoffMs = Date.now() - 30 * 86400000;
+                snapVAll.forEach(function(d) {
+                    var v = d.data();
+                    if (v.createdAt && v.createdAt.seconds * 1000 >= cutoffMs) ventes30j.push(v);
+                });
+            } catch(e2) {}
+        }
+
+        var ventesParProduit = {};
+        ventes30j.forEach(function(v) {
+            (v.items || []).forEach(function(it) {
+                var pid = it.id || it.nom;
+                ventesParProduit[pid] = (ventesParProduit[pid] || 0) + (it.quantite || 0);
+            });
+        });
+
+        var alertesStock = [];
+        produits.forEach(function(p) {
+            var vendues30 = ventesParProduit[p.id] || ventesParProduit[p.nom] || 0;
+            var vitesseJour = vendues30 / 30;
+            var stock = p.stock || 0;
+            var jours = vitesseJour > 0 ? (stock / vitesseJour) : (stock > 0 ? Infinity : 0);
+
+            var niveau = 'ok';
+            if (stock <= 0) niveau = 'rupture';
+            else if (jours <= 2) niveau = 'rouge';
+            else if (jours <= 5) niveau = 'orange';
+            else if (jours <= 10) niveau = 'jaune';
+
+            if (niveau !== 'ok') {
+                alertesStock.push({ nom: p.nom, stock: stock, jours: jours, niveau: niveau });
+            }
+        });
+
+        var alertesExpiration = [];
+        var today = new Date(); today.setHours(0,0,0,0);
+        produits.forEach(function(p) {
+            if (!p.dateExpiration) return;
+            var d = null;
+            if (typeof p.dateExpiration === 'string') d = new Date(p.dateExpiration);
+            else if (p.dateExpiration.seconds) d = new Date(p.dateExpiration.seconds * 1000);
+            else if (p.dateExpiration.toDate) d = p.dateExpiration.toDate();
+            if (!d || isNaN(d.getTime())) return;
+            d.setHours(0,0,0,0);
+            var joursRestants = Math.ceil((d - today) / 86400000);
+
+            var niveau = 'ok';
+            if (joursRestants < 0) niveau = 'expire';
+            else if (joursRestants <= 3) niveau = 'rouge';
+            else if (joursRestants <= 7) niveau = 'orange';
+            else if (joursRestants <= 30) niveau = 'jaune';
+
+            if (niveau !== 'ok') {
+                alertesExpiration.push({ nom: p.nom, dateExp: d, jours: joursRestants, niveau: niveau });
+            }
+        });
+
+        var ventesParJour = {};
+        try {
+            var cutoff90 = new Date(Date.now() - 90 * 86400000);
+            var snapV90 = await db.collection('ventes').where('createdAt', '>=', cutoff90).get();
+            snapV90.forEach(function(d) {
+                var v = d.data();
+                if (!v.createdAt || !v.createdAt.seconds) return;
+                var key = new Date(v.createdAt.seconds * 1000).toISOString().split('T')[0];
+                ventesParJour[key] = (ventesParJour[key] || 0) + (v.total || 0);
+            });
+        } catch(e) {
+            try {
+                var snapVAll2 = await db.collection('ventes').get();
+                var cutoffMs2 = Date.now() - 90 * 86400000;
+                snapVAll2.forEach(function(d) {
+                    var v = d.data();
+                    if (v.createdAt && v.createdAt.seconds * 1000 >= cutoffMs2) {
+                        var key = new Date(v.createdAt.seconds * 1000).toISOString().split('T')[0];
+                        ventesParJour[key] = (ventesParJour[key] || 0) + (v.total || 0);
+                    }
+                });
+            } catch(e2) {}
+        }
+
+        var total30 = 0, count30 = 0;
+        for (var i = 0; i < 30; i++) {
+            var d = new Date(Date.now() - i * 86400000);
+            var k = d.toISOString().split('T')[0];
+            total30 += (ventesParJour[k] || 0);
+            count30++;
+        }
+        var caPrevuJour = count30 > 0 ? (total30 / count30) : 0;
+        var caPrevu7j = caPrevuJour * 7;
+
+        var stockRouge = alertesStock.filter(function(a) { return a.niveau === 'rouge' || a.niveau === 'rupture'; }).length;
+        var stockOrange = alertesStock.filter(function(a) { return a.niveau === 'orange'; }).length;
+        var stockJaune = alertesStock.filter(function(a) { return a.niveau === 'jaune'; }).length;
+
+        var expRouge = alertesExpiration.filter(function(a) { return a.niveau === 'rouge' || a.niveau === 'expire'; }).length;
+        var expOrange = alertesExpiration.filter(function(a) { return a.niveau === 'orange'; }).length;
+        var expJaune = alertesExpiration.filter(function(a) { return a.niveau === 'jaune'; }).length;
+
+        var elStock = document.getElementById('alertStockContent');
+        if (elStock) {
+            if (alertesStock.length === 0) {
+                elStock.innerHTML = '<div class="smart-alert-summary" style="color:#16a34a;"><i class="fas fa-check-circle"></i> Tous les stocks sont optimaux</div>';
+            } else {
+                elStock.innerHTML =
+                    '<div class="smart-alert-badges">' +
+                        (stockRouge > 0 ? '<span class="smart-badge red"><i class="fas fa-times-circle"></i> Critique : ' + stockRouge + '</span>' : '') +
+                        (stockOrange > 0 ? '<span class="smart-badge orange"><i class="fas fa-exclamation-triangle"></i> Bas : ' + stockOrange + '</span>' : '') +
+                        (stockJaune > 0 ? '<span class="smart-badge yellow"><i class="fas fa-clock"></i> À surveiller : ' + stockJaune + '</span>' : '') +
+                    '</div>' +
+                    '<div class="smart-alert-summary"><strong>' + alertesStock.length + '</strong> produit(s) nécessitent votre attention</div>';
+            }
+        }
+
+        var elExp = document.getElementById('alertExpContent');
+        if (elExp) {
+            if (alertesExpiration.length === 0) {
+                elExp.innerHTML = '<div class="smart-alert-summary" style="color:#16a34a;"><i class="fas fa-check-circle"></i> Aucun produit n\'expire bientôt</div>';
+            } else {
+                elExp.innerHTML =
+                    '<div class="smart-alert-badges">' +
+                        (expRouge > 0 ? '<span class="smart-badge red"><i class="fas fa-times-circle"></i> Critique : ' + expRouge + '</span>' : '') +
+                        (expOrange > 0 ? '<span class="smart-badge orange"><i class="fas fa-clock"></i> Bientôt : ' + expOrange + '</span>' : '') +
+                        (expJaune > 0 ? '<span class="smart-badge yellow"><i class="fas fa-calendar"></i> À surveiller : ' + expJaune + '</span>' : '') +
+                    '</div>' +
+                    '<div class="smart-alert-summary"><strong>' + alertesExpiration.length + '</strong> lot(s) d\'expiration à surveiller</div>';
+            }
+        }
+
+        var elPrev = document.getElementById('alertPrevContent');
+        if (elPrev) {
+            elPrev.innerHTML =
+                '<div class="smart-forecast-grid">' +
+                    '<div class="smart-forecast-item today">' +
+                        '<span class="label">Aujourd\'hui</span>' +
+                        '<span class="value">' + caPrevuJour.toFixed(2) + ' MAD</span>' +
+                    '</div>' +
+                    '<div class="smart-forecast-item week">' +
+                        '<span class="label">7 jours</span>' +
+                        '<span class="value">' + caPrevu7j.toFixed(2) + ' MAD</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="smart-alert-summary" style="margin-top:10px;"><i class="fas fa-info-circle"></i> Basé sur la moyenne des <strong>30 derniers jours</strong></div>';
+        }
+
+    } catch(e) {
+        console.error('❌ Erreur loadSmartAlerts:', e);
+    }
+}
+window.loadSmartAlerts = loadSmartAlerts;
+
+function loadDashboardStats() {
+    db.collection('products').get().then(function(s) { var e = document.getElementById('productsCount'); if (e) e.textContent = s.size; });
+    db.collection('clients').get().then(function(s) { var e = document.getElementById('clientsCount'); if (e) e.textContent = s.size; });
+    db.collection('categories').get().then(function(s) { var e = document.getElementById('categoriesCount'); if (e) e.textContent = s.size; });
+    db.collection('ventes').get().then(function(s) { var e = document.getElementById('ventesCount'); if (e) e.textContent = s.size; });
+
+    db.collection('ventes').get().then(function(snapshot) {
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var caJour = 0, nbVentesJour = 0;
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            var dateVente = null;
+            if (d.createdAt && d.createdAt.seconds) dateVente = new Date(d.createdAt.seconds * 1000);
+            else if (d.createdAt && d.createdAt.toDate) dateVente = d.createdAt.toDate();
+            if (dateVente && dateVente >= today) {
+                caJour += parseFloat(d.total) || 0;
+                nbVentesJour += 1;
+            }
+        });
+        var caEl = document.getElementById('kpiCaJour');
+        if (caEl) caEl.textContent = caJour.toFixed(2) + ' MAD';
+        var vEl = document.getElementById('kpiVentesJour');
+        if (vEl) vEl.textContent = nbVentesJour;
+    }).catch(function(e) { console.warn('Erreur stats jour:', e); });
+
+    db.collection('credits').get().then(function(snapshot) {
+        var totalImpaye = 0;
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            if (d.paid === false) {
+                totalImpaye += parseFloat(d.remainingAmount || d.total) || 0;
+            }
+        });
+        var el = document.getElementById('kpiCreditsImpayes');
+        if (el) el.textContent = totalImpaye.toFixed(2) + ' MAD';
+    }).catch(function(e) { console.warn('Erreur crédits:', e); });
+}
+
+// ==================== INSCRIPTIONS EN ATTENTE ====================
+function loadPendingRegistrations() {
+var d = document.getElementById('pendingRegistrations');
+if (!d) return;
+
+d.innerHTML = `
+<div class="table-container">
+<table class="data-table" id="pendingTable">
+<thead>
+<tr>
+<th>Utilisateur</th>
+<th>Email</th>
+<th>Rôle</th>
+<th>Date</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+`;
+
+db.collection('users')
+.get()
+.then(function(snapshot) {
+window.pendingUsersData = [];
+snapshot.forEach(function(dc) {
+var u = dc.data();
+if (u.authorized === 'no') {
+window.pendingUsersData.push({
+id: dc.id,
+prenom: (u.prenom || '') + ' ' + (u.nom || ''),
+email: u.email || '',
+role: u.role || 'client',
+createdAt: u.createdAt,
+data: u
+});
+}
+});
+
+window.pendingUsersData.sort(function(a, b) {
+var dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000).getTime() : 0;
+var dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000).getTime() : 0;
+return dateB - dateA;
+});
+
+renderPendingTable();
+})
+.catch(function(err) {
+console.error('❌ Erreur chargement pending:', err);
+window.pendingUsersData = [];
+renderPendingTable();
+});
+}
+
+function renderPendingTable() {
+var tb = document.querySelector('#pendingTable tbody');
+if (!tb) return;
+tb.innerHTML = '';
+
+var data = window.pendingUsersData || [];
+
+if (data.length === 0) {
+tb.innerHTML = `
+<tr>
+<td colspan="5" style="text-align:center;padding:32px;color:#6F767E;font-size:0.88rem;">
+<i class="fas fa-check-circle" style="color:#16a34a;margin-right:6px;"></i> Aucune inscription en attente
+</td>
+</tr>
+`;
+return;
+}
+
+for (var i = 0; i < data.length; i++) {
+var x = data[i];
+var dt = x.createdAt ? new Date(x.createdAt.seconds * 1000).toLocaleDateString('fr-FR') + ' ' +
+new Date(x.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : 'N/A';
+
+tb.innerHTML += `
+<tr>
+<td><strong style="color:#1A1D1F;">${escapeHtml(x.prenom)}</strong></td>
+<td style="color:#6F767E;">${escapeHtml(x.email)}</td>
+<td><span class="status-warning">${escapeHtml(x.role)}</span></td>
+<td style="color:#6F767E;">${dt}</td>
+<td>
+<button class="btn-add" onclick="approveUser('${x.id}')">
+<i class="fas fa-check"></i> Accepter
+</button>
+<button class="btn-delete" style="margin-left:6px;" onclick="rejectUser('${x.id}')">
+<i class="fas fa-times"></i> Refuser
+</button>
+</td>
+</tr>
+`;
+}
+}
+
+// ==================== APPROVE / REJECT USER ====================
+async function approveUser(uid) {
+if (!confirm('Accepter cet utilisateur ?')) return;
+try {
+const doc = await db.collection('users').doc(uid).get();
+if (!doc.exists) { alert('❌ Utilisateur introuvable'); return; }
+const userData = doc.data();
+await db.collection('users').doc(uid).update({ authorized: 'yes', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+const updatedUser = { ...userData, authorized: 'yes', updatedAt: new Date() };
+await CacheDB.set('users', uid, { uid: uid, userData: updatedUser });
+if (userData.role === 'client') {
+const clientData = {
+nom: userData.nom || '', prenom: userData.prenom || '', email: userData.email || '',
+telephone: userData.telephone || '', username: userData.username || '', authorized: 'yes',
+pointsFidelite: 0, ca: 0, profit: 0,
+createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+};
+const clientDoc = await db.collection('clients').doc(uid).get();
+if (clientDoc.exists) await db.collection('clients').doc(uid).update(clientData);
+else await db.collection('clients').doc(uid).set(clientData);
+await CacheDB.set('clients', uid, { id: uid, ...clientData });
+}
+if (window.currentUserData && window.currentUserData.uid === uid) {
+window.currentUserData.userData.authorized = 'yes';
+await CacheDB.set('users', 'current', window.currentUserData);
+}
+await CacheDB.sync();
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('users');
+    CacheDB.saveCollection('clients');
+}
+alert('✅ Utilisateur accepté avec succès !');
+if (typeof loadPendingRegistrations === 'function') loadPendingRegistrations();
+if (typeof loadUsersList === 'function') loadUsersList();
+if (typeof loadClients === 'function') loadClients();
+} catch (e) {
+console.error('❌ Erreur approveUser:', e);
+alert('❌ Erreur : ' + e.message);
+}
+}
+
+async function rejectUser(uid) {
+if (!confirm('Refuser et supprimer cet utilisateur ?')) return;
+try {
+await db.collection('users').doc(uid).delete();
+await CacheDB.delete('users', uid);
+const clientDoc = await db.collection('clients').doc(uid).get();
+if (clientDoc.exists) {
+await db.collection('clients').doc(uid).delete();
+await CacheDB.delete('clients', uid);
+}
+await CacheDB.sync();
+if (typeof CacheDB !== 'undefined' && CacheDB.saveCollection) {
+    CacheDB.saveCollection('users');
+    CacheDB.saveCollection('clients');
+}
+alert('✅ Utilisateur supprimé');
+if (typeof loadPendingRegistrations === 'function') loadPendingRegistrations();
+if (typeof loadUsersList === 'function') loadUsersList();
+if (typeof loadClients === 'function') loadClients();
+} catch (e) {
+console.error('❌ Erreur rejectUser:', e);
+alert('❌ Erreur : ' + e.message);
+}
+}
+
+// ==================== OPTIONS ====================
+function loadOptionsPage(c) {
+if (!window.currentUserData || window.currentUserData.userData.role !== 'admin') {
+c.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#ef4444;">Accès réservé à l\'administrateur</p></div>';
+return;
+}
+c.innerHTML = '<div class="stats-grid">' +
+'<div class="stat-card"><div class="stat-icon" style="background:#fef3c7;"><i class="fas fa-clock" style="color:#d97706;"></i></div><div class="stat-info"><span>En attente</span><span class="stat-value" id="pendingCount">0</span></div></div>' +
+'<div class="stat-card"><div class="stat-icon" style="background:#dcfce7;"><i class="fas fa-check-circle" style="color:#16a34a;"></i></div><div class="stat-info"><span>Autorisés</span><span class="stat-value" id="authorizedCount">0</span></div></div>' +
+'<div class="stat-card"><div class="stat-icon" style="background:#e0e7ff;"><i class="fas fa-users" style="color:#4f46e5;"></i></div><div class="stat-info"><span>Total</span><span class="stat-value" id="totalUsers">0</span></div></div>' +
+'</div>' +
+'<div class="content-card"><div class="card-header"><h3><i class="fas fa-lock"></i> Sécurité</h3><button class="btn-add" onclick="toggleChangePasswordForm()"><i class="fas fa-key"></i> Changer le mot de passe</button></div><div id="changePasswordForm" class="hidden" style="margin-top:15px;"><div class="form-row"><div class="form-group"><label>Mot de passe actuel</label><input type="password" id="currentPassword"></div></div><div class="form-row"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="newPassword"></div><div class="form-group"><label>Confirmer</label><input type="password" id="confirmPassword"></div></div><button class="btn-save" onclick="changeAdminPassword()">Changer le mot de passe</button></div></div>' +
+'<div class="content-card"><div class="card-header"><h3><i class="fas fa-bullhorn"></i> Fidélité</h3><button class="btn-add" onclick="toggleMarketingProgram()"><i class="fas fa-cog"></i> Gérer</button></div><div id="marketingProgramContent" class="hidden" style="margin-top:15px;"><div style="display:flex;align-items:flex-end;gap:20px;"><div class="form-group"><label>Activer</label><select id="fideliteActifSelect"><option value="1">✅ Actif</option><option value="0">❌ Inactif</option></select></div><div class="form-group"><label>Points/vente</label><input type="number" id="fidelitePointsInput" value="1" min="1" style="width:80px;"></div><button class="btn-save" onclick="saveFideliteSettings()">Enregistrer</button></div></div></div>' +
+'<div class="content-card">' +
+    '<div class="card-header">' +
+        '<h3><i class="fas fa-qrcode"></i> Générateur de QR Codes</h3>' +
+        '<span style="font-size:0.8rem;color:#6F767E;">Les QR codes restent valables indéfiniment</span>' +
+    '</div>' +
+    '<div style="padding:16px 0;border-bottom:1px solid #EAECEF;margin-bottom:16px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">' +
+            '<div><label style="font-weight:600;font-size:0.8rem;color:#6F767E;display:block;margin-bottom:4px;">Titre (optionnel)</label><input type="text" id="qrTitreInput" placeholder="Ex: Menu restaurant" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.9rem;"></div>' +
+            '<div><label style="font-weight:600;font-size:0.8rem;color:#6F767E;display:block;margin-bottom:4px;">Lien / URL *</label><input type="url" id="qrUrlInput" placeholder="https://exemple.com" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.9rem;"></div>' +
+        '</div>' +
+        '<button onclick="qrAdd()" class="btn-add" style="margin-top:12px;padding:10px 24px;font-size:0.9rem;"><i class="fas fa-plus"></i> Générer et ajouter un QR Code</button>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">' +
+        '<strong style="font-size:0.95rem;color:#1A1D1F;">Mes QR Codes (<span id="qrCount">0</span>)</strong>' +
+        '<input type="text" id="qrSearchInput" placeholder="🔍 Rechercher..." onkeyup="window.qrSearchQuery=this.value.trim().toLowerCase();qrRender();" style="padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;width:200px;font-size:0.85rem;">' +
+    '</div>' +
+    '<div id="qrListContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;"></div>' +
+'</div>' +
+'<div class="content-card"><div class="card-header"><h3><i class="fas fa-users"></i> Utilisateurs</h3><div style="display:flex;gap:10px;"><input type="text" id="usersSearchInput" placeholder="🔍 Rechercher..." style="padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;width:220px;" onkeyup="window.usersSearchQuery=this.value.trim().toLowerCase();renderUsersTable();"><button class="btn-add" onclick="loadUsersList()">Actualiser</button></div></div><div class="table-container"><table class="data-table" id="usersTable"><thead><tr><th>Username</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>';
+loadUsersList();
+loadFideliteSettings();
+qrLoadAll();
+
+if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+    setTimeout(function() { CacheDB.saveAll(); }, 500);
+}
+}
+
+function loadUsersList() {
+db.collection('users').get().then(function(sn) {
+window.allUsersData = [];
+sn.forEach(function(dc) { var d = dc.data(); d.id = dc.id; d.fullName = (d.prenom + ' ' + d.nom).toLowerCase(); window.allUsersData.push(d); });
+var p = window.allUsersData.filter(function(u) { return u.authorized === 'no'; }).length;
+var a = window.allUsersData.filter(function(u) { return u.authorized === 'yes'; }).length;
+document.getElementById('pendingCount').textContent = p;
+document.getElementById('authorizedCount').textContent = a;
+document.getElementById('totalUsers').textContent = window.allUsersData.length;
+renderUsersTable();
+});
+}
+
+function renderUsersTable() {
+var tb = document.querySelector('#usersTable tbody');
+if (!tb) return;
+var data = window.allUsersData.slice();
+if (window.usersSearchQuery) { data = data.filter(function(u) { return (u.email || '').toLowerCase().indexOf(window.usersSearchQuery) !== -1 || (u.username || '').toLowerCase().indexOf(window.usersSearchQuery) !== -1 || (u.fullName || '').indexOf(window.usersSearchQuery) !== -1; }); }
+tb.innerHTML = '';
+if (data.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">Aucun</td></tr>'; return; }
+data.forEach(function(u) {
+var badge = u.authorized === 'yes' ? '<span class="status-success">✅ OK</span>' : '<span class="status-warning">⏳ En attente</span>';
+var act = u.authorized === 'no' ?
+'<button class="btn-add" style="padding:4px 8px;font-size:0.7rem;margin-right:4px;" onclick="approveUser(\'' + u.id + '\')">✔</button><button class="btn-delete" style="padding:4px 8px;font-size:0.7rem;" onclick="rejectUser(\'' + u.id + '\')">✖</button>'
+: '<button style="padding:4px 8px;font-size:0.7rem;margin-right:4px;color:#d97706;border:none;background:#fef3c7;border-radius:6px;cursor:pointer;" onclick="blockUser(\'' + u.id + '\')">⛔ Bloquer</button><button class="btn-delete" style="padding:4px 8px;font-size:0.7rem;" onclick="deleteUserPermanently(\'' + u.id + '\')">🗑</button>';
+tb.innerHTML += '<tr><td><strong>@' + escapeHtml(u.username || '') + '</strong></td><td>' + escapeHtml(u.prenom || '') + ' ' + escapeHtml(u.nom || '') + '</td><td>' + escapeHtml(u.email || '') + '</td><td>' + escapeHtml(u.role || '') + '</td><td>' + badge + '</td><td>' + act + '</td></tr>';
+});
+}
+
+function blockUser(uid) { if (confirm('Bloquer ?')) { CacheDB.write('users', uid, { authorized: 'no' }, 'update').then(function() { loadUsersList(); loadPendingRegistrations(); CacheDB.sync(); }); } }
+function deleteUserPermanently(uid) { if (confirm('Supprimer ?')) { CacheDB.write('users', uid, null, 'delete').then(function() { loadUsersList(); loadPendingRegistrations(); CacheDB.sync(); }); } }
+
+function toggleChangePasswordForm() { document.getElementById('changePasswordForm').classList.toggle('hidden'); }
+
+async function changeAdminPassword() {
+var cp = document.getElementById('currentPassword').value.trim();
+var np = document.getElementById('newPassword').value.trim();
+var conf = document.getElementById('confirmPassword').value.trim();
+if (!cp || !np || !conf) { alert('Tous les champs obligatoires'); return; }
+if (np.length < 6) { alert('6 caractères minimum'); return; }
+if (np !== conf) { alert('Ne correspondent pas'); return; }
+var user = auth.currentUser;
+if (!user) { alert('Non connecté'); return; }
+try {
+await user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(user.email, cp));
+await user.updatePassword(np);
+alert('✅ Mot de passe changé');
+document.getElementById('currentPassword').value = '';
+document.getElementById('newPassword').value = '';
+document.getElementById('confirmPassword').value = '';
+toggleChangePasswordForm();
+} catch (e) {
+if (e.code === 'auth/wrong-password') alert('❌ Mot de passe actuel incorrect');
+else alert('Erreur: ' + e.message);
+}
+}
+
+function toggleMarketingProgram() { var d = document.getElementById('marketingProgramContent'); if (d) { d.classList.toggle('hidden'); if (!d.classList.contains('hidden')) loadFideliteSettings(); } }
+
+async function loadFideliteSettings() {
+var a = true, p = 1;
+try { var doc = await db.collection('settings').doc('fidelite').get(); if (doc.exists) { a = doc.data().active === true; p = doc.data().pointsParVente || 1; } } catch (e) {}
+document.getElementById('fideliteActifSelect').value = a ? '1' : '0';
+document.getElementById('fidelitePointsInput').value = p;
+}
+
+async function saveFideliteSettings() {
+var a = document.getElementById('fideliteActifSelect').value === '1';
+var p = parseInt(document.getElementById('fidelitePointsInput').value) || 1;
+try { await db.collection('settings').doc('fidelite').set({ active: a, pointsParVente: p }, { merge: true }); } catch (e) {}
+localStorage.setItem('fidelite_active', a); localStorage.setItem('fidelite_points', p);
+alert('✅ Enregistré');
+}
+
+// ==================== QR CODES ====================
+function qrGenerateUniqueId() { return 'qr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
+
+async function qrLoadAll() {
+    try {
+        var doc = await db.collection('settings').doc('qrcodes').get();
+        if (doc.exists && Array.isArray(doc.data().items)) window.allQrCodesData = doc.data().items;
+        else window.allQrCodesData = [];
+    } catch(e) {
+        console.warn('⚠️ Erreur chargement QR:', e);
+        window.allQrCodesData = [];
+    }
+    qrRender();
+}
+
+async function qrSaveAll() {
+    try {
+        await db.collection('settings').doc('qrcodes').set({ items: window.allQrCodesData }, { merge: true });
+        if (typeof CacheDB !== 'undefined' && CacheDB.set) CacheDB.set('settings', 'qrcodes', { items: window.allQrCodesData });
+    } catch(e) { console.warn('⚠️ Erreur sauvegarde QR:', e); }
+}
+
+function qrAdd() {
+    var titreInput = document.getElementById('qrTitreInput');
+    var urlInput = document.getElementById('qrUrlInput');
+    if (!urlInput) return;
+    var titre = (titreInput && titreInput.value) ? titreInput.value.trim() : '';
+    var url = urlInput.value.trim();
+    if (!url) { alert('❌ Veuillez saisir un lien / URL.'); urlInput.focus(); return; }
+    if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) url = 'https://' + url;
+    if (typeof QRCode === 'undefined') {
+        alert('❌ Bibliothèque QRCode.js non chargée.');
+        return;
+    }
+    var newQr = { id: qrGenerateUniqueId(), titre: titre || ('QR Code ' + (window.allQrCodesData.length + 1)), url: url, createdAt: new Date().toISOString() };
+    window.allQrCodesData.unshift(newQr);
+    qrSaveAll();
+    qrRender();
+    if (titreInput) titreInput.value = '';
+    if (urlInput) urlInput.value = '';
+    alert('✅ QR Code ajouté avec succès !');
+}
+
+function qrRender() {
+    var container = document.getElementById('qrListContainer');
+    if (!container) return;
+    var countEl = document.getElementById('qrCount');
+    var data = window.allQrCodesData || [];
+    if (window.qrSearchQuery) {
+        var q = window.qrSearchQuery;
+        data = data.filter(function(item) {
+            return (item.titre || '').toLowerCase().indexOf(q) !== -1 || (item.url || '').toLowerCase().indexOf(q) !== -1;
+        });
+    }
+    if (countEl) countEl.textContent = (window.allQrCodesData || []).length;
+    if (data.length === 0) {
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9A9FA5;"><i class="fas fa-qrcode" style="font-size:2.5rem;display:block;margin-bottom:10px;"></i>Aucun QR code. Ajoutez-en un ci-dessus.</div>';
+        return;
+    }
+    var html = '';
+    data.forEach(function(item) {
+        var dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString('fr-FR') : '';
+        html += '<div style="background:#FFFFFF;border:1px solid #EAECEF;border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">' +
+            '<div style="font-weight:700;font-size:0.95rem;color:#1A1D1F;word-break:break-word;">' + escapeHtml(item.titre) + '</div>' +
+            '<div id="qr_' + item.id + '" style="display:flex;align-items:center;justify-content:center;padding:8px;background:#FFFFFF;border-radius:10px;border:1px solid #EAECEF;"></div>' +
+            '<div style="font-size:0.75rem;color:#6F767E;word-break:break-all;max-width:100%;">' + escapeHtml(item.url) + '</div>' +
+            '<div style="font-size:0.7rem;color:#9A9FA5;">' + dateStr + '</div>' +
+            '<div style="display:flex;gap:6px;margin-top:4px;">' +
+                '<button onclick="qrDownload(\'' + item.id + '\')" title="Télécharger PNG" style="background:#2563EB;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-download"></i></button>' +
+                '<button onclick="qrCopy(\'' + item.id + '\')" title="Copier le lien" style="background:#8B5CF6;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-copy"></i></button>' +
+                '<button onclick="qrDelete(\'' + item.id + '\')" title="Supprimer" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.75rem;"><i class="fas fa-trash"></i></button>' +
+            '</div>' +
+        '</div>';
+    });
+    container.innerHTML = html;
+    setTimeout(function() {
+        data.forEach(function(item) {
+            var el = document.getElementById('qr_' + item.id);
+            if (!el) return;
+            el.innerHTML = '';
+            try {
+                new QRCode(el, {
+                    text: item.url, width: 180, height: 180,
+                    colorDark: '#1A1D1F', colorLight: '#FFFFFF',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch(e) { console.warn('Erreur génération QR:', e); el.innerHTML = '<span style="color:#ef4444;font-size:0.75rem;">Erreur QR</span>'; }
+        });
+    }, 50);
+}
+
+function qrDownload(id) {
+    var item = (window.allQrCodesData || []).find(function(x) { return x.id === id; });
+    if (!item) return;
+    var el = document.getElementById('qr_' + id);
+    if (!el) return;
+    var canvas = el.querySelector('canvas');
+    var img = el.querySelector('img');
+    var dataUrl = null;
+    if (canvas) dataUrl = canvas.toDataURL('image/png');
+    else if (img) dataUrl = img.src;
+    if (!dataUrl) { alert('❌ Impossible de télécharger le QR code.'); return; }
+    var safeTitre = (item.titre || 'qrcode').replace(/[^a-z0-9]/gi, '_').substring(0, 40);
+    var filename = 'QR_' + safeTitre + '_' + item.id + '.png';
+    var link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function qrCopy(id) {
+    var item = (window.allQrCodesData || []).find(function(x) { return x.id === id; });
+    if (!item) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(item.url).then(function() { alert('✅ Lien copié dans le presse-papier !'); }).catch(function() { prompt('Copiez manuellement :', item.url); });
+    } else { prompt('Copiez manuellement :', item.url); }
+}
+
+async function qrDelete(id) {
+    if (!confirm('Supprimer ce QR code ?')) return;
+    window.allQrCodesData = (window.allQrCodesData || []).filter(function(x) { return x.id !== id; });
+    await qrSaveAll();
+    qrRender();
+    alert('✅ QR code supprimé');
+}
+
+// ==================== NAVIGATION ====================
+function navigateTo(page) {
+console.log('📍 Navigation vers:', page);
+var content = document.getElementById('dynamicContent');
+if (!content) return;
+
+if (page === 'depenses' && window.currentUserData && window.currentUserData.userData.role === 'caissier') {
+    content.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
+    if (typeof window.loadDepensesPage === 'function') window.loadDepensesPage(content);
+    else if (typeof loadDepensesPage === 'function') loadDepensesPage(content);
+    else content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Dépenses non disponibles</p></div>';
+    closeSidebar();
+    return;
+}
+
+var titles = {
+'dashboard': 'Dashboard', 'pos': 'POS', 'commandes': 'Commandes en ligne',
+'categories': 'Catégories', 'products': 'Produits', 'clients': 'Clients',
+'fournisseurs': 'Fournisseurs', 'ventes': 'Ventes', 'credits': 'Crédits',
+'depenses': 'Dépenses', 'statistiques': 'Statistiques', 'options': 'Options'
+};
+var icons = {
+'dashboard': 'fa-chart-line', 'pos': 'fa-cash-register', 'commandes': 'fa-shopping-basket',
+'categories': 'fa-layer-group', 'products': 'fa-coffee', 'clients': 'fa-users',
+'fournisseurs': 'fa-truck', 'ventes': 'fa-shopping-cart', 'credits': 'fa-credit-card',
+'depenses': 'fa-money-bill-wave', 'statistiques': 'fa-chart-bar', 'options': 'fa-cog'
+};
+var titleEl = document.getElementById('pageTitle');
+if (titleEl) titleEl.textContent = titles[page] || page;
+var iconEl = document.querySelector('.header-title i');
+if (iconEl && icons[page]) iconEl.className = 'fas ' + icons[page];
+
+if (page === 'pos') {
+if (typeof window.loadPosPage === 'function') window.loadPosPage(content);
+else if (typeof loadPosPage === 'function') loadPosPage(content);
+else {
+content.innerHTML = `<div class="content-card"><p style="text-align:center;padding:40px;"><i class="fas fa-cash-register" style="font-size:3rem;display:block;color:#A67C52;margin-bottom:15px;"></i>Chargement du POS...</p></div>`;
+setTimeout(function() { if (typeof window.loadPosPage === 'function') window.loadPosPage(content); }, 500);
+}
+closeSidebar();
+return;
+}
+
+var pageFunctions = {
+'dashboard': window.loadDashboardPage || loadDashboardPage,
+'commandes': window.loadCommandesPage || loadCommandesPage,
+'categories': window.loadCategoriesPage || loadCategoriesPage,
+'products': window.loadProductsPage || loadProductsPage,
+'clients': window.loadClientsPage || loadClientsPage,
+'fournisseurs': window.loadFournisseursPage || loadFournisseursPage,
+'ventes': window.loadVentesPage || loadVentesPage,
+'credits': window.loadCreditsPage || loadCreditsPage,
+'depenses': window.loadDepensesPage || loadDepensesPage,
+'statistiques': window.loadStatistiquesPage || loadStatistiquesPage,
+'options': window.loadOptionsPage || loadOptionsPage
+};
+
+var fn = pageFunctions[page];
+if (fn && typeof fn === 'function') {
+try { fn(content); } catch(e) {
+console.error('Erreur chargement page:', e);
+content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#ef4444;">Erreur de chargement: ' + e.message + '</p></div>';
+}
+} else {
+content.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#94a3b8;">Page en développement</p></div>';
+}
+
+closeSidebar();
+}
+
+// ==================== EXPORTS ====================
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.fileToBase64 = fileToBase64;
+window.previewImage = previewImage;
+window.saveDocument = saveDocument;
+window.deleteDocument = deleteDocument;
+window.refreshCurrentPage = refreshCurrentPage;
+window.editDocument = editDocument;
+window.sortTableData = sortTableData;
+window.applySort = applySort;
+window.makeSortableHeader = makeSortableHeader;
+window.getPaginationHTML = getPaginationHTML;
+window.changePage = changePage;
+window.getPageData = getPageData;
+window.getPeriodOptions = getPeriodOptions;
+window.filterByPeriod = filterByPeriod;
+window.filterBySearch = filterBySearch;
+window.loadDashboardPage = loadDashboardPage;
+window.loadDashboardStats = loadDashboardStats;
+window.loadSmartAlerts = loadSmartAlerts;
+window.injectAdminStyles = injectAdminStyles;
+window.loadPendingRegistrations = loadPendingRegistrations;
+window.renderPendingTable = renderPendingTable;
+window.approveUser = approveUser;
+window.rejectUser = rejectUser;
+window.loadOptionsPage = loadOptionsPage;
+window.loadUsersList = loadUsersList;
+window.renderUsersTable = renderUsersTable;
+window.blockUser = blockUser;
+window.deleteUserPermanently = deleteUserPermanently;
+window.toggleChangePasswordForm = toggleChangePasswordForm;
+window.changeAdminPassword = changeAdminPassword;
+window.toggleMarketingProgram = toggleMarketingProgram;
+window.loadFideliteSettings = loadFideliteSettings;
+window.saveFideliteSettings = saveFideliteSettings;
+window.navigateTo = navigateTo;
+
+window.qrLoadAll = qrLoadAll;
+window.qrAdd = qrAdd;
+window.qrRender = qrRender;
+window.qrDownload = qrDownload;
+window.qrCopy = qrCopy;
+window.qrDelete = qrDelete;
+window.qrSaveAll = qrSaveAll;
+
+window.openDashboardCalendar = openDashboardCalendar;
+window.dcCloseCalendar = dcCloseCalendar;
+
+console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
+console.log('🧠 Alertes intelligentes : Stock / Expiration / Prévisions ventes');
+console.log('🎨 Dashboard PRO minimaliste : UNE SEULE couleur #2563EB (aligné POS)');
+console.log('📱 100% responsive');
+console.log('🆕 📅 Calendrier intégré (météo + fêtes + événements)');
