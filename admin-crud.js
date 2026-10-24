@@ -14,7 +14,7 @@
 // ✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur
 // ✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats
 // ✅ 🆕 Tableau produits (plus de cards) + tri sur toutes les colonnes + Vendues / CA / Profit
-// ✅ 🆕 FIX v9 : le profit cumulé n'est plus écrasé (ni au chargement, ni à l'édition)
+// ✅ 🆕 FIX v10 : profit = (prixEffectif - prixAchat) × vendues (recalculé automatiquement)
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -732,10 +732,10 @@ async function loadProducts() {
         window.allProductsData = [];
         snapshot.forEach(d => {
             let dd = d.data(); dd.id = d.id;
-            // ✅ FIX v9 : ne plus écraser le profit cumulé
-            if (dd.profit === undefined || dd.profit === null) {
-                dd.profit = 0;
-            }
+            // ✅ FIX v10 : profit recalculé = marge unitaire × nb fois vendu
+            let prixEffectif = (dd.prixPromo && dd.prixPromo > 0) ? dd.prixPromo : (dd.prixVente || 0);
+            let margeUnitaire = acNum(prixEffectif) - acNum(dd.prixAchat);
+            dd.profit = margeUnitaire * acNum(dd.vendues);
             dd.dateProduction = dd.dateProduction || '';
             dd.dureeConservation = dd.dureeConservation || 0;
             dd.dateExpiration = dd.dateExpiration || '';
@@ -1076,20 +1076,20 @@ function saveProduct() {
             fournisseurNom: fournisseurNom
         };
 
-        // ✅ FIX v9 : Ne pas écraser les compteurs cumulés lors d'une modification
+        // ✅ FIX v10 : conserver vendues et ca, recalculer profit = marge unitaire × vendues
         if (editingId) {
             var existing = window.allProductsData.find(function(x) { return x.id === editingId; });
             if (existing) {
-                d.profit = (existing.profit !== undefined && existing.profit !== null) ? existing.profit : 0;
                 d.vendues = (existing.vendues !== undefined && existing.vendues !== null) ? existing.vendues : 0;
                 d.ca = (existing.ca !== undefined && existing.ca !== null) ? existing.ca : 0;
             } else {
-                d.profit = 0; d.vendues = 0; d.ca = 0;
+                d.vendues = 0; d.ca = 0;
             }
         } else {
-            // Création : init à 0
-            d.profit = 0; d.vendues = 0; d.ca = 0;
+            d.vendues = 0; d.ca = 0;
         }
+        var prixEffectifSave = (prixPromo > 0) ? prixPromo : prixVente;
+        d.profit = (acNum(prixEffectifSave) - acNum(prixAchat)) * acNum(d.vendues);
 
         if (img) d.imageBase64 = img;
         if (editingId) {
@@ -2333,7 +2333,7 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v9');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v10');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
@@ -2349,4 +2349,4 @@ console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
 console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur');
 console.log('✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats');
 console.log('✅ 🆕 Tableau produits + tri sur toutes les colonnes + Vendues / CA / Profit');
-console.log('✅ 🆕 FIX v9 : profit cumulé conservé (loadProducts + saveProduct)');
+console.log('✅ 🆕 FIX v10 : profit = (prixEffectif - prixAchat) × vendues (recalculé auto)');
