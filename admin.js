@@ -4,6 +4,7 @@
 // 🎨 Dashboard minimaliste — UNE SEULE COULEUR D'ACCENT (#2563EB), aligné sur le POS
 // 📱 100% responsive
 // 🆕 📅 Calendrier PRO : ville + filtres période + fêtes préétablies + saisons
+// 🆕 ➕ CRUD événements personnels (ajouter / modifier / supprimer)
 
 // ==================== VARIABLES GLOBALES ====================
 window.editingId = window.editingId || null;
@@ -250,6 +251,31 @@ window._calendarState = window._calendarState || {
     periodType: 'month'
 };
 
+// 🆕 Stockage événements personnels
+window._dcpCustomEvents = window._dcpCustomEvents || [];
+
+async function dcpLoadCustomEvents() {
+    try {
+        var doc = await db.collection('settings').doc('calendar_events').get();
+        if (doc.exists && Array.isArray(doc.data().items)) {
+            window._dcpCustomEvents = doc.data().items;
+        } else {
+            window._dcpCustomEvents = [];
+        }
+    } catch(e) {
+        try { window._dcpCustomEvents = JSON.parse(localStorage.getItem('dcp_custom_events') || '[]'); }
+        catch(e2) { window._dcpCustomEvents = []; }
+    }
+}
+
+async function dcpSaveCustomEvents() {
+    try {
+        await db.collection('settings').doc('calendar_events').set({ items: window._dcpCustomEvents }, { merge: true });
+        if (typeof CacheDB !== 'undefined' && CacheDB.set) CacheDB.set('settings', 'calendar_events', { items: window._dcpCustomEvents });
+    } catch(e) { console.warn('⚠️ Erreur sauvegarde événements:', e); }
+    try { localStorage.setItem('dcp_custom_events', JSON.stringify(window._dcpCustomEvents)); } catch(e) {}
+}
+
 // ✅ Fêtes + saisons préétablies
 function dcpGetPredefinedEvents(year) {
     var events = [];
@@ -310,6 +336,20 @@ function dcpGetPredefinedEvents(year) {
     (muslimDates[year] || []).forEach(function(e) {
         events.push({ date: e.date, type: 'muslim', titre: e.titre, icon: e.icon, description: e.desc });
     });
+
+    // ✅ Ajouter les événements personnels
+    (window._dcpCustomEvents || []).forEach(function(ce) {
+        events.push({
+            date: ce.date,
+            type: 'custom',
+            titre: ce.titre,
+            icon: ce.icon || '📌',
+            description: ce.description || '',
+            id: ce.id,
+            endDate: ce.endDate || null
+        });
+    });
+
     return events;
 }
 
@@ -440,6 +480,7 @@ async function openDashboardCalendar() {
     html += '        <button onclick="dcpNavigate(-1)" class="dcp-nav-btn"><i class="fas fa-chevron-left"></i></button>';
     html += '        <button onclick="dcpGoToday()" class="dcp-nav-btn primary">Aujourd\'hui</button>';
     html += '        <button onclick="dcpNavigate(1)" class="dcp-nav-btn"><i class="fas fa-chevron-right"></i></button>';
+    html += '        <button onclick="dcpOpenEventForm()" class="dcp-nav-btn primary" style="background:linear-gradient(135deg,#10B981,#059669);"><i class="fas fa-plus"></i> Ajouter</button>';
     html += '      </div>';
     html += '    </div>';
 
@@ -450,6 +491,7 @@ async function openDashboardCalendar() {
     html += '</div>';
     document.body.insertAdjacentHTML('beforeend', html);
 
+    await dcpLoadCustomEvents();
     await dcpRenderBody();
 }
 
@@ -530,6 +572,13 @@ async function dcpRenderBody() {
             html += '  <div class="dcp-event-title">' + escapeHtml(e.titre) + '</div>';
             html += '  <div class="dcp-event-date">' + dateLabel + '</div>';
             if (e.description) html += '  <div class="dcp-event-desc">' + escapeHtml(e.description) + '</div>';
+            // ✅ Boutons Modifier/Supprimer pour événements personnalisés uniquement
+            if (e.type === 'custom' && e.id) {
+                html += '  <div style="display:flex;gap:6px;margin-top:8px;">';
+                html += '    <button onclick="dcpOpenEventForm(\'' + e.id + '\')" style="background:#3B82F6;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;"><i class="fas fa-edit"></i> Modifier</button>';
+                html += '    <button onclick="dcpDeleteEvent(\'' + e.id + '\')" style="background:#EF4444;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;"><i class="fas fa-trash"></i> Supprimer</button>';
+                html += '  </div>';
+            }
             html += '</div>';
         });
         html += '</div>';
@@ -578,6 +627,140 @@ function dcCloseCalendar() {
 }
 window.dcCloseCalendar = dcCloseCalendar;
 window.openDashboardCalendar = openDashboardCalendar;
+
+// ====================================================
+//  ✏️ CRUD ÉVÉNEMENTS PERSONNELS
+// ====================================================
+window.dcpOpenEventForm = function(eventId) {
+    var old = document.getElementById('dcpFormOverlay');
+    if (old) old.remove();
+
+    var isEdit = !!eventId;
+    var ev = isEdit ? (window._dcpCustomEvents || []).find(function(x) { return x.id === eventId; }) : null;
+    if (isEdit && !ev) { alert('❌ Événement introuvable'); return; }
+
+    var state = window._calendarState;
+    var defaultDate = new Date(state.currentDate);
+    var defaultDateStr = defaultDate.getFullYear() + '-' + String(defaultDate.getMonth() + 1).padStart(2, '0') + '-' + String(defaultDate.getDate()).padStart(2, '0');
+
+    var html = '';
+    html += '<div id="dcpFormOverlay" style="position:fixed;inset:0;background:rgba(15,23,42,0.7);backdrop-filter:blur(6px);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;">';
+    html += '  <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:520px;box-shadow:0 24px 64px rgba(0,0,0,0.35);">';
+    html += '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">';
+    html += '      <h3 style="margin:0;font-size:18px;font-weight:800;color:#0F172A;display:flex;align-items:center;gap:10px;"><i class="fas ' + (isEdit ? 'fa-edit' : 'fa-plus') + '" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:white;padding:8px;border-radius:10px;font-size:14px;"></i> ' + (isEdit ? 'Modifier l\'événement' : 'Nouvel événement') + '</h3>';
+    html += '      <button onclick="dcpCloseEventForm()" style="width:36px;height:36px;border-radius:50%;border:none;background:#F1F5F9;color:#64748B;font-size:16px;cursor:pointer;"><i class="fas fa-times"></i></button>';
+    html += '    </div>';
+
+    // Titre
+    html += '    <div style="margin-bottom:14px;">';
+    html += '      <label style="font-size:11px;font-weight:800;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Titre *</label>';
+    html += '      <input type="text" id="dcpEvTitle" placeholder="Ex: Réunion fournisseur" maxlength="80" value="' + (ev ? escapeHtml(ev.titre) : '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">';
+    html += '    </div>';
+
+    // Dates
+    html += '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">';
+    html += '      <div>';
+    html += '        <label style="font-size:11px;font-weight:800;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Date début *</label>';
+    html += '        <input type="date" id="dcpEvDate" value="' + (ev ? ev.date : defaultDateStr) + '" style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">';
+    html += '      </div>';
+    html += '      <div>';
+    html += '        <label style="font-size:11px;font-weight:800;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Date fin (optionnel)</label>';
+    html += '        <input type="date" id="dcpEvEndDate" value="' + (ev && ev.endDate ? ev.endDate : '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">';
+    html += '      </div>';
+    html += '    </div>';
+
+    // Icône
+    html += '    <div style="margin-bottom:14px;">';
+    html += '      <label style="font-size:11px;font-weight:800;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Icône</label>';
+    html += '      <select id="dcpEvIcon" style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;cursor:pointer;">';
+    var icons = [
+        { v: '📌', l: '📌 Épingle' }, { v: '🎉', l: '🎉 Fête' }, { v: '🚚', l: '🚚 Livraison' },
+        { v: '📦', l: '📦 Stock' }, { v: '💰', l: '💰 Paiement' }, { v: '📊', l: '📊 Réunion' },
+        { v: '⚠️', l: '⚠️ Important' }, { v: '🛒', l: '🛒 Commande' }, { v: '🎂', l: '🎂 Anniversaire' },
+        { v: '🏖️', l: '🏖️ Congé' }, { v: '📞', l: '📞 Appel' }, { v: '✈️', l: '✈️ Voyage' },
+        { v: '🎓', l: '🎓 Formation' }, { v: '🏥', l: '🏥 Médical' }, { v: '🔧', l: '🔧 Maintenance' }
+    ];
+    icons.forEach(function(ic) {
+        html += '<option value="' + ic.v + '"' + (ev && ev.icon === ic.v ? ' selected' : '') + '>' + ic.l + '</option>';
+    });
+    html += '      </select>';
+    html += '    </div>';
+
+    // Description
+    html += '    <div style="margin-bottom:18px;">';
+    html += '      <label style="font-size:11px;font-weight:800;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Description (optionnel)</label>';
+    html += '      <textarea id="dcpEvDesc" placeholder="Détails..." maxlength="300" style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:vertical;min-height:70px;box-sizing:border-box;">' + (ev ? escapeHtml(ev.description || '') : '') + '</textarea>';
+    html += '    </div>';
+
+    // Actions
+    html += '    <div style="display:flex;gap:10px;justify-content:flex-end;">';
+    html += '      <button onclick="dcpCloseEventForm()" style="background:#F1F5F9;color:#64748B;border:none;border-radius:10px;padding:11px 20px;font-weight:700;cursor:pointer;font-size:13px;">Annuler</button>';
+    html += '      <button onclick="dcpSaveEvent(' + (isEdit ? '\'' + eventId + '\'' : 'null') + ')" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:white;border:none;border-radius:10px;padding:11px 20px;font-weight:700;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;"><i class="fas fa-check"></i> ' + (isEdit ? 'Enregistrer' : 'Ajouter') + '</button>';
+    html += '    </div>';
+
+    html += '  </div>';
+    html += '</div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    setTimeout(function() {
+        var t = document.getElementById('dcpEvTitle');
+        if (t) t.focus();
+    }, 100);
+};
+
+window.dcpCloseEventForm = function() {
+    var el = document.getElementById('dcpFormOverlay');
+    if (el) el.remove();
+};
+
+window.dcpSaveEvent = async function(eventId) {
+    var titre = (document.getElementById('dcpEvTitle').value || '').trim();
+    var date = document.getElementById('dcpEvDate').value;
+    var endDate = document.getElementById('dcpEvEndDate').value;
+    var icon = document.getElementById('dcpEvIcon').value;
+    var description = (document.getElementById('dcpEvDesc').value || '').trim();
+
+    if (!titre) { alert('❌ Le titre est obligatoire'); return; }
+    if (!date) { alert('❌ La date de début est obligatoire'); return; }
+    if (endDate && endDate < date) { alert('❌ La date de fin doit être après la date de début'); return; }
+
+    if (eventId) {
+        var ev = window._dcpCustomEvents.find(function(x) { return x.id === eventId; });
+        if (ev) {
+            ev.titre = titre;
+            ev.date = date;
+            ev.endDate = endDate || null;
+            ev.icon = icon;
+            ev.description = description;
+            ev.updatedAt = new Date().toISOString();
+        }
+    } else {
+        window._dcpCustomEvents.push({
+            id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+            titre: titre,
+            date: date,
+            endDate: endDate || null,
+            icon: icon,
+            description: description,
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    await dcpSaveCustomEvents();
+    dcpCloseEventForm();
+    dcpRenderBody();
+    alert('✅ Événement ' + (eventId ? 'modifié' : 'ajouté') + ' avec succès !');
+};
+
+window.dcpDeleteEvent = async function(eventId) {
+    var ev = window._dcpCustomEvents.find(function(x) { return x.id === eventId; });
+    if (!ev) { alert('❌ Événement introuvable'); return; }
+    if (!confirm('Supprimer cet événement ?\n\n"' + ev.titre + '"\n\nCette action est irréversible.')) return;
+    window._dcpCustomEvents = window._dcpCustomEvents.filter(function(x) { return x.id !== eventId; });
+    await dcpSaveCustomEvents();
+    dcpRenderBody();
+    alert('🗑️ Événement supprimé');
+};
 
 // ==================== MODAL & CRUD ====================
 function openModal(t, b) {
@@ -1687,8 +1870,15 @@ window.qrSaveAll = qrSaveAll;
 window.openDashboardCalendar = openDashboardCalendar;
 window.dcCloseCalendar = dcCloseCalendar;
 
+// 🆕 CRUD événements personnels
+window.dcpOpenEventForm = dcpOpenEventForm;
+window.dcpCloseEventForm = dcpCloseEventForm;
+window.dcpSaveEvent = dcpSaveEvent;
+window.dcpDeleteEvent = dcpDeleteEvent;
+
 console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
 console.log('🧠 Alertes intelligentes : Stock / Expiration / Prévisions ventes');
 console.log('🎨 Dashboard PRO minimaliste : UNE SEULE couleur #2563EB (aligné POS)');
 console.log('📱 100% responsive');
 console.log('🆕 📅 Calendrier PRO : ville + filtres période + fêtes préétablies + saisons');
+console.log('🆕 ➕ CRUD événements personnels (ajouter / modifier / supprimer)');
