@@ -3,7 +3,7 @@
 // ✅ 🆕 Alertes intelligentes sur le dashboard (Stock / Expiration / Prévisions ventes)
 // 🎨 Dashboard minimaliste — UNE SEULE COULEUR D'ACCENT (#2563EB), aligné sur le POS
 // 📱 100% responsive
-// 🆕 📅 Calendrier (météo 7j + fêtes marocaines + événements)
+// 🆕 📅 Calendrier PRO : ville + filtres période + fêtes préétablies + saisons
 
 // ==================== VARIABLES GLOBALES ====================
 window.editingId = window.editingId || null;
@@ -73,864 +73,511 @@ return null;
 }
 
 // ==================== 🎨 STYLE DASHBOARD PRO MINIMALISTE ====================
-// Une seule couleur d'accent : #2563EB (bleu POS)
-// Palette : blanc, gris clair (#F7F8FA, #F8FAFC, #EAECEF), texte (#1A1D1F, #6F767E)
 function injectAdminStyles() {
     var styleId = 'admin-dashboard-pro';
     if (document.getElementById(styleId)) return;
     var style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        /* ============================================================ */
-        /* 🎨 DASHBOARD PRO — UNE SEULE COULEUR D'ACCENT (bleu #2563EB) */
-        /* Design aligné sur le POS (cartes blanches, bordures #EAECEF) */
-        /* ============================================================ */
-
-        #dashboardPage {
-            background: #F7F8FA !important;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-            color: #1A1D1F;
-        }
-
-        /* === Bandeau de bienvenue (sobre, sans multi-couleurs) === */
-        .dash-welcome {
-            background: #FFFFFF;
-            border-radius: 14px;
-            padding: 22px 24px;
-            margin-bottom: 18px;
-            border: 1px solid #EAECEF;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        .dash-welcome h1 {
-            font-size: 1.35rem;
-            font-weight: 800;
-            letter-spacing: -0.4px;
-            color: #1A1D1F;
-            margin: 0 0 4px 0;
-            line-height: 1.2;
-        }
-        .dash-welcome p {
-            margin: 0;
-            font-size: 0.88rem;
-            color: #6F767E;
-            font-weight: 500;
-        }
-        .dash-welcome-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 14px;
-            background: #EFF6FF;
-            color: #2563EB;
-            border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            white-space: nowrap;
-            border: 1px solid #BFDBFE;
-        }
+        #dashboardPage { background: #F7F8FA !important; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important; color: #1A1D1F; }
+        .dash-welcome { background: #FFFFFF; border-radius: 14px; padding: 22px 24px; margin-bottom: 18px; border: 1px solid #EAECEF; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .dash-welcome h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.4px; color: #1A1D1F; margin: 0 0 4px 0; line-height: 1.2; }
+        .dash-welcome p { margin: 0; font-size: 0.88rem; color: #6F767E; font-weight: 500; }
+        .dash-welcome-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: #EFF6FF; color: #2563EB; border-radius: 999px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; border: 1px solid #BFDBFE; }
         .dash-welcome-badge i { font-size: 0.75rem; }
-
-        /* === KPI Cards — cartes blanches épurées (style POS) === */
-        .dash-kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-        .dash-kpi {
-            background: #FFFFFF;
-            border: 1px solid #EAECEF;
-            border-radius: 14px;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            transition: all 0.2s ease;
-        }
-        .dash-kpi:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-        }
-        .dash-kpi-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.05rem;
-            flex-shrink: 0;
-            background: #EFF6FF;
-            color: #2563EB;
-        }
-        .dash-kpi-label {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #6F767E;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: block;
-            margin: 0;
-        }
-        .dash-kpi-value {
-            font-size: 1.4rem;
-            font-weight: 800;
-            color: #1A1D1F;
-            letter-spacing: -0.5px;
-            line-height: 1.1;
-            display: block;
-            margin-top: 2px;
-        }
-
-        /* === Alertes intelligentes — même style POS === */
-        .smart-alert-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 14px;
-            margin-bottom: 18px;
-        }
-        .smart-alert-card {
-            background: #FFFFFF;
-            border-radius: 14px;
-            padding: 18px;
-            border: 1px solid #EAECEF;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            transition: all 0.2s ease;
-        }
-        .smart-alert-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-            transform: translateY(-2px);
-        }
-        .smart-alert-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-        .smart-alert-header h4 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #1A1D1F;
-            letter-spacing: -0.2px;
-        }
-        .smart-alert-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            background: #EFF6FF;
-            color: #2563EB;
-        }
+        .dash-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .dash-kpi { background: #FFFFFF; border: 1px solid #EAECEF; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease; }
+        .dash-kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .dash-kpi-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0; background: #EFF6FF; color: #2563EB; }
+        .dash-kpi-label { font-size: 0.72rem; font-weight: 700; color: #6F767E; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin: 0; }
+        .dash-kpi-value { font-size: 1.4rem; font-weight: 800; color: #1A1D1F; letter-spacing: -0.5px; line-height: 1.1; display: block; margin-top: 2px; }
+        .smart-alert-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 18px; }
+        .smart-alert-card { background: #FFFFFF; border-radius: 14px; padding: 18px; border: 1px solid #EAECEF; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease; }
+        .smart-alert-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); transform: translateY(-2px); }
+        .smart-alert-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .smart-alert-header h4 { margin: 0; font-size: 0.95rem; font-weight: 700; color: #1A1D1F; letter-spacing: -0.2px; }
+        .smart-alert-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #EFF6FF; color: #2563EB; }
         .smart-alert-icon i { font-size: 1rem; }
-
-        .smart-alert-badges {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 8px;
-        }
-        .smart-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            white-space: nowrap;
-            border: 1px solid #EAECEF;
-            background: #F8FAFC;
-            color: #64748B;
-        }
-        /* Seule exception de couleur : rouge discret pour alerte critique */
+        .smart-alert-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+        .smart-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; border: 1px solid #EAECEF; background: #F8FAFC; color: #64748B; }
         .smart-badge.red { background: #FEF2F2; color: #B91C1C; border-color: #FECACA; }
         .smart-badge.orange { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
         .smart-badge.yellow { background: #FEFCE8; color: #713F12; border-color: #FDE68A; }
-
-        .smart-alert-summary {
-            font-size: 0.82rem;
-            color: #6F767E;
-            line-height: 1.5;
-            font-weight: 500;
-        }
+        .smart-alert-summary { font-size: 0.82rem; color: #6F767E; line-height: 1.5; font-weight: 500; }
         .smart-alert-summary strong { color: #1A1D1F; font-weight: 700; }
-
-        .smart-forecast-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 4px;
-        }
-        .smart-forecast-item {
-            background: #F7F8FA;
-            border-radius: 10px;
-            padding: 10px 12px;
-            border: 1px solid #EAECEF;
-        }
-        .smart-forecast-item .label {
-            display: block;
-            font-size: 0.68rem;
-            color: #6F767E;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin-bottom: 3px;
-        }
-        .smart-forecast-item .value {
-            display: block;
-            font-size: 1.15rem;
-            font-weight: 800;
-            letter-spacing: -0.4px;
-            color: #1A1D1F;
-        }
-
-        /* === Sections (Accès rapide / Inscriptions) === */
-        .dash-section {
-            background: #FFFFFF;
-            border-radius: 14px;
-            border: 1px solid #EAECEF;
-            padding: 20px;
-            margin-bottom: 18px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        }
-        .dash-section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        .dash-section-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1rem;
-            font-weight: 800;
-            color: #1A1D1F;
-            letter-spacing: -0.3px;
-            margin: 0;
-        }
-        .dash-section-title i {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: #EFF6FF;
-            color: #2563EB;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-        }
-        .dash-section-subtitle {
-            font-size: 0.8rem;
-            color: #6F767E;
-            font-weight: 500;
-            margin-top: 2px;
-        }
-        .dash-btn-refresh {
-            background: #F8FAFC;
-            color: #6F767E;
-            border: 1px solid #EAECEF;
-            border-radius: 8px;
-            padding: 7px 14px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-            font-family: inherit;
-        }
-        .dash-btn-refresh:hover {
-            background: #2563EB;
-            color: #fff;
-            border-color: #2563EB;
-            transform: translateY(-1px);
-        }
-
-        /* === Accès rapide — tuiles épurées (style POS) === */
-        .quick-access-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 12px;
-        }
-        .qa-tile {
-            cursor: pointer;
-            background: #FFFFFF;
-            border: 1px solid #EAECEF;
-            border-radius: 12px;
-            padding: 16px 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            text-align: center;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        }
-        .qa-tile:hover {
-            transform: translateY(-3px);
-            border-color: #BFDBFE;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.08);
-        }
-        .qa-tile-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            flex-shrink: 0;
-            background: #EFF6FF;
-            color: #2563EB;
-            transition: all 0.2s ease;
-        }
-        .qa-tile:hover .qa-tile-icon {
-            background: #2563EB;
-            color: #FFFFFF;
-        }
-        .qa-tile-label {
-            font-weight: 700;
-            font-size: 0.82rem;
-            color: #1A1D1F;
-            line-height: 1.2;
-        }
-        .qa-tile-desc {
-            font-size: 0.68rem;
-            color: #6F767E;
-            font-weight: 500;
-            line-height: 1.3;
-        }
-
-        /* === Table Inscriptions en attente — style POS === */
-        #dashboardPage .table-container {
-            background: #FFFFFF;
-            border-radius: 10px;
-            overflow-x: auto;
-            border: 1px solid #EAECEF;
-        }
-        #dashboardPage .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-        }
-        #dashboardPage .data-table thead th {
-            background: #F8FAFC !important;
-            color: #64748B !important;
-            font-size: 0.7rem !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
-            font-weight: 700 !important;
-            padding: 12px 14px !important;
-            border-bottom: 1.5px solid #EAECEF !important;
-            text-align: left;
-        }
-        #dashboardPage .data-table tbody td {
-            padding: 12px 14px !important;
-            font-size: 0.85rem !important;
-            color: #1A1D1F !important;
-            border-bottom: 1px solid #F1F5F9 !important;
-            vertical-align: middle !important;
-        }
-        #dashboardPage .data-table tbody tr:last-child td {
-            border-bottom: none !important;
-        }
-        #dashboardPage .data-table tbody tr:hover td {
-            background: #FAFBFC !important;
-        }
-
-        /* === Boutons actions de la table (Accepter / Refuser) === */
-        #dashboardPage .btn-add {
-            padding: 6px 14px !important;
-            border-radius: 8px !important;
-            font-size: 0.75rem !important;
-            font-weight: 700 !important;
-            background: #2563EB !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            cursor: pointer !important;
-            box-shadow: 0 1px 3px rgba(37,99,235,0.2) !important;
-            transition: all 0.2s ease !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 5px !important;
-            font-family: inherit !important;
-        }
-        #dashboardPage .btn-add:hover {
-            background: #1D4ED8 !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 4px 10px rgba(37,99,235,0.3) !important;
-        }
-        #dashboardPage .btn-delete {
-            padding: 6px 14px !important;
-            border-radius: 8px !important;
-            font-size: 0.75rem !important;
-            font-weight: 700 !important;
-            background: #F8FAFC !important;
-            color: #6F767E !important;
-            border: 1px solid #EAECEF !important;
-            cursor: pointer !important;
-            transition: all 0.2s ease !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 5px !important;
-            font-family: inherit !important;
-        }
-        #dashboardPage .btn-delete:hover {
-            background: #1A1D1F !important;
-            color: #FFFFFF !important;
-            border-color: #1A1D1F !important;
-            transform: translateY(-1px) !important;
-        }
-
-        /* === Statut role (badge gris clair) === */
-        #dashboardPage .status-warning {
-            background: #F8FAFC !important;
-            color: #6F767E !important;
-            padding: 3px 10px !important;
-            border-radius: 6px !important;
-            font-size: 0.72rem !important;
-            font-weight: 700 !important;
-            border: 1px solid #EAECEF !important;
-            display: inline-block !important;
-            text-transform: capitalize !important;
-        }
-
-        /* === Animations (sobres) === */
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .dash-welcome, .dash-kpi, .smart-alert-card, .dash-section {
-            animation: fadeUp 0.35s ease both;
-        }
-        .dash-kpi:nth-child(1) { animation-delay: 0.03s; }
-        .dash-kpi:nth-child(2) { animation-delay: 0.06s; }
-        .dash-kpi:nth-child(3) { animation-delay: 0.09s; }
-        .dash-kpi:nth-child(4) { animation-delay: 0.12s; }
-        .dash-kpi:nth-child(5) { animation-delay: 0.15s; }
-        .smart-alert-card:nth-child(1) { animation-delay: 0.18s; }
-        .smart-alert-card:nth-child(2) { animation-delay: 0.21s; }
-        .smart-alert-card:nth-child(3) { animation-delay: 0.24s; }
-        .dash-section { animation-delay: 0.27s; }
-
-        /* ============================================================ */
-        /* 📱 RESPONSIVE                                                 */
-        /* ============================================================ */
-
-        @media (max-width: 1024px) {
-            .dash-welcome { padding: 20px; }
-            .dash-welcome h1 { font-size: 1.2rem; }
-            .dash-kpi-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-            .quick-access-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-        }
-
+        .smart-forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+        .smart-forecast-item { background: #F7F8FA; border-radius: 10px; padding: 10px 12px; border: 1px solid #EAECEF; }
+        .smart-forecast-item .label { display: block; font-size: 0.68rem; color: #6F767E; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+        .smart-forecast-item .value { display: block; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.4px; color: #1A1D1F; }
+        .dash-section { background: #FFFFFF; border-radius: 14px; border: 1px solid #EAECEF; padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .dash-section-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .dash-section-title { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 800; color: #1A1D1F; letter-spacing: -0.3px; margin: 0; }
+        .dash-section-title i { width: 32px; height: 32px; border-radius: 8px; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .dash-section-subtitle { font-size: 0.8rem; color: #6F767E; font-weight: 500; margin-top: 2px; }
+        .dash-btn-refresh { background: #F8FAFC; color: #6F767E; border: 1px solid #EAECEF; border-radius: 8px; padding: 7px 14px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; font-family: inherit; }
+        .dash-btn-refresh:hover { background: #2563EB; color: #fff; border-color: #2563EB; transform: translateY(-1px); }
+        .quick-access-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .qa-tile { cursor: pointer; background: #FFFFFF; border: 1px solid #EAECEF; border-radius: 12px; padding: 16px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .qa-tile:hover { transform: translateY(-3px); border-color: #BFDBFE; box-shadow: 0 4px 12px rgba(37,99,235,0.08); }
+        .qa-tile-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; background: #EFF6FF; color: #2563EB; transition: all 0.2s ease; }
+        .qa-tile:hover .qa-tile-icon { background: #2563EB; color: #FFFFFF; }
+        .qa-tile-label { font-weight: 700; font-size: 0.82rem; color: #1A1D1F; line-height: 1.2; }
+        .qa-tile-desc { font-size: 0.68rem; color: #6F767E; font-weight: 500; line-height: 1.3; }
+        #dashboardPage .table-container { background: #FFFFFF; border-radius: 10px; overflow-x: auto; border: 1px solid #EAECEF; }
+        #dashboardPage .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        #dashboardPage .data-table thead th { background: #F8FAFC !important; color: #64748B !important; font-size: 0.7rem !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; font-weight: 700 !important; padding: 12px 14px !important; border-bottom: 1.5px solid #EAECEF !important; text-align: left; }
+        #dashboardPage .data-table tbody td { padding: 12px 14px !important; font-size: 0.85rem !important; color: #1A1D1F !important; border-bottom: 1px solid #F1F5F9 !important; vertical-align: middle !important; }
+        #dashboardPage .data-table tbody tr:last-child td { border-bottom: none !important; }
+        #dashboardPage .data-table tbody tr:hover td { background: #FAFBFC !important; }
+        #dashboardPage .btn-add { padding: 6px 14px !important; border-radius: 8px !important; font-size: 0.75rem !important; font-weight: 700 !important; background: #2563EB !important; color: #FFFFFF !important; border: none !important; cursor: pointer !important; box-shadow: 0 1px 3px rgba(37,99,235,0.2) !important; transition: all 0.2s ease !important; display: inline-flex !important; align-items: center !important; gap: 5px !important; font-family: inherit !important; }
+        #dashboardPage .btn-add:hover { background: #1D4ED8 !important; transform: translateY(-1px) !important; box-shadow: 0 4px 10px rgba(37,99,235,0.3) !important; }
+        #dashboardPage .btn-delete { padding: 6px 14px !important; border-radius: 8px !important; font-size: 0.75rem !important; font-weight: 700 !important; background: #F8FAFC !important; color: #6F767E !important; border: 1px solid #EAECEF !important; cursor: pointer !important; transition: all 0.2s ease !important; display: inline-flex !important; align-items: center !important; gap: 5px !important; font-family: inherit !important; }
+        #dashboardPage .btn-delete:hover { background: #1A1D1F !important; color: #FFFFFF !important; border-color: #1A1D1F !important; transform: translateY(-1px) !important; }
+        #dashboardPage .status-warning { background: #F8FAFC !important; color: #6F767E !important; padding: 3px 10px !important; border-radius: 6px !important; font-size: 0.72rem !important; font-weight: 700 !important; border: 1px solid #EAECEF !important; display: inline-block !important; text-transform: capitalize !important; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .dash-welcome, .dash-kpi, .smart-alert-card, .dash-section { animation: fadeUp 0.35s ease both; }
+        @media (max-width: 1024px) { .dash-welcome { padding: 20px; } .dash-welcome h1 { font-size: 1.2rem; } .dash-kpi-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); } .quick-access-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
         @media (max-width: 768px) {
             #dashboardPage { padding: 0 2px; }
-
-            .dash-welcome {
-                padding: 16px;
-                border-radius: 12px;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
+            .dash-welcome { padding: 16px; border-radius: 12px; flex-direction: column; align-items: flex-start; gap: 10px; }
             .dash-welcome h1 { font-size: 1.1rem; }
-            .dash-welcome p { font-size: 0.8rem; }
-            .dash-welcome-badge { font-size: 0.72rem; padding: 6px 12px; }
-
-            .dash-kpi-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-            }
+            .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
             .dash-kpi { padding: 14px; gap: 8px; }
-            .dash-kpi-icon { width: 34px; height: 34px; font-size: 0.9rem; }
-            .dash-kpi-label { font-size: 0.65rem; }
             .dash-kpi-value { font-size: 1.1rem; }
-
-            .smart-alert-grid {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-            .smart-alert-card { padding: 14px; }
-            .smart-alert-header h4 { font-size: 0.88rem; }
-            .smart-alert-icon { width: 32px; height: 32px; }
-            .smart-alert-icon i { font-size: 0.9rem; }
-            .smart-alert-summary { font-size: 0.75rem; }
-
+            .smart-alert-grid { grid-template-columns: 1fr; gap: 10px; }
             .dash-section { padding: 14px; }
-            .dash-section-title { font-size: 0.92rem; }
-            .dash-section-title i { width: 28px; height: 28px; font-size: 0.8rem; }
-
-            .quick-access-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
-            }
+            .quick-access-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
             .qa-tile { padding: 12px 6px; gap: 6px; border-radius: 10px; }
-            .qa-tile-icon { width: 38px; height: 38px; font-size: 1rem; border-radius: 9px; }
-            .qa-tile-label { font-size: 0.72rem; }
             .qa-tile-desc { display: none; }
-
-            #dashboardPage .data-table thead th,
-            #dashboardPage .data-table tbody td {
-                padding: 10px 10px !important;
-                font-size: 0.75rem !important;
-            }
-            #dashboardPage .btn-add,
-            #dashboardPage .btn-delete {
-                padding: 5px 10px !important;
-                font-size: 0.68rem !important;
-            }
         }
-
-        @media (max-width: 480px) {
-            .dash-welcome h1 { font-size: 1rem; }
-            .dash-kpi-grid { gap: 8px; }
-            .dash-kpi { padding: 12px; }
-            .dash-kpi-icon { width: 30px; height: 30px; font-size: 0.82rem; }
-            .dash-kpi-label { font-size: 0.6rem; }
-            .dash-kpi-value { font-size: 1rem; }
-
-            .quick-access-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 6px;
-            }
-            .qa-tile { padding: 10px 6px; }
-            .qa-tile-icon { width: 34px; height: 34px; font-size: 0.9rem; }
-            .qa-tile-label { font-size: 0.68rem; }
-
-            .smart-forecast-grid { grid-template-columns: 1fr; }
-
-            #dashboardPage .data-table thead th,
-            #dashboardPage .data-table tbody td {
-                padding: 8px 8px !important;
-                font-size: 0.7rem !important;
-            }
-        }
-
-        @media (min-width: 1600px) {
-            .dash-kpi-grid { grid-template-columns: repeat(5, 1fr); }
-            .quick-access-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
-        }
+        @media (max-width: 480px) { .dash-kpi-grid { gap: 8px; } .quick-access-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; } .smart-forecast-grid { grid-template-columns: 1fr; } }
+        @media (min-width: 1600px) { .dash-kpi-grid { grid-template-columns: repeat(5, 1fr); } .quick-access-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); } }
 
         /* ============================================================ */
-        /* 🆕 📅 CALENDRIER — styles                                      */
+        /* 🆕 📅 CALENDRIER PRO — 90% de la page                        */
         /* ============================================================ */
-        .dc-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.65); backdrop-filter: blur(6px); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
-        .dc-modal { background: #FFFFFF; border-radius: 20px; width: 100%; max-width: 900px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.25); overflow: hidden; }
-        .dc-header { padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #EFF6FF, #FFFFFF); border-bottom: 1px solid #E2E8F0; flex-shrink: 0; }
-        .dc-header h3 { font-size: 20px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 12px; }
-        .dc-header h3 i { background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white; padding: 10px; border-radius: 12px; font-size: 18px; }
-        .dc-close { width: 40px; height: 40px; border-radius: 50%; border: none; background: #F1F5F9; color: #64748B; font-size: 18px; cursor: pointer; }
-        .dc-close:hover { background: #E2E8F0; color: #0F172A; }
-        .dc-body { flex: 1; overflow-y: auto; padding: 20px 28px; background: #F8FAFC; display: flex; flex-direction: column; gap: 20px; }
-        .dc-weather { background: linear-gradient(135deg, #3B82F6, #1D4ED8); border-radius: 16px; padding: 18px 20px; color: #FFFFFF; box-shadow: 0 6px 20px rgba(37,99,235,0.35); }
-        .dc-weather-title { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; opacity: 0.9; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .dc-weather-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-        .dc-weather-day { text-align: center; padding: 10px 6px; border-radius: 10px; background: rgba(255,255,255,0.12); }
-        .dc-weather-day .dname { font-size: 10px; font-weight: 700; opacity: 0.85; text-transform: uppercase; }
-        .dc-weather-day .dicon { font-size: 22px; margin: 4px 0; }
-        .dc-weather-day .dtemp { font-size: 13px; font-weight: 800; }
-        .dc-weather-day .dtemp-min { font-size: 10px; opacity: 0.75; font-weight: 600; }
-        .dc-calendar-section { background: #FFFFFF; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; }
-        .dc-cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .dc-cal-title { font-size: 18px; font-weight: 800; color: #0F172A; text-transform: capitalize; }
-        .dc-cal-arrows { display: flex; gap: 6px; }
-        .dc-cal-arrows button { width: 36px; height: 36px; border-radius: 10px; border: none; background: #EFF6FF; color: #2563EB; cursor: pointer; font-size: 14px; }
-        .dc-cal-arrows button:hover { background: #2563EB; color: white; }
-        .dc-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .dc-cal-dow { text-align: center; font-size: 11px; font-weight: 800; color: #64748B; padding: 8px 0; text-transform: uppercase; }
-        .dc-cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: #0F172A; position: relative; border: 1.5px solid transparent; user-select: none; }
-        .dc-cal-day:hover { background: #EFF6FF; border-color: #BFDBFE; }
-        .dc-cal-day.other-month { color: #CBD5E1; font-weight: 500; }
-        .dc-cal-day.today { background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white; }
-        .dc-cal-day.selected { background: #DBEAFE; border-color: #2563EB; color: #1D4ED8; }
-        .dc-cal-day.in-range { background: #BFDBFE; color: #1E40AF; }
-        .dc-cal-day.holiday::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: #EF4444; }
-        .dc-cal-day.has-event::before { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: #10B981; }
-        .dc-events-section { background: #FFFFFF; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; }
-        .dc-events-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 2px solid #F1F5F9; }
-        .dc-events-header h4 { font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px; }
-        .dc-events-header h4 i { color: #8B5CF6; }
-        .dc-add-btn { background: linear-gradient(135deg, #10B981, #059669); color: white; border: none; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-        .dc-add-btn:hover { transform: translateY(-2px); }
-        .dc-events-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
-        .dc-event-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #F8FAFC; border-radius: 12px; border-left: 4px solid #8B5CF6; }
-        .dc-event-item.holiday { border-left-color: #EF4444; background: #FEF2F2; }
-        .dc-event-icon { font-size: 22px; flex-shrink: 0; }
-        .dc-event-content { flex: 1; min-width: 0; }
-        .dc-event-title { font-size: 14px; font-weight: 700; color: #0F172A; margin: 0 0 2px 0; }
-        .dc-event-date { font-size: 11px; color: #64748B; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        .dc-event-delete { background: #FEF2F2; color: #EF4444; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
-        .dc-event-delete:hover { background: #EF4444; color: white; }
-        .dc-empty-events { text-align: center; padding: 30px 20px; color: #94A3B8; font-size: 13px; }
-        .dc-empty-events i { font-size: 32px; color: #CBD5E1; margin-bottom: 8px; display: block; }
-        .dc-form-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.6); z-index: 10; display: flex; align-items: center; justify-content: center; padding: 20px; border-radius: 20px; }
-        .dc-form { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 440px; }
-        .dc-form h4 { font-size: 17px; font-weight: 800; color: #0F172A; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; }
-        .dc-form h4 i { background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white; padding: 8px; border-radius: 10px; font-size: 14px; }
-        .dc-form-group { margin-bottom: 12px; }
-        .dc-form-label { font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; display: block; margin-bottom: 6px; }
-        .dc-form-input, .dc-form-textarea, .dc-form-select { width: 100%; padding: 10px 12px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-size: 14px; font-family: inherit; color: #0F172A; outline: none; box-sizing: border-box; }
-        .dc-form-input:focus, .dc-form-textarea:focus, .dc-form-select:focus { border-color: #8B5CF6; box-shadow: 0 0 0 4px rgba(139,92,246,0.1); }
-        .dc-form-textarea { resize: vertical; min-height: 60px; }
-        .dc-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
-        .dc-form-btn-cancel { background: #F1F5F9; color: #64748B; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; cursor: pointer; font-size: 13px; }
-        .dc-form-btn-save { background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; cursor: pointer; font-size: 13px; }
-        @media (max-width: 640px) {
-            .dc-modal { max-width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; }
-            .dc-weather-days { grid-template-columns: repeat(4, 1fr); }
-            .dc-weather-day:nth-child(n+5) { display: none; }
-            .dc-body { padding: 14px; }
-            .dc-cal-dow { font-size: 9px; }
-            .dc-cal-day { font-size: 12px; }
+        .dcp-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.7); backdrop-filter: blur(8px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 5vh 5vw; }
+        .dcp-modal { background: #FFFFFF; border-radius: 20px; width: 90vw; height: 90vh; max-width: 1600px; max-height: 1200px; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.35); overflow: hidden; }
+        .dcp-header { padding: 20px 28px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg,#EFF6FF,#FFFFFF); flex-shrink: 0; }
+        .dcp-header h2 { margin: 0; font-size: 22px; font-weight: 800; color: #0F172A; display: flex; align-items: center; gap: 12px; }
+        .dcp-header h2 i { background: linear-gradient(135deg,#3B82F6,#1D4ED8); color: white; padding: 10px; border-radius: 12px; font-size: 18px; }
+        .dcp-close { width: 42px; height: 42px; border-radius: 50%; border: none; background: #F1F5F9; color: #64748B; font-size: 18px; cursor: pointer; transition: all 0.2s; }
+        .dcp-close:hover { background: #E2E8F0; color: #0F172A; }
+        .dcp-toolbar { padding: 16px 28px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+        .dcp-toolbar label { font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.4px; }
+        .dcp-toolbar select { padding: 9px 14px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-size: 14px; background: white; color: #0F172A; cursor: pointer; outline: none; min-width: 150px; font-family: inherit; }
+        .dcp-toolbar select:focus { border-color: #2563EB; box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
+        .dcp-nav-btn { padding: 9px 14px; border: none; background: white; border-radius: 10px; font-size: 14px; font-weight: 700; color: #0F172A; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-family: inherit; }
+        .dcp-nav-btn:hover { background: #EFF6FF; color: #2563EB; }
+        .dcp-nav-btn.primary { background: linear-gradient(135deg,#3B82F6,#2563EB); color: white; box-shadow: 0 2px 6px rgba(59,130,246,0.35); }
+        .dcp-nav-btn.primary:hover { background: linear-gradient(135deg,#2563EB,#1D4ED8); }
+        .dcp-body { flex: 1; overflow-y: auto; padding: 24px 28px; background: #FAFBFC; }
+        .dcp-period-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .dcp-period-title h3 { margin: 0; font-size: 20px; font-weight: 800; color: #0F172A; text-transform: capitalize; }
+        .dcp-city-badge { background: #EFF6FF; color: #2563EB; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+        .dcp-weather { background: linear-gradient(135deg,#DBEAFE,#BFDBFE); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+        .dcp-weather-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .dcp-weather-icon { font-size: 48px; }
+        .dcp-weather-temp { font-size: 32px; font-weight: 800; color: #0F172A; }
+        .dcp-weather-desc { font-size: 14px; color: #1E40AF; font-weight: 600; }
+        .dcp-weather-forecast { display: grid; grid-template-columns: repeat(auto-fit,minmax(100px,1fr)); gap: 8px; margin-top: 16px; }
+        .dcp-forecast-day { background: white; border-radius: 10px; padding: 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; }
+        .dcp-forecast-day .dname { font-size: 12px; font-weight: 700; color: #64748B; }
+        .dcp-forecast-day .dicon { font-size: 22px; margin: 4px 0; }
+        .dcp-forecast-day .dmax { font-size: 13px; font-weight: 700; color: #0F172A; }
+        .dcp-forecast-day .dmin { font-size: 11px; color: #94A3B8; }
+        .dcp-events-title { margin: 0 0 12px 0; font-size: 15px; font-weight: 800; color: #0F172A; display: flex; align-items: center; gap: 8px; }
+        .dcp-events-title i { color: #F59E0B; }
+        .dcp-events-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(320px,1fr)); gap: 14px; }
+        .dcp-event-card { border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; border-left: 4px solid; }
+        .dcp-event-card.national { background: #FEF3C7; border-left-color: #F59E0B; }
+        .dcp-event-card.muslim { background: #D1FAE5; border-left-color: #10B981; }
+        .dcp-event-card.saison { background: #DBEAFE; border-left-color: #3B82F6; }
+        .dcp-event-card.custom { background: #FCE7F3; border-left-color: #EC4899; }
+        .dcp-event-top { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+        .dcp-event-emoji { font-size: 22px; }
+        .dcp-event-badge { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: white; }
+        .dcp-event-badge.national { background: #F59E0B; }
+        .dcp-event-badge.muslim { background: #10B981; }
+        .dcp-event-badge.saison { background: #3B82F6; }
+        .dcp-event-badge.custom { background: #EC4899; }
+        .dcp-event-title { font-size: 14px; font-weight: 800; }
+        .dcp-event-card.national .dcp-event-title, .dcp-event-card.national .dcp-event-date { color: #92400E; }
+        .dcp-event-card.muslim .dcp-event-title, .dcp-event-card.muslim .dcp-event-date { color: #065F46; }
+        .dcp-event-card.saison .dcp-event-title, .dcp-event-card.saison .dcp-event-date { color: #1E40AF; }
+        .dcp-event-card.custom .dcp-event-title, .dcp-event-card.custom .dcp-event-date { color: #831843; }
+        .dcp-event-date { font-size: 11px; font-weight: 600; opacity: 0.8; }
+        .dcp-event-desc { font-size: 12px; opacity: 0.9; }
+        .dcp-empty { text-align: center; padding: 40px; background: white; border-radius: 14px; border: 1px dashed #CBD5E1; color: #94A3B8; }
+        .dcp-empty i { font-size: 2.5rem; display: block; margin-bottom: 10px; opacity: 0.5; }
+        @media (max-width: 768px) {
+            .dcp-modal { width: 100vw; height: 100vh; max-width: 100%; max-height: 100vh; border-radius: 0; }
+            .dcp-toolbar { padding: 12px 16px; }
+            .dcp-body { padding: 14px; }
+            .dcp-events-grid { grid-template-columns: 1fr; }
         }
     `;
     document.head.appendChild(style);
 }
 
-// ==================== 🆕 📅 CALENDRIER — fonctions ====================
-window.dcState = window.dcState || { currentDate: new Date(), selectedDates: [], events: [], weather: null };
-const DC_WEATHER_LAT = 33.5731;
-const DC_WEATHER_LON = -7.5898;
-const DC_WEATHER_CITY = 'Casablanca';
-const DC_COLLECTION = 'evenements_dashboard';
-
-const DC_FETES_FIXES = [
-    { month: 1, day: 1, name: 'Nouvel An', icon: '🎆' },
-    { month: 1, day: 11, name: 'Manifeste de l\'Indépendance', icon: '🇲🇦' },
-    { month: 5, day: 1, name: 'Fête du Travail', icon: '🛠️' },
-    { month: 7, day: 30, name: 'Fête du Trône', icon: '👑' },
-    { month: 8, day: 14, name: 'Allégeance Oued Eddahab', icon: '🇲🇦' },
-    { month: 8, day: 20, name: 'Révolution du Roi et du Peuple', icon: '🎖️' },
-    { month: 8, day: 21, name: 'Fête de la Jeunesse', icon: '🎉' },
-    { month: 11, day: 6, name: 'Marche Verte', icon: '🟢' },
-    { month: 11, day: 18, name: 'Fête de l\'Indépendance', icon: '🇲🇦' }
+// ==================== 🆕 📅 CALENDRIER PRO ====================
+var CALENDAR_CITIES = [
+    { name: 'Casablanca', lat: 33.5731, lon: -7.5898 },
+    { name: 'Rabat', lat: 34.0209, lon: -6.8416 },
+    { name: 'Marrakech', lat: 31.6295, lon: -7.9811 },
+    { name: 'Fès', lat: 34.0181, lon: -5.0078 },
+    { name: 'Tanger', lat: 35.7595, lon: -5.8340 },
+    { name: 'Agadir', lat: 30.4278, lon: -9.5981 },
+    { name: 'Meknès', lat: 33.8935, lon: -5.5473 },
+    { name: 'Oujda', lat: 34.6814, lon: -1.9086 },
+    { name: 'Kénitra', lat: 34.2610, lon: -6.5802 },
+    { name: 'Tétouan', lat: 35.5785, lon: -5.3684 },
+    { name: 'Safi', lat: 32.2994, lon: -9.2372 },
+    { name: 'Mohammedia', lat: 33.6866, lon: -7.3830 },
+    { name: 'Khouribga', lat: 32.8811, lon: -6.9063 },
+    { name: 'El Jadida', lat: 33.2316, lon: -8.5007 },
+    { name: 'Béni Mellal', lat: 32.3373, lon: -6.3498 },
+    { name: 'Nador', lat: 35.1681, lon: -2.9287 },
+    { name: 'Settat', lat: 33.0010, lon: -7.6164 },
+    { name: 'Laâyoune', lat: 27.1253, lon: -13.1625 },
+    { name: 'Dakhla', lat: 23.6848, lon: -15.9580 },
+    { name: 'Essaouira', lat: 31.5085, lon: -9.7595 }
 ];
-const DC_FETES_RELIGIEUSES = {
-    2024: [{ month: 3, day: 11, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 6, day: 17, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 7, day: 8, name: '1er Moharram', icon: '🌙' }, { month: 9, day: 16, name: 'Aïd Al-Mawlid', icon: '🌙' }],
-    2025: [{ month: 3, day: 31, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 6, day: 7, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 6, day: 27, name: '1er Moharram', icon: '🌙' }, { month: 9, day: 5, name: 'Aïd Al-Mawlid', icon: '🌙' }],
-    2026: [{ month: 3, day: 20, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 5, day: 27, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 6, day: 16, name: '1er Moharram', icon: '🌙' }, { month: 8, day: 25, name: 'Aïd Al-Mawlid', icon: '🌙' }],
-    2027: [{ month: 3, day: 10, name: 'Aïd Al-Fitr', icon: '🌙' }, { month: 5, day: 17, name: 'Aïd Al-Adha', icon: '🐑' }, { month: 6, day: 5, name: '1er Moharram', icon: '🌙' }, { month: 8, day: 14, name: 'Aïd Al-Mawlid', icon: '🌙' }]
-};
-const DC_WMO_ICONS = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '🌨️', 73: '🌨️', 75: '❄️', 80: '🌦️', 81: '🌧️', 82: '⛈️', 95: '⛈️', 96: '⛈️', 99: '⛈️' };
-const DC_WMO_NAMES = { 0: 'Ciel dégagé', 1: 'Peu nuageux', 2: 'Partiellement nuageux', 3: 'Couvert', 45: 'Brouillard', 48: 'Brouillard givrant', 51: 'Bruine légère', 53: 'Bruine modérée', 55: 'Bruine dense', 61: 'Pluie faible', 63: 'Pluie modérée', 65: 'Pluie forte', 71: 'Neige légère', 73: 'Neige modérée', 75: 'Neige forte', 80: 'Averses faibles', 81: 'Averses modérées', 82: 'Averses violentes', 95: 'Orage', 96: 'Orage avec grêle', 99: 'Orage violent' };
 
-function dcGetHolidaysForYear(year) {
-    const list = DC_FETES_FIXES.map(f => Object.assign({}, f, { year: year, isHoliday: true }));
-    if (DC_FETES_RELIGIEUSES[year]) DC_FETES_RELIGIEUSES[year].forEach(f => list.push(Object.assign({}, f, { year: year, isHoliday: true })));
-    return list;
-}
-function dcGetHolidayForDate(year, month, day) { return dcGetHolidaysForYear(year).find(h => h.month === month && h.day === day); }
-function dcFormatDateKey(y, m, d) { return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
-function dcGetEventsForDate(dateKey) {
-    return window.dcState.events.filter(e => {
-        if (e.date === dateKey) return true;
-        if (e.endDate && dateKey >= e.date && dateKey <= e.endDate) return true;
-        return false;
-    });
-}
-async function dcFetchWeather() {
-    try {
-        var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + DC_WEATHER_LAT + '&longitude=' + DC_WEATHER_LON + '&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Africa%2FCasablanca&forecast_days=7';
-        var res = await fetch(url);
-        if (!res.ok) throw new Error('Weather API failed');
-        var data = await res.json();
-        return data.daily;
-    } catch (e) { console.warn('Météo indisponible:', e); return null; }
-}
-function dcRenderWeather(daily, container) {
-    if (!daily || !daily.time) { container.innerHTML = '<div style="opacity:0.7;font-size:12px;">🌍 Météo indisponible</div>'; return; }
-    var days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-    var html = '<div class="dc-weather-title"><i class="fas fa-map-marker-alt"></i> Météo · ' + DC_WEATHER_CITY + ' (7 jours)</div><div class="dc-weather-days">';
-    for (var i = 0; i < daily.time.length; i++) {
-        var d = new Date(daily.time[i]);
-        var code = daily.weather_code[i];
-        var tmax = Math.round(daily.temperature_2m_max[i]);
-        var tmin = Math.round(daily.temperature_2m_min[i]);
-        var icon = DC_WMO_ICONS[code] || '🌡️';
-        html += '<div class="dc-weather-day" title="' + (DC_WMO_NAMES[code] || '') + '"><div class="dname">' + days[d.getDay()] + '</div><div class="dicon">' + icon + '</div><div class="dtemp">' + tmax + '°</div><div class="dtemp-min">' + tmin + '°</div></div>';
-    }
-    html += '</div>';
-    container.innerHTML = html;
-}
-async function dcLoadEvents() {
-    if (typeof db !== 'undefined' && db) {
-        try {
-            var snap = await db.collection(DC_COLLECTION).orderBy('date', 'asc').get();
-            var events = [];
-            snap.forEach(d => events.push(Object.assign({ id: d.id }, d.data())));
-            localStorage.setItem('dc_events_cache', JSON.stringify(events));
-            return events;
-        } catch (e) { console.warn('Firestore events fallback', e); }
-    }
-    try { return JSON.parse(localStorage.getItem('dc_events_cache') || '[]'); } catch (e) { return []; }
-}
-async function dcSaveEvent(ev) {
-    if (typeof db !== 'undefined' && db) {
-        try { var ref = await db.collection(DC_COLLECTION).add(ev); return Object.assign({ id: ref.id }, ev); }
-        catch (e) { console.warn('Save event fallback', e); }
-    }
-    var all = JSON.parse(localStorage.getItem('dc_events_cache') || '[]');
-    ev.id = 'local_' + Date.now();
-    all.push(ev);
-    localStorage.setItem('dc_events_cache', JSON.stringify(all));
-    return ev;
-}
-async function dcDeleteEvent(id) {
-    if (typeof db !== 'undefined' && db && !id.startsWith('local_')) {
-        try { await db.collection(DC_COLLECTION).doc(id).delete(); return true; }
-        catch (e) { console.warn('Delete event fallback', e); }
-    }
-    var all = JSON.parse(localStorage.getItem('dc_events_cache') || '[]');
-    localStorage.setItem('dc_events_cache', JSON.stringify(all.filter(e => e.id !== id)));
-    return true;
-}
-function dcRenderCalendar() {
-    var st = window.dcState;
-    var y = st.currentDate.getFullYear();
-    var m = st.currentDate.getMonth();
-    var today = new Date();
-    var todayKey = dcFormatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
-    var firstDay = new Date(y, m, 1);
-    var lastDay = new Date(y, m + 1, 0);
-    var startWeekday = (firstDay.getDay() + 6) % 7;
-    var daysInMonth = lastDay.getDate();
-    var prevLastDay = new Date(y, m, 0).getDate();
-    var monthName = st.currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    var html = '<div class="dc-cal-nav"><div class="dc-cal-title">' + monthName + '</div><div class="dc-cal-arrows"><button onclick="dcNavMonth(-1)"><i class="fas fa-chevron-left"></i></button><button onclick="dcNavToday()" style="width:auto;padding:0 12px;font-size:12px;font-weight:800;">Auj.</button><button onclick="dcNavMonth(1)"><i class="fas fa-chevron-right"></i></button></div></div>';
-    html += '<div class="dc-cal-grid">';
-    ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].forEach(dow => { html += '<div class="dc-cal-dow">' + dow + '</div>'; });
-    for (var i = startWeekday - 1; i >= 0; i--) html += '<div class="dc-cal-day other-month">' + (prevLastDay - i) + '</div>';
-    for (var d = 1; d <= daysInMonth; d++) {
-        var dateKey = dcFormatDateKey(y, m, d);
-        var isToday = dateKey === todayKey;
-        var isSelected = st.selectedDates.indexOf(dateKey) !== -1;
-        var isInRange = st.selectedDates.length === 2 && dateKey >= st.selectedDates[0] && dateKey <= st.selectedDates[1];
-        var holiday = dcGetHolidayForDate(y, m + 1, d);
-        var hasEvent = dcGetEventsForDate(dateKey).length > 0;
-        var cls = 'dc-cal-day';
-        if (isToday) cls += ' today';
-        if (isSelected) cls += ' selected';
-        else if (isInRange) cls += ' in-range';
-        if (holiday) cls += ' holiday';
-        if (hasEvent) cls += ' has-event';
-        var title = '';
-        if (holiday) title = holiday.name;
-        var evs = dcGetEventsForDate(dateKey);
-        if (evs.length) title += (title ? ' · ' : '') + evs.map(e => e.title).join(', ');
-        html += '<div class="' + cls + '" data-date="' + dateKey + '" onclick="dcToggleDate(\'' + dateKey + '\')" title="' + title + '">' + d + '</div>';
-    }
-    var totalCells = startWeekday + daysInMonth;
-    var remaining = (7 - (totalCells % 7)) % 7;
-    for (var j = 1; j <= remaining; j++) html += '<div class="dc-cal-day other-month">' + j + '</div>';
-    html += '</div>';
-    return html;
-}
-function dcRenderEventsList() {
-    var st = window.dcState;
+window._calendarState = window._calendarState || {
+    cityIndex: 0,
+    currentDate: new Date(),
+    periodType: 'month'
+};
+
+// ✅ Fêtes + saisons préétablies
+function dcpGetPredefinedEvents(year) {
     var events = [];
-    var y = st.currentDate.getFullYear();
-    var m = st.currentDate.getMonth();
-    dcGetHolidaysForYear(y).forEach(h => {
-        if (h.month === m + 1) events.push({ isHoliday: true, title: h.name, icon: h.icon, dateKey: dcFormatDateKey(y, m, h.day), dateLabel: h.day + ' ' + st.currentDate.toLocaleDateString('fr-FR', { month: 'long' }) });
+
+    // 🇲🇦 Fêtes nationales marocaines
+    events.push({ date: year + '-01-01', type: 'national', titre: 'Nouvel An', icon: '🎉', description: 'Jour de l\'An' });
+    events.push({ date: year + '-01-11', type: 'national', titre: 'Manifeste de l\'Indépendance', icon: '🇲🇦', description: 'Fête nationale' });
+    events.push({ date: year + '-01-14', type: 'national', titre: 'Nouvel An Amazigh', icon: '🏔️', description: 'Fête nationale amazighe' });
+    events.push({ date: year + '-05-01', type: 'national', titre: 'Fête du Travail', icon: '⚒️', description: 'Fête internationale des travailleurs' });
+    events.push({ date: year + '-07-30', type: 'national', titre: 'Fête du Trône', icon: '👑', description: 'Intronisation du Roi Mohammed VI' });
+    events.push({ date: year + '-08-14', type: 'national', titre: 'Allégeance Oued Eddahab', icon: '🏜️', description: 'Fête nationale' });
+    events.push({ date: year + '-08-20', type: 'national', titre: 'Révolution du Roi et du Peuple', icon: '🔥', description: 'Fête nationale' });
+    events.push({ date: year + '-08-21', type: 'national', titre: 'Fête de la Jeunesse', icon: '🎊', description: 'Anniversaire du Roi Mohammed VI' });
+    events.push({ date: year + '-11-06', type: 'national', titre: 'Marche Verte', icon: '💚', description: 'Fête nationale' });
+    events.push({ date: year + '-11-18', type: 'national', titre: 'Fête de l\'Indépendance', icon: '🇲🇦', description: 'Fête nationale' });
+
+    // 🌸 Saisons (hémisphère Nord)
+    events.push({ date: year + '-03-20', type: 'saison', titre: 'Début du Printemps', icon: '🌸', description: 'Équinoxe de printemps' });
+    events.push({ date: year + '-06-21', type: 'saison', titre: 'Début de l\'Été', icon: '☀️', description: 'Solstice d\'été' });
+    events.push({ date: year + '-09-22', type: 'saison', titre: 'Début de l\'Automne', icon: '🍂', description: 'Équinoxe d\'automne' });
+    events.push({ date: year + '-12-21', type: 'saison', titre: 'Début de l\'Hiver', icon: '❄️', description: 'Solstice d\'hiver' });
+
+    // 🕌 Fêtes musulmanes (dates estimées)
+    var muslimDates = {
+        2024: [
+            { date: '2024-03-11', titre: 'Début Ramadan', icon: '🌙', desc: '1er jour du mois de Ramadan' },
+            { date: '2024-04-10', titre: 'Aïd al-Fitr', icon: '🌙', desc: 'Fête de fin du Ramadan' },
+            { date: '2024-06-16', titre: 'Aïd al-Adha', icon: '🐑', desc: 'Fête du sacrifice' },
+            { date: '2024-07-07', titre: 'Nouvel An Hégirien', icon: '📅', desc: '1er Muharram' },
+            { date: '2024-07-16', titre: 'Achoura', icon: '💧', desc: '10 Muharram' },
+            { date: '2024-09-15', titre: 'Mawlid an-Nabi', icon: '🕌', desc: 'Naissance du Prophète' }
+        ],
+        2025: [
+            { date: '2025-03-01', titre: 'Début Ramadan', icon: '🌙', desc: '1er jour du mois de Ramadan' },
+            { date: '2025-03-30', titre: 'Aïd al-Fitr', icon: '🌙', desc: 'Fête de fin du Ramadan' },
+            { date: '2025-06-06', titre: 'Aïd al-Adha', icon: '🐑', desc: 'Fête du sacrifice' },
+            { date: '2025-06-26', titre: 'Nouvel An Hégirien', icon: '📅', desc: '1er Muharram' },
+            { date: '2025-07-05', titre: 'Achoura', icon: '💧', desc: '10 Muharram' },
+            { date: '2025-09-05', titre: 'Mawlid an-Nabi', icon: '🕌', desc: 'Naissance du Prophète' }
+        ],
+        2026: [
+            { date: '2026-02-18', titre: 'Début Ramadan', icon: '🌙', desc: '1er jour du mois de Ramadan' },
+            { date: '2026-03-20', titre: 'Aïd al-Fitr', icon: '🌙', desc: 'Fête de fin du Ramadan' },
+            { date: '2026-05-27', titre: 'Aïd al-Adha', icon: '🐑', desc: 'Fête du sacrifice' },
+            { date: '2026-06-16', titre: 'Nouvel An Hégirien', icon: '📅', desc: '1er Muharram' },
+            { date: '2026-06-25', titre: 'Achoura', icon: '💧', desc: '10 Muharram' },
+            { date: '2026-08-25', titre: 'Mawlid an-Nabi', icon: '🕌', desc: 'Naissance du Prophète' }
+        ],
+        2027: [
+            { date: '2027-02-08', titre: 'Début Ramadan', icon: '🌙', desc: '1er jour du mois de Ramadan' },
+            { date: '2027-03-10', titre: 'Aïd al-Fitr', icon: '🌙', desc: 'Fête de fin du Ramadan' },
+            { date: '2027-05-17', titre: 'Aïd al-Adha', icon: '🐑', desc: 'Fête du sacrifice' },
+            { date: '2027-06-06', titre: 'Nouvel An Hégirien', icon: '📅', desc: '1er Muharram' },
+            { date: '2027-06-15', titre: 'Achoura', icon: '💧', desc: '10 Muharram' },
+            { date: '2027-08-14', titre: 'Mawlid an-Nabi', icon: '🕌', desc: 'Naissance du Prophète' }
+        ]
+    };
+    (muslimDates[year] || []).forEach(function(e) {
+        events.push({ date: e.date, type: 'muslim', titre: e.titre, icon: e.icon, description: e.desc });
     });
-    st.events.forEach(e => {
-        var parts = e.date.split('-');
-        var ey = Number(parts[0]), em = Number(parts[1]);
-        if (ey === y && (em - 1) === m) events.push({ id: e.id, isHoliday: false, title: e.title, icon: e.icon || '📌', dateKey: e.date, dateLabel: new Date(e.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }), endDate: e.endDate });
-    });
-    events.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+    return events;
+}
+
+// ✅ Filtre période
+function dcpFilterByPeriod(events, centerDate, periodType) {
+    var start = new Date(centerDate);
+    var end = new Date(centerDate);
+    if (periodType === 'day') { start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
+    else if (periodType === 'week') {
+        var day = start.getDay(); var diff = day === 0 ? -6 : 1 - day;
+        start.setDate(start.getDate() + diff); start.setHours(0,0,0,0);
+        end = new Date(start); end.setDate(end.getDate() + 6); end.setHours(23,59,59,999);
+    } else if (periodType === '15days') { start.setHours(0,0,0,0); end = new Date(start); end.setDate(end.getDate() + 15); end.setHours(23,59,59,999); }
+    else if (periodType === 'month') { start = new Date(centerDate.getFullYear(), centerDate.getMonth(), 1); end = new Date(centerDate.getFullYear(), centerDate.getMonth() + 1, 0, 23, 59, 59, 999); }
+    else if (periodType === '3months') { start.setHours(0,0,0,0); end = new Date(start); end.setMonth(end.getMonth() + 3); end.setHours(23,59,59,999); }
+    else if (periodType === '6months') { start.setHours(0,0,0,0); end = new Date(start); end.setMonth(end.getMonth() + 6); end.setHours(23,59,59,999); }
+    else if (periodType === 'year') { start = new Date(centerDate.getFullYear(), 0, 1); end = new Date(centerDate.getFullYear(), 11, 31, 23, 59, 59, 999); }
+    return events.filter(function(e) {
+        var evDate = new Date(e.date);
+        return evDate >= start && evDate <= end;
+    }).sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
+}
+
+// ✅ Météo Open-Meteo
+async function dcpFetchWeather(cityIndex) {
+    var city = CALENDAR_CITIES[cityIndex];
+    if (!city) return null;
+    try {
+        var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + city.lat + '&longitude=' + city.lon +
+            '&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Africa/Casablanca&forecast_days=7';
+        var resp = await fetch(url);
+        if (!resp.ok) return null;
+        return await resp.json();
+    } catch(e) { console.warn('⚠️ Erreur météo:', e); return null; }
+}
+
+function dcpGetWeatherLabel(code) {
+    var labels = {
+        0: { txt: 'Ciel dégagé', icon: '☀️' }, 1: { txt: 'Peu nuageux', icon: '🌤️' }, 2: { txt: 'Partiellement nuageux', icon: '⛅' },
+        3: { txt: 'Couvert', icon: '☁️' }, 45: { txt: 'Brouillard', icon: '🌫️' }, 48: { txt: 'Brouillard givrant', icon: '🌫️' },
+        51: { txt: 'Bruine légère', icon: '🌦️' }, 53: { txt: 'Bruine modérée', icon: '🌦️' }, 55: { txt: 'Bruine dense', icon: '🌧️' },
+        61: { txt: 'Pluie légère', icon: '🌧️' }, 63: { txt: 'Pluie modérée', icon: '🌧️' }, 65: { txt: 'Pluie forte', icon: '🌧️' },
+        71: { txt: 'Neige légère', icon: '🌨️' }, 73: { txt: 'Neige modérée', icon: '🌨️' }, 75: { txt: 'Neige forte', icon: '❄️' },
+        80: { txt: 'Averses légères', icon: '🌦️' }, 81: { txt: 'Averses modérées', icon: '🌧️' }, 82: { txt: 'Averses violentes', icon: '⛈️' },
+        95: { txt: 'Orage', icon: '⛈️' }, 96: { txt: 'Orage + grêle', icon: '⛈️' }, 99: { txt: 'Orage violent', icon: '⛈️' }
+    };
+    return labels[code] || { txt: 'Inconnu', icon: '🌡️' };
+}
+
+function dcpGetEventTypeStyle(type) {
+    var styles = {
+        'national': { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'National' },
+        'muslim': { bg: '#D1FAE5', border: '#10B981', color: '#065F46', label: 'Musulman' },
+        'saison': { bg: '#DBEAFE', border: '#3B82F6', color: '#1E40AF', label: 'Saison' },
+        'custom': { bg: '#FCE7F3', border: '#EC4899', color: '#831843', label: 'Personnel' }
+    };
+    return styles[type] || styles.custom;
+}
+
+function dcpGetPeriodLabel(date, periodType) {
+    var d = new Date(date);
+    if (periodType === 'day') return d.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    if (periodType === 'week') {
+        var day = d.getDay(); var diff = day === 0 ? -6 : 1 - day;
+        var start = new Date(d); start.setDate(d.getDate() + diff);
+        var end = new Date(start); end.setDate(end.getDate() + 6);
+        return 'Semaine du ' + start.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) + ' au ' + end.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+    if (periodType === '15days') {
+        var start15 = new Date(d); start15.setHours(0,0,0,0);
+        var end15 = new Date(start15); end15.setDate(end15.getDate() + 15);
+        return 'Du ' + start15.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) + ' au ' + end15.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+    if (periodType === 'month') return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    if (periodType === '3months') {
+        var s3 = new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
+        var e3 = new Date(s3.getFullYear(), s3.getMonth() + 3, 0);
+        return 'T3 ' + s3.toLocaleDateString('fr-FR', { month: 'short' }) + ' → ' + e3.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+    }
+    if (periodType === '6months') {
+        var s6 = new Date(d.getFullYear(), Math.floor(d.getMonth() / 6) * 6, 1);
+        var e6 = new Date(s6.getFullYear(), s6.getMonth() + 6, 0);
+        return 'S' + (s6.getMonth() < 6 ? '1' : '2') + ' ' + s6.getFullYear() + ' (' + s6.toLocaleDateString('fr-FR', { month: 'short' }) + ' → ' + e6.toLocaleDateString('fr-FR', { month: 'short' }) + ')';
+    }
+    if (periodType === 'year') return 'Année ' + d.getFullYear();
+    return d.toLocaleDateString('fr-FR');
+}
+
+// ✅ Modale principale (90% de la page)
+async function openDashboardCalendar() {
+    var old = document.getElementById('modalCalendarPro');
+    if (old) old.remove();
+    var state = window._calendarState;
+
     var html = '';
-    if (events.length === 0) html += '<div class="dc-empty-events"><i class="fas fa-calendar-day"></i>Aucun événement ce mois</div>';
-    else {
-        events.forEach(ev => {
-            html += '<div class="dc-event-item' + (ev.isHoliday ? ' holiday' : '') + '"><div class="dc-event-icon">' + ev.icon + '</div><div class="dc-event-content"><p class="dc-event-title">' + escapeHtml(ev.title) + '</p><div class="dc-event-date"><i class="fas fa-calendar"></i> ' + ev.dateLabel;
-            if (ev.endDate && ev.endDate !== ev.dateKey) html += ' → ' + new Date(ev.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-            html += '</div></div>';
-            if (!ev.isHoliday && ev.id) html += '<button class="dc-event-delete" onclick="dcDeleteEventHandler(\'' + ev.id + '\')"><i class="fas fa-trash"></i></button>';
+    html += '<div id="modalCalendarPro" class="dcp-overlay">';
+    html += '  <div class="dcp-modal">';
+
+    // HEADER
+    html += '    <div class="dcp-header">';
+    html += '      <h2><i class="fas fa-calendar-alt"></i> Calendrier & Événements</h2>';
+    html += '      <button onclick="dcCloseCalendar()" class="dcp-close"><i class="fas fa-times"></i></button>';
+    html += '    </div>';
+
+    // TOOLBAR
+    html += '    <div class="dcp-toolbar">';
+    html += '      <div style="display:flex;align-items:center;gap:8px;">';
+    html += '        <label>📍 Ville</label>';
+    html += '        <select id="dcpCitySelect" onchange="dcpChangeCity(this.value)">';
+    CALENDAR_CITIES.forEach(function(c, i) {
+        html += '<option value="' + i + '"' + (i === state.cityIndex ? ' selected' : '') + '>' + c.name + '</option>';
+    });
+    html += '        </select>';
+    html += '      </div>';
+    html += '      <div style="display:flex;align-items:center;gap:8px;flex:1;">';
+    html += '        <label>📅 Période</label>';
+    html += '        <select id="dcpPeriodSelect" onchange="dcpChangePeriod(this.value)">';
+    html += '          <option value="day"' + (state.periodType === 'day' ? ' selected' : '') + '>Jour</option>';
+    html += '          <option value="week"' + (state.periodType === 'week' ? ' selected' : '') + '>Semaine</option>';
+    html += '          <option value="15days"' + (state.periodType === '15days' ? ' selected' : '') + '>15 jours</option>';
+    html += '          <option value="month"' + (state.periodType === 'month' ? ' selected' : '') + '>Mois</option>';
+    html += '          <option value="3months"' + (state.periodType === '3months' ? ' selected' : '') + '>3 mois</option>';
+    html += '          <option value="6months"' + (state.periodType === '6months' ? ' selected' : '') + '>6 mois</option>';
+    html += '          <option value="year"' + (state.periodType === 'year' ? ' selected' : '') + '>Année</option>';
+    html += '        </select>';
+    html += '      </div>';
+    html += '      <div style="display:flex;gap:6px;">';
+    html += '        <button onclick="dcpNavigate(-1)" class="dcp-nav-btn"><i class="fas fa-chevron-left"></i></button>';
+    html += '        <button onclick="dcpGoToday()" class="dcp-nav-btn primary">Aujourd\'hui</button>';
+    html += '        <button onclick="dcpNavigate(1)" class="dcp-nav-btn"><i class="fas fa-chevron-right"></i></button>';
+    html += '      </div>';
+    html += '    </div>';
+
+    // BODY
+    html += '    <div class="dcp-body" id="dcpBodyContent"></div>';
+
+    html += '  </div>';
+    html += '</div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    await dcpRenderBody();
+}
+
+async function dcpRenderBody() {
+    var body = document.getElementById('dcpBodyContent');
+    if (!body) return;
+    body.innerHTML = '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#2563EB;"></i><p style="color:#64748B;margin-top:12px;">Chargement…</p></div>';
+
+    var state = window._calendarState;
+    var city = CALENDAR_CITIES[state.cityIndex];
+    var year = state.currentDate.getFullYear();
+
+    var events = dcpGetPredefinedEvents(year);
+    events = events.concat(dcpGetPredefinedEvents(year + 1));
+
+    var filteredEvents = dcpFilterByPeriod(events, state.currentDate, state.periodType);
+    var weather = await dcpFetchWeather(state.cityIndex);
+
+    var html = '';
+
+    // Titre période
+    var periodLabel = dcpGetPeriodLabel(state.currentDate, state.periodType);
+    html += '<div class="dcp-period-title">';
+    html += '  <h3>' + periodLabel + '</h3>';
+    html += '  <span class="dcp-city-badge">📍 ' + city.name + '</span>';
+    html += '</div>';
+
+    // Widget météo
+    if (weather && weather.current) {
+        var cur = weather.current;
+        var wInfo = dcpGetWeatherLabel(cur.weather_code);
+        html += '<div class="dcp-weather">';
+        html += '  <div class="dcp-weather-main">';
+        html += '    <div style="display:flex;align-items:center;gap:16px;">';
+        html += '      <div class="dcp-weather-icon">' + wInfo.icon + '</div>';
+        html += '      <div>';
+        html += '        <div class="dcp-weather-temp">' + Math.round(cur.temperature_2m) + '°C</div>';
+        html += '        <div class="dcp-weather-desc">' + wInfo.txt + '</div>';
+        html += '      </div>';
+        html += '    </div>';
+        html += '    <div style="font-size:13px;color:#1E40AF;font-weight:600;">💨 Vent : ' + Math.round(cur.wind_speed_10m) + ' km/h</div>';
+        html += '  </div>';
+        if (weather.daily && weather.daily.time) {
+            html += '  <div class="dcp-weather-forecast">';
+            for (var i = 0; i < weather.daily.time.length && i < 7; i++) {
+                var d = new Date(weather.daily.time[i]);
+                var dayName = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][d.getDay()];
+                var wd = dcpGetWeatherLabel(weather.daily.weather_code[i]);
+                html += '<div class="dcp-forecast-day">';
+                html += '  <div class="dname">' + dayName + '</div>';
+                html += '  <div class="dicon">' + wd.icon + '</div>';
+                html += '  <div class="dmax">' + Math.round(weather.daily.temperature_2m_max[i]) + '°</div>';
+                html += '  <div class="dmin">' + Math.round(weather.daily.temperature_2m_min[i]) + '°</div>';
+                html += '</div>';
+            }
+            html += '  </div>';
+        }
+        html += '</div>';
+    }
+
+    // Liste événements
+    html += '<h4 class="dcp-events-title"><i class="fas fa-star"></i> Événements de la période (' + filteredEvents.length + ')</h4>';
+
+    if (filteredEvents.length === 0) {
+        html += '<div class="dcp-empty"><i class="fas fa-calendar-times"></i>Aucun événement sur cette période</div>';
+    } else {
+        html += '<div class="dcp-events-grid">';
+        filteredEvents.forEach(function(e) {
+            var style = dcpGetEventTypeStyle(e.type);
+            var evDate = new Date(e.date);
+            var dateLabel = evDate.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+            var isPast = evDate < new Date(new Date().setHours(0,0,0,0));
+            html += '<div class="dcp-event-card ' + e.type + '" style="opacity:' + (isPast ? '0.65' : '1') + ';">';
+            html += '  <div class="dcp-event-top">';
+            html += '    <div class="dcp-event-emoji">' + e.icon + '</div>';
+            html += '    <span class="dcp-event-badge ' + e.type + '">' + style.label + '</span>';
+            html += '  </div>';
+            html += '  <div class="dcp-event-title">' + escapeHtml(e.titre) + '</div>';
+            html += '  <div class="dcp-event-date">' + dateLabel + '</div>';
+            if (e.description) html += '  <div class="dcp-event-desc">' + escapeHtml(e.description) + '</div>';
             html += '</div>';
         });
+        html += '</div>';
     }
-    return html;
+
+    body.innerHTML = html;
 }
-function dcRefresh() {
-    var c = document.getElementById('dcCalendarContainer');
-    var e = document.getElementById('dcEventsContainer');
-    if (c) c.innerHTML = dcRenderCalendar();
-    if (e) e.innerHTML = dcRenderEventsList();
+
+// ✅ Helpers navigation
+function dcpNavigate(delta) {
+    var state = window._calendarState;
+    var d = new Date(state.currentDate);
+    if (state.periodType === 'day') d.setDate(d.getDate() + delta);
+    else if (state.periodType === 'week') d.setDate(d.getDate() + (delta * 7));
+    else if (state.periodType === '15days') d.setDate(d.getDate() + (delta * 15));
+    else if (state.periodType === 'month') d.setMonth(d.getMonth() + delta);
+    else if (state.periodType === '3months') d.setMonth(d.getMonth() + (delta * 3));
+    else if (state.periodType === '6months') d.setMonth(d.getMonth() + (delta * 6));
+    else if (state.periodType === 'year') d.setFullYear(d.getFullYear() + delta);
+    state.currentDate = d;
+    dcpRenderBody();
 }
-window.dcRefresh = dcRefresh;
-window.dcNavMonth = function (delta) { window.dcState.currentDate.setMonth(window.dcState.currentDate.getMonth() + delta); dcRefresh(); };
-window.dcNavToday = function () { window.dcState.currentDate = new Date(); dcRefresh(); };
-window.dcToggleDate = function (dateKey) {
-    var st = window.dcState;
-    var idx = st.selectedDates.indexOf(dateKey);
-    if (idx !== -1) st.selectedDates.splice(idx, 1);
-    else { if (st.selectedDates.length >= 2) st.selectedDates = [dateKey]; else { st.selectedDates.push(dateKey); st.selectedDates.sort(); } }
-    dcRefresh();
-};
-window.dcDeleteEventHandler = async function (id) {
-    if (!confirm('Supprimer cet événement ?')) return;
-    await dcDeleteEvent(id);
-    window.dcState.events = window.dcState.events.filter(e => e.id !== id);
-    dcRefresh();
-};
-window.dcOpenAddForm = function () {
-    var overlay = document.getElementById('dcFormOverlay');
-    if (overlay) return;
-    var defaultDate = '';
-    if (window.dcState.selectedDates.length > 0) defaultDate = window.dcState.selectedDates[0];
-    else { var t = new Date(); defaultDate = dcFormatDateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
-    var endDate = window.dcState.selectedDates.length === 2 ? window.dcState.selectedDates[1] : '';
-    var formHtml = '<div id="dcFormOverlay" class="dc-form-overlay" onclick="if(event.target.id===\'dcFormOverlay\')dcCloseForm()"><div class="dc-form" onclick="event.stopPropagation()"><h4><i class="fas fa-plus"></i> Nouvel événement</h4><div class="dc-form-group"><label class="dc-form-label">Titre *</label><input type="text" id="dcEvTitle" class="dc-form-input" placeholder="Ex: Livraison fournisseur" maxlength="80"></div><div class="dc-form-group"><label class="dc-form-label">Date début *</label><input type="date" id="dcEvDate" class="dc-form-input" value="' + defaultDate + '"></div><div class="dc-form-group"><label class="dc-form-label">Date fin (optionnel)</label><input type="date" id="dcEvEndDate" class="dc-form-input" value="' + endDate + '"></div><div class="dc-form-group"><label class="dc-form-label">Icône</label><select id="dcEvIcon" class="dc-form-select"><option value="📌">📌 Épingle</option><option value="🎉">🎉 Fête</option><option value="🚚">🚚 Livraison</option><option value="📦">📦 Stock</option><option value="💰">💰 Paiement</option><option value="📊">📊 Réunion</option><option value="⚠️">⚠️ Important</option><option value="🛒">🛒 Commande</option><option value="🎂">🎂 Anniversaire</option><option value="🏖️">🏖️ Congé</option></select></div><div class="dc-form-group"><label class="dc-form-label">Description (optionnel)</label><textarea id="dcEvDesc" class="dc-form-textarea" placeholder="Détails..." maxlength="300"></textarea></div><div class="dc-form-actions"><button class="dc-form-btn-cancel" onclick="dcCloseForm()">Annuler</button><button class="dc-form-btn-save" onclick="dcSaveFormHandler()"><i class="fas fa-check"></i> Enregistrer</button></div></div></div>';
-    document.querySelector('.dc-modal').insertAdjacentHTML('beforeend', formHtml);
-    setTimeout(function () { document.getElementById('dcEvTitle').focus(); }, 100);
-};
-window.dcCloseForm = function () { var o = document.getElementById('dcFormOverlay'); if (o) o.remove(); };
-window.dcSaveFormHandler = async function () {
-    var title = document.getElementById('dcEvTitle').value.trim();
-    var date = document.getElementById('dcEvDate').value;
-    var endDate = document.getElementById('dcEvEndDate').value;
-    var icon = document.getElementById('dcEvIcon').value;
-    var description = document.getElementById('dcEvDesc').value.trim();
-    if (!title) { alert('Le titre est obligatoire'); return; }
-    if (!date) { alert('La date de début est obligatoire'); return; }
-    if (endDate && endDate < date) { alert('La date de fin doit être après la date de début'); return; }
-    var ev = { title: title, date: date, endDate: endDate || null, icon: icon, description: description, createdAt: new Date().toISOString() };
-    var saved = await dcSaveEvent(ev);
-    window.dcState.events.push(saved);
-    dcCloseForm();
-    window.dcState.selectedDates = [];
-    dcRefresh();
-};
-window.dcCloseCalendar = function () { var el = document.getElementById('dcOverlay'); if (el) el.remove(); };
-window.openDashboardCalendar = async function () {
-    var old = document.getElementById('dcOverlay');
-    if (old) old.remove();
-    var html = '<div id="dcOverlay" class="dc-overlay" onclick="if(event.target.id===\'dcOverlay\')dcCloseCalendar()"><div class="dc-modal" onclick="event.stopPropagation()"><div class="dc-header"><h3><i class="fas fa-calendar-alt"></i> Calendrier & Événements</h3><button class="dc-close" onclick="dcCloseCalendar()"><i class="fas fa-times"></i></button></div><div class="dc-body"><div class="dc-weather" id="dcWeatherContainer"><div class="dc-weather-title"><i class="fas fa-spinner fa-spin"></i> Chargement météo...</div></div><div class="dc-calendar-section"><div id="dcCalendarContainer"></div></div><div class="dc-events-section"><div class="dc-events-header"><h4><i class="fas fa-star"></i> Événements & fêtes du mois</h4><button class="dc-add-btn" onclick="dcOpenAddForm()"><i class="fas fa-plus"></i> Ajouter</button></div><div class="dc-events-list" id="dcEventsContainer"></div></div></div></div></div>';
-    document.body.insertAdjacentHTML('beforeend', html);
-    window.dcState.events = await dcLoadEvents();
-    dcRefresh();
-    var weather = await dcFetchWeather();
-    window.dcState.weather = weather;
-    var wc = document.getElementById('dcWeatherContainer');
-    if (wc) dcRenderWeather(weather, wc);
-};
+window.dcpNavigate = dcpNavigate;
+
+function dcpGoToday() {
+    window._calendarState.currentDate = new Date();
+    dcpRenderBody();
+}
+window.dcpGoToday = dcpGoToday;
+
+function dcpChangeCity(idx) {
+    window._calendarState.cityIndex = parseInt(idx) || 0;
+    dcpRenderBody();
+}
+window.dcpChangeCity = dcpChangeCity;
+
+function dcpChangePeriod(p) {
+    window._calendarState.periodType = p;
+    dcpRenderBody();
+}
+window.dcpChangePeriod = dcpChangePeriod;
+
+function dcCloseCalendar() {
+    var el = document.getElementById('modalCalendarPro');
+    if (el) el.remove();
+}
+window.dcCloseCalendar = dcCloseCalendar;
+window.openDashboardCalendar = openDashboardCalendar;
 
 // ==================== MODAL & CRUD ====================
 function openModal(t, b) {
@@ -1181,7 +828,6 @@ function loadDashboardPage(c) {
     var userRole = (window.currentUserData && window.currentUserData.userData && window.currentUserData.userData.role) ? window.currentUserData.userData.role : 'admin';
     var userName = (window.currentUserData && window.currentUserData.userData) ? (window.currentUserData.userData.prenom || 'Utilisateur') : 'Utilisateur';
 
-    // === Bandeau bienvenue sobre ===
     var welcomeHTML =
         '<div class="dash-welcome">' +
             '<div>' +
@@ -1197,7 +843,6 @@ function loadDashboardPage(c) {
             '</div>' +
         '</div>';
 
-    // === KPI Cards épurées ===
     var kpiHTML = '<div class="dash-kpi-grid">' +
         '<div class="dash-kpi">' +
             '<div class="dash-kpi-icon"><i class="fas fa-money-bill-wave"></i></div>' +
@@ -1226,7 +871,6 @@ function loadDashboardPage(c) {
         '</div>' +
     '</div>';
 
-    // === Alertes intelligentes ===
     var alertsHTML = '<div class="smart-alert-grid">' +
         '<div class="smart-alert-card stock">' +
             '<div class="smart-alert-header">' +
@@ -1251,7 +895,6 @@ function loadDashboardPage(c) {
         '</div>' +
     '</div>';
 
-    // === Navigation ===
     var navItemsAdmin = [
         { page: 'pos', icon: 'fa-cash-register', label: 'POS', desc: 'Point de vente' },
         { page: 'calendrier', icon: 'fa-calendar-alt', label: 'Calendrier', desc: 'Événements & météo' },
@@ -1296,7 +939,6 @@ function loadDashboardPage(c) {
 
     quickHTML += '</div></div>';
 
-    // === Inscriptions en attente ===
     var pendingHTML = '<div class="dash-section">' +
         '<div class="dash-section-header">' +
             '<div>' +
@@ -1534,7 +1176,6 @@ function loadDashboardStats() {
 function loadPendingRegistrations() {
 var d = document.getElementById('pendingRegistrations');
 if (!d) return;
-
 d.innerHTML = `
 <div class="table-container">
 <table class="data-table" id="pendingTable">
@@ -1551,10 +1192,7 @@ d.innerHTML = `
 </table>
 </div>
 `;
-
-db.collection('users')
-.get()
-.then(function(snapshot) {
+db.collection('users').get().then(function(snapshot) {
 window.pendingUsersData = [];
 snapshot.forEach(function(dc) {
 var u = dc.data();
@@ -1569,16 +1207,13 @@ data: u
 });
 }
 });
-
 window.pendingUsersData.sort(function(a, b) {
 var dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000).getTime() : 0;
 var dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000).getTime() : 0;
 return dateB - dateA;
 });
-
 renderPendingTable();
-})
-.catch(function(err) {
+}).catch(function(err) {
 console.error('❌ Erreur chargement pending:', err);
 window.pendingUsersData = [];
 renderPendingTable();
@@ -1589,9 +1224,7 @@ function renderPendingTable() {
 var tb = document.querySelector('#pendingTable tbody');
 if (!tb) return;
 tb.innerHTML = '';
-
 var data = window.pendingUsersData || [];
-
 if (data.length === 0) {
 tb.innerHTML = `
 <tr>
@@ -1602,12 +1235,10 @@ tb.innerHTML = `
 `;
 return;
 }
-
 for (var i = 0; i < data.length; i++) {
 var x = data[i];
 var dt = x.createdAt ? new Date(x.createdAt.seconds * 1000).toLocaleDateString('fr-FR') + ' ' +
 new Date(x.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : 'N/A';
-
 tb.innerHTML += `
 <tr>
 <td><strong style="color:#1A1D1F;">${escapeHtml(x.prenom)}</strong></td>
@@ -2060,4 +1691,4 @@ console.log('☕ Mixmax Minimarket - Admin JS complet (corrigé window.)');
 console.log('🧠 Alertes intelligentes : Stock / Expiration / Prévisions ventes');
 console.log('🎨 Dashboard PRO minimaliste : UNE SEULE couleur #2563EB (aligné POS)');
 console.log('📱 100% responsive');
-console.log('🆕 📅 Calendrier intégré (météo + fêtes + événements)');
+console.log('🆕 📅 Calendrier PRO : ville + filtres période + fêtes préétablies + saisons');
