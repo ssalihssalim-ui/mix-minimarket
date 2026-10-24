@@ -14,6 +14,7 @@
 // ✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur
 // ✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats
 // ✅ 🆕 Tableau produits (plus de cards) + tri sur toutes les colonnes + Vendues / CA / Profit
+// ✅ 🆕 FIX v9 : le profit cumulé n'est plus écrasé (ni au chargement, ni à l'édition)
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -731,8 +732,10 @@ async function loadProducts() {
         window.allProductsData = [];
         snapshot.forEach(d => {
             let dd = d.data(); dd.id = d.id;
-            let prix = (dd.prixPromo && dd.prixPromo > 0) ? dd.prixPromo : (dd.prixVente || 0);
-            dd.profit = acNum(prix) - acNum(dd.prixAchat);
+            // ✅ FIX v9 : ne plus écraser le profit cumulé
+            if (dd.profit === undefined || dd.profit === null) {
+                dd.profit = 0;
+            }
             dd.dateProduction = dd.dateProduction || '';
             dd.dureeConservation = dd.dureeConservation || 0;
             dd.dateExpiration = dd.dateExpiration || '';
@@ -1051,8 +1054,6 @@ function saveProduct() {
     var prixAchat = acNum(document.getElementById('prodPA').value);
     var prixVente = acNum(document.getElementById('prodPV').value);
     var prixPromo = acNum(document.getElementById('prodPromo').value);
-    var prix = (prixPromo > 0) ? prixPromo : prixVente;
-    var profit = prix - prixAchat;
 
     var sf = function(img) {
         var d = {
@@ -1060,9 +1061,8 @@ function saveProduct() {
             brand: document.getElementById('prodBrand').value.trim(),
             box_price: acNum(document.getElementById('prodBoxPrice').value),
             box_unit: acNum(document.getElementById('prodBoxUnit').value) || 1,
-            prixAchat: prixAchat, prixVente: prixVente, prixPromo: prixPromo, profit: profit,
+            prixAchat: prixAchat, prixVente: prixVente, prixPromo: prixPromo,
             stock: acNum(document.getElementById('prodStock').value),
-            vendues: 0, ca: 0,
             tempsPrep: document.getElementById('prodTemps').value,
             disponible: document.getElementById('prodDispo').value === '1',
             description: document.getElementById('prodDesc').value,
@@ -1075,6 +1075,22 @@ function saveProduct() {
             fournisseurId: fournisseurId,
             fournisseurNom: fournisseurNom
         };
+
+        // ✅ FIX v9 : Ne pas écraser les compteurs cumulés lors d'une modification
+        if (editingId) {
+            var existing = window.allProductsData.find(function(x) { return x.id === editingId; });
+            if (existing) {
+                d.profit = (existing.profit !== undefined && existing.profit !== null) ? existing.profit : 0;
+                d.vendues = (existing.vendues !== undefined && existing.vendues !== null) ? existing.vendues : 0;
+                d.ca = (existing.ca !== undefined && existing.ca !== null) ? existing.ca : 0;
+            } else {
+                d.profit = 0; d.vendues = 0; d.ca = 0;
+            }
+        } else {
+            // Création : init à 0
+            d.profit = 0; d.vendues = 0; d.ca = 0;
+        }
+
         if (img) d.imageBase64 = img;
         if (editingId) {
             CacheDB.write('products', editingId, d, 'update').then(function() {
@@ -1710,7 +1726,7 @@ async function validerAchats() {
             if (item.nouveauPrix > 0) {
                 updateData.box_price = item.nouveauPrix;
                 var pu = item.nouveauPrix / boxUnit;
-                updateData.prixAchat = pu; updateData.prixVente = pu * 1.3; updateData.profit = updateData.prixVente - pu;
+                updateData.prixAchat = pu; updateData.prixVente = pu * 1.3;
                 updateData.lastPrixUpdate = todayStr;
             }
             updateData.dateProduction = todayStr;
@@ -2317,7 +2333,7 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v8');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v9');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
@@ -2333,3 +2349,4 @@ console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
 console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur');
 console.log('✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats');
 console.log('✅ 🆕 Tableau produits + tri sur toutes les colonnes + Vendues / CA / Profit');
+console.log('✅ 🆕 FIX v9 : profit cumulé conservé (loadProducts + saveProduct)');
