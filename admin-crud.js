@@ -15,6 +15,7 @@
 // ✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats
 // ✅ 🆕 Tableau produits (plus de cards) + tri sur toutes les colonnes + Vendues / CA / Profit
 // ✅ 🆕 FIX v10 : profit = (prixEffectif - prixAchat) × vendues (recalculé automatiquement)
+// ✅ 🆕 FIX v11 : ajout "Valeur de stock" (prix achat × stock) + "CA estimé" (prix vente × stock)
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -359,6 +360,8 @@ function renderClientsStats(data) {
 function renderProduitsStats(data) {
     var totalProduits = (data || []).length;
     var totalStock = 0, totalCA = 0, totalProfit = 0;
+    var valeurStockAchat = 0;   // 🆕 Σ (prixAchat × stock)
+    var caEstime = 0;           // 🆕 Σ (prixVenteEffectif × stock)
     var stockBas = 0, stockOut = 0, expirés = 0, expirantSoon = 0;
     var bestProduit = null, bestProfit = -Infinity;
     var now = new Date(); now.setHours(0,0,0,0);
@@ -366,9 +369,19 @@ function renderProduitsStats(data) {
         var stock = acNum(p.stock);
         var ca = acNum(p.ca);
         var profit = acNum(p.profit);
+        var prixAchat = acNum(p.prixAchat);
+        var prixVenteEffectif = (p.prixPromo && p.prixPromo > 0) ? acNum(p.prixPromo) : acNum(p.prixVente);
+
         totalStock += stock;
         totalCA += ca;
         totalProfit += profit;
+
+        // ✅ Calcul des 2 nouvelles stats
+        if (stock > 0) {
+            valeurStockAchat += prixAchat * stock;
+            caEstime += prixVenteEffectif * stock;
+        }
+
         if (stock <= 0) stockOut++;
         else if (stock <= 5) stockBas++;
         if (profit > bestProfit) { bestProfit = profit; bestProduit = p.nom || '-'; }
@@ -386,8 +399,12 @@ function renderProduitsStats(data) {
     var html = '';
     html += acStatCard('Produits', totalProduits, 'Au catalogue', 'blue', 'fa-box');
     html += acStatCard('Stock total', totalStock, 'Unités', 'purple', 'fa-cubes');
+    // 🆕 NOUVELLES STATS
+    html += acStatCard('Valeur de stock', acFormatMAD(valeurStockAchat), 'Prix achat × stock', 'purple', 'fa-warehouse');
+    html += acStatCard('CA estimé', acFormatMAD(caEstime), 'Prix vente × stock', 'orange', 'fa-chart-line');
+    // Stats existantes
     html += acStatCard('CA total', acFormatMAD(totalCA), 'Cumulé', 'green', 'fa-coins');
-    html += acStatCard('Marge', acFormatPct(margeGlobale), 'Profit/CA', 'orange', 'fa-chart-line');
+    html += acStatCard('Marge', acFormatPct(margeGlobale), 'Profit/CA', 'orange', 'fa-percentage');
     html += acStatCard('Stock bas', stockBas, '≤ 5 unités', 'orange', 'fa-exclamation-triangle');
     html += acStatCard('Ruptures', stockOut, 'À réapprovisionner', 'red', 'fa-times-circle');
     html += acStatCard('Expirés', expirés, 'À retirer', 'red', 'fa-calendar-times');
@@ -2333,7 +2350,7 @@ window.openProductForm = openProductForm;
 window.openClientForm = openClientForm;
 window.openFournisseurForm = openFournisseurForm;
 
-console.log('🚀 E-SOLUTION - Admin CRUD PRO v10');
+console.log('🚀 E-SOLUTION - Admin CRUD PRO v11');
 console.log('✅ 🎨 Formulaires modernes (modal bleu/blanc)');
 console.log('✅ 🐛 Fix stock: conversion safe → plus de [object Object]');
 console.log('✅ 📱 Responsive renforcé');
@@ -2350,3 +2367,4 @@ console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impress
 console.log('✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats');
 console.log('✅ 🆕 Tableau produits + tri sur toutes les colonnes + Vendues / CA / Profit');
 console.log('✅ 🆕 FIX v10 : profit = (prixEffectif - prixAchat) × vendues (recalculé auto)');
+console.log('✅ 🆕 FIX v11 : ajout "Valeur de stock" + "CA estimé" dans la page Produits');
