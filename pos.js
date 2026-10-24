@@ -33,6 +33,7 @@
 // ✅ QUANTITÉ ENTIER (pas de décimales)
 // 🆕 v6 : Recherche → retour auto aux catégories (recherche sur TOUS les produits)
 // 🆕 v6 : Bouton flèche ↑ remonte à 100% (top:0 forcé + smooth + scrolls internes)
+// 🆕 v7 : Profit produit incrémenté à chaque vente (vendues + ca + profit)
 
 var posCart = [];
 var posStep = 1;
@@ -561,7 +562,6 @@ if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButto
 }, 500);
 }
 }
-
 // 🆕 v6 : RECHERCHE → RETOUR AUTOMATIQUE AUX CATÉGORIES (recherche sur TOUS les produits)
 function posSearchProducts(query){
     clearTimeout(window._searchTimeout);
@@ -1149,6 +1149,7 @@ if(vb) vb.disabled=posCart.length===0;
 
 function getNextFactureNum(){ factureCounter=parseInt(localStorage.getItem('factureCounter'))||0; factureCounter++; localStorage.setItem('factureCounter',factureCounter); return 'FACT-'+new Date().getFullYear()+'-'+String(factureCounter).padStart(5,'0'); }
 
+
 function renderPOS(){
 applyDynamicContentScroll();
 if(!isOnPOSPage()) return;
@@ -1451,6 +1452,10 @@ else cd.innerHTML='<div style="font-size:22px;font-weight:700;color:#FF5B5B;disp
 
 async function updateClientFidelityAsync(clientId, total, profitTotal) { try { return await forceUpdateClient(clientId, total, profitTotal); } catch(e) { return false; } }
 
+// ============================================================
+// ✅ FONCTION CORRIGÉE : profit produit incrémenté à chaque vente
+// 🆕 v7 : batch.update inclut maintenant profit: increment(profitLigne)
+// ============================================================
 async function posFinalizeSale(){
 if(posCart.length === 0){ alert('❌ Le panier est vide. Ajoutez des articles avant de finaliser.'); return; }
 if(isFinalizing) return;
@@ -1486,7 +1491,19 @@ batch.set(ventesRef,sd);
 if(!paid){ var creditsRef=db.collection('credits').doc(); batch.set(creditsRef,sd); }
 if(window.posCommandeId){ batch.update(db.collection('commandes').doc(window.posCommandeId), {statut:'payé', paidAt:firebase.firestore.FieldValue.serverTimestamp(), factureNum:fn}); delete window.posCommandeId; }
 if(window.posVenteId){ batch.update(db.collection('ventes').doc(window.posVenteId), {paid:true, statutPaiement:'payé', remainingAmount:0, paidAt:firebase.firestore.FieldValue.serverTimestamp()}); delete window.posVenteId; }
-for(var i=0;i<posCart.length;i++){ var it=posCart[i]; batch.update(db.collection('products').doc(it.id), {stock:firebase.firestore.FieldValue.increment(-it.quantite), vendues:firebase.firestore.FieldValue.increment(it.quantite), ca:firebase.firestore.FieldValue.increment(it.prixUnitaire*it.quantite)}); }
+
+// ✅ CORRECTION : profit produit incrémenté à chaque vente
+for(var i=0;i<posCart.length;i++){
+    var it=posCart[i];
+    var profitLigne = (it.prixUnitaire - (it.prixAchat || 0)) * it.quantite;
+    batch.update(db.collection('products').doc(it.id), {
+        stock: firebase.firestore.FieldValue.increment(-it.quantite),
+        vendues: firebase.firestore.FieldValue.increment(it.quantite),
+        ca: firebase.firestore.FieldValue.increment(it.prixUnitaire * it.quantite),
+        profit: firebase.firestore.FieldValue.increment(profitLigne)
+    });
+}
+
 await batch.commit();
 
 localStorage.removeItem('posSavedState');
@@ -2422,7 +2439,8 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
 // ============================================================
 // ✅ BOUTON FLÈCHE ↑ — VERSION CORRIGÉE (remonte à 100%)
-// 🆕 v6 : top:0 forcé + smooth + scrolls internes + 2e scroll à 500ms// ============================================================
+// 🆕 v6 : top:0 forcé + smooth + scrolls internes + 2e scroll à 500ms
+// ============================================================
 (function posScrollTopButtonFixed() {
     var STYLE_ID = 'pos-scroll-top-fixed-style';
     var BTN_ID = 'posScrollTopFixedBtn';
@@ -2523,7 +2541,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         }
     }
 
-    // 🆕 v6 : scrollToTop renforcé pour remonter à 100%
     function scrollToTop() {
         var targets = [
             document.getElementById('dynamicContent'),
@@ -2550,7 +2567,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             }
         });
 
-        // Remonter aussi la fenêtre principale
         try { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
         catch(e) { window.scrollTo(0, 0); }
 
@@ -2558,7 +2574,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         try { document.documentElement.scrollTop = 0; } catch(e) {}
         try { document.body.scrollTop = 0; } catch(e) {}
 
-        // Remonter aussi les scrolls internes (panier, produits, formulaire paiement)
         document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form, #posPanierContainer').forEach(function(el) {
             try {
                 el.scrollTop = 0;
@@ -2568,7 +2583,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             } catch(e) {}
         });
 
-        // 🆕 2e scroll forcé à 500ms (au cas où le smooth s'arrête à mi-chemin)
         setTimeout(function() {
             try { window.scrollTo(0, 0); } catch(e) {}
             try { document.documentElement.scrollTop = 0; } catch(e) {}
@@ -2582,7 +2596,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             if (mc) mc.scrollTop = 0;
         }, 500);
 
-        // Feedback visuel sur le panier
         var cartPanel = document.querySelector('.pos-cart-panel');
         if (cartPanel) {
             cartPanel.style.transition = 'box-shadow 0.3s ease';
@@ -2763,7 +2776,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
     document.head.appendChild(s);
     console.log('✅ [POS] Zone mobile agrandie (header masqué + marges supprimées)');
 })();
-console.log('🚀 E-SOLUTION - POS V6 ASTRONAUTE (sans bordures)');
+console.log('🚀 E-SOLUTION - POS V7 ASTRONAUTE (sans bordures)');
 console.log('✅ Design glassmorphism + glow + gradients');
 console.log('✅ BORDURES RETIRÉES : séparations par ombres uniquement');
 console.log('✅ Recherche + Tables/En ligne visibles sur PC ET mobile');
@@ -2777,3 +2790,4 @@ console.log('✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU CO
 console.log('✅ QUANTITÉ ENTIER (step=1, pas de décimales)');
 console.log('🆕 v6 : Recherche → retour auto aux catégories (recherche sur TOUS les produits)');
 console.log('🆕 v6 : Bouton flèche ↑ remonte à 100% (top:0 forcé + smooth + 2e scroll)');
+console.log('🆕 v7 : Profit produit incrémenté automatiquement à chaque vente (vendues + ca + profit)');
