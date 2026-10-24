@@ -13,6 +13,7 @@
 // ✅ 🆕 Fix scroll modal achat (footer toujours accessible)
 // ✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur
 // ✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats
+// ✅ 🆕 Tableau produits (plus de cards) + tri sur toutes les colonnes + Vendues / CA / Profit
 
 const GEMINI_WORKER_URL = 'https://mon-proxy-gemini.ssalihssalim.workers.dev/';
 
@@ -753,48 +754,135 @@ function renderProductsTable() {
         var q = window.productSearchQuery;
         data = data.filter(function(d) { return (d.nom || '').toLowerCase().indexOf(q) !== -1 || (d.description || '').toLowerCase().indexOf(q) !== -1 || (d.brand || '').toLowerCase().indexOf(q) !== -1; });
     }
-    data = applySort('products', data, 'nom');
+
+    // ✅ Tri personnalisé produits
+    var col = window._productsSortCol || 'nom';
+    var dir = window._productsSortDir || 'asc';
+    data = data.slice().sort(function(a, b) {
+        var va, vb;
+        if (col === 'nom') { va = (a.nom || '').toLowerCase(); vb = (b.nom || '').toLowerCase(); }
+        else if (col === 'brand') { va = (a.brand || '').toLowerCase(); vb = (b.brand || '').toLowerCase(); }
+        else if (col === 'categorie') {
+            va = ((a.categories && a.categories[0]) || a.categorie || '').toLowerCase();
+            vb = ((b.categories && b.categories[0]) || b.categorie || '').toLowerCase();
+        }
+        else if (col === 'fournisseur') { va = (a.fournisseurNom || '').toLowerCase(); vb = (b.fournisseurNom || '').toLowerCase(); }
+        else if (col === 'stock') { va = acNum(a.stock); vb = acNum(b.stock); }
+        else if (col === 'prixAchat') { va = acNum(a.prixAchat); vb = acNum(b.prixAchat); }
+        else if (col === 'prixVente') {
+            va = (a.prixPromo && a.prixPromo > 0) ? acNum(a.prixPromo) : acNum(a.prixVente);
+            vb = (b.prixPromo && b.prixPromo > 0) ? acNum(b.prixPromo) : acNum(b.prixVente);
+        }
+        else if (col === 'prixPromo') { va = acNum(a.prixPromo); vb = acNum(b.prixPromo); }
+        else if (col === 'vendues') { va = acNum(a.vendues); vb = acNum(b.vendues); }
+        else if (col === 'ca') { va = acNum(a.ca); vb = acNum(b.ca); }
+        else if (col === 'profit') { va = acNum(a.profit); vb = acNum(b.profit); }
+        else if (col === 'dateExpiration') { va = a.dateExpiration || ''; vb = b.dateExpiration || ''; }
+        else { va = (a.nom || '').toLowerCase(); vb = (b.nom || '').toLowerCase(); }
+        if (typeof va === 'string') {
+            var cmp = va.localeCompare(vb);
+            return dir === 'asc' ? cmp : -cmp;
+        }
+        return dir === 'asc' ? (va - vb) : (vb - va);
+    });
+
     var pageData = getPageData('products', data);
     if (statsGrid) statsGrid.innerHTML = renderProduitsStats(data);
+
     if (pageData.length === 0) {
         container.innerHTML = '<div class="ac-empty"><i class="fas fa-box-open"></i><h3>Aucun produit trouvé</h3><p>' + (window.productSearchQuery ? 'Essayez un autre mot-clé.' : 'Cliquez sur "Nouveau" pour ajouter votre premier produit.') + '</p></div>';
         document.getElementById('productsPagination').innerHTML = '';
         return;
     }
-    var html = '<div class="ac-grid">';
+
+    // ✅ Helper tri
+    var thStyle = 'cursor:pointer;user-select:none;';
+    var thFor = function(colKey, label, center) {
+        var active = (col === colKey) ? ' sort-active' : '';
+        var cls = center ? 'center ' : '';
+        var icon = '';
+        if (col === colKey) {
+            icon = dir === 'asc'
+                ? '<i class="fas fa-sort-up" style="margin-left:4px;color:#2563EB;font-size:13px;"></i>'
+                : '<i class="fas fa-sort-down" style="margin-left:4px;color:#2563EB;font-size:13px;"></i>';
+        } else {
+            icon = '<i class="fas fa-sort" style="opacity:0.35;margin-left:4px;font-size:11px;"></i>';
+        }
+        return '<th style="' + thStyle + '" class="' + cls + active + '" onclick="productsToggleSort(\'' + colKey + '\')">' + label + icon + '</th>';
+    };
+
+    var html = '<div style="background:#fff;border-radius:12px;border:1px solid #E2E8F0;overflow:auto;box-shadow:0 1px 2px rgba(0,0,0,0.04);">';
+    html += '<table class="ac-modal-table"><thead><tr>';
+    html += thFor('nom', 'Produit');
+    html += thFor('brand', 'Marque');
+    html += thFor('categorie', 'Catégorie');
+    html += thFor('fournisseur', 'Fournisseur');
+    html += thFor('stock', 'Stock', true);
+    html += thFor('prixAchat', 'Prix achat', true);
+    html += thFor('prixVente', 'Prix vente', true);
+    html += thFor('vendues', 'Vendues', true);
+    html += thFor('ca', 'CA', true);
+    html += thFor('profit', 'Profit', true);
+    html += thFor('dateExpiration', 'Expiration', true);
+    html += '<th class="center">Actions</th>';
+    html += '</tr></thead><tbody>';
+
     for (var i = 0; i < pageData.length; i++) {
         var d = pageData[i];
         var stock = acNum(d.stock);
-        var imageHtml = d.imageBase64 ? '<img src="' + d.imageBase64 + '" alt="' + escapeHtml(d.nom || '') + '">' : '<i class="fas fa-box"></i>';
-        var stockBadge = '';
-        if (stock <= 0) stockBadge = '<span class="ac-badge stock-out">Rupture</span>';
-        else if (stock <= 5) stockBadge = '<span class="ac-badge stock-low">Stock bas</span>';
-        var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories[0] : (d.categorie || 'Sans catégorie');
+        var vendues = acNum(d.vendues);
+        var ca = acNum(d.ca);
+        var profit = acNum(d.profit);
         var prixVente = (d.prixPromo && d.prixPromo > 0) ? acNum(d.prixPromo) : acNum(d.prixVente);
-        var prixPromoHtml = (d.prixPromo && d.prixPromo > 0) ? '<span class="ac-price-sub" style="text-decoration:line-through;">' + acNum(d.prixVente).toFixed(2) + '</span>' : '';
-        var brandHtml = d.brand ? '<span style="font-size:12px;color:#64748B;">' + escapeHtml(d.brand) + '</span>' : '';
-        html += '<div class="ac-card">';
-        html += '  <div class="ac-card-image">' + imageHtml + stockBadge + '</div>';
-        html += '  <div class="ac-card-body">';
-        html += '    <h4 class="ac-card-title">' + escapeHtml(d.nom || 'Sans nom') + '</h4>';
-        html += '    <span class="ac-card-category">' + escapeHtml(categoriesDisplay) + '</span>';
-        html += '    ' + brandHtml;
-        html += '    <div class="ac-card-info"><i class="fas fa-cubes"></i> Stock : <strong>' + stock + '</strong></div>';
-        html += '    <div class="ac-card-price">';
-        html += '      <div><div class="ac-price-main">' + prixVente.toFixed(2) + ' MAD</div>' + prixPromoHtml + '</div>';
-        html += '      <div style="text-align:right;"><div style="font-size:12px;color:var(--ac-gray-500);">Achat</div><div style="font-size:13px;font-weight:700;">' + acNum(d.prixAchat).toFixed(2) + '</div></div>';
-        html += '    </div>';
-        html += '  </div>';
-        html += '  <div class="ac-card-actions">';
-        html += '    <button class="edit" onclick="editDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-edit"></i> Modifier</button>';
-        html += '    <button class="delete" onclick="deleteDocument(\'products\',\'' + d.id + '\')"><i class="fas fa-trash"></i></button>';
-        html += '  </div>';
-        html += '</div>';
+        var categoriesDisplay = (d.categories && d.categories.length > 0) ? d.categories[0] : (d.categorie || '—');
+        var stockBadge = '';
+        if (stock <= 0) stockBadge = ' <span class="ac-badge stock-out" style="position:static;margin-left:6px;">Rupture</span>';
+        else if (stock <= 5) stockBadge = ' <span class="ac-badge stock-low" style="position:static;margin-left:6px;">Bas</span>';
+        var imgHtml = d.imageBase64
+            ? '<img src="' + d.imageBase64 + '" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex-shrink:0;">'
+            : '<div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE);display:flex;align-items:center;justify-content:center;color:#3B82F6;flex-shrink:0;"><i class="fas fa-box" style="font-size:16px;"></i></div>';
+
+        html += '<tr>';
+        html += '<td>';
+        html += '<div style="display:flex;align-items:center;gap:10px;">' + imgHtml;
+        html += '<div><div class="ac-product-name">' + escapeHtml(d.nom || 'Sans nom') + stockBadge + '</div>';
+        html += '<div style="font-size:11px;color:#94A3B8;font-family:monospace;">' + (d.id || '').substring(0, 6) + '</div></div>';
+        html += '</div></td>';
+        html += '<td>' + escapeHtml(d.brand || '—') + '</td>';
+        html += '<td><span style="font-size:12px;background:#EFF6FF;color:#2563EB;padding:2px 8px;border-radius:6px;font-weight:600;">' + escapeHtml(categoriesDisplay) + '</span></td>';
+        html += '<td style="font-size:12px;">' + escapeHtml(d.fournisseurNom || '—') + '</td>';
+        html += '<td class="center" style="font-weight:700;">' + stock + '</td>';
+        html += '<td class="center">' + acNum(d.prixAchat).toFixed(2) + '</td>';
+        html += '<td class="center" style="font-weight:700;color:#2563EB;">' + prixVente.toFixed(2) + '</td>';
+        // ✅ Nb fois vendue
+        html += '<td class="center"><span style="display:inline-block;background:' + (vendues > 0 ? '#ECFDF5' : '#F1F5F9') + ';color:' + (vendues > 0 ? '#059669' : '#94A3B8') + ';padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;">' + vendues + '</span></td>';
+        // ✅ CA
+        html += '<td class="center" style="font-weight:700;color:#0F172A;">' + ca.toFixed(2) + ' <span style="font-size:10px;color:#94A3B8;">MAD</span></td>';
+        // ✅ Profit
+        html += '<td class="center" style="font-weight:700;color:' + (profit >= 0 ? '#10B981' : '#EF4444') + ';">' + profit.toFixed(2) + '</td>';
+        html += '<td class="center" style="font-size:12px;">' + (d.dateExpiration ? escapeHtml(d.dateExpiration) : '<span style="color:#CBD5E1;">—</span>') + '</td>';
+        html += '<td class="center" style="white-space:nowrap;">';
+        html += '<button class="ac-price-action-btn" style="background:#EFF6FF;color:#2563EB;" onclick="editDocument(\'products\',\'' + d.id + '\')" title="Modifier"><i class="fas fa-edit"></i></button>';
+        html += '<button class="ac-price-action-btn cancel" onclick="deleteDocument(\'products\',\'' + d.id + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>';
+        html += '</td>';
+        html += '</tr>';
     }
-    html += '</div>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
     document.getElementById('productsPagination').innerHTML = getPaginationHTML('products', data.length);
 }
+
+// ✅ Tri produits
+function productsToggleSort(col) {
+    if (window._productsSortCol === col) {
+        window._productsSortDir = window._productsSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        window._productsSortCol = col;
+        window._productsSortDir = 'asc';
+    }
+    renderProductsTable();
+}
+window.productsToggleSort = productsToggleSort;
 
 async function openProductForm(data) {
     data = data || {}; await loadStockForProductForm();
@@ -2244,3 +2332,4 @@ console.log('✅ 🆕 Scan avec compression INTELLIGENTE (sans perte de qualité
 console.log('✅ 🆕 Fix scroll modal achat (footer toujours accessible)');
 console.log('✅ 🆕 Bouton "Liste des achats" + historique + filtres + impression + tri fournisseur');
 console.log('✅ 🆕 Barre de recherche produit + boutons Modifier/Supprimer dans la liste des achats');
+console.log('✅ 🆕 Tableau produits + tri sur toutes les colonnes + Vendues / CA / Profit');
