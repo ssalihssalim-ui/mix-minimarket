@@ -1726,7 +1726,7 @@ async function validerAchats() {
             if (item.nouveauPrix > 0) {
                 updateData.box_price = item.nouveauPrix;
                 var pu = item.nouveauPrix / boxUnit;
-                updateData.prixAchat = pu; updateData.prixVente = pu * 1.3;
+                updateData.prixAchat = pu; 
                 updateData.lastPrixUpdate = todayStr;
             }
             updateData.dateProduction = todayStr;
