@@ -1585,18 +1585,9 @@ if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ✓', reg)).catch(err => console.error('SW ✗', err));
 }
 
-// ✅ AJOUT : Sauvegarde automatique au chargement de l'application
-window.addEventListener('load', function() {
-setTimeout(function() {
-if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
-console.log('💾 Sauvegarde initiale des données...');
-CacheDB.saveAll();
-if (typeof CacheDB.setupRealtime === 'function') {
-CacheDB.setupRealtime();
-}
-}
-}, 2000);
-});
+// 🔧 FIX : Supprimé le setTimeout(2000) qui causait un refresh en boucle
+// après ~5 secondes (2s + 3s cumulés avec le bloc dans script.js).
+// Le cache sera géré par CacheDB lui-même à la demande.
 </script>
 
 </body>
