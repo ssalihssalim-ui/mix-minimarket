@@ -425,16 +425,9 @@ showAuthPage();
 }
 showLogin();
 
-// ✅ OPTIMISATION : Sauvegarde UNE SEULE FOIS après 3 secondes
-setTimeout(function() {
-    if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
-        console.log('💾 Sauvegarde initiale des données...');
-        CacheDB.saveAll();
-        if (typeof CacheDB.setupRealtime === 'function') {
-            CacheDB.setupRealtime();
-        }
-    }
-}, 3000);
+// 🔧 FIX : Supprimé le setTimeout(3000) qui causait un refresh en boucle
+// après ~5 secondes (2s index.html + 3s script.js cumulés).
+// Le préchargement via preloadAllData() en haut du fichier suffit.
 }
 
 // ========== GESTION DU MENU MOBILE ==========
