@@ -355,6 +355,21 @@ document.getElementById('authPage').classList.add('hidden');
 document.getElementById('dashboardPage').classList.add('hidden');
 document.getElementById('clientPage').classList.add('hidden');
 document.getElementById('menuTactilePage').classList.remove('hidden');
+
+// 🔒 GARDE-FOU : Neutraliser showAuthPage() pour empêcher tout retour au login
+if (!window._showAuthPageBlocked) {
+    window._showAuthPageBlocked = true;
+    var _origShowAuth = window.showAuthPage;
+    window.showAuthPage = function() {
+        if (window._menuTactileTable) {
+            console.warn('🚫 showAuthPage() BLOQUÉE (menu tactile actif)');
+            return;
+        }
+        if (typeof _origShowAuth === 'function') _origShowAuth.apply(this, arguments);
+    };
+    console.log('🔒 showAuthPage neutralisée pour le menu tactile');
+}
+
 var a = 0,
 wi = setInterval(function() {
 if (typeof db !== 'undefined' && typeof CacheDB !== 'undefined' && typeof initMenuTactile === 'function') {
@@ -425,9 +440,16 @@ showAuthPage();
 }
 showLogin();
 
-// 🔧 FIX : Supprimé le setTimeout(3000) qui causait un refresh en boucle
-// après ~5 secondes (2s index.html + 3s script.js cumulés).
-// Le préchargement via preloadAllData() en haut du fichier suffit.
+// ✅ OPTIMISATION : Sauvegarde UNE SEULE FOIS après 3 secondes
+setTimeout(function() {
+    if (typeof CacheDB !== 'undefined' && CacheDB.saveAll) {
+        console.log('💾 Sauvegarde initiale des données...');
+        CacheDB.saveAll();
+        if (typeof CacheDB.setupRealtime === 'function') {
+            CacheDB.setupRealtime();
+        }
+    }
+}, 3000);
 }
 
 // ========== GESTION DU MENU MOBILE ==========
@@ -478,7 +500,13 @@ closeClientSidebar();
 }
 });
 
-function showAuthPage() { document.getElementById('authPage').classList.remove('hidden');
+function showAuthPage() { 
+// 🔒 GARDE-FOU : Ne jamais afficher login sur menu tactile
+if (window._menuTactileTable) {
+    console.warn('🚫 showAuthPage() IGNORÉE (menu tactile actif)');
+    return;
+}
+document.getElementById('authPage').classList.remove('hidden');
 document.getElementById('dashboardPage').classList.add('hidden');
 document.getElementById('clientPage').classList.add('hidden'); }
 
