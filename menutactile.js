@@ -1,5 +1,5 @@
 // ==================== MENU TACTILE - E-SOLUTION ====================
-// 🆕 v10 : Reproduction EXACTE du style POS (variables CSS + couleurs + structure)
+// 🆕 v11 : SCROLL CORRIGÉ (page + produits fonctionnels)
 // Logo logo.png + Catégories → Produits + Recherche dynamique + Panier fixe
 
 var menuTableNum = null;
@@ -199,7 +199,7 @@ function renderMenuTactile() {
 
 // ========== GRILLE CATÉGORIES (style POS) ==========
 function renderCategoriesGrid() {
-    var html = '<div style="grid-column:1/-1;padding:6px 8px;font-size:0.9rem;font-weight:700;color:var(--text-primary);">📂 Choisissez une catégorie</div>';
+    var html = '<div style="grid-column:1/-1;padding:6px 8px;font-size:0.9rem;font-weight:700;color:#0F172A;">📂 Choisissez une catégorie</div>';
 
     if (menuCategories.length === 0) {
         return '<div class="menu-empty-state"><i class="fas fa-folder-open"></i><p>Aucune catégorie</p></div>';
@@ -232,16 +232,16 @@ function renderCategoriesGrid() {
 
         var imgContent = cat.imageBase64
             ? '<img src="' + escapeHtml(cat.imageBase64) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
-            : '<i class="fas fa-folder" style="font-size:' + folderSize + ';color:var(--accent);"></i>';
+            : '<i class="fas fa-folder" style="font-size:' + folderSize + ';color:#14B8A6;"></i>';
 
         html += '<div class="pos-category-card menu-cat-card" data-cat-name="' + escapeHtml(cat.nom) + '" ' +
                 'style="min-height:' + cardMinHeight + ';max-height:' + cardMaxHeight + ';padding:8px 4px;border-radius:10px;border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;background:#FFFFFF;cursor:pointer;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);gap:2px;" ' +
                 'onclick="menuSelectCategory(\'' + escapeHtml(cat.nom).replace(/'/g, "\\'") + '\')" ' +
-                'onmouseover="if(!this.classList.contains(\'active\')){this.style.borderColor=\'var(--accent)\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 12px rgba(20,184,166,0.15)\';}" ' +
+                'onmouseover="if(!this.classList.contains(\'active\')){this.style.borderColor=\'#14B8A6\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 12px rgba(20,184,166,0.15)\';}" ' +
                 'onmouseout="if(!this.classList.contains(\'active\')){this.style.borderColor=\'transparent\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\';}">' +
-                '<div style="width:' + imgSize + ';height:' + imgSize + ';border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--gray-100);display:flex;align-items:center;justify-content:center;margin-bottom:2px;border:2px solid var(--gray-200);">' + imgContent + '</div>' +
+                '<div style="width:' + imgSize + ';height:' + imgSize + ';border-radius:50%;overflow:hidden;flex-shrink:0;background:#F1F5F9;display:flex;align-items:center;justify-content:center;margin-bottom:2px;border:2px solid #E2E8F0;">' + imgContent + '</div>' +
                 '<span style="font-size:' + nameSize + ';font-weight:700;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;color:#000000;margin-top:2px;line-height:1.2;display:block;">' + escapeHtml(cat.nom) + '</span>' +
-                '<span style="font-size:' + countSize + ';color:var(--text-muted);font-weight:500;display:block;margin-top:0px;">' + count + ' produit' + (count > 1 ? 's' : '') + '</span>' +
+                '<span style="font-size:' + countSize + ';color:#64748B;font-weight:500;display:block;margin-top:0px;">' + count + ' produit' + (count > 1 ? 's' : '') + '</span>' +
                 '</div>';
     }
 
@@ -253,8 +253,8 @@ function renderCategoriesGrid() {
 function renderProductsGrid() {
     var html = '';
 
-    html += '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:4px;background:var(--bg-page);border-radius:8px;">';
-    html += '<button onclick="menuBackToCategories()" style="display:flex;align-items:center;gap:6px;background:var(--black);color:var(--white);border:none;border-radius:8px;padding:6px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;"><i class="fas fa-arrow-left"></i> Retour aux catégories</button>';
+    html += '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:4px;background:#F8FAFC;border-radius:8px;">';
+    html += '<button onclick="menuBackToCategories()" style="display:flex;align-items:center;gap:6px;background:#0F172A;color:#FFFFFF;border:none;border-radius:8px;padding:6px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;"><i class="fas fa-arrow-left"></i> Retour aux catégories</button>';
     html += '<span style="font-weight:700;font-size:0.9rem;color:#000000;background:#FFFFFF;padding:4px 12px;border-radius:6px;border:1px solid #14B8A6;">📂 ' + escapeHtml(menuSelectedCategoryName || '') + '</span>';
     html += '</div>';
 
@@ -293,20 +293,20 @@ function renderProductsGrid() {
             : 'padding:6px 8px;min-height:150px;max-height:190px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
 
         var imgStyle = isMobile
-            ? 'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;'
-            : 'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
+            ? 'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:#F1F5F9;display:flex;align-items:center;justify-content:center;'
+            : 'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#F1F5F9;display:flex;align-items:center;justify-content:center;';
 
         var nameStyle = isMobile
-            ? 'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:1px 0;'
-            : 'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:2px 0;';
+            ? 'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#0F172A;margin:1px 0;'
+            : 'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#0F172A;margin:2px 0;';
 
         var priceStyle = isMobile
-            ? 'font-size:10px !important;font-weight:700 !important;color:var(--text-primary);'
-            : 'font-size:0.8rem !important;font-weight:700 !important;color:var(--text-primary);';
+            ? 'font-size:10px !important;font-weight:700 !important;color:#0F172A;'
+            : 'font-size:0.8rem !important;font-weight:700 !important;color:#0F172A;';
 
         var imgContent = p.imageBase64
             ? '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">'
-            : '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;' : 'font-size:26px;') + 'color:var(--text-muted);"></i>';
+            : '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;' : 'font-size:26px;') + 'color:#94A3B8;"></i>';
 
         html += '<div class="pos-product-card ' + (outOfStock ? 'pos-out-of-stock' : '') + '" ' +
                 'style="' + cardStyle + '" ' +
@@ -316,7 +316,7 @@ function renderProductsGrid() {
                 '<span class="pos-product-name" style="' + nameStyle + '">' + escapeHtml(p.nom) + stt + '</span>' +
                 '<span class="pos-product-price" style="' + priceStyle + '">' +
                 (hp
-                    ? '<span style="' + (isMobile ? 'font-size:7px;' : 'font-size:0.6rem;') + 'text-decoration:line-through;color:var(--text-muted);">' + p.prixVente.toFixed(2) + '</span> <span style="' + (isMobile ? 'font-size:10px;' : 'font-size:0.8rem;') + 'color:var(--danger);">' + pr.toFixed(2) + ' MAD</span>'
+                    ? '<span style="' + (isMobile ? 'font-size:7px;' : 'font-size:0.6rem;') + 'text-decoration:line-through;color:#94A3B8;">' + p.prixVente.toFixed(2) + '</span> <span style="' + (isMobile ? 'font-size:10px;' : 'font-size:0.8rem;') + 'color:#ef4444;">' + pr.toFixed(2) + ' MAD</span>'
                     : pr.toFixed(2) + ' MAD') +
                 '</span></div></div>';
     }
@@ -333,7 +333,7 @@ function renderSearchResults() {
         (p.categorie || '').toLowerCase().indexOf(q) !== -1
     ).sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
 
-    var html = '<div style="grid-column:1/-1;padding:6px 8px;font-size:0.9rem;font-weight:700;color:var(--text-primary);"><i class="fas fa-search"></i> ' + results.length + ' résultat' + (results.length > 1 ? 's' : '') + ' pour "' + escapeHtml(menuSearchQuery) + '"</div>';
+    var html = '<div style="grid-column:1/-1;padding:6px 8px;font-size:0.9rem;font-weight:700;color:#0F172A;"><i class="fas fa-search"></i> ' + results.length + ' résultat' + (results.length > 1 ? 's' : '') + ' pour "' + escapeHtml(menuSearchQuery) + '"</div>';
 
     if (results.length === 0) {
         return html + '<div class="menu-empty-state"><i class="fas fa-search"></i><p>Aucun produit trouvé</p></div>';
@@ -356,18 +356,18 @@ function renderSearchResults() {
             : 'padding:6px 8px;min-height:150px;max-height:190px;aspect-ratio:1/1;border-radius:8px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;';
 
         var imgStyle = isMobile
-            ? 'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;'
-            : 'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-200);display:flex;align-items:center;justify-content:center;';
+            ? 'height:55px;width:55px;margin-bottom:4px;border-radius:6px;overflow:hidden;flex-shrink:0;background:#F1F5F9;display:flex;align-items:center;justify-content:center;'
+            : 'height:75px;width:75px;margin-bottom:6px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#F1F5F9;display:flex;align-items:center;justify-content:center;';
 
         var nameStyle = isMobile
-            ? 'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:1px 0;'
-            : 'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text-primary);margin:2px 0;';
+            ? 'font-size:9px !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#0F172A;margin:1px 0;'
+            : 'font-size:0.75rem !important;font-weight:600 !important;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#0F172A;margin:2px 0;';
 
-        var priceStyle = isMobile ? 'font-size:10px !important;font-weight:700 !important;color:var(--text-primary);' : 'font-size:0.8rem !important;font-weight:700 !important;color:var(--text-primary);';
+        var priceStyle = isMobile ? 'font-size:10px !important;font-weight:700 !important;color:#0F172A;' : 'font-size:0.8rem !important;font-weight:700 !important;color:#0F172A;';
 
         var imgContent = p.imageBase64
             ? '<img src="' + escapeHtml(p.imageBase64) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">'
-            : '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;' : 'font-size:26px;') + 'color:var(--text-muted);"></i>';
+            : '<i class="fas fa-box" style="' + (isMobile ? 'font-size:18px;' : 'font-size:26px;') + 'color:#94A3B8;"></i>';
 
         html += '<div class="pos-product-card ' + (outOfStock ? 'pos-out-of-stock' : '') + '" ' +
                 'style="' + cardStyle + '" ' +
@@ -377,7 +377,7 @@ function renderSearchResults() {
                 '<span class="pos-product-name" style="' + nameStyle + '">' + escapeHtml(p.nom) + '</span>' +
                 '<span class="pos-product-price" style="' + priceStyle + '">' +
                 (hp
-                    ? '<span style="' + (isMobile ? 'font-size:7px;' : 'font-size:0.6rem;') + 'text-decoration:line-through;color:var(--text-muted);">' + p.prixVente.toFixed(2) + '</span> <span style="' + (isMobile ? 'font-size:10px;' : 'font-size:0.8rem;') + 'color:var(--danger);">' + pr.toFixed(2) + ' MAD</span>'
+                    ? '<span style="' + (isMobile ? 'font-size:7px;' : 'font-size:0.6rem;') + 'text-decoration:line-through;color:#94A3B8;">' + p.prixVente.toFixed(2) + '</span> <span style="' + (isMobile ? 'font-size:10px;' : 'font-size:0.8rem;') + 'color:#ef4444;">' + pr.toFixed(2) + ' MAD</span>'
                     : pr.toFixed(2) + ' MAD') +
                 '</span></div></div>';
     }
@@ -388,7 +388,6 @@ function renderSearchResults() {
 
 // ========== NAVIGATION ==========
 function menuSelectCategory(catName) {
-    // Marquer la carte active
     document.querySelectorAll('.menu-cat-card').forEach(function(card) {
         card.classList.remove('active');
         card.style.borderColor = 'transparent';
@@ -635,24 +634,56 @@ function initMenuTactile(tableNum) {
     loadMenuData();
 }
 
-// ========== STYLES ==========
+// ========== STYLES (v11 — SCROLL CORRIGÉ) ==========
 function injectMenuStyles() {
-    if (document.getElementById('menuTactileStylesV10')) return;
+    if (document.getElementById('menuTactileStylesV11')) return;
+    // Supprimer l'ancien style si présent
+    var old = document.getElementById('menuTactileStylesV10');
+    if (old) old.remove();
+
     var style = document.createElement('style');
-    style.id = 'menuTactileStylesV10';
+    style.id = 'menuTactileStylesV11';
     style.textContent = `
+    /* ============================================================
+       🔧 v11 : SCROLL CORRIGÉ
+       ============================================================ */
+
+    /* ===== RESET SCROLL GLOBAL ===== */
+    html, body {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        max-height: none !important;
+        position: static !important;
+    }
+
+    /* ===== PAGE MENU TACTILE ===== */
     #menuTactilePage {
         background: #f8fafc !important;
-        min-height: 100vh;
-        min-height: 100dvh;
+        min-height: 100vh !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         -webkit-font-smoothing: antialiased;
+        position: relative;
+        display: block !important;
     }
+
     #menuTactileContent {
         max-width: 1400px;
         margin: 0 auto;
-        padding-bottom: 280px;
+        padding-bottom: 60vh !important;
+        min-height: 100vh !important;
+        height: auto !important;
+        overflow: visible !important;
+        position: relative;
     }
+
+    /* ===== HEADER ===== */
     .menu-header {
         background: linear-gradient(135deg, #0A0D12, #1a1a2e);
         color: #fff;
@@ -715,11 +746,12 @@ function injectMenuStyles() {
     }
     .menu-close-btn:hover { background: rgba(0,0,0,0.55); transform: rotate(90deg); }
 
+    /* ===== RECHERCHE ===== */
     .menu-search-wrapper {
         padding: 12px 14px;
         background: #f8fafc;
         position: sticky;
-        top: 92px;
+        top: 100px;
         z-index: 40;
     }
     .menu-search-bar {
@@ -765,18 +797,29 @@ function injectMenuStyles() {
     }
     .menu-search-clear:hover { background: #E2E8F0; color: #0F172A; }
 
-    .menu-main-zone { padding: 0 10px 24px; }
+    /* ===== ZONE PRINCIPALE ===== */
+    .menu-main-zone {
+        padding: 0 10px 24px;
+        overflow: visible !important;
+        height: auto !important;
+    }
 
+    /* ===== GRILLE CATÉGORIES ===== */
     .menu-categories-grid {
         display: grid;
         gap: 10px;
         padding: 10px;
+        overflow: visible !important;
+        height: auto !important;
     }
 
+    /* ===== GRILLE PRODUITS ===== */
     .menu-products-grid {
         display: grid;
         gap: 8px;
         padding: 4px;
+        overflow: visible !important;
+        height: auto !important;
     }
 
     .menu-empty-state {
@@ -788,6 +831,7 @@ function injectMenuStyles() {
     .menu-empty-state i { font-size: 3rem; margin-bottom: 12px; display: block; opacity: 0.5; }
     .menu-empty-state p { margin: 0; font-size: 0.95rem; }
 
+    /* ===== PANIER FIXE ===== */
     .menu-cart-fixed {
         position: fixed;
         bottom: 0; left: 0; right: 0;
@@ -798,6 +842,7 @@ function injectMenuStyles() {
         box-shadow: 0 -2px 15px rgba(0,0,0,0.15);
         max-height: 55vh;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -835,6 +880,7 @@ function injectMenuStyles() {
     .menu-cart-items {
         max-height: 25vh;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -940,6 +986,7 @@ function injectMenuStyles() {
     }
     .menu-btn-clear:hover { background: #FEF2F2; border-color: #FCA5A5; }
 
+    /* ===== PLEIN ÉCRAN ===== */
     .menu-fullscreen-btn {
         position: fixed;
         bottom: calc(55vh + 10px);
@@ -962,6 +1009,7 @@ function injectMenuStyles() {
 
     .menu-cat-card.active { border-color: #14B8A6 !important; }
 
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 380px) {
         .menu-title-wrapper h1 { font-size: 1rem; }
         .menu-title-wrapper p { font-size: 0.7rem; }
@@ -972,8 +1020,26 @@ function injectMenuStyles() {
         .menu-logo-wrapper { width: 40px; height: 40px; }
         .menu-cart-fixed { max-height: 50vh; }
     }
+
+    /* ===== SCROLLBAR DOUCE ===== */
+    #menuTactilePage::-webkit-scrollbar,
+    .menu-cart-items::-webkit-scrollbar,
+    .menu-cart-fixed::-webkit-scrollbar {
+        width: 6px;
+    }
+    #menuTactilePage::-webkit-scrollbar-track,
+    .menu-cart-items::-webkit-scrollbar-track,
+    .menu-cart-fixed::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #menuTactilePage::-webkit-scrollbar-thumb,
+    .menu-cart-items::-webkit-scrollbar-thumb,
+    .menu-cart-fixed::-webkit-scrollbar-thumb {
+        background: #CBD5E1;
+        border-radius: 3px;
+    }
     `;
     document.head.appendChild(style);
 }
 
-console.log('🚀 Menu tactile E-SOLUTION v10 (style POS exact)');
+console.log('🚀 Menu tactile E-SOLUTION v11 (scroll corrigé)');
