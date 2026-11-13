@@ -1,4 +1,6 @@
 // ==================== MENU TACTILE - E-SOLUTION ====================
+// 🆕 v8 : Commande avec table STRING + paid:false pour cohérence POS
+
 var menuTableNum = null;
 var menuCart = [];
 var menuCategories = [];
@@ -106,7 +108,7 @@ function renderMenuTactile() {
     html += '<h1 style="margin:0;font-size:1.4rem;">E-<span style="color:#14B8A6;">SOLUTION</span></h1>';
     html += '<p style="margin:5px 0 0;">🍽️ Table n° ' + menuTableNum + '</p></div>';
     
-    html += '<div style="overflow-x:auto;white-space:nowrap;padding:10px 10px 5px 10px;">';
+    html += '<div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;white-space:nowrap;padding:10px 10px 5px 10px;">';
     html += '<button onclick="menuFilterCategory(\'all\')" style="display:inline-block;padding:8px 16px;margin:0 4px;border-radius:50px;border:2px solid ' + (menuSelectedCategory === 'all' ? '#14B8A6' : '#e2e8f0') + ';background:' + (menuSelectedCategory === 'all' ? '#14B8A6' : '#fff') + ';color:' + (menuSelectedCategory === 'all' ? '#fff' : '#1e293b') + ';font-weight:600;">📋 Tous</button>';
     for (var i = 0; i < menuCategories.length; i++) {
         var cat = menuCategories[i];
@@ -141,7 +143,7 @@ function renderMenuTactile() {
     }
     html += '</div>';
     
-    html += '<div style="position:sticky;bottom:0;background:#fff;padding:12px;border-radius:20px 20px 0 0;box-shadow:0 -2px 15px rgba(0,0,0,0.1);margin-top:10px;">';
+    html += '<div style="position:fixed;bottom:0;left:0;right:0;z-index:30;background:#fff;padding:12px;border-radius:20px 20px 0 0;box-shadow:0 -2px 15px rgba(0,0,0,0.15);max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>🛒 Mon panier</strong><span style="background:#14B8A6;color:#fff;padding:2px 10px;border-radius:20px;">' + menuCart.length + ' article(s)</span></div>';
     if (menuCart.length === 0) {
         html += '<p style="text-align:center;color:#94a3b8;margin:5px 0;">Cliquez sur un produit</p>';
@@ -161,7 +163,7 @@ function renderMenuTactile() {
     if (menuCart.length > 0) html += '<button onclick="menuClearCart()" style="width:100%;margin-top:8px;padding:6px;border:1px solid #ccc;background:#fff;border-radius:12px;">🗑️ Vider</button>';
     html += '</div>';
     
-    html += '<button onclick="requestFullscreen()" style="position:fixed;bottom:20px;right:20px;background:#14B8A6;color:white;border:none;border-radius:50%;width:45px;height:45px;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer;z-index:1000;">⛶</button>';
+    html += '<button onclick="requestFullscreen()" style="position:fixed;bottom:calc(55vh + 10px);right:15px;background:#14B8A6;color:white;border:none;border-radius:50%;width:45px;height:45px;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer;z-index:1000;">⛶</button>';
     
     content.innerHTML = html;
 }
@@ -340,13 +342,15 @@ async function menuValiderCommande() {
     if (!confirm('📋 Confirmer la commande ?\nTable ' + menuTableNum + '\nTotal: ' + total.toFixed(2) + ' MAD')) return;
     
     try {
+        // 🆕 v8 : table STRING + paid:false pour cohérence POS
         await db.collection('commandes').add({
             items: JSON.parse(JSON.stringify(menuCart)),
             total: total,
-            table: menuTableNum,
+            table: String(menuTableNum),
             clientName: 'Table ' + menuTableNum,
             statut: 'en_attente',
             source: 'menu_tactile',
+            paid: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert('✅ Commande envoyée !');
@@ -380,4 +384,4 @@ function initMenuTactile(tableNum) {
     loadMenuData();
 }
 
-console.log('🚀 Menu tactile E-SOLUTION prêt');
+console.log('🚀 Menu tactile E-SOLUTION prêt (v8 - commande tables)');
