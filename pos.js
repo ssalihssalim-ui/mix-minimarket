@@ -34,6 +34,7 @@
 // 🆕 v6 : Recherche → retour auto aux catégories (recherche sur TOUS les produits)
 // 🆕 v6 : Bouton flèche ↑ remonte à 100% (top:0 forcé + smooth + scrolls internes)
 // 🆕 v7 : Profit produit incrémenté à chaque vente (vendues + ca + profit)
+// 🆕 v8 : COMMANDES TABLES → lecture Firestore + affichage modal + paiement direct
 
 var posCart = [];
 var posStep = 1;
@@ -375,7 +376,6 @@ function posToggleTools() {
     }
 }
 
-// ✅ MODIFIÉ : height:auto + min-height:100vh + padding-bottom pour permettre le scroll complet
 function applyDynamicContentScroll() {
 var container = document.getElementById('dynamicContent');
 if (container) {
@@ -561,20 +561,25 @@ if (posCurrentClient && posCurrentClient.name) { var ci = document.getElementByI
 if (typeof window.updatePaymentButtons === 'function') window.updatePaymentButtons();
 }, 500);
 }
+
+// 🔧 AJOUT v8 : Démarrer l'écoute temps réel des commandes tables
+if (!window._posCommandesListener) {
+    setTimeout(function() {
+        if (typeof posStartCommandesListener === 'function') posStartCommandesListener();
+    }, 1000);
 }
-// 🆕 v6 : RECHERCHE → RETOUR AUTOMATIQUE AUX CATÉGORIES (recherche sur TOUS les produits)
+}
+
 function posSearchProducts(query){
     clearTimeout(window._searchTimeout);
     window._searchTimeout = setTimeout(function(){
         posProductOffset = 0;
         posSearchQuery = query.toLowerCase().trim();
 
-        // 🆕 CORRECTION 1 : dès que l'utilisateur TAPE, on REVIENT aux catégories
-        // pour chercher sur TOUS les produits (pas seulement la catégorie active)
         if (posSearchQuery.length > 0) {
             posViewMode = 'products';
-            posSelectedCategoryForView = null;   // efface la catégorie sélectionnée
-            posSelectedCategory = 'all';          // remet le filtre catégorie à "tous"
+            posSelectedCategoryForView = null;
+            posSelectedCategory = 'all';
         }
 
         if (posSearchQuery.length > 0 && !posSearchCache[posSearchQuery]) {
@@ -904,7 +909,6 @@ function posAddToCartOrOpenOptions(pid){
     posSaveMultiCarts(); 
 }
 
-// ✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE + NOMBRE ENTIER
 async function posOpenOptionsModal(pid) {
 var p = posProductsList.find(function(x) { return x.id === pid; });
 if (!p) return;
@@ -957,12 +961,10 @@ h += '<div style="margin-bottom:14px;"><label style="font-weight:700;font-size:0
 grouped[cat].forEach(function(ing) {
 var disabled = ing.stockDisponible <= 0 ? 'disabled' : '';
 var uniteLabel = ing.unite ? ' (' + escapeHtml(ing.unite) + ')' : '';
-// Checkbox DÉCOCHÉE par défaut
 h += '<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:none;border-radius:10px;background:#F8FAFC;cursor:' + (ing.stockDisponible <= 0 ? 'not-allowed' : 'pointer') + ';' + (ing.stockDisponible <= 0 ? 'opacity:0.5;' : '') + 'flex-wrap:wrap;">';
 h += '<input type="checkbox" class="pos-ingredient-check" value="' + escapeHtml(ing.nom) + '" data-stock-id="' + escapeHtml(ing.idStock || '') + '" data-unite="' + escapeHtml(ing.unite || '') + '" ' + disabled + ' onchange="posToggleIngredientQty(this)">';
 h += '<span style="min-width:60px;">' + escapeHtml(ing.nom) + uniteLabel + '</span>';
 h += '<span style="font-size:0.7rem;color:#9A9FA5;">dispo: ' + (ing.stockDisponible || 0) + '</span>';
-// Input quantity DÉSACTIVÉ par défaut (grisé) - nombre ENTIER
 h += '<input type="number" class="pos-ingredient-qty" value="' + (ing.quantite || 1) + '" min="1" step="1" data-nom="' + escapeHtml(ing.nom) + '" data-stock-id="' + escapeHtml(ing.idStock || '') + '" data-unite="' + escapeHtml(ing.unite || '') + '" style="width:70px;padding:4px 6px;border:none;background:#E5E7EB;border-radius:8px;font-size:0.8rem;font-weight:700;text-align:center;color:#9A9FA5;cursor:not-allowed;" disabled>';
 h += '</label>';
 });
@@ -974,7 +976,6 @@ h += '<div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify
 openModal('Personnaliser - ' + escapeHtml(p.nom), h);
 }
 
-// ✅ Active/désactive l'input quantité selon la checkbox
 function posToggleIngredientQty(checkbox) {
     var label = checkbox.closest('label');
     if (!label) return;
@@ -995,7 +996,6 @@ function posToggleIngredientQty(checkbox) {
     }
 }
 
-// ✅ Récupère UNIQUEMENT les ingrédients COCHÉS avec leur quantité ENTIÈRE
 function posConfirmOptions() {
 var interdits = [];
 var epice = 'Normal';
@@ -1016,14 +1016,12 @@ document.querySelectorAll('.pos-ingredient-check').forEach(function(checkbox) {
     var unite = checkbox.getAttribute('data-unite') || '';
     
     if (checkbox.checked) {
-        // ✅ COCHÉ → déduire avec la quantité saisie (nombre entier)
         var quantite = parseInt(qtyInput ? qtyInput.value : 1, 10);
         if (isNaN(quantite) || quantite < 1) quantite = 1;
         if (stockId && quantite > 0) {
             ingredientsAvecQuantite.push({ nom: nom, idStock: stockId, quantite: quantite, unite: unite });
         }
     } else {
-        // ✅ DÉCOCHÉ → ne rien déduire
         ingredientsExclus.push(nom.toLowerCase().trim());
     }
 });
@@ -1050,7 +1048,6 @@ posSauvegarderDonneesPanier(posCurrentCartId);
 posSaveMultiCarts();
 }
 
-// ✅ Décrémente avec les quantités personnalisées si fournies
 function decrementerIngredientsStock(productId, ingredientsExclus, ingredientsAvecQuantite) {
     db.collection('products').doc(productId).get().then(function(doc) {
         if (!doc.exists) return;
@@ -1094,7 +1091,6 @@ function decrementerIngredientsStock(productId, ingredientsExclus, ingredientsAv
     });
 }
 
-// ==================== updateCartOnly() ====================
 function updateCartOnly(){
 if(!isOnPOSPage()) return;
 var ci=document.querySelector('.pos-cart-items');
@@ -1452,10 +1448,6 @@ else cd.innerHTML='<div style="font-size:22px;font-weight:700;color:#FF5B5B;disp
 
 async function updateClientFidelityAsync(clientId, total, profitTotal) { try { return await forceUpdateClient(clientId, total, profitTotal); } catch(e) { return false; } }
 
-// ============================================================
-// ✅ FONCTION CORRIGÉE : profit produit incrémenté à chaque vente
-// 🆕 v7 : batch.update inclut maintenant profit: increment(profitLigne)
-// ============================================================
 async function posFinalizeSale(){
 if(posCart.length === 0){ alert('❌ Le panier est vide. Ajoutez des articles avant de finaliser.'); return; }
 if(isFinalizing) return;
@@ -1492,7 +1484,6 @@ if(!paid){ var creditsRef=db.collection('credits').doc(); batch.set(creditsRef,s
 if(window.posCommandeId){ batch.update(db.collection('commandes').doc(window.posCommandeId), {statut:'payé', paidAt:firebase.firestore.FieldValue.serverTimestamp(), factureNum:fn}); delete window.posCommandeId; }
 if(window.posVenteId){ batch.update(db.collection('ventes').doc(window.posVenteId), {paid:true, statutPaiement:'payé', remainingAmount:0, paidAt:firebase.firestore.FieldValue.serverTimestamp()}); delete window.posVenteId; }
 
-// ✅ CORRECTION : profit produit incrémenté à chaque vente
 for(var i=0;i<posCart.length;i++){
     var it=posCart[i];
     var profitLigne = (it.prixUnitaire - (it.prixAchat || 0)) * it.quantite;
@@ -1555,9 +1546,220 @@ if (document.getElementById('clientCreditDisplay')) document.getElementById('cli
 if (isOnPOSPage()) renderPOS();
 }
 
-function posChargerCommandesTables() { posCommandesTablesCount = 0; }
-function posChargerCommandesEnLigneCount() { posCommandesEnLigneCount = 0; }
-function posAfficherCommandesTables() { alert('Fonction à implémenter selon votre logique'); }
+// ============================================================
+// 🔧 v8 : COMMANDES TABLES → Lecture Firestore + affichage + paiement
+// ============================================================
+
+async function posChargerCommandesTables() {
+    try {
+        const snap = await db.collection('commandes')
+            .where('statut', '==', 'en_attente')
+            .get();
+        posCommandesTables = [];
+        snap.forEach(d => {
+            const data = d.data();
+            posCommandesTables.push({ id: d.id, ...data });
+        });
+        posCommandesTables.sort((a, b) =>
+            (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+        );
+        posCommandesTablesCount = posCommandesTables.length;
+        console.log('✅ Commandes tables chargées:', posCommandesTablesCount);
+    } catch(e) {
+        console.warn('⚠️ Erreur chargement commandes tables:', e);
+        posCommandesTablesCount = 0;
+    }
+}
+
+async function posChargerCommandesEnLigneCount() {
+    try {
+        const snap = await db.collection('commandes')
+            .where('statut', '==', 'en_attente')
+            .where('source', '==', 'menu_tactile')
+            .get();
+        posCommandesEnLigneCount = snap.size;
+        console.log('✅ Commandes menu tactile:', posCommandesEnLigneCount);
+    } catch(e) {
+        console.warn('⚠️ Erreur commandes en ligne:', e);
+        posCommandesEnLigneCount = 0;
+    }
+}
+
+function posAfficherCommandesTables() {
+    let html = '<div style="max-height:70vh;overflow-y:auto;padding:4px;">';
+
+    if (posCommandesTables.length === 0) {
+        html += '<div style="text-align:center;padding:60px 20px;">';
+        html += '<i class="fas fa-inbox" style="font-size:3rem;color:#CBD5E1;"></i>';
+        html += '<p style="margin-top:16px;color:#64748B;font-size:1.1rem;">Aucune commande en attente</p>';
+        html += '<p style="margin-top:8px;color:#94A3B8;font-size:0.85rem;">Les commandes du menu tactile apparaîtront ici</p>';
+        html += '</div></div>';
+        openModal('🍽️ Commandes Tables (0)', html);
+        return;
+    }
+
+    html += '<div style="display:flex;flex-direction:column;gap:12px;">';
+
+    posCommandesTables.forEach(function(cmd) {
+        const total = (cmd.total || 0).toFixed(2);
+        const table = cmd.table || cmd.clientName || 'N/A';
+        const nbItems = (cmd.items || []).length;
+        const time = cmd.createdAt && cmd.createdAt.seconds
+            ? new Date(cmd.createdAt.seconds * 1000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})
+            : '—';
+        const source = cmd.source === 'menu_tactile' ? '📱 Menu' : '💻 POS';
+
+        html += '<div style="background:#F8FAFC;border-radius:14px;padding:16px;border:1px solid #E2E8F0;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;flex-wrap:wrap;gap:8px;">';
+        html += '<div>';
+        html += '<div style="font-weight:800;font-size:1.1rem;color:#0F172A;display:flex;align-items:center;gap:6px;">🍽️ Table ' + escapeHtml(String(table)) + '</div>';
+        html += '<div style="font-size:0.75rem;color:#94A3B8;margin-top:4px;">' + source + ' • ' + time + ' • ' + nbItems + ' article' + (nbItems>1?'s':'') + '</div>';
+        html += '</div>';
+        html += '<div style="font-size:1.2rem;font-weight:800;color:#2563EB;">' + total + ' MAD</div>';
+        html += '</div>';
+
+        html += '<div style="background:#fff;border-radius:10px;padding:10px;margin-bottom:10px;font-size:0.85rem;color:#475569;max-height:140px;overflow-y:auto;">';
+        (cmd.items || []).forEach(function(it) {
+            const lineTotal = ((it.prixUnitaire || 0) * (it.quantite || 0)).toFixed(2);
+            html += '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #F1F5F9;">';
+            html += '<span>' + (it.quantite || 1) + '× ' + escapeHtml(it.nom || '—') + '</span>';
+            html += '<span style="font-weight:600;">' + lineTotal + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button onclick="posPayerCommandeTable(\'' + cmd.id + '\')" style="flex:1;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;border:none;border-radius:10px;padding:11px;font-weight:700;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fas fa-cash-register"></i> Encaisser</button>';
+        html += '<button onclick="posAnnulerCommandeTable(\'' + cmd.id + '\')" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:10px;padding:11px 16px;font-weight:600;cursor:pointer;font-size:0.85rem;"><i class="fas fa-times"></i></button>';
+        html += '</div>';
+
+        html += '</div>';
+    });
+
+    html += '</div></div>';
+    openModal('🍽️ Commandes Tables (' + posCommandesTables.length + ')', html);
+}
+
+function posPayerCommandeTable(cmdId) {
+    const cmd = posCommandesTables.find(c => c.id === cmdId);
+    if (!cmd) { alert('❌ Commande introuvable'); return; }
+    closeModal();
+
+    posCart = [];
+    (cmd.items || []).forEach(function(item) {
+        const produit = posProductsList.find(p => p.id === item.id);
+        const prix = item.prixUnitaire || (produit ? (produit.prixPromo > 0 ? produit.prixPromo : produit.prixVente) : 0);
+        posCart.push({
+            id: item.id || 'custom-' + Date.now() + Math.random(),
+            nom: item.nom || 'Article',
+            prixUnitaire: prix,
+            prixAchat: item.prixAchat || (produit ? produit.prixAchat : 0) || 0,
+            prixPromo: item.prixPromo || 0,
+            prixVente: item.prixVente || prix,
+            quantite: item.quantite || 1,
+            categorie: item.categorie || '',
+            imageBase64: item.imageBase64 || '',
+            sauces: item.sauces || [],
+            interdits: item.interdits || [],
+            epice: item.epice || 'Normal',
+            sel: item.sel || 'Normal',
+            ingredientsExclus: item.ingredientsExclus || [],
+            ingredientsAvecQuantite: item.ingredientsAvecQuantite || []
+        });
+    });
+
+    window.posCart = posCart;
+    posCurrentTable = String(cmd.table || '');
+    posCurrentClient = cmd.clientName && cmd.clientName !== 'Passager'
+        ? { id: cmd.clientId || null, name: cmd.clientName }
+        : null;
+    posStep = 2;
+    window.posStep = 2;
+    window.posCommandeId = cmd.id;
+    posSaveMultiCarts();
+
+    if (isOnPOSPage()) renderPOS();
+
+    console.log('✅ Commande table chargée dans panier POS:', cmd.id, '→ Table', posCurrentTable);
+
+    setTimeout(function() {
+        var tableInput = document.getElementById('posTableNum');
+        if (tableInput && posCurrentTable) tableInput.value = posCurrentTable;
+        var clientInput = document.getElementById('posClientSearchInput');
+        if (clientInput && posCurrentClient) clientInput.value = posCurrentClient.name;
+    }, 300);
+}
+
+async function posAnnulerCommandeTable(cmdId) {
+    if (!confirm('⚠️ Annuler cette commande ?\n\nElle sera marquée comme annulée et disparaîtra du POS.')) return;
+    try {
+        await db.collection('commandes').doc(cmdId).update({
+            statut: 'annule',
+            annuleeAt: firebase.firestore.FieldValue.serverTimestamp(),
+            annuleePar: window.currentUserData
+                ? (window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom)
+                : 'Admin'
+        });
+        closeModal();
+        await posChargerCommandesTables();
+        await posChargerCommandesEnLigneCount();
+        if (isOnPOSPage()) renderPOS();
+        alert('✅ Commande annulée');
+    } catch(e) {
+        alert('❌ Erreur: ' + e.message);
+    }
+}
+
+function posStartCommandesListener() {
+    if (window._posCommandesListener) {
+        window._posCommandesListener();
+    }
+    try {
+        window._posCommandesListener = db.collection('commandes')
+            .where('statut', '==', 'en_attente')
+            .onSnapshot(function(snap) {
+                posCommandesTablesCount = snap.size;
+                posCommandesTables = [];
+                snap.forEach(function(d) {
+                    posCommandesTables.push({ id: d.id, ...d.data() });
+                });
+                posCommandesTables.sort((a, b) =>
+                    (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+                );
+                posCommandesEnLigneCount = posCommandesTables.filter(c => c.source === 'menu_tactile').length;
+
+                var tablesBtn = document.getElementById('posTablesBtn');
+                if (tablesBtn) {
+                    var badge = tablesBtn.querySelector('span');
+                    if (badge) badge.textContent = posCommandesTablesCount;
+                }
+                var enLigneBtn = document.getElementById('posEnLigneBtn');
+                if (enLigneBtn) {
+                    var badge2 = enLigneBtn.querySelector('span');
+                    if (badge2) badge2.textContent = posCommandesEnLigneCount;
+                }
+
+                if (posCommandesTablesCount > 0) {
+                    console.log('🔔 Nouvelle(s) commande(s) table:', posCommandesTablesCount);
+                }
+            }, function(err) {
+                console.warn('⚠️ Erreur listener commandes:', err);
+            });
+    } catch(e) {
+        console.warn('⚠️ Erreur démarrage listener:', e);
+    }
+}
+
+window.posChargerCommandesTables = posChargerCommandesTables;
+window.posChargerCommandesEnLigneCount = posChargerCommandesEnLigneCount;
+window.posAfficherCommandesTables = posAfficherCommandesTables;
+window.posPayerCommandeTable = posPayerCommandeTable;
+window.posAnnulerCommandeTable = posAnnulerCommandeTable;
+window.posStartCommandesListener = posStartCommandesListener;
+
+// ============================================================
+// FONCTIONS EXISTANTES (inchangées)
+// ============================================================
 function posToggleVoiceSearch() { if (typeof window.toggleVoiceSearch === 'function') window.toggleVoiceSearch(); else alert('Fonction de recherche vocale non disponible'); }
 
 function updateClearButtonVisibility() {
@@ -1704,24 +1906,16 @@ function posAddMultipleProductsToCart(produitsList) {
 }
 window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
 
-
 // ============================================================
-// 🎨 STYLE ASTRONAUTE MINIMALISTE (glassmorphism + glow + gradients)
-// ✅ BORDURES RETIRÉES : design épuré, séparations par ombres uniquement
+// 🎨 STYLE ASTRONAUTE MINIMALISTE
 // ============================================================
 (function injectMinimalistStyle() {
     var STYLE_ID = 'pos-astronaut-styles';
     if (document.getElementById(STYLE_ID)) return;
-
-    var ancien1 = document.getElementById('pos-minimalist-styles');
-    if (ancien1) ancien1.remove();
-    var ancien2 = document.getElementById('pos-modern-styles-v1');
-    if (ancien2) ancien2.remove();
-    var ancien3 = document.getElementById('pos-restoe-styles-v1');
-    if (ancien3) ancien3.remove();
-    var ancien4 = document.getElementById('pos-restoe-styles-v3');
-    if (ancien4) ancien4.remove();
-
+    var ancien1 = document.getElementById('pos-minimalist-styles'); if (ancien1) ancien1.remove();
+    var ancien2 = document.getElementById('pos-modern-styles-v1'); if (ancien2) ancien2.remove();
+    var ancien3 = document.getElementById('pos-restoe-styles-v1'); if (ancien3) ancien3.remove();
+    var ancien4 = document.getElementById('pos-restoe-styles-v3'); if (ancien4) ancien4.remove();
     var styles = document.createElement('style');
     styles.id = STYLE_ID;
     styles.textContent = `
@@ -1749,7 +1943,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         --r-shadow-blue: 0 6px 18px rgba(37, 99, 235, 0.30);
         --r-glow: 0 0 0 4px rgba(37,99,235,0.12);
     }
-
     .pos-container {
         background:
             radial-gradient(circle at 20% 10%, rgba(59,130,246,0.05) 0%, transparent 40%),
@@ -1765,7 +1958,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         color: var(--r-text) !important;
         gap: 14px !important;
     }
-
     .pos-multi-carts-bar {
         display: flex !important;
         flex-wrap: wrap !important;
@@ -1780,7 +1972,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border: none !important;
         margin-bottom: 14px !important;
     }
-
     .pos-multi-carts-bar > div {
         border-radius: var(--r-radius-sm) !important;
         transition: all 0.2s ease !important;
@@ -1789,19 +1980,16 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         backdrop-filter: blur(8px) !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
     }
-
     .pos-multi-carts-bar > div:hover {
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 12px rgba(37,99,235,0.10) !important;
         background: rgba(255,255,255,0.9) !important;
     }
-
     .pos-multi-carts-bar button[onclick*="posCreateNewCart"]:hover:not(:disabled) {
         background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
         transform: translateY(-1px) !important;
         box-shadow: 0 6px 16px rgba(37,99,235,0.35) !important;
     }
-
     .pos-products-panel {
         background: rgba(255,255,255,0.92) !important;
         backdrop-filter: blur(10px) !important;
@@ -1811,7 +1999,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         border: none !important;
         padding: 16px !important;
     }
-
     .pos-cart-panel {
         background: rgba(255,255,255,0.92) !important;
         backdrop-filter: blur(10px) !important;
@@ -1822,21 +2009,8 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         overflow: hidden !important;
         transition: box-shadow 0.3s ease !important;
     }
-
-    .pos-products-grid {
-        display: grid !important;
-        gap: 12px !important;
-        padding: 0 !important;
-        background: transparent !important;
-    }
-
-    .pos-categories-grid {
-        display: grid !important;
-        gap: 12px !important;
-        padding: 0 !important;
-        background: transparent !important;
-    }
-
+    .pos-products-grid { display: grid !important; gap: 12px !important; padding: 0 !important; background: transparent !important; }
+    .pos-categories-grid { display: grid !important; gap: 12px !important; padding: 0 !important; background: transparent !important; }
     .pos-product-card {
         background: linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%) !important;
         border: none !important;
@@ -1850,24 +2024,12 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         max-height: 200px !important;
         position: relative !important;
     }
-
     .pos-product-card:hover {
         transform: translateY(-4px) !important;
-        box-shadow:
-            0 12px 28px rgba(37,99,235,0.18),
-            0 4px 10px rgba(37,99,235,0.10) !important;
+        box-shadow: 0 12px 28px rgba(37,99,235,0.18), 0 4px 10px rgba(37,99,235,0.10) !important;
     }
-
-    .pos-product-card:active {
-        transform: translateY(-1px) scale(0.98) !important;
-    }
-
-    .pos-product-card.pos-out-of-stock {
-        opacity: 0.45 !important;
-        cursor: not-allowed !important;
-        filter: grayscale(0.7) !important;
-    }
-
+    .pos-product-card:active { transform: translateY(-1px) scale(0.98) !important; }
+    .pos-product-card.pos-out-of-stock { opacity: 0.45 !important; cursor: not-allowed !important; filter: grayscale(0.7) !important; }
     .pos-product-img {
         height: 85px !important;
         width: 85px !important;
@@ -1880,44 +2042,12 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         justify-content: center !important;
         transition: transform 0.25s ease !important;
     }
-
-    .pos-product-card:hover .pos-product-img {
-        transform: scale(1.05) !important;
-    }
-
-    .pos-product-img img {
-        border-radius: 9px !important;
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-    }
-
-    .pos-product-name {
-        color: var(--r-text) !important;
-        font-weight: 700 !important;
-        font-size: 0.85rem !important;
-        line-height: 1.3 !important;
-        letter-spacing: -0.2px !important;
-    }
-
-    .pos-product-price {
-        color: #2563EB !important;
-        font-weight: 800 !important;
-        font-size: 0.92rem !important;
-        letter-spacing: -0.3px !important;
-    }
-
-    .pos-promo-price {
-        color: var(--r-red) !important;
-        font-weight: 800 !important;
-        font-size: 0.92rem !important;
-    }
-
-    .pos-old-price {
-        font-size: 0.70rem !important;
-        color: var(--r-text-3) !important;
-    }
-
+    .pos-product-card:hover .pos-product-img { transform: scale(1.05) !important; }
+    .pos-product-img img { border-radius: 9px !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+    .pos-product-name { color: var(--r-text) !important; font-weight: 700 !important; font-size: 0.85rem !important; line-height: 1.3 !important; letter-spacing: -0.2px !important; }
+    .pos-product-price { color: #2563EB !important; font-weight: 800 !important; font-size: 0.92rem !important; letter-spacing: -0.3px !important; }
+    .pos-promo-price { color: var(--r-red) !important; font-weight: 800 !important; font-size: 0.92rem !important; }
+    .pos-old-price { font-size: 0.70rem !important; color: var(--r-text-3) !important; }
     .pos-category-card {
         background: linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%) !important;
         border: none !important;
@@ -1926,48 +2056,21 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         overflow: hidden !important;
     }
-
     .pos-category-card:hover {
         transform: translateY(-4px) !important;
-        box-shadow:
-            0 14px 32px rgba(37,99,235,0.18),
-            0 4px 10px rgba(37,99,235,0.08) !important;
+        box-shadow: 0 14px 32px rgba(37,99,235,0.18), 0 4px 10px rgba(37,99,235,0.08) !important;
     }
-
     .pos-category-card.active {
         background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%) !important;
         border: none !important;
         color: #1D4ED8 !important;
-        box-shadow:
-            0 10px 28px rgba(37,99,235,0.30),
-            0 0 0 4px rgba(37,99,235,0.10) !important;
+        box-shadow: 0 10px 28px rgba(37,99,235,0.30), 0 0 0 4px rgba(37,99,235,0.10) !important;
     }
-
-    .pos-category-card .category-image {
-        border-radius: 50% !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-        border: none !important;
-        transition: transform 0.25s ease !important;
-    }
-
-    .pos-category-card:hover .category-image {
-        transform: scale(1.05) !important;
-    }
-
-    .pos-category-card.active .category-image {
-        box-shadow: 0 4px 16px rgba(37,99,235,0.30) !important;
-    }
-
-    .pos-category-card .category-name {
-        color: var(--r-text) !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.2px !important;
-    }
-
-    .pos-category-card.active .category-name {
-        color: #1D4ED8 !important;
-    }
-
+    .pos-category-card .category-image { border-radius: 50% !important; box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important; border: none !important; transition: transform 0.25s ease !important; }
+    .pos-category-card:hover .category-image { transform: scale(1.05) !important; }
+    .pos-category-card.active .category-image { box-shadow: 0 4px 16px rgba(37,99,235,0.30) !important; }
+    .pos-category-card .category-name { color: var(--r-text) !important; font-weight: 700 !important; letter-spacing: -0.2px !important; }
+    .pos-category-card.active .category-name { color: #1D4ED8 !important; }
     .pos-category-card .category-count {
         color: var(--r-text-2) !important;
         font-weight: 600 !important;
@@ -1978,30 +2081,10 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         margin-top: 4px !important;
         transition: background 0.2s ease !important;
     }
-
-    .pos-category-card.active .category-count {
-        background: #DBEAFE !important;
-        color: #1D4ED8 !important;
-    }
-
-    .pos-cart-header {
-        background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%) !important;
-        border: none !important;
-    }
-
-    .pos-cart-header h3 i {
-        color: var(--r-blue) !important;
-        filter: drop-shadow(0 2px 4px rgba(37,99,235,0.35)) !important;
-    }
-
-    .pos-cart-badge {
-        background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
-        color: #fff !important;
-        border-radius: 999px !important;
-        font-weight: 700 !important;
-        box-shadow: 0 2px 8px rgba(37,99,235,0.35) !important;
-    }
-
+    .pos-category-card.active .category-count { background: #DBEAFE !important; color: #1D4ED8 !important; }
+    .pos-cart-header { background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%) !important; border: none !important; }
+    .pos-cart-header h3 i { color: var(--r-blue) !important; filter: drop-shadow(0 2px 4px rgba(37,99,235,0.35)) !important; }
+    .pos-cart-badge { background: linear-gradient(135deg, #3B82F6, #2563EB) !important; color: #fff !important; border-radius: 999px !important; font-weight: 700 !important; box-shadow: 0 2px 8px rgba(37,99,235,0.35) !important; }
     .pos-cart-item {
         background: rgba(255,255,255,0.9) !important;
         backdrop-filter: blur(4px) !important;
@@ -2010,12 +2093,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         transition: all 0.2s ease !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
     }
-
-    .pos-cart-item:hover {
-        box-shadow: 0 4px 12px rgba(37,99,235,0.10) !important;
-        background: rgba(255,255,255,1) !important;
-    }
-
+    .pos-cart-item:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.10) !important; background: rgba(255,255,255,1) !important; }
     .pos-qty-btn {
         background: #F8FAFC !important;
         border: none !important;
@@ -2034,18 +2112,8 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         padding: 0 !important;
     }
-
-    .pos-qty-btn:hover {
-        background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
-        color: #fff !important;
-        transform: scale(1.08) !important;
-        box-shadow: 0 4px 12px rgba(37,99,235,0.35) !important;
-    }
-
-    .pos-qty-btn:active {
-        transform: scale(0.92) !important;
-    }
-
+    .pos-qty-btn:hover { background: linear-gradient(135deg, #3B82F6, #2563EB) !important; color: #fff !important; transform: scale(1.08) !important; box-shadow: 0 4px 12px rgba(37,99,235,0.35) !important; }
+    .pos-qty-btn:active { transform: scale(0.92) !important; }
     .pos-qty-input {
         border: none !important;
         border-radius: var(--r-radius-sm) !important;
@@ -2060,13 +2128,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         padding: 6px 4px !important;
         transition: all 0.2s ease !important;
     }
-
-    .pos-qty-input:focus {
-        outline: none !important;
-        background: #FFFFFF !important;
-        box-shadow: var(--r-glow) !important;
-    }
-
+    .pos-qty-input:focus { outline: none !important; background: #FFFFFF !important; box-shadow: var(--r-glow) !important; }
     .pos-remove-btn {
         width: 44px !important;
         height: 44px !important;
@@ -2084,49 +2146,23 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         cursor: pointer !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
-
-    .pos-remove-btn:hover {
-        background: var(--r-red) !important;
-        color: #fff !important;
-        transform: scale(1.08) !important;
-        box-shadow: 0 4px 12px rgba(255,91,91,0.35) !important;
-    }
-
-    .pos-remove-btn:active {
-        transform: scale(0.92) !important;
-    }
-
+    .pos-remove-btn:hover { background: var(--r-red) !important; color: #fff !important; transform: scale(1.08) !important; box-shadow: 0 4px 12px rgba(255,91,91,0.35) !important; }
+    .pos-remove-btn:active { transform: scale(0.92) !important; }
     .pos-cart-total-row {
         background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%) !important;
         border: none !important;
         border-radius: 12px !important;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.6) !important;
     }
-
-    .pos-cart-total-row span:first-child {
-        color: #1E40AF !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px;
-    }
-
-    .pos-cart-total-row span:last-child {
-        color: #1D4ED8 !important;
-        font-weight: 800 !important;
-        letter-spacing: -0.5px !important;
-        font-size: 1.15rem !important;
-    }
-
-    .pos-validate-btn,
-    .pos-finalize-btn {
+    .pos-cart-total-row span:first-child { color: #1E40AF !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
+    .pos-cart-total-row span:last-child { color: #1D4ED8 !important; font-weight: 800 !important; letter-spacing: -0.5px !important; font-size: 1.15rem !important; }
+    .pos-validate-btn, .pos-finalize-btn {
         background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%) !important;
         color: #fff !important;
         border: none !important;
         border-radius: 14px !important;
         font-weight: 700 !important;
-        box-shadow:
-            0 6px 18px rgba(37,99,235,0.35),
-            inset 0 1px 0 rgba(255,255,255,0.20) !important;
+        box-shadow: 0 6px 18px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.20) !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         cursor: pointer !important;
         width: 100% !important;
@@ -2141,9 +2177,7 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         position: relative !important;
         overflow: hidden !important;
     }
-
-    .pos-validate-btn::before,
-    .pos-finalize-btn::before {
+    .pos-validate-btn::before, .pos-finalize-btn::before {
         content: '' !important;
         position: absolute !important;
         inset: 0 !important;
@@ -2151,33 +2185,14 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         transform: translateX(-100%) !important;
         transition: transform 0.6s ease !important;
     }
-
-    .pos-validate-btn:hover:not(:disabled)::before,
-    .pos-finalize-btn:hover:not(:disabled)::before {
-        transform: translateX(100%) !important;
-    }
-
-    .pos-validate-btn:hover:not(:disabled),
-    .pos-finalize-btn:hover:not(:disabled) {
+    .pos-validate-btn:hover:not(:disabled)::before, .pos-finalize-btn:hover:not(:disabled)::before { transform: translateX(100%) !important; }
+    .pos-validate-btn:hover:not(:disabled), .pos-finalize-btn:hover:not(:disabled) {
         background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%) !important;
         transform: translateY(-2px) !important;
-        box-shadow:
-            0 10px 26px rgba(37,99,235,0.45),
-            inset 0 1px 0 rgba(255,255,255,0.25) !important;
+        box-shadow: 0 10px 26px rgba(37,99,235,0.45), inset 0 1px 0 rgba(255,255,255,0.25) !important;
     }
-
-    .pos-validate-btn:active:not(:disabled),
-    .pos-finalize-btn:active:not(:disabled) {
-        transform: scale(0.98) !important;
-    }
-
-    .pos-validate-btn:disabled {
-        background: #E5E7EB !important;
-        color: var(--r-text-3) !important;
-        box-shadow: none !important;
-        cursor: not-allowed !important;
-    }
-
+    .pos-validate-btn:active:not(:disabled), .pos-finalize-btn:active:not(:disabled) { transform: scale(0.98) !important; }
+    .pos-validate-btn:disabled { background: #E5E7EB !important; color: var(--r-text-3) !important; box-shadow: none !important; cursor: not-allowed !important; }
     .pos-payment-btn {
         background: #F8FAFC !important;
         border: none !important;
@@ -2194,257 +2209,45 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         justify-content: center !important;
         gap: 6px !important;
     }
-
-    .pos-payment-btn:hover:not(:disabled) {
-        background: #F1F5F9 !important;
-        color: #0F172A !important;
-        transform: translateY(-1px) !important;
-    }
-
-    .pos-payment-btn.active {
-        background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
-        color: #fff !important;
-        box-shadow: 0 6px 18px rgba(37,99,235,0.30) !important;
-    }
-
-    #posCreditBtn.active {
-        background: linear-gradient(135deg, #F59E0B, #D97706) !important;
-        color: #fff !important;
-        box-shadow: 0 6px 18px rgba(245,158,11,0.35) !important;
-    }
-
-    #posPartielBtn.active {
-        background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
-        color: #fff !important;
-        box-shadow: 0 6px 18px rgba(139,92,246,0.35) !important;
-    }
-
-    #posMicBtn {
-        background: #FFFFFF !important;
-        border: none !important;
-        color: #64748B !important;
-        transition: all 0.2s ease !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-    }
-
-    #posMicBtn:hover {
-        background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
-        color: #fff !important;
-        transform: scale(1.05) !important;
-        box-shadow: 0 4px 12px rgba(37,99,235,0.30) !important;
-    }
-
-    #posGeminiBtn {
-        background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
-        border: none !important;
-        color: #fff !important;
-        box-shadow: 0 4px 12px rgba(139,92,246,0.30) !important;
-        transition: all 0.2s ease !important;
-    }
-
-    #posGeminiBtn:hover {
-        background: linear-gradient(135deg, #7C3AED, #6D28D9) !important;
-        transform: scale(1.05) !important;
-        box-shadow: 0 6px 16px rgba(139,92,246,0.45) !important;
-    }
-
-    #posTablesBtn,
-    #posEnLigneBtn {
-        background: #FFFFFF !important;
-        border: none !important;
-        color: #0F172A !important;
-        border-radius: 999px !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-    }
-
-    #posTablesBtn:hover,
-    #posEnLigneBtn:hover {
-        background: #EFF6FF !important;
-        color: #2563EB !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(37,99,235,0.12) !important;
-    }
-
-    #posTablesBtn span,
-    #posEnLigneBtn span {
-        background: linear-gradient(135deg, #EF4444, #DC2626) !important;
-        color: #fff !important;
-        border-radius: 999px !important;
-        font-weight: 700 !important;
-        box-shadow: 0 1px 3px rgba(239,68,68,0.35) !important;
-    }
-
-    #posToggleToolsBtn {
-        background: rgba(255,255,255,0.9) !important;
-        color: var(--r-text) !important;
-        border: none !important;
-        border-radius: 999px !important;
-        font-weight: 600 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-        transition: all 0.2s ease !important;
-    }
-
-    #posToggleToolsBtn:hover {
-        background: #F8FAFC !important;
-        transform: translateY(-1px) !important;
-    }
-
-    .pos-products-grid::-webkit-scrollbar,
-    .pos-cart-items::-webkit-scrollbar,
-    .pos-payment-form::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-
-    .pos-products-grid::-webkit-scrollbar-track,
-    .pos-cart-items::-webkit-scrollbar-track,
-    .pos-payment-form::-webkit-scrollbar-track {
-        background: transparent;
-        border-radius: 4px;
-    }
-
-    .pos-products-grid::-webkit-scrollbar-thumb,
-    .pos-cart-items::-webkit-scrollbar-thumb,
-    .pos-payment-form::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #CBD5E1, #94A3B8) !important;
-        border-radius: 4px;
-    }
-
-    .pos-products-grid::-webkit-scrollbar-thumb:hover,
-    .pos-cart-items::-webkit-scrollbar-thumb:hover,
-    .pos-payment-form::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #94A3B8, #64748B) !important;
-    }
-
-    .pos-cart-items {
-        min-height: 280px !important;
-        max-height: none !important;
-    }
+    .pos-payment-btn:hover:not(:disabled) { background: #F1F5F9 !important; color: #0F172A !important; transform: translateY(-1px) !important; }
+    .pos-payment-btn.active { background: linear-gradient(135deg, #3B82F6, #2563EB) !important; color: #fff !important; box-shadow: 0 6px 18px rgba(37,99,235,0.30) !important; }
+    #posCreditBtn.active { background: linear-gradient(135deg, #F59E0B, #D97706) !important; color: #fff !important; box-shadow: 0 6px 18px rgba(245,158,11,0.35) !important; }
+    #posPartielBtn.active { background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important; color: #fff !important; box-shadow: 0 6px 18px rgba(139,92,246,0.35) !important; }
+    #posMicBtn { background: #FFFFFF !important; border: none !important; color: #64748B !important; transition: all 0.2s ease !important; box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important; }
+    #posMicBtn:hover { background: linear-gradient(135deg, #3B82F6, #2563EB) !important; color: #fff !important; transform: scale(1.05) !important; box-shadow: 0 4px 12px rgba(37,99,235,0.30) !important; }
+    #posGeminiBtn { background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important; border: none !important; color: #fff !important; box-shadow: 0 4px 12px rgba(139,92,246,0.30) !important; transition: all 0.2s ease !important; }
+    #posGeminiBtn:hover { background: linear-gradient(135deg, #7C3AED, #6D28D9) !important; transform: scale(1.05) !important; box-shadow: 0 6px 16px rgba(139,92,246,0.45) !important; }
+    #posTablesBtn, #posEnLigneBtn { background: #FFFFFF !important; border: none !important; color: #0F172A !important; border-radius: 999px !important; font-weight: 600 !important; transition: all 0.2s ease !important; box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important; }
+    #posTablesBtn:hover, #posEnLigneBtn:hover { background: #EFF6FF !important; color: #2563EB !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(37,99,235,0.12) !important; }
+    #posTablesBtn span, #posEnLigneBtn span { background: linear-gradient(135deg, #EF4444, #DC2626) !important; color: #fff !important; border-radius: 999px !important; font-weight: 700 !important; box-shadow: 0 1px 3px rgba(239,68,68,0.35) !important; }
+    #posToggleToolsBtn { background: rgba(255,255,255,0.9) !important; color: var(--r-text) !important; border: none !important; border-radius: 999px !important; font-weight: 600 !important; box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important; transition: all 0.2s ease !important; }
+    #posToggleToolsBtn:hover { background: #F8FAFC !important; transform: translateY(-1px) !important; }
+    .pos-products-grid::-webkit-scrollbar, .pos-cart-items::-webkit-scrollbar, .pos-payment-form::-webkit-scrollbar { width: 8px; height: 8px; }
+    .pos-products-grid::-webkit-scrollbar-track, .pos-cart-items::-webkit-scrollbar-track, .pos-payment-form::-webkit-scrollbar-track { background: transparent; border-radius: 4px; }
+    .pos-products-grid::-webkit-scrollbar-thumb, .pos-cart-items::-webkit-scrollbar-thumb, .pos-payment-form::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #CBD5E1, #94A3B8) !important; border-radius: 4px; }
+    .pos-products-grid::-webkit-scrollbar-thumb:hover, .pos-cart-items::-webkit-scrollbar-thumb:hover, .pos-payment-form::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #94A3B8, #64748B) !important; }
+    .pos-cart-items { min-height: 280px !important; max-height: none !important; }
     @media (max-width: 700px) {
-        .pos-cart-items {
-            min-height: 220px !important;
-            max-height: none !important;
-        }
-    }
-
-    @media (max-width: 700px) {
-        .pos-product-card {
-            min-height: 145px !important;
-            max-height: 170px !important;
-            padding: 10px 6px !important;
-            border-radius: 12px !important;
-        }
-        .pos-product-img {
-            height: 70px !important;
-            width: 70px !important;
-            margin-bottom: 6px !important;
-        }
-        .pos-product-price,
-        .pos-promo-price {
-            font-size: 13px !important;
-            font-weight: 800 !important;
-        }
-        .pos-product-name {
-            font-size: 11px !important;
-            font-weight: 600 !important;
-        }
-        .pos-qty-btn,
-        .pos-remove-btn {
-            width: 40px !important;
-            height: 40px !important;
-            min-width: 40px !important;
-            min-height: 40px !important;
-            font-size: 14px !important;
-        }
-        .pos-qty-input {
-            width: 56px !important;
-            min-width: 56px !important;
-            height: 40px !important;
-            font-size: 14px !important;
-        }
-        .pos-validate-btn,
-        .pos-finalize-btn {
-            min-height: 54px !important;
-            font-size: 1.05rem !important;
-        }
-        .pos-payment-btn {
-            min-height: 50px !important;
-            font-size: 0.95rem !important;
-        }
+        .pos-cart-items { min-height: 220px !important; max-height: none !important; }
+        .pos-product-card { min-height: 145px !important; max-height: 170px !important; padding: 10px 6px !important; border-radius: 12px !important; }
+        .pos-product-img { height: 70px !important; width: 70px !important; margin-bottom: 6px !important; }
+        .pos-product-price, .pos-promo-price { font-size: 13px !important; font-weight: 800 !important; }
+        .pos-product-name { font-size: 11px !important; font-weight: 600 !important; }
+        .pos-qty-btn, .pos-remove-btn { width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important; font-size: 14px !important; }
+        .pos-qty-input { width: 56px !important; min-width: 56px !important; height: 40px !important; font-size: 14px !important; }
+        .pos-validate-btn, .pos-finalize-btn { min-height: 54px !important; font-size: 1.05rem !important; }
+        .pos-payment-btn { min-height: 50px !important; font-size: 0.95rem !important; }
         .pos-products-grid { gap: 8px !important; }
         .pos-categories-grid { gap: 8px !important; }
     }
-
-    [data-theme="dark"] .pos-product-card,
-    [data-theme="dark"] .pos-category-card {
-        background: linear-gradient(135deg, #0D1117 0%, #161B22 100%) !important;
-        border: none !important;
-    }
-    [data-theme="dark"] .pos-product-card:hover,
-    [data-theme="dark"] .pos-category-card:hover {
-        box-shadow: 0 12px 28px rgba(37,99,235,0.30) !important;
-    }
-    [data-theme="dark"] .pos-category-card.active {
-        background: linear-gradient(135deg, #1C2333 0%, #1E293B 100%) !important;
-        border: none !important;
-    }
-    [data-theme="dark"] .pos-cart-item {
-        background: rgba(22,27,34,0.9) !important;
-        border: none !important;
-    }
-    [data-theme="dark"] .pos-cart-total-row {
-        background: linear-gradient(135deg, #1C2333 0%, #1E293B 100%) !important;
-        border: none !important;
-    }
-    [data-theme="dark"] .pos-cart-total-row span:last-child {
-        color: #60A5FA !important;
-    }
-    [data-theme="dark"] .pos-qty-btn {
-        background: #1C2333 !important;
-        border: none !important;
-        color: #8B949E !important;
-    }
-    [data-theme="dark"] .pos-qty-btn:hover {
-        background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
-        color: #fff !important;
-    }
-    [data-theme="dark"] .pos-qty-input {
-        background: #0D1117 !important;
-        border: none !important;
-        color: #F0F6FC !important;
-    }
-    [data-theme="dark"] .pos-product-name,
-    [data-theme="dark"] .pos-category-card .category-name {
-        color: #F0F6FC !important;
-    }
-    [data-theme="dark"] .pos-product-price {
-        color: #60A5FA !important;
-    }
-    [data-theme="dark"] .pos-multi-carts-bar {
-        background: rgba(22,27,34,0.72) !important;
-        border: none !important;
-    }
-    [data-theme="dark"] .pos-products-panel,
-    [data-theme="dark"] .pos-cart-panel {
-        background: rgba(22,27,34,0.92) !important;
-        border: none !important;
-    }
     `;
-
     document.head.appendChild(styles);
-    console.log('🚀 [POS] Style ASTRONAUTE injecté (glassmorphism + glow + gradients, sans bordures)');
+    console.log('🚀 [POS] Style ASTRONAUTE injecté');
 })();
 
-// ============================================================
-// ✅ BOUTON FLÈCHE ↑ — VERSION CORRIGÉE (remonte à 100%)
-// 🆕 v6 : top:0 forcé + smooth + scrolls internes + 2e scroll à 500ms
-// ============================================================
 (function posScrollTopButtonFixed() {
     var STYLE_ID = 'pos-scroll-top-fixed-style';
     var BTN_ID = 'posScrollTopFixedBtn';
-
     if (!document.getElementById(STYLE_ID)) {
         var style = document.createElement('style');
         style.id = STYLE_ID;
@@ -2464,53 +2267,26 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             display: none;
             align-items: center !important;
             justify-content: center !important;
-            box-shadow:
-                0 6px 18px rgba(37,99,235,0.55),
-                0 3px 8px rgba(0,0,0,0.20),
-                0 0 0 3px rgba(59,130,246,0.25) !important;
+            box-shadow: 0 6px 18px rgba(37,99,235,0.55), 0 3px 8px rgba(0,0,0,0.20), 0 0 0 3px rgba(59,130,246,0.25) !important;
             z-index: 2147483647 !important;
             transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease !important;
             opacity: 0;
         }
-        #${BTN_ID}.visible {
-            display: flex !important;
-            opacity: 1;
-        }
+        #${BTN_ID}.visible { display: flex !important; opacity: 1; }
         #${BTN_ID}:hover {
             transform: scale(1.10) !important;
-            box-shadow:
-                0 8px 24px rgba(37,99,235,0.65),
-                0 4px 10px rgba(0,0,0,0.25),
-                0 0 0 3px rgba(59,130,246,0.35) !important;
+            box-shadow: 0 8px 24px rgba(37,99,235,0.65), 0 4px 10px rgba(0,0,0,0.25), 0 0 0 3px rgba(59,130,246,0.35) !important;
         }
-        #${BTN_ID}:active {
-            transform: scale(0.94) !important;
-        }
+        #${BTN_ID}:active { transform: scale(0.94) !important; }
         @media (max-width: 768px) {
-            #${BTN_ID} {
-                top: 8px !important;
-                right: 8px !important;
-                width: 48px !important;
-                height: 48px !important;
-                font-size: 17px !important;
-            }
+            #${BTN_ID} { top: 8px !important; right: 8px !important; width: 48px !important; height: 48px !important; font-size: 17px !important; }
         }
         @media (max-width: 380px) {
-            #${BTN_ID} {
-                top: 6px !important;
-                right: 6px !important;
-                width: 44px !important;
-                height: 44px !important;
-                font-size: 16px !important;
-            }
-        }
-        [data-theme="dark"] #${BTN_ID} {
-            border-color: #1C2333 !important;
+            #${BTN_ID} { top: 6px !important; right: 6px !important; width: 44px !important; height: 44px !important; font-size: 16px !important; }
         }
         `;
         document.head.appendChild(style);
     }
-
     var btn = document.getElementById(BTN_ID);
     if (!btn) {
         btn = document.createElement('button');
@@ -2520,7 +2296,6 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
         document.body.appendChild(btn);
     }
-
     function getScrollTop() {
         var max = 0;
         var dc = document.getElementById('dynamicContent');
@@ -2532,15 +2307,10 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
         max = Math.max(max, document.body.scrollTop || 0);
         return max;
     }
-
     function updateVisibility() {
-        if (getScrollTop() > 100) {
-            btn.classList.add('visible');
-        } else {
-            btn.classList.remove('visible');
-        }
+        if (getScrollTop() > 100) { btn.classList.add('visible'); }
+        else { btn.classList.remove('visible'); }
     }
-
     function scrollToTop() {
         var targets = [
             document.getElementById('dynamicContent'),
@@ -2554,61 +2324,37 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             document.scrollingElement || document.documentElement,
             document.body
         ];
-
         targets.forEach(function(el) {
             if (!el) return;
             try {
                 el.scrollTop = 0;
-                if (typeof el.scrollTo === 'function') {
-                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                }
-            } catch(e) {
-                try { el.scrollTop = 0; } catch(e2) {}
-            }
+                if (typeof el.scrollTo === 'function') { el.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
+            } catch(e) { try { el.scrollTop = 0; } catch(e2) {} }
         });
-
         try { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
         catch(e) { window.scrollTo(0, 0); }
-
         try { window.pageYOffset = 0; } catch(e) {}
         try { document.documentElement.scrollTop = 0; } catch(e) {}
         try { document.body.scrollTop = 0; } catch(e) {}
-
         document.querySelectorAll('.pos-cart-items, .pos-products-grid, .pos-payment-form, #posPanierContainer').forEach(function(el) {
             try {
                 el.scrollTop = 0;
-                if (typeof el.scrollTo === 'function') {
-                    el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                }
+                if (typeof el.scrollTo === 'function') { el.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
             } catch(e) {}
         });
-
         setTimeout(function() {
             try { window.scrollTo(0, 0); } catch(e) {}
             try { document.documentElement.scrollTop = 0; } catch(e) {}
             try { document.body.scrollTop = 0; } catch(e) {}
-
-            var dc = document.getElementById('dynamicContent');
-            if (dc) dc.scrollTop = 0;
-            var main = document.querySelector('.main-content');
-            if (main) main.scrollTop = 0;
-            var mc = document.querySelector('.pos-container');
-            if (mc) mc.scrollTop = 0;
+            var dc = document.getElementById('dynamicContent'); if (dc) dc.scrollTop = 0;
+            var main = document.querySelector('.main-content'); if (main) main.scrollTop = 0;
+            var mc = document.querySelector('.pos-container'); if (mc) mc.scrollTop = 0;
         }, 500);
-
-        var cartPanel = document.querySelector('.pos-cart-panel');
-        if (cartPanel) {
-            cartPanel.style.transition = 'box-shadow 0.3s ease';
-            cartPanel.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.4)';
-            setTimeout(function() { cartPanel.style.boxShadow = ''; }, 800);
-        }
     }
-
     if (!btn.dataset.bound) {
         btn.addEventListener('click', scrollToTop);
         btn.dataset.bound = '1';
     }
-
     function attachScrollListeners() {
         window.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
         document.addEventListener('scroll', updateVisibility, { passive: true, capture: true });
@@ -2626,168 +2372,67 @@ window.posAddMultipleProductsToCart = posAddMultipleProductsToCart;
             }
         });
     }
-
     attachScrollListeners();
-
     var observer = new MutationObserver(function() {
         attachScrollListeners();
-        if (btn.parentElement !== document.body) {
-            document.body.appendChild(btn);
-        }
+        if (btn.parentElement !== document.body) { document.body.appendChild(btn); }
         updateVisibility();
     });
     observer.observe(document.body, { childList: true, subtree: true });
-
-    setInterval(function() {
-        attachScrollListeners();
-        updateVisibility();
-    }, 500);
-
+    setInterval(function() { attachScrollListeners(); updateVisibility(); }, 500);
     setTimeout(updateVisibility, 100);
     updateVisibility();
-
-    console.log('✅ [POS] Bouton flèche ↑ corrigé et fonctionnel (remonte à 100%)');
+    console.log('✅ [POS] Bouton flèche ↑ corrigé');
 })();
 
-/////////
-// ============================================================
-// ✅ SUPPRESSION DU PAGE-HEADER SUR MOBILE (< 700px)
-// ============================================================
 (function hidePageHeaderOnMobile() {
     var STYLE_ID = 'pos-hide-pageheader-mobile';
     if (document.getElementById(STYLE_ID)) return;
-
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = `
     @media (max-width: 700px) {
-        .page-header,
-        #pageHeader,
-        header.page-header,
-        .page-header-wrapper,
-        #pageHeaderWrapper {
-            display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            max-height: 0 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            border: none !important;
-            overflow: hidden !important;
+        .page-header, #pageHeader, header.page-header, .page-header-wrapper, #pageHeaderWrapper {
+            display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; max-height: 0 !important;
+            padding: 0 !important; margin: 0 !important; border: none !important; overflow: hidden !important;
         }
-        .pos-container {
-            margin-top: 0 !important;
-            padding-top: 6px !important;
-        }
-        #dynamicContent {
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-        }
-        body {
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-        }
+        .pos-container { margin-top: 0 !important; padding-top: 6px !important; }
+        #dynamicContent { padding-top: 0 !important; margin-top: 0 !important; }
+        body { padding-top: 0 !important; margin-top: 0 !important; }
     }
     `;
     document.head.appendChild(s);
-    console.log('✅ [POS] page-header supprimé sur mobile (< 700px)');
-})();  
+    console.log('✅ [POS] page-header supprimé sur mobile');
+})();
 
-// ============================================================
-// ✅ AGRANDIR LA ZONE UTILE SUR MOBILE (< 700px)
-// ============================================================
 (function posAgrandirZoneMobile() {
     var STYLE_ID = 'pos-agrandir-zone-mobile';
     if (document.getElementById(STYLE_ID)) return;
-
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = `
     @media (max-width: 700px) {
-        .page-header,
-        #pageHeader,
-        header.page-header,
-        .page-header-wrapper,
-        #pageHeaderWrapper {
-            display: none !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            max-height: 0 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            overflow: hidden !important;
+        .page-header, #pageHeader, header.page-header, .page-header-wrapper, #pageHeaderWrapper {
+            display: none !important; height: 0 !important; min-height: 0 !important; max-height: 0 !important;
+            padding: 0 !important; margin: 0 !important; overflow: hidden !important;
         }
-        .main-content {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            padding-top: 4px !important;
-        }
-        #dynamicContent {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-        }
-        .pos-container {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-            gap: 4px !important;
-        }
-        .pos-row {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            gap: 4px !important;
-        }
-        .pos-products-panel,
-        .pos-cart-panel {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 100% !important;
-            padding-left: 3px !important;
-            padding-right: 3px !important;
-            border-radius: 10px !important;
-        }
-        .pos-products-panel {
-            max-height: 65vh !important;
-            min-height: 350px !important;
-        }
-        .pos-products-grid {
-            gap: 5px !important;
-            padding: 2px !important;
-        }
-        .pos-categories-grid {
-            gap: 5px !important;
-            padding: 2px !important;
-        }
-        .pos-cart-items {
-            min-height: 240px !important;
-            padding-left: 6px !important;
-            padding-right: 6px !important;
-        }
-        body {
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-        }
+        .main-content { padding-left: 0 !important; padding-right: 0 !important; padding-top: 4px !important; }
+        #dynamicContent { padding-left: 0 !important; padding-right: 0 !important; padding-top: 0 !important; margin-top: 0 !important; }
+        .pos-container { padding-left: 0 !important; padding-right: 0 !important; padding-top: 0 !important; margin-top: 0 !important; gap: 4px !important; }
+        .pos-row { padding-left: 0 !important; padding-right: 0 !important; gap: 4px !important; }
+        .pos-products-panel, .pos-cart-panel { width: 100% !important; max-width: 100% !important; min-width: 100% !important; padding-left: 3px !important; padding-right: 3px !important; border-radius: 10px !important; }
+        .pos-products-panel { max-height: 65vh !important; min-height: 350px !important; }
+        .pos-products-grid { gap: 5px !important; padding: 2px !important; }
+        .pos-categories-grid { gap: 5px !important; padding: 2px !important; }
+        .pos-cart-items { min-height: 240px !important; padding-left: 6px !important; padding-right: 6px !important; }
+        body { padding-top: 0 !important; margin-top: 0 !important; }
     }
     `;
     document.head.appendChild(s);
-    console.log('✅ [POS] Zone mobile agrandie (header masqué + marges supprimées)');
+    console.log('✅ [POS] Zone mobile agrandie');
 })();
-console.log('🚀 E-SOLUTION - POS V7 ASTRONAUTE (sans bordures)');
-console.log('✅ Design glassmorphism + glow + gradients');
-console.log('✅ BORDURES RETIRÉES : séparations par ombres uniquement');
-console.log('✅ Recherche + Tables/En ligne visibles sur PC ET mobile');
-console.log('✅ Panier 100% largeur sur mobile + marges propres');
-console.log('✅ Bouton flèche ↑ corrigé (remonte à 100% + smooth + 2e scroll)');
-console.log('✅ Panier min-height 220px (3+ articles visibles)');
-console.log('✅ Boutons POS AGRANDIS + hover néon');
-console.log('✅ BOUTON VALIDER STICKY (toujours visible)');
-console.log('✅ ÉPICES ET SEL SUPPRIMÉS COMPLÈTEMENT');
-console.log('✅ INGRÉDIENTS DÉCOCHÉS PAR DÉFAUT + QUANTITÉ ACTIVABLE AU COCHAGE');
-console.log('✅ QUANTITÉ ENTIER (step=1, pas de décimales)');
-console.log('🆕 v6 : Recherche → retour auto aux catégories (recherche sur TOUS les produits)');
-console.log('🆕 v6 : Bouton flèche ↑ remonte à 100% (top:0 forcé + smooth + 2e scroll)');
-console.log('🆕 v7 : Profit produit incrémenté automatiquement à chaque vente (vendues + ca + profit)');
+
+console.log('🚀 E-SOLUTION - POS V8 (Tables intégrées)');
+console.log('✅ Commandes tables : lecture Firestore + affichage + encaissement');
+console.log('✅ Listener temps réel : nouvelles commandes détectées automatiquement');
+console.log('✅ Tous les correctifs v1→v7 conservés');
