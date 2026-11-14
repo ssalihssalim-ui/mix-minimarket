@@ -1529,13 +1529,13 @@ body {
 <!-- ==================== MENU TACTILE PAGE ==================== -->
 <div id="menuTactilePage" class="hidden" style="background:#f8fafc; min-height:100vh;">
 
-    <!-- 🆕 SPLASH SCREEN VIDÉO + WELCOME -->
+    <!-- 🆕 SPLASH SCREEN VIDÉO + WELCOME (Welcome caché par défaut) -->
     <div id="menuSplashScreen">
         <video id="menuSplashVideo" muted playsinline preload="auto">
             <source src="intro.mp4" type="video/mp4">
         </video>
         <div id="menuSplashOverlay"></div>
-        <div id="menuSplashWelcome">
+        <div id="menuSplashWelcome" style="opacity: 0; visibility: hidden; pointer-events: none;">
             <h1>Welcome</h1>
         </div>
     </div>
