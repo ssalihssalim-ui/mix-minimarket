@@ -1,5 +1,6 @@
 // ==================== MENU TACTILE - E-SOLUTION ====================
-// 🆕 v13 : Recherche fixée (focus conservé) + tailles augmentées
+// 🆕 v14 : Panier dans le flux (position relative) + mini-barre flottante
+// v13 : Recherche fixée (focus conservé) + tailles augmentées
 // v12 : Effet 3D MOTION (tilt + profondeur + animation d'entrée)
 // v11 : SCROLL CORRIGÉ
 
@@ -43,6 +44,17 @@ function requestFullscreen() {
         method.call(elem).catch(err => console.log(err));
     } else {
         alert("Ajouter à l'écran d'accueil pour le plein écran.");
+    }
+}
+
+// ========== 🆕 v14 : SCROLL VERS LE PANIER ==========
+function scrollToMenuCart() {
+    var cart = document.querySelector('.menu-cart-fixed');
+    if (cart) {
+        cart.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cart.style.transition = 'box-shadow 0.3s ease';
+        cart.style.boxShadow = '0 0 0 4px rgba(20,184,166,0.4)';
+        setTimeout(function() { cart.style.boxShadow = ''; }, 1200);
     }
 }
 
@@ -184,7 +196,7 @@ function renderMenuTactile() {
 
     html += '</div>';
 
-    // ==================== PANIER FIXE ====================
+    // ==================== PANIER (dans le flux — v14) ====================
     html += '<div class="menu-cart-fixed">';
     html += '  <div class="menu-cart-header">';
     html += '    <h3><i class="fas fa-shopping-cart"></i> Panier <span class="menu-cart-badge">' + totalArticles + '</span></h3>';
@@ -216,6 +228,16 @@ function renderMenuTactile() {
         html += '  <button class="menu-btn-clear" onclick="menuClearCart()"><i class="fas fa-trash-alt"></i> Vider</button>';
     }
     html += '</div>';
+
+    // ==================== MINI-BARRE FLOTTANTE (v14) ====================
+    if (menuCart.length > 0) {
+        html += '<button class="menu-cart-float-bar" onclick="scrollToMenuCart()">';
+        html += '  <i class="fas fa-shopping-cart"></i>';
+        html += '  <span>Voir le panier</span>';
+        html += '  <span class="badge">' + totalArticles + '</span>';
+        html += '  <span>' + total.toFixed(2) + ' MAD</span>';
+        html += '</button>';
+    }
 
     // ==================== PLEIN ÉCRAN ====================
     html += '<button class="menu-fullscreen-btn" onclick="requestFullscreen()" title="Plein écran"><i class="fas fa-expand"></i></button>';
@@ -256,7 +278,6 @@ function renderCategoriesGrid() {
         return oA - oB || (a.nom || '').localeCompare(b.nom || '');
     });
 
-    // 🔧 v13 : tailles catégories augmentées
     var imgSize, cardMinHeight, cardMaxHeight, folderSize, nameSize, countSize;
     if (isPC) {
         imgSize = '160px';
@@ -355,7 +376,6 @@ function renderProductsGrid() {
             else if (p.stock <= 5) stt = ' (' + p.stock + ' rest.)';
         }
 
-        // 🔧 v13 : tailles produits augmentées
         var cardStyle = isMobile
             ? 'padding:6px 4px;min-height:130px;max-height:160px;aspect-ratio:1/1;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;animation:menuCardFadeIn 0.4s ease both;animation-delay:' + (j * 0.02) + 's;'
             : 'padding:8px 10px;min-height:180px;max-height:220px;aspect-ratio:1/1;border-radius:10px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;animation:menuCardFadeIn 0.4s ease both;animation-delay:' + (j * 0.02) + 's;';
@@ -419,7 +439,6 @@ function renderSearchResults() {
         var hp = p.prixPromo && p.prixPromo > 0;
         var outOfStock = p.stock !== undefined && p.stock <= 0;
 
-        // 🔧 v13 : tailles produits augmentées
         var cardStyle = isMobile
             ? 'padding:6px 4px;min-height:130px;max-height:160px;aspect-ratio:1/1;border-radius:8px;border-width:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;animation:menuCardFadeIn 0.4s ease both;animation-delay:' + (i * 0.02) + 's;'
             : 'padding:8px 10px;min-height:180px;max-height:220px;aspect-ratio:1/1;border-radius:10px;border-width:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;animation:menuCardFadeIn 0.4s ease both;animation-delay:' + (i * 0.02) + 's;';
@@ -502,12 +521,10 @@ function menuFilterCategory(cat) {
     else menuSelectCategory(cat);
 }
 
-// 🔧 v13 : RECHERCHE SANS PERTE DE FOCUS
 function menuHandleSearch(value) {
     clearTimeout(window._menuSearchTimeout);
     menuSearchQuery = value || '';
 
-    // Mettre à jour UNIQUEMENT la zone des résultats (l'input n'est PAS reconstruit)
     var mainZone = document.querySelector('.menu-main-zone');
     if (mainZone) {
         if (menuSearchQuery.trim()) {
@@ -520,7 +537,6 @@ function menuHandleSearch(value) {
         initMenu3DMotion();
     }
 
-    // Ajouter/supprimer le bouton "clear" sans détruire l'input
     var wrapper = document.querySelector('.menu-search-bar');
     if (wrapper) {
         var existingClear = wrapper.querySelector('.menu-search-clear');
@@ -536,7 +552,6 @@ function menuHandleSearch(value) {
     }
 }
 
-// 🔧 v13 : CLEAR SEARCH SANS RECONSTRUIRE TOUT
 function menuClearSearch() {
     menuSearchQuery = '';
     var input = document.getElementById('menuSearchInput');
@@ -746,21 +761,20 @@ function initMenuTactile(tableNum) {
     loadMenuData();
 }
 
-// ========== STYLES (v13 — recherche fixée + tailles augmentées) ==========
+// ========== STYLES (v14 — panier dans le flux + mini-barre flottante) ==========
 function injectMenuStyles() {
-    if (document.getElementById('menuTactileStylesV13')) return;
+    if (document.getElementById('menuTactileStylesV14')) return;
 
-    // Supprimer les anciens styles
-    ['menuTactileStylesV12', 'menuTactileStylesV11', 'menuTactileStylesV10'].forEach(function(id) {
+    ['menuTactileStylesV13', 'menuTactileStylesV12', 'menuTactileStylesV11', 'menuTactileStylesV10'].forEach(function(id) {
         var old = document.getElementById(id);
         if (old) old.remove();
     });
 
     var style = document.createElement('style');
-    style.id = 'menuTactileStylesV13';
+    style.id = 'menuTactileStylesV14';
     style.textContent = `
     /* ============================================================
-       🔧 v13 : RECHERCHE FIXÉE + TAILLES AUGMENTÉES + 3D MOTION
+       🔧 v14 : PANIER DANS LE FLUX + MINI-BARRE FLOTTANTE
        ============================================================ */
 
     /* ===== RESET SCROLL GLOBAL ===== */
@@ -793,12 +807,14 @@ function injectMenuStyles() {
     #menuTactileContent {
         max-width: 1400px;
         margin: 0 auto;
-        padding-bottom: 60vh !important;
+        padding-bottom: 24px !important;
         min-height: 100vh !important;
         height: auto !important;
         overflow: visible !important;
         position: relative;
         perspective: 1500px;
+        display: flex;
+        flex-direction: column;
     }
 
     @keyframes menuCardFadeIn {
@@ -943,6 +959,7 @@ function injectMenuStyles() {
         padding: 0 10px 24px;
         overflow: visible !important;
         height: auto !important;
+        flex: 1;
     }
 
     .menu-categories-grid {
@@ -989,21 +1006,25 @@ function injectMenuStyles() {
     .menu-empty-state i { font-size: 3rem; margin-bottom: 12px; display: block; opacity: 0.5; }
     .menu-empty-state p { margin: 0; font-size: 0.95rem; }
 
-    /* ===== PANIER FIXE ===== */
+    /* ===== 🆕 v14 : PANIER DANS LE FLUX ===== */
     .menu-cart-fixed {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        z-index: 60;
+        position: relative !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        z-index: 10 !important;
         background: #FFFFFF;
-        border-radius: 20px 20px 0 0;
-        padding: 12px 14px max(12px, env(safe-area-inset-bottom));
-        box-shadow: 0 -2px 15px rgba(0,0,0,0.15);
-        max-height: 55vh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        border-radius: 16px 16px 0 0;
+        padding: 14px 16px 20px;
+        margin: 20px 10px 0 !important;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        max-height: none !important;
+        overflow-y: visible !important;
         display: flex;
         flex-direction: column;
         gap: 8px;
+        border: 1px solid #E2E8F0;
+        border-bottom: none;
     }
     .menu-cart-header {
         display: flex;
@@ -1012,7 +1033,7 @@ function injectMenuStyles() {
     }
     .menu-cart-header h3 {
         margin: 0;
-        font-size: 1rem;
+        font-size: 1.1rem;
         font-weight: 700;
         display: flex;
         align-items: center;
@@ -1024,30 +1045,29 @@ function injectMenuStyles() {
         background: #14B8A6;
         color: #fff;
         border-radius: 50%;
-        padding: 1px 8px;
-        font-size: 0.75rem;
+        padding: 2px 10px;
+        font-size: 0.8rem;
         font-weight: 700;
     }
     .menu-cart-empty {
         text-align: center;
-        padding: 10px;
+        padding: 20px;
         color: #94A3B8;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
-    .menu-cart-empty i { font-size: 1.5rem; display: block; margin-bottom: 4px; color: #E2E8F0; }
+    .menu-cart-empty i { font-size: 1.8rem; display: block; margin-bottom: 8px; color: #E2E8F0; }
     .menu-cart-items {
-        max-height: 25vh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        max-height: none !important;
+        overflow-y: visible !important;
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 6px;
     }
     .menu-cart-item {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 4px;
+        gap: 8px;
+        padding: 10px 8px;
         border-bottom: 1px solid #F1F5F9;
     }
     .menu-cart-item-info {
@@ -1057,27 +1077,27 @@ function injectMenuStyles() {
         flex-direction: column;
     }
     .menu-cart-item-name {
-        font-size: 0.85rem;
+        font-size: 0.95rem;
         font-weight: 600;
         color: #0F172A;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    .menu-cart-item-price { font-size: 0.7rem; color: #64748B; }
+    .menu-cart-item-price { font-size: 0.8rem; color: #64748B; }
     .menu-cart-qty {
         display: flex;
         align-items: center;
-        gap: 3px;
+        gap: 4px;
         flex-shrink: 0;
     }
     .menu-cart-qty button {
-        width: 26px; height: 26px;
+        width: 32px; height: 32px;
         border-radius: 50%;
         border: 2px solid #e2e8f0;
         background: #fff;
         color: #0F172A;
-        font-size: 0.7rem;
+        font-size: 0.85rem;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -1085,7 +1105,7 @@ function injectMenuStyles() {
         transition: all 0.15s;
     }
     .menu-cart-qty button:hover { background: #14B8A6; color: #fff; border-color: #14B8A6; transform: scale(1.1); }
-    .menu-cart-qty span { font-size: 0.85rem; font-weight: 700; min-width: 20px; text-align: center; }
+    .menu-cart-qty span { font-size: 0.95rem; font-weight: 700; min-width: 24px; text-align: center; }
     .menu-cart-remove {
         background: none !important;
         border: none !important;
@@ -1093,10 +1113,10 @@ function injectMenuStyles() {
     }
     .menu-cart-remove:hover { color: #dc2626 !important; }
     .menu-cart-item-total {
-        font-size: 0.8rem;
+        font-size: 0.9rem;
         font-weight: 700;
         color: #0F172A;
-        min-width: 65px;
+        min-width: 80px;
         text-align: right;
         flex-shrink: 0;
     }
@@ -1104,21 +1124,21 @@ function injectMenuStyles() {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 0;
+        padding: 12px 0;
         border-top: 2px solid #e2e8f0;
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         font-weight: 700;
         color: #0F172A;
     }
-    .menu-cart-total span:last-child { color: #14B8A6; font-size: 1.3rem; }
+    .menu-cart-total span:last-child { color: #14B8A6; font-size: 1.4rem; }
     .menu-btn-validate {
         width: 100%;
-        padding: 12px;
+        padding: 14px;
         border: none;
-        border-radius: 10px;
+        border-radius: 12px;
         background: #14B8A6;
         color: #fff;
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         font-weight: 700;
         cursor: pointer;
         display: flex;
@@ -1132,22 +1152,57 @@ function injectMenuStyles() {
     .menu-btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
     .menu-btn-clear {
         width: 100%;
-        padding: 8px;
+        padding: 10px;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
+        border-radius: 10px;
         background: #fff;
         color: #ef4444;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s;
     }
     .menu-btn-clear:hover { background: #FEF2F2; border-color: #FCA5A5; }
 
+    /* ===== 🆕 v14 : MINI-BARRE FLOTTANTE ===== */
+    .menu-cart-float-bar {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 55;
+        background: linear-gradient(135deg, #14B8A6, #0D9488);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 40px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(20,184,166,0.5);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+        border: none;
+        font-family: inherit;
+    }
+    .menu-cart-float-bar:hover {
+        transform: translateX(-50%) translateY(-2px);
+        box-shadow: 0 8px 28px rgba(20,184,166,0.65);
+    }
+    .menu-cart-float-bar .badge {
+        background: white;
+        color: #14B8A6;
+        border-radius: 50%;
+        padding: 2px 10px;
+        font-size: 0.8rem;
+        font-weight: 800;
+    }
+
     /* ===== PLEIN ÉCRAN ===== */
     .menu-fullscreen-btn {
         position: fixed;
-        bottom: calc(55vh + 10px);
+        bottom: 20px;
         right: 15px;
         width: 45px; height: 45px;
         border-radius: 50%;
@@ -1159,8 +1214,8 @@ function injectMenuStyles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        z-index: 55;
+        box-shadow: 0 4px 12px rgba(20,184,166,0.35);
+        z-index: 54;
         transition: all 0.2s;
     }
     .menu-fullscreen-btn:hover { transform: scale(1.1) rotate(90deg); }
@@ -1172,11 +1227,11 @@ function injectMenuStyles() {
         .menu-title-wrapper h1 { font-size: 1rem; }
         .menu-title-wrapper p { font-size: 0.7rem; }
         .menu-logo-wrapper { width: 42px; height: 42px; }
+        .menu-cart-float-bar { padding: 10px 18px; font-size: 0.85rem; }
     }
     @media (max-height: 500px) and (orientation: landscape) {
         .menu-header { padding: 10px 16px; }
         .menu-logo-wrapper { width: 40px; height: 40px; }
-        .menu-cart-fixed { max-height: 50vh; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1185,7 +1240,8 @@ function injectMenuStyles() {
         .pos-product-card,
         .menu-search-bar,
         .menu-btn-validate,
-        .menu-cart-qty button {
+        .menu-cart-qty button,
+        .menu-cart-float-bar {
             animation: none !important;
             transition: none !important;
         }
@@ -1196,18 +1252,15 @@ function injectMenuStyles() {
     }
 
     #menuTactilePage::-webkit-scrollbar,
-    .menu-cart-items::-webkit-scrollbar,
-    .menu-cart-fixed::-webkit-scrollbar {
+    .menu-cart-items::-webkit-scrollbar {
         width: 6px;
     }
     #menuTactilePage::-webkit-scrollbar-track,
-    .menu-cart-items::-webkit-scrollbar-track,
-    .menu-cart-fixed::-webkit-scrollbar-track {
+    .menu-cart-items::-webkit-scrollbar-track {
         background: transparent;
     }
     #menuTactilePage::-webkit-scrollbar-thumb,
-    .menu-cart-items::-webkit-scrollbar-thumb,
-    .menu-cart-fixed::-webkit-scrollbar-thumb {
+    .menu-cart-items::-webkit-scrollbar-thumb {
         background: #CBD5E1;
         border-radius: 3px;
     }
@@ -1215,4 +1268,4 @@ function injectMenuStyles() {
     document.head.appendChild(style);
 }
 
-console.log('🚀 Menu tactile E-SOLUTION v13 (recherche fixée + tailles augmentées)');
+console.log('🚀 Menu tactile E-SOLUTION v14 (panier dans le flux + mini-barre flottante)');
