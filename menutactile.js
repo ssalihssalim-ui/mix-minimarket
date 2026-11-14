@@ -1,8 +1,8 @@
 // ==================== MENU TACTILE - E-SOLUTION ====================
-// 🆕 v14 : Panier dans le flux (position relative) + mini-barre flottante
-// v13 : Recherche fixée (focus conservé) + tailles augmentées
-// v12 : Effet 3D MOTION (tilt + profondeur + animation d'entrée)
-// v11 : SCROLL CORRIGÉ
+// 🆕 v15 : Three.js background (particules flottantes) + tout v14 conservé
+// v14 : Panier dans le flux + mini-barre flottante
+// v13 : Recherche fixée + tailles augmentées
+// v12 : Effet 3D MOTION CSS (tilt + profondeur + animation d'entrée)
 
 var menuTableNum = null;
 var menuCart = [];
@@ -19,6 +19,238 @@ var menuSel = ['Normal', 'Moins de sel', 'Sans sel'];
 
 var allStockData = [];
 
+// ========== 🆕 v15 : THREE.JS BACKGROUND ==========
+var threeJsState = {
+    loaded: false,
+    loading: false,
+    renderer: null,
+    scene: null,
+    camera: null,
+    particles: null,
+    animationId: null,
+    clock: null,
+    isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+};
+
+// Charge Three.js depuis le CDN (async, non bloquant)
+function loadThreeJs(callback) {
+    if (threeJsState.loaded) {
+        if (callback) callback();
+        return;
+    }
+    if (threeJsState.loading) {
+        // Attendre que le chargement en cours se termine
+        var check = setInterval(function() {
+            if (threeJsState.loaded) {
+                clearInterval(check);
+                if (callback) callback();
+            }
+        }, 100);
+        return;
+    }
+    threeJsState.loading = true;
+
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    script.async = true;
+    script.onload = function() {
+        threeJsState.loaded = true;
+        threeJsState.loading = false;
+        console.log('✅ Three.js chargé depuis le CDN');
+        if (callback) callback();
+    };
+    script.onerror = function() {
+        threeJsState.loading = false;
+        console.warn('⚠️ Impossible de charger Three.js — mode fallback');
+    };
+    document.head.appendChild(script);
+}
+
+// Détecte si WebGL est disponible
+function isWebGLAvailable() {
+    try {
+        var canvas = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+    } catch (e) {
+        return false;
+    }
+}
+
+// Initialise la scène 3D d'arrière-plan (particules flottantes)
+function initThreeJsBackground() {
+    // Si WebGL non supporté → on abandonne
+    if (!isWebGLAvailable()) {
+        console.warn('⚠️ WebGL non supporté — background 3D désactivé');
+        return;
+    }
+
+    // Si THREE n'est pas encore chargé → charger puis retenter
+    if (typeof THREE === 'undefined') {
+        loadThreeJs(function() {
+            if (typeof THREE !== 'undefined') {
+                initThreeJsBackground();
+            }
+        });
+        return;
+    }
+
+    // Si déjà initialisé → ne pas recommencer
+    if (threeJsState.renderer) return;
+
+    try {
+        var isMobile = threeJsState.isMobile;
+
+        // ========== RENDERER (optimisations strictes) ==========
+        var renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            antialias: !isMobile,
+            powerPreference: 'high-performance',
+            precision: isMobile ? 'mediump' : 'highp'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = false;
+
+        // ========== CANVAS EN ARRIÈRE-PLAN ==========
+        var canvas = renderer.domElement;
+        canvas.id = 'menuThreeBg';
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.zIndex = '-1';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.opacity = '0';
+        canvas.style.transition = 'opacity 1.5s ease';
+
+        // Ajouter au body (pas au menuTactilePage pour être vraiment derrière)
+        document.body.appendChild(canvas);
+
+        // Fade-in progressif pour éviter le flash
+        setTimeout(function() { canvas.style.opacity = '0.6'; }, 100);
+
+        // ========== SCÈNE ==========
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        // ========== PARTICULES ==========
+        var particlesCount = isMobile ? 150 : 400;
+        var positions = new Float32Array(particlesCount * 3);
+        var sizes = new Float32Array(particlesCount);
+
+        for (var i = 0; i < particlesCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 20;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 15;
+            sizes[i] = Math.random() * 0.08 + 0.03;
+        }
+
+        var geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        var material = new THREE.PointsMaterial({
+            color: 0x14B8A6,
+            size: 0.06,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true
+        });
+
+        var particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        // ========== SAUVEGARDER L'ÉTAT ==========
+        threeJsState.renderer = renderer;
+        threeJsState.scene = scene;
+        threeJsState.camera = camera;
+        threeJsState.particles = particles;
+        threeJsState.clock = new THREE.Clock();
+
+        // ========== BOUCLE D'ANIMATION ==========
+        function animate() {
+            threeJsState.animationId = requestAnimationFrame(animate);
+            var elapsedTime = threeJsState.clock.getElapsedTime();
+
+            if (threeJsState.particles) {
+                threeJsState.particles.rotation.y = elapsedTime * 0.05;
+                threeJsState.particles.rotation.x = elapsedTime * 0.02;
+            }
+
+            threeJsState.renderer.render(threeJsState.scene, threeJsState.camera);
+        }
+
+        // ========== PAUSE QUAND ONGLET INACTIF ==========
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                if (threeJsState.animationId) {
+                    cancelAnimationFrame(threeJsState.animationId);
+                    threeJsState.animationId = null;
+                }
+            } else {
+                if (!threeJsState.animationId) {
+                    animate();
+                }
+            }
+        });
+
+        // ========== RESIZE ==========
+        window.addEventListener('resize', function() {
+            if (!threeJsState.camera || !threeJsState.renderer) return;
+            threeJsState.camera.aspect = window.innerWidth / window.innerHeight;
+            threeJsState.camera.updateProjectionMatrix();
+            threeJsState.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+        console.log('✅ Three.js background initialisé (' + particlesCount + ' particules)');
+
+    } catch (e) {
+        console.warn('⚠️ Erreur initialisation Three.js:', e);
+        // Nettoyer si partiellement initialisé
+        if (threeJsState.renderer) {
+            try {
+                threeJsState.renderer.dispose();
+                if (threeJsState.renderer.domElement && threeJsState.renderer.domElement.parentNode) {
+                    threeJsState.renderer.domElement.parentNode.removeChild(threeJsState.renderer.domElement);
+                }
+            } catch (ex) {}
+        }
+        threeJsState.renderer = null;
+        threeJsState.scene = null;
+        threeJsState.camera = null;
+        threeJsState.particles = null;
+    }
+}
+
+// Nettoyage propre de la scène Three.js (si besoin)
+function destroyThreeJsBackground() {
+    if (threeJsState.animationId) {
+        cancelAnimationFrame(threeJsState.animationId);
+        threeJsState.animationId = null;
+    }
+    if (threeJsState.particles) {
+        threeJsState.particles.geometry.dispose();
+        threeJsState.particles.material.dispose();
+    }
+    if (threeJsState.renderer) {
+        threeJsState.renderer.dispose();
+        if (threeJsState.renderer.domElement && threeJsState.renderer.domElement.parentNode) {
+            threeJsState.renderer.domElement.parentNode.removeChild(threeJsState.renderer.domElement);
+        }
+    }
+    threeJsState.renderer = null;
+    threeJsState.scene = null;
+    threeJsState.camera = null;
+    threeJsState.particles = null;
+    threeJsState.clock = null;
+    console.log('🧹 Three.js background détruit');
+}
+
 // ========== UTILITAIRES ==========
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -34,6 +266,7 @@ function escapeHtml(str) {
 }
 
 function closeMenuTactile() {
+    destroyThreeJsBackground();
     window.location.href = window.location.pathname;
 }
 
@@ -47,7 +280,7 @@ function requestFullscreen() {
     }
 }
 
-// ========== 🆕 v14 : SCROLL VERS LE PANIER ==========
+// ========== v14 : SCROLL VERS LE PANIER ==========
 function scrollToMenuCart() {
     var cart = document.querySelector('.menu-cart-fixed');
     if (cart) {
@@ -58,7 +291,7 @@ function scrollToMenuCart() {
     }
 }
 
-// ========== 🆕 EFFET 3D MOTION — TILT DES CARTES ==========
+// ========== EFFET 3D MOTION — TILT DES CARTES ==========
 function initMenu3DMotion() {
     setTimeout(function() {
         var cards = document.querySelectorAll('.menu-cat-card, .pos-product-card');
@@ -196,7 +429,7 @@ function renderMenuTactile() {
 
     html += '</div>';
 
-    // ==================== PANIER (dans le flux — v14) ====================
+    // ==================== PANIER ====================
     html += '<div class="menu-cart-fixed">';
     html += '  <div class="menu-cart-header">';
     html += '    <h3><i class="fas fa-shopping-cart"></i> Panier <span class="menu-cart-badge">' + totalArticles + '</span></h3>';
@@ -229,7 +462,7 @@ function renderMenuTactile() {
     }
     html += '</div>';
 
-    // ==================== MINI-BARRE FLOTTANTE (v14) ====================
+    // ==================== MINI-BARRE FLOTTANTE ====================
     if (menuCart.length > 0) {
         html += '<button class="menu-cart-float-bar" onclick="scrollToMenuCart()">';
         html += '  <i class="fas fa-shopping-cart"></i>';
@@ -257,7 +490,7 @@ function renderMenuTactile() {
     }
 }
 
-// ========== GRILLE CATÉGORIES (style POS + 3D motion) ==========
+// ========== GRILLE CATÉGORIES ==========
 function renderCategoriesGrid() {
     var html = '<div style="grid-column:1/-1;padding:6px 8px;font-size:0.9rem;font-weight:700;color:#0F172A;">📂 Choisissez une catégorie</div>';
 
@@ -280,35 +513,19 @@ function renderCategoriesGrid() {
 
     var imgSize, cardMinHeight, cardMaxHeight, folderSize, nameSize, countSize;
     if (isPC) {
-        imgSize = '160px';
-        cardMinHeight = '190px';
-        cardMaxHeight = '230px';
-        folderSize = '75px';
-        nameSize = '18px';
-        countSize = '13px';
+        imgSize = '160px'; cardMinHeight = '190px'; cardMaxHeight = '230px';
+        folderSize = '75px'; nameSize = '18px'; countSize = '13px';
     } else if (isTablette) {
-        imgSize = '150px';
-        cardMinHeight = '175px';
-        cardMaxHeight = '210px';
-        folderSize = '70px';
-        nameSize = '15px';
-        countSize = '11px';
+        imgSize = '150px'; cardMinHeight = '175px'; cardMaxHeight = '210px';
+        folderSize = '70px'; nameSize = '15px'; countSize = '11px';
     } else {
-        imgSize = '55px';
-        cardMinHeight = '85px';
-        cardMaxHeight = '105px';
-        folderSize = '26px';
-        nameSize = '10px';
-        countSize = '8px';
+        imgSize = '55px'; cardMinHeight = '85px'; cardMaxHeight = '105px';
+        folderSize = '26px'; nameSize = '10px'; countSize = '8px';
     }
 
     if (window.innerWidth < 400) {
-        imgSize = '45px';
-        cardMinHeight = '70px';
-        cardMaxHeight = '90px';
-        folderSize = '20px';
-        nameSize = '9px';
-        countSize = '7px';
+        imgSize = '45px'; cardMinHeight = '70px'; cardMaxHeight = '90px';
+        folderSize = '20px'; nameSize = '9px'; countSize = '7px';
     }
 
     for (var i = 0; i < sorted.length; i++) {
@@ -337,7 +554,7 @@ function renderCategoriesGrid() {
     return html;
 }
 
-// ========== GRILLE PRODUITS (style POS + 3D motion) ==========
+// ========== GRILLE PRODUITS ==========
 function renderProductsGrid() {
     var html = '';
 
@@ -413,7 +630,7 @@ function renderProductsGrid() {
     return html;
 }
 
-// ========== RÉSULTATS RECHERCHE (style POS + 3D motion) ==========
+// ========== RÉSULTATS RECHERCHE ==========
 function renderSearchResults() {
     var q = menuSearchQuery.toLowerCase().trim();
     var results = menuProducts.filter(p =>
@@ -745,6 +962,12 @@ function initMenuTactile(tableNum) {
 
     injectMenuStyles();
 
+    // 🆕 v15 : Initialiser le background 3D
+    // (asynchrone, ne bloque pas le menu)
+    setTimeout(function() {
+        initThreeJsBackground();
+    }, 500);
+
     const menuPage = document.getElementById('menuTactilePage');
     if (menuPage) {
         menuPage.classList.remove('hidden');
@@ -761,23 +984,22 @@ function initMenuTactile(tableNum) {
     loadMenuData();
 }
 
-// ========== STYLES (v14 — panier dans le flux + mini-barre flottante) ==========
+// ========== STYLES (v15) ==========
 function injectMenuStyles() {
-    if (document.getElementById('menuTactileStylesV14')) return;
+    if (document.getElementById('menuTactileStylesV15')) return;
 
-    ['menuTactileStylesV13', 'menuTactileStylesV12', 'menuTactileStylesV11', 'menuTactileStylesV10'].forEach(function(id) {
+    ['menuTactileStylesV14', 'menuTactileStylesV13', 'menuTactileStylesV12', 'menuTactileStylesV11', 'menuTactileStylesV10'].forEach(function(id) {
         var old = document.getElementById(id);
         if (old) old.remove();
     });
 
     var style = document.createElement('style');
-    style.id = 'menuTactileStylesV14';
+    style.id = 'menuTactileStylesV15';
     style.textContent = `
     /* ============================================================
-       🔧 v14 : PANIER DANS LE FLUX + MINI-BARRE FLOTTANTE
+       🔧 v15 : Three.js Background (particules) + tout v14
        ============================================================ */
 
-    /* ===== RESET SCROLL GLOBAL ===== */
     html, body {
         overflow-y: auto !important;
         overflow-x: hidden !important;
@@ -787,11 +1009,15 @@ function injectMenuStyles() {
         position: static !important;
     }
 
-    /* ===== PAGE MENU TACTILE ===== */
+    /* 🆕 v15 : s'assurer que le body a un fond neutre derrière le canvas */
+    body {
+        background: #f8fafc;
+    }
+
     #menuTactilePage {
         background: radial-gradient(circle at 20% 10%, rgba(20,184,166,0.05) 0%, transparent 40%),
                     radial-gradient(circle at 80% 90%, rgba(59,130,246,0.04) 0%, transparent 40%),
-                    #f8fafc !important;
+                    transparent !important;
         min-height: 100vh !important;
         height: auto !important;
         max-height: none !important;
@@ -802,6 +1028,7 @@ function injectMenuStyles() {
         -webkit-font-smoothing: antialiased;
         position: relative;
         display: block !important;
+        z-index: 1;
     }
 
     #menuTactileContent {
@@ -822,7 +1049,6 @@ function injectMenuStyles() {
         100% { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* ===== HEADER ===== */
     .menu-header {
         background: linear-gradient(135deg, #0A0D12, #1a1a2e);
         color: #fff;
@@ -902,10 +1128,11 @@ function injectMenuStyles() {
     }
     .menu-close-btn:hover { background: rgba(0,0,0,0.55); transform: rotate(90deg); }
 
-    /* ===== RECHERCHE ===== */
     .menu-search-wrapper {
         padding: 12px 14px;
-        background: #f8fafc;
+        background: rgba(248,250,252,0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         position: sticky;
         top: 100px;
         z-index: 40;
@@ -954,12 +1181,13 @@ function injectMenuStyles() {
     }
     .menu-search-clear:hover { background: #E2E8F0; color: #0F172A; transform: scale(1.05); }
 
-    /* ===== ZONE PRINCIPALE ===== */
     .menu-main-zone {
         padding: 0 10px 24px;
         overflow: visible !important;
         height: auto !important;
         flex: 1;
+        position: relative;
+        z-index: 1;
     }
 
     .menu-categories-grid {
@@ -1006,7 +1234,6 @@ function injectMenuStyles() {
     .menu-empty-state i { font-size: 3rem; margin-bottom: 12px; display: block; opacity: 0.5; }
     .menu-empty-state p { margin: 0; font-size: 0.95rem; }
 
-    /* ===== 🆕 v14 : PANIER DANS LE FLUX ===== */
     .menu-cart-fixed {
         position: relative !important;
         bottom: auto !important;
@@ -1026,203 +1253,101 @@ function injectMenuStyles() {
         border: 1px solid #E2E8F0;
         border-bottom: none;
     }
-    .menu-cart-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+    .menu-cart-header { display: flex; justify-content: space-between; align-items: center; }
     .menu-cart-header h3 {
-        margin: 0;
-        font-size: 1.1rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #0F172A;
+        margin: 0; font-size: 1.1rem; font-weight: 700;
+        display: flex; align-items: center; gap: 8px; color: #0F172A;
     }
     .menu-cart-header h3 i { color: #14B8A6; }
     .menu-cart-badge {
-        background: #14B8A6;
-        color: #fff;
-        border-radius: 50%;
-        padding: 2px 10px;
-        font-size: 0.8rem;
-        font-weight: 700;
+        background: #14B8A6; color: #fff; border-radius: 50%;
+        padding: 2px 10px; font-size: 0.8rem; font-weight: 700;
     }
-    .menu-cart-empty {
-        text-align: center;
-        padding: 20px;
-        color: #94A3B8;
-        font-size: 0.9rem;
-    }
+    .menu-cart-empty { text-align: center; padding: 20px; color: #94A3B8; font-size: 0.9rem; }
     .menu-cart-empty i { font-size: 1.8rem; display: block; margin-bottom: 8px; color: #E2E8F0; }
     .menu-cart-items {
-        max-height: none !important;
-        overflow-y: visible !important;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+        max-height: none !important; overflow-y: visible !important;
+        display: flex; flex-direction: column; gap: 6px;
     }
     .menu-cart-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 8px;
-        border-bottom: 1px solid #F1F5F9;
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 8px; border-bottom: 1px solid #F1F5F9;
     }
-    .menu-cart-item-info {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-    }
+    .menu-cart-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .menu-cart-item-name {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #0F172A;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 0.95rem; font-weight: 600; color: #0F172A;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .menu-cart-item-price { font-size: 0.8rem; color: #64748B; }
-    .menu-cart-qty {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        flex-shrink: 0;
-    }
+    .menu-cart-qty { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
     .menu-cart-qty button {
-        width: 32px; height: 32px;
-        border-radius: 50%;
-        border: 2px solid #e2e8f0;
-        background: #fff;
-        color: #0F172A;
-        font-size: 0.85rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 32px; height: 32px; border-radius: 50%;
+        border: 2px solid #e2e8f0; background: #fff; color: #0F172A;
+        font-size: 0.85rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
         transition: all 0.15s;
     }
     .menu-cart-qty button:hover { background: #14B8A6; color: #fff; border-color: #14B8A6; transform: scale(1.1); }
     .menu-cart-qty span { font-size: 0.95rem; font-weight: 700; min-width: 24px; text-align: center; }
-    .menu-cart-remove {
-        background: none !important;
-        border: none !important;
-        color: #ef4444 !important;
-    }
+    .menu-cart-remove { background: none !important; border: none !important; color: #ef4444 !important; }
     .menu-cart-remove:hover { color: #dc2626 !important; }
     .menu-cart-item-total {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #0F172A;
-        min-width: 80px;
-        text-align: right;
-        flex-shrink: 0;
+        font-size: 0.9rem; font-weight: 700; color: #0F172A;
+        min-width: 80px; text-align: right; flex-shrink: 0;
     }
     .menu-cart-total {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 0;
-        border-top: 2px solid #e2e8f0;
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #0F172A;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 0; border-top: 2px solid #e2e8f0;
+        font-size: 1.2rem; font-weight: 700; color: #0F172A;
     }
     .menu-cart-total span:last-child { color: #14B8A6; font-size: 1.4rem; }
     .menu-btn-validate {
-        width: 100%;
-        padding: 14px;
-        border: none;
-        border-radius: 12px;
-        background: #14B8A6;
-        color: #fff;
-        font-size: 1.1rem;
-        font-weight: 700;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        transition: all 0.2s;
-        box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+        width: 100%; padding: 14px; border: none; border-radius: 12px;
+        background: #14B8A6; color: #fff; font-size: 1.1rem; font-weight: 700;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+        transition: all 0.2s; box-shadow: 0 4px 12px rgba(20,184,166,0.3);
     }
     .menu-btn-validate:hover { background: #0D9488; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,184,166,0.4); }
     .menu-btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
     .menu-btn-clear {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        background: #fff;
-        color: #ef4444;
-        font-size: 0.85rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s;
+        width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 10px;
+        background: #fff; color: #ef4444; font-size: 0.85rem; font-weight: 600;
+        cursor: pointer; transition: all 0.15s;
     }
     .menu-btn-clear:hover { background: #FEF2F2; border-color: #FCA5A5; }
 
-    /* ===== 🆕 v14 : MINI-BARRE FLOTTANTE ===== */
     .menu-cart-float-bar {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 55;
+        position: fixed; bottom: 20px; left: 50%;
+        transform: translateX(-50%); z-index: 55;
         background: linear-gradient(135deg, #14B8A6, #0D9488);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 40px;
-        font-weight: 700;
-        cursor: pointer;
+        color: white; padding: 12px 24px; border-radius: 40px;
+        font-weight: 700; cursor: pointer;
         box-shadow: 0 4px 20px rgba(20,184,166,0.5);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        transition: all 0.2s ease;
-        font-size: 0.95rem;
-        border: none;
-        font-family: inherit;
+        display: flex; align-items: center; gap: 10px;
+        transition: all 0.2s ease; font-size: 0.95rem;
+        border: none; font-family: inherit;
     }
     .menu-cart-float-bar:hover {
         transform: translateX(-50%) translateY(-2px);
         box-shadow: 0 8px 28px rgba(20,184,166,0.65);
     }
     .menu-cart-float-bar .badge {
-        background: white;
-        color: #14B8A6;
-        border-radius: 50%;
-        padding: 2px 10px;
-        font-size: 0.8rem;
-        font-weight: 800;
+        background: white; color: #14B8A6; border-radius: 50%;
+        padding: 2px 10px; font-size: 0.8rem; font-weight: 800;
     }
 
-    /* ===== PLEIN ÉCRAN ===== */
     .menu-fullscreen-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 15px;
-        width: 45px; height: 45px;
-        border-radius: 50%;
-        border: none;
-        background: #14B8A6;
-        color: #fff;
-        font-size: 18px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        position: fixed; bottom: 20px; right: 15px;
+        width: 45px; height: 45px; border-radius: 50%; border: none;
+        background: #14B8A6; color: #fff; font-size: 18px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
         box-shadow: 0 4px 12px rgba(20,184,166,0.35);
-        z-index: 54;
-        transition: all 0.2s;
+        z-index: 54; transition: all 0.2s;
     }
     .menu-fullscreen-btn:hover { transform: scale(1.1) rotate(90deg); }
 
     .menu-cat-card.active { border-color: #14B8A6 !important; }
 
-    /* ===== RESPONSIVE ===== */
     @media (max-width: 380px) {
         .menu-title-wrapper h1 { font-size: 1rem; }
         .menu-title-wrapper p { font-size: 0.7rem; }
@@ -1268,4 +1393,4 @@ function injectMenuStyles() {
     document.head.appendChild(style);
 }
 
-console.log('🚀 Menu tactile E-SOLUTION v14 (panier dans le flux + mini-barre flottante)');
+console.log('🚀 Menu tactile E-SOLUTION v15 (Three.js background + tout v14 conservé)');
