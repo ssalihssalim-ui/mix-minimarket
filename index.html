@@ -1528,7 +1528,19 @@ body {
 
 <!-- ==================== MENU TACTILE PAGE ==================== -->
 <div id="menuTactilePage" class="hidden" style="background:#f8fafc; min-height:100vh;">
-<div id="menuTactileContent" style="padding-bottom:100px;"></div>
+
+    <!-- 🆕 SPLASH SCREEN VIDÉO + WELCOME -->
+    <div id="menuSplashScreen">
+        <video id="menuSplashVideo" muted playsinline preload="auto">
+            <source src="intro.mp4" type="video/mp4">
+        </video>
+        <div id="menuSplashOverlay"></div>
+        <div id="menuSplashWelcome">
+            <h1>Welcome</h1>
+        </div>
+    </div>
+
+    <div id="menuTactileContent" style="padding-bottom:100px;"></div>
 </div>
 
 <!-- ==================== MODAL ==================== -->
