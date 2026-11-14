@@ -1,5 +1,6 @@
 // ==================== MENU TACTILE - E-SOLUTION ====================
-// 🆕 v17 : Splash vidéo + Welcome + tout v16 conservé
+// 🆕 v18 : Correctif "Welcome" qui apparaît sur page blanche
+// v17 : Splash vidéo + Welcome
 // v16 : PERFORMANCE MAX (cache rendu, debounce 80ms, content-visibility)
 // v14 : Panier dans le flux
 // v13 : Recherche fixée
@@ -69,21 +70,19 @@ function requestFullscreen() {
     }
 }
 
-// ========== 🎬 v17 : SPLASH VIDÉO + WELCOME ==========
+// ========== 🎬 v18 : SPLASH VIDÉO + WELCOME (correctif visibility) ==========
 function playMenuSplashSequence(onComplete) {
     var splash = document.getElementById('menuSplashScreen');
     var video = document.getElementById('menuSplashVideo');
     var overlay = document.getElementById('menuSplashOverlay');
     var welcome = document.getElementById('menuSplashWelcome');
 
-    // Si pas de splash dans le DOM → on lance directement
     if (!splash || !video) {
         console.log('🎬 Pas de splash → menu direct');
         if (onComplete) onComplete();
         return;
     }
 
-    // Si déjà joué dans cette session → skip
     if (sessionStorage.getItem('menuSplashPlayed') === '1') {
         console.log('🎬 Splash déjà joué — skip');
         splash.style.display = 'none';
@@ -97,19 +96,20 @@ function playMenuSplashSequence(onComplete) {
     splash.style.display = 'flex';
     splash.style.opacity = '1';
     splash.style.background = '#000000';
+
+    // 🔧 FIX : Cacher complètement Welcome avec visibility
     if (welcome) {
         welcome.style.opacity = '0';
+        welcome.style.visibility = 'hidden';
         welcome.style.transform = 'scale(0.8)';
     }
     if (overlay) overlay.style.opacity = '0';
 
-    // Forcer le rechargement de la vidéo
     try {
         video.currentTime = 0;
         video.load();
     } catch (e) { console.warn('⚠️ Erreur reset vidéo:', e); }
 
-    // ========== ÉTAPE 1 : JOUER LA VIDÉO ==========
     var playPromise = video.play();
 
     if (playPromise !== undefined) {
@@ -120,7 +120,6 @@ function playMenuSplashSequence(onComplete) {
         });
     }
 
-    // ========== ÉTAPE 2 : FIN DE VIDÉO ==========
     var videoEnded = false;
 
     function handleVideoEnd() {
@@ -129,7 +128,6 @@ function playMenuSplashSequence(onComplete) {
 
         console.log('🎬 Vidéo terminée — transition Welcome');
 
-        // 1) Fondu blanc progressif (1s)
         splash.style.transition = 'background 1s ease';
         splash.style.background = '#FFFFFF';
 
@@ -138,19 +136,18 @@ function playMenuSplashSequence(onComplete) {
             overlay.style.opacity = '1';
         }
 
-        // 2) Afficher Welcome (après 0.8s)
         setTimeout(function() {
+            // 🔧 FIX : Rendre Welcome VISIBLE avant l'opacité
             if (welcome) {
+                welcome.style.visibility = 'visible';
                 welcome.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
                 welcome.style.opacity = '1';
                 welcome.style.transform = 'scale(1)';
             }
             console.log('🎬 Welcome affiché');
 
-            // 3) Charger le menu en arrière-plan
             if (onComplete) onComplete();
 
-            // 4) Après 1.5s → effacer Welcome
             setTimeout(function() {
                 if (welcome) {
                     welcome.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
@@ -158,7 +155,6 @@ function playMenuSplashSequence(onComplete) {
                     welcome.style.transform = 'scale(1.05)';
                 }
 
-                // 5) Fondu noir final (0.5s)
                 setTimeout(function() {
                     splash.style.transition = 'opacity 0.5s ease';
                     splash.style.opacity = '0';
@@ -168,7 +164,11 @@ function playMenuSplashSequence(onComplete) {
                         splash.style.opacity = '1';
                         splash.style.background = '';
                         if (overlay) overlay.style.opacity = '0';
-                        if (welcome) welcome.style.opacity = '0';
+                        // 🔧 FIX : Cacher Welcome avec visibility aussi
+                        if (welcome) {
+                            welcome.style.opacity = '0';
+                            welcome.style.visibility = 'hidden';
+                        }
 
                         sessionStorage.setItem('menuSplashPlayed', '1');
                         console.log('🎬 Splash terminé — menu visible');
@@ -180,7 +180,6 @@ function playMenuSplashSequence(onComplete) {
 
     video.addEventListener('ended', handleVideoEnd, { once: true });
 
-    // ========== SÉCURITÉ : Timeout 10s ==========
     setTimeout(function() {
         if (!videoEnded && splash.style.display !== 'none') {
             console.warn('⚠️ Timeout vidéo — transition forcée');
@@ -296,7 +295,6 @@ function renderMenuTactile() {
 
     var html = '';
 
-    // ==================== HEADER ====================
     html += '<div class="menu-header">';
     html += '  <button class="menu-close-btn" onclick="closeMenuTactile()" aria-label="Fermer">&times;</button>';
     html += '  <div class="menu-header-content">';
@@ -310,7 +308,6 @@ function renderMenuTactile() {
     html += '  </div>';
     html += '</div>';
 
-    // ==================== RECHERCHE ====================
     html += '<div class="menu-search-wrapper">';
     html += '  <div class="menu-search-bar">';
     html += '    <i class="fas fa-search menu-search-icon"></i>';
@@ -321,7 +318,6 @@ function renderMenuTactile() {
     html += '  </div>';
     html += '</div>';
 
-    // ==================== ZONE PRINCIPALE ====================
     html += '<div class="menu-main-zone">';
 
     if (menuSearchQuery.trim()) {
@@ -334,7 +330,6 @@ function renderMenuTactile() {
 
     html += '</div>';
 
-    // ==================== PANIER ====================
     html += '<div class="menu-cart-fixed">';
     html += '  <div class="menu-cart-header">';
     html += '    <h3><i class="fas fa-shopping-cart"></i> Panier <span class="menu-cart-badge">' + totalArticles + '</span></h3>';
@@ -367,7 +362,6 @@ function renderMenuTactile() {
     }
     html += '</div>';
 
-    // ==================== PLEIN ÉCRAN ====================
     html += '<button class="menu-fullscreen-btn" onclick="requestFullscreen()" title="Plein écran"><i class="fas fa-expand"></i></button>';
 
     content.innerHTML = html;
@@ -881,18 +875,17 @@ function initMenuTactile(tableNum) {
         if (menuPage) menuPage.appendChild(content);
     }
 
-    // 🆕 v17 : splash d'abord, puis chargement du menu
     playMenuSplashSequence(function() {
         console.log('🍽️ Splash terminé, chargement du menu...');
         loadMenuData();
     });
 }
 
-// ========== STYLES (v17) ==========
+// ========== STYLES (v18) ==========
 function injectMenuStyles() {
-    if (document.getElementById('menuTactileStylesV17')) return;
+    if (document.getElementById('menuTactileStylesV18')) return;
 
-    ['menuTactileStylesV16', 'menuTactileStylesV15', 'menuTactileStylesV14',
+    ['menuTactileStylesV17', 'menuTactileStylesV16', 'menuTactileStylesV15', 'menuTactileStylesV14',
      'menuTactileStylesV13', 'menuTactileStylesV12', 'menuTactileStylesV11',
      'menuTactileStylesV10'].forEach(function(id) {
         var old = document.getElementById(id);
@@ -900,10 +893,10 @@ function injectMenuStyles() {
     });
 
     var style = document.createElement('style');
-    style.id = 'menuTactileStylesV17';
+    style.id = 'menuTactileStylesV18';
     style.textContent = `
     /* ============================================================
-       🎬 v17 : SPLASH VIDÉO + WELCOME
+       🎬 v18 : SPLASH VIDÉO + WELCOME (correctif visibility)
        ============================================================ */
 
     #menuSplashScreen {
@@ -941,13 +934,15 @@ function injectMenuStyles() {
         pointer-events: none;
     }
 
+    /* 🔧 FIX : visibility hidden par défaut */
     #menuSplashWelcome {
         position: relative;
         z-index: 3;
         text-align: center;
         opacity: 0;
+        visibility: hidden;
         transform: scale(0.8);
-        transition: opacity 0.6s ease, transform 0.6s ease;
+        transition: opacity 0.6s ease, transform 0.6s ease, visibility 0.6s;
     }
 
     #menuSplashWelcome h1 {
@@ -965,8 +960,6 @@ function injectMenuStyles() {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-8px); }
     }
-
-    /* ===== STYLES v16 (inchangés) ===== */
 
     html, body {
         overflow-y: auto !important;
@@ -1231,4 +1224,4 @@ function injectMenuStyles() {
     document.head.appendChild(style);
 }
 
-console.log('🚀 Menu tactile E-SOLUTION v17 (Splash vidéo + Welcome + v16 conservé)');
+console.log('🚀 Menu tactile E-SOLUTION v18 (correctif Welcome + tout v17 conservé)');
