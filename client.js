@@ -3,8 +3,9 @@
 // ✅ Réutilise directement pos.js : buildFullPOS, filterProductGrid, updateCartOnly, etc.
 // ✅ 🆕 v4 : Historique ventes + crédits + total crédits restant / Fidélité convertible en DH
 // ✅ 🆕 v5 : Validation directe du panier SANS étape paiement
+// ✅ 🆕 v5 : 1 seul panier (pas de multi-paniers, pas d'étapes 1/2)
+// ✅ 🆕 v5 : Vert + Blanc uniquement (pas de bleu) + balance en haut masquée
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
-// ✅ SANS multi-paniers
 // ✅ SANS boutons Tables / En ligne
 // ✅ Mêmes dimensions / même responsive
 
@@ -18,14 +19,14 @@ var FIDELITE_DH_PAR_BLOC = 10;     // 10 DH par bloc de 100 points
 
 // ==================== 🆕 v4 : STYLES INTÉGRÉS CLIENT (Vert + Blanc) ====================
 function injectClientStyles() {
-    if (document.getElementById('clientModernStylesV4')) return;
+    if (document.getElementById('clientModernStylesV5')) return;
 
     var style = document.createElement('style');
-    style.id = 'clientModernStylesV4';
+    style.id = 'clientModernStylesV5';
     style.textContent = `
     /* ============================================================
-       🎨 CLIENT PAGE — Vert + Blanc uniquement (v4)
-       Ajout : historique + fidélité
+       🎨 CLIENT PAGE — Vert + Blanc uniquement (v5)
+       Anti-bleu : toutes les couleurs bleues écrasées par du vert
        ============================================================ */
 
     :root {
@@ -146,6 +147,89 @@ function injectClientStyles() {
         font-weight: 800 !important;
         color: var(--client-text) !important;
         letter-spacing: -0.4px !important;
+    }
+
+    /* ==================== 🆕 v5 : MASQUER LA BALANCE / SOLDE EN HAUT ==================== */
+    #clientDynamicContent .client-balance-bar,
+    #clientDynamicContent .pos-balance-bar,
+    #clientDynamicContent .balance-header,
+    #clientDynamicContent .solde-header,
+    #clientDynamicContent .pos-solde,
+    #clientDynamicContent .client-solde-banner,
+    #clientDynamicContent .pos-header-balance,
+    #clientDynamicContent .pos-total-balance,
+    #clientDynamicContent .client-total-solde {
+        display: none !important;
+    }
+
+    /* ==================== 🆕 v5 : MASQUER LES ÉTAPES 1/2 ==================== */
+    #clientDynamicContent .pos-steps,
+    #clientDynamicContent .pos-step-indicator,
+    #clientDynamicContent .pos-step,
+    #clientDynamicContent .pos-checkout-steps,
+    #clientDynamicContent .pos-stepper {
+        display: none !important;
+    }
+
+    /* ==================== 🆕 v5 : MASQUER MULTI-PANIERS ==================== */
+    #clientDynamicContent .pos-multi-carts-bar,
+    #clientDynamicContent .pos-add-cart-btn,
+    #clientDynamicContent .pos-new-cart-btn,
+    #clientDynamicContent .pos-cart-tabs {
+        display: none !important;
+    }
+
+    /* ==================== 🆕 v5 : ANTI-BLEU — Boutons bleus → vert ==================== */
+    #clientDynamicContent button[style*="3B82F6"],
+    #clientDynamicContent button[style*="2563EB"],
+    #clientDynamicContent button[style*="1D4ED8"],
+    #clientDynamicContent button[style*="60A5FA"],
+    #clientDynamicContent .btn-primary,
+    #clientDynamicContent .btn-blue,
+    #clientDynamicContent .pos-btn-blue,
+    #clientDynamicContent .pos-action-btn-blue {
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
+        border: none !important;
+    }
+    #clientDynamicContent button[style*="3B82F6"]:hover,
+    #clientDynamicContent button[style*="2563EB"]:hover,
+    #clientDynamicContent .btn-primary:hover,
+    #clientDynamicContent .btn-blue:hover {
+        background: var(--client-green-dark) !important;
+    }
+
+    /* Liens / textes bleus → vert */
+    #clientDynamicContent a[style*="3B82F6"],
+    #clientDynamicContent a[style*="2563EB"],
+    #clientDynamicContent span[style*="3B82F6"],
+    #clientDynamicContent span[style*="2563EB"],
+    #clientDynamicContent .text-blue,
+    #clientDynamicContent .link-primary {
+        color: var(--client-green-dark) !important;
+    }
+
+    /* Badges bleus → vert */
+    #clientDynamicContent .badge-primary,
+    #clientDynamicContent .badge-blue,
+    #clientDynamicContent .status-info {
+        background: var(--client-green-soft) !important;
+        color: var(--client-green-dark) !important;
+    }
+
+    /* Bordures bleues → vert */
+    #clientDynamicContent [style*="border-color: #3B82F6"],
+    #clientDynamicContent [style*="border: 2px solid #3B82F6"] {
+        border-color: var(--client-green) !important;
+    }
+
+    /* Inputs focus bleus → vert */
+    #clientDynamicContent input:focus,
+    #clientDynamicContent select:focus,
+    #clientDynamicContent textarea:focus {
+        outline: none !important;
+        border-color: var(--client-green) !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
     }
 
     /* ==================== 🆕 v4 : BANNIÈRE WELCOME ==================== */
@@ -561,14 +645,6 @@ function injectClientStyles() {
         background: var(--client-green) !important;
         color: var(--client-white) !important;
     }
-    #clientDynamicContent .pos-step.active {
-        background: var(--client-green-soft) !important;
-        color: var(--client-green-dark) !important;
-    }
-    #clientDynamicContent .pos-step.active .step-number {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-    }
     #clientDynamicContent input[type="text"],
     #clientDynamicContent input[type="number"],
     #clientDynamicContent #posSearchInput,
@@ -605,7 +681,7 @@ function injectClientStyles() {
     }
     `;
     document.head.appendChild(style);
-    console.log('✅ Styles client modernes injectés (Vert + Blanc v4)');
+    console.log('✅ Styles client modernes injectés (Vert + Blanc v5 — anti-bleu)');
 }
 
 // Injection immédiate des styles
@@ -668,7 +744,7 @@ async function loadClientCommanderPage() {
     c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#10B981;"></i><p style="margin-top:15px;color:#6B7280;">Chargement du menu...</p></div>';
 
     posCart = clientCart.length > 0 ? clientCart.slice() : [];
-    posStep = clientStep;
+    posStep = 1; // 🆕 v5 : toujours étape 1 (pas de paiement)
     posSelectedCategory = 'all';
     posViewMode = 'categories';
     posSelectedCategoryForView = null;
@@ -676,6 +752,7 @@ async function loadClientCommanderPage() {
     posToolsVisible = false;
     posProductOffset = 0;
 
+    // 🆕 v5 : UN SEUL panier pour le client
     posMultiCarts = { 'client-panier': posCart };
     posCurrentCartId = 'client-panier';
     posMultiPaniersData = {
@@ -764,13 +841,15 @@ function renderClientPOS() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
+    window.posHideMultiCarts = true; // 🆕 v5 : forcer 1 seul panier
+
     if (posProductsList.length === 0 && posCategoriesList.length === 0) {
         c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#10B981;"></i><p style="margin-top:15px;color:#6B7280;">Chargement...</p></div>';
         return;
     }
 
     clientCart = posCart.slice();
-    clientStep = posStep;
+    clientStep = 1; // 🆕 v5 : toujours étape 1
 
     if (typeof buildFullPOS === 'function') {
         var bannerHtml = renderClientWelcomeBanner();
@@ -786,39 +865,81 @@ function renderClientPOS() {
 
 // ==================== MASQUER LES ÉLÉMENTS ADMIN ====================
 function masquerElementsAdminDansClient() {
+    // 🆕 v5 : Barre multi-paniers
     var multiCartBar = document.querySelector('#clientDynamicContent .pos-multi-carts-bar');
     if (multiCartBar) multiCartBar.style.display = 'none';
 
+    // 🆕 v5 : Bouton nouveau panier
+    var newCartBtn = document.querySelector('#clientDynamicContent button[onclick*="posCreateNewCart"]');
+    if (newCartBtn) newCartBtn.style.display = 'none';
+
+    var addCartBtn = document.querySelector('#clientDynamicContent .pos-add-cart-btn');
+    if (addCartBtn) addCartBtn.style.display = 'none';
+
+    // 🆕 v5 : Étapes 1 - Panier / 2 - Paiement
+    var posSteps = document.querySelector('#clientDynamicContent .pos-steps');
+    if (posSteps) posSteps.style.display = 'none';
+
+    var posStepIndicator = document.querySelector('#clientDynamicContent .pos-step-indicator');
+    if (posStepIndicator) posStepIndicator.style.display = 'none';
+
+    var allSteps = document.querySelectorAll('#clientDynamicContent .pos-step');
+    allSteps.forEach(function(s) { s.style.display = 'none'; });
+
+    var checkoutSteps = document.querySelector('#clientDynamicContent .pos-checkout-steps');
+    if (checkoutSteps) checkoutSteps.style.display = 'none';
+
+    var stepper = document.querySelector('#clientDynamicContent .pos-stepper');
+    if (stepper) stepper.style.display = 'none';
+
+    // 🆕 v5 : Balance / solde en DH en haut
+    var balanceSelectors = [
+        '.client-balance-bar', '.pos-balance-bar', '.balance-header',
+        '.solde-header', '.pos-solde', '.client-solde-banner',
+        '.pos-header-balance', '.pos-total-balance', '.client-total-solde'
+    ];
+    balanceSelectors.forEach(function(sel) {
+        var el = document.querySelector('#clientDynamicContent ' + sel);
+        if (el) el.style.display = 'none';
+    });
+
+    // Boutons Tables / En ligne
     var tablesBtn = document.getElementById('posTablesBtn');
     if (tablesBtn) tablesBtn.style.display = 'none';
 
     var enligneBtn = document.getElementById('posEnLigneBtn');
     if (enligneBtn) enligneBtn.style.display = 'none';
 
+    // Vendeur
     var vendeurGroup = document.getElementById('posVendeur');
     if (vendeurGroup) {
         var parent = vendeurGroup.closest('div[style*="margin-bottom"]');
         if (parent) parent.style.display = 'none';
     }
 
+    // Table
     var tableInput = document.getElementById('posTableNum');
     if (tableInput) {
         var parent = tableInput.closest('div[style*="margin-bottom"]');
         if (parent) parent.style.display = 'none';
     }
 
+    // Séparateur "OU"
     var separator = document.querySelector('#clientDynamicContent div[style*="OU"]');
     if (separator) separator.style.display = 'none';
 
+    // Bouton nouveau client
     var nouveauBtn = document.querySelector('#clientDynamicContent button[onclick*="posAjouterNouveauClient"]');
     if (nouveauBtn) nouveauBtn.style.display = 'none';
 
+    // Recherche client
     var clientSearchInput = document.getElementById('posClientSearchInput');
     if (clientSearchInput) {
         var parent = clientSearchInput.closest('div[style*="position:relative"]');
         if (parent) parent.style.display = 'none';
     }
 
+    // Labels "Client"
     var allLabels = document.querySelectorAll('#clientDynamicContent label');
     allLabels.forEach(function(lbl) {
         if (lbl.textContent.trim() === 'Client') {
@@ -827,16 +948,19 @@ function masquerElementsAdminDansClient() {
         }
     });
 
+    // Boutons crédit / partiel
     var creditBtn = document.getElementById('posCreditBtn');
     if (creditBtn) creditBtn.style.display = 'none';
     var partielBtn = document.getElementById('posPartielBtn');
     if (partielBtn) partielBtn.style.display = 'none';
 
+    // Bouton finalize
     var finalizeBtn = document.querySelector('#clientDynamicContent .pos-finalize-btn');
     if (finalizeBtn) {
         finalizeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer la commande';
     }
 
+    // Header "Paiement" → "Confirmation"
     var paymentHeader = document.querySelector('#clientDynamicContent .pos-cart-header h3');
     if (paymentHeader && paymentHeader.textContent.indexOf('Paiement') !== -1) {
         paymentHeader.innerHTML = '<i class="fas fa-clipboard-check"></i> Confirmation';
@@ -847,6 +971,18 @@ function masquerElementsAdminDansClient() {
     if (validateBtn) {
         validateBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer la commande';
     }
+
+    // 🆕 v5 : Anti-bleu — forcer les boutons bleus en vert via JS
+    var allBtns = document.querySelectorAll('#clientDynamicContent button');
+    allBtns.forEach(function(btn) {
+        var bg = btn.style.background || btn.style.backgroundColor || '';
+        if (bg.indexOf('59, 130, 246') !== -1 || bg.indexOf('#3B82F6') !== -1 ||
+            bg.indexOf('#2563EB') !== -1 || bg.indexOf('#1D4ED8') !== -1 ||
+            bg.indexOf('37, 99, 235') !== -1 || bg.indexOf('29, 78, 216') !== -1) {
+            btn.style.background = '#10B981';
+            btn.style.color = '#FFFFFF';
+        }
+    });
 }
 
 
@@ -897,6 +1033,11 @@ async function clientValidateOrder() {
         posStep = 1;
         clientStep = 1;
         posMultiCarts['client-panier'] = [];
+
+        // 🆕 v5 : Toujours rester à l'étape 1 (panier uniquement)
+        posStep = 1;
+        clientStep = 1;
+
         renderClientPOS();
 
         CacheDB.sync();
@@ -1510,4 +1651,6 @@ console.log('✅ Historique ventes + crédits + total crédits restant');
 console.log('✅ Profil : crédits + points fidélité + équivalent DH');
 console.log('✅ Conversion 100 points = 10 DH');
 console.log('✅ Validation directe sans étape paiement');
-console.log('✅ Design Vert + Blanc conservé');
+console.log('✅ 1 seul panier (pas de multi-paniers)');
+console.log('✅ Vert + Blanc uniquement (anti-bleu)');
+console.log('✅ Balance en haut masquée');
