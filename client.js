@@ -6,6 +6,7 @@
 // ✅ 🆕 v5 : 1 seul panier (pas de multi-paniers, pas d'étapes 1/2)
 // ✅ 🆕 v5 : Vert + Blanc uniquement (pas de bleu) + balance en haut masquée
 // ✅ 🆕 v6 : Historique complet = commandes + ventes + crédits
+// ✅ 🆕 v7 : Crédits payés disparaissent (paid=true ou remainingAmount=0)
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
 // ✅ SANS boutons Tables / En ligne
 // ✅ Mêmes dimensions / même responsive
@@ -1208,7 +1209,7 @@ window.posToggleTools = function() {
     }
 };
 
-// ==================== 🆕 v6 : PAGE HISTORIQUE (commandes + ventes + crédits) ====================
+// ==================== 🆕 v6/v7 : PAGE HISTORIQUE (commandes + ventes + crédits non soldés) ====================
 async function loadClientHistoriquePage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
@@ -1262,10 +1263,18 @@ async function loadClientHistoriquePage() {
             credits.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
         } catch(e) { console.warn('Erreur chargement crédits:', e); }
 
+        // 🆕 v7 : Normaliser — si paid=true, remainingAmount doit être 0
+        credits = credits.map(function(cr) {
+            if (cr.paid === true) {
+                cr.remainingAmount = 0;
+            }
+            return cr;
+        });
+
         // ========== 4. CALCULS ==========
         var totalCreditsImpayes = 0;
         credits.forEach(function(cr) {
-            if (!cr.paid && cr.remainingAmount > 0) totalCreditsImpayes += cr.remainingAmount;
+            if (!cr.paid && (cr.remainingAmount || 0) > 0) totalCreditsImpayes += cr.remainingAmount;
         });
 
         var totalVentes = 0;
@@ -1378,15 +1387,18 @@ async function loadClientHistoriquePage() {
             h += '</div>';
         }
 
-        // ========== SECTION CRÉDITS ==========
-        if (credits.length > 0) {
+        // ========== SECTION CRÉDITS (uniquement les crédits non soldés) ==========
+        var creditsActifs = credits.filter(function(cr) {
+            return !cr.paid && (cr.remainingAmount || 0) > 0;
+        });
+        if (creditsActifs.length > 0) {
             h += '<div class="content-card">';
             h += '  <div class="card-header"><h3><i class="fas fa-credit-card" style="color:#10B981;"></i> Mes crédits</h3></div>';
             h += '  <div class="table-container">';
             h += '    <table class="data-table">';
             h += '      <thead><tr><th>Date</th><th>Facture</th><th>Total</th><th>Restant</th><th>Statut</th></tr></thead>';
             h += '      <tbody>';
-            credits.forEach(function(cr) {
+            creditsActifs.forEach(function(cr) {
                 var date = cr.createdAt ? new Date(cr.createdAt.seconds * 1000).toLocaleString('fr-FR') : '-';
                 var facture = cr.factureNum || cr.id.substring(0, 8);
                 var total = (cr.total || 0).toFixed(2);
@@ -1409,7 +1421,7 @@ async function loadClientHistoriquePage() {
         }
 
         // Aucun historique
-        if (commandes.length === 0 && ventes.length === 0 && credits.length === 0) {
+        if (commandes.length === 0 && ventes.length === 0 && creditsActifs.length === 0) {
             h += '<div class="content-card" style="text-align:center;padding:60px 20px;">';
             h += '  <i class="fas fa-inbox" style="font-size:3rem;color:#E5E7EB;"></i>';
             h += '  <p style="color:#9CA3AF;margin-top:16px;">Aucun historique pour le moment</p>';
@@ -1450,7 +1462,10 @@ async function loadClientParametresPage() {
             .get();
         creditsSnap.forEach(function(d) {
             var cr = d.data();
-            totalCredits += cr.remainingAmount || 0;
+            // 🆕 v7 : Ne compter que si non payé ET restant > 0
+            if (!cr.paid && (cr.remainingAmount || 0) > 0) {
+                totalCredits += cr.remainingAmount || 0;
+            }
         });
     } catch(e) { console.warn('Erreur chargement crédits:', e); }
 
@@ -1700,8 +1715,9 @@ window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
 window.renderClientWelcomeBanner = renderClientWelcomeBanner;
 window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS v6 chargé');
+console.log('🚀 E-SOLUTION - Client JS v7 chargé');
 console.log('✅ Historique complet : commandes + ventes + crédits');
+console.log('✅ Crédits payés disparaissent (paid=true ou remainingAmount=0)');
 console.log('✅ Profil : crédits + points fidélité + équivalent DH');
 console.log('✅ Conversion 100 points = 10 DH');
 console.log('✅ Validation directe sans étape paiement');
