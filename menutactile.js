@@ -1,7 +1,8 @@
 // ==================== MENU TACTILE - E-SOLUTION ====================
-// 🆕 v16 : PERFORMANCE MAX (Three.js supprimé, bouton panier supprimé, cache rendu, debounce 80ms)
-// v14 : Panier dans le flux + mini-barre flottante (SUPPRIMÉE)
-// v13 : Recherche fixée + tailles augmentées
+// 🆕 v17 : Splash vidéo + Welcome ajoutés
+// v16 : PERFORMANCE MAX (cache rendu, debounce 80ms, content-visibility)
+// v14 : Panier dans le flux
+// v13 : Recherche fixée
 // v12 : Effet 3D MOTION CSS
 
 var menuTableNum = null;
@@ -19,14 +20,12 @@ var menuSel = ['Normal', 'Moins de sel', 'Sans sel'];
 
 var allStockData = [];
 
-// 🆕 v16 : CACHE DE RENDUS (évite de recalculer le HTML à chaque frappe)
 var menuRenderCache = {
     categories: null,
     products: {},
     search: {}
 };
 
-// 🆕 v16 : CACHE DE RECHERCHE PRODUIT (index inversé)
 var menuProductSearchIndex = null;
 
 function buildProductSearchIndex() {
@@ -70,10 +69,122 @@ function requestFullscreen() {
     }
 }
 
+// ========== 🎬 v17 : SPLASH VIDÉO + WELCOME ==========
+function playMenuSplashSequence(onComplete) {
+    var splash = document.getElementById('menuSplashScreen');
+    var video = document.getElementById('menuSplashVideo');
+    var overlay = document.getElementById('menuSplashOverlay');
+    var welcome = document.getElementById('menuSplashWelcome');
+
+    if (!splash || !video) {
+        console.log('🎬 Pas de splash dans le DOM → menu direct');
+        if (onComplete) onComplete();
+        return;
+    }
+
+    if (sessionStorage.getItem('menuSplashPlayed') === '1') {
+        console.log('🎬 Splash déjà joué — skip');
+        splash.style.display = 'none';
+        if (onComplete) onComplete();
+        return;
+    }
+
+    console.log('🎬 Démarrage splash vidéo...');
+
+    splash.style.display = 'flex';
+    splash.style.opacity = '1';
+    splash.style.background = '#000000';
+
+    if (welcome) {
+        welcome.style.opacity = '0';
+        welcome.style.visibility = 'hidden';
+        welcome.style.transform = 'scale(0.8)';
+    }
+    if (overlay) overlay.style.opacity = '0';
+
+    try {
+        video.currentTime = 0;
+        video.load();
+    } catch (e) { console.warn('⚠️ Erreur reset vidéo:', e); }
+
+    var playPromise = video.play();
+
+    if (playPromise !== undefined) {
+        playPromise.catch(function(err) {
+            console.warn('⚠️ Autoplay bloqué → passage direct au menu:', err);
+            splash.style.display = 'none';
+            if (onComplete) onComplete();
+        });
+    }
+
+    var videoEnded = false;
+
+    function handleVideoEnd() {
+        if (videoEnded) return;
+        videoEnded = true;
+        console.log('🎬 Vidéo terminée — transition Welcome');
+
+        splash.style.transition = 'background 1s ease';
+        splash.style.background = '#FFFFFF';
+
+        if (overlay) {
+            overlay.style.transition = 'opacity 1s ease';
+            overlay.style.opacity = '1';
+        }
+
+        setTimeout(function() {
+            if (welcome) {
+                welcome.style.visibility = 'visible';
+                welcome.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                welcome.style.opacity = '1';
+                welcome.style.transform = 'scale(1)';
+            }
+            console.log('🎬 Welcome affiché');
+
+            if (onComplete) onComplete();
+
+            setTimeout(function() {
+                if (welcome) {
+                    welcome.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                    welcome.style.opacity = '0';
+                    welcome.style.transform = 'scale(1.05)';
+                }
+
+                setTimeout(function() {
+                    splash.style.transition = 'opacity 0.5s ease';
+                    splash.style.opacity = '0';
+
+                    setTimeout(function() {
+                        splash.style.display = 'none';
+                        splash.style.opacity = '1';
+                        splash.style.background = '';
+                        if (overlay) overlay.style.opacity = '0';
+                        if (welcome) {
+                            welcome.style.opacity = '0';
+                            welcome.style.visibility = 'hidden';
+                        }
+                        sessionStorage.setItem('menuSplashPlayed', '1');
+                        console.log('🎬 Splash terminé — menu visible');
+                    }, 500);
+                }, 600);
+            }, 1500);
+        }, 800);
+    }
+
+    video.addEventListener('ended', handleVideoEnd, { once: true });
+
+    setTimeout(function() {
+        if (!videoEnded && splash.style.display !== 'none') {
+            console.warn('⚠️ Timeout vidéo — transition forcée');
+            try { video.pause(); } catch (e) {}
+            handleVideoEnd();
+        }
+    }, 10000);
+}
+
 // ========== EFFET 3D MOTION (optimisé : passive + throttle) ==========
 var _motion3DRAF = null;
 function initMenu3DMotion() {
-    // Sur mobile → pas de tilt (économie CPU + batterie)
     if ('ontouchstart' in window && window.innerWidth < 1024) return;
 
     requestAnimationFrame(function() {
@@ -149,10 +260,8 @@ async function loadMenuData() {
             allStockData.push(dd);
         });
 
-        // 🆕 v16 : construire l'index de recherche UNE FOIS
         buildProductSearchIndex();
 
-        // 🆕 v16 : vider les caches au chargement initial
         menuRenderCache.categories = null;
         menuRenderCache.products = {};
         menuRenderCache.search = {};
@@ -179,7 +288,6 @@ function renderMenuTactile() {
 
     var html = '';
 
-    // ==================== HEADER ====================
     html += '<div class="menu-header">';
     html += '  <button class="menu-close-btn" onclick="closeMenuTactile()" aria-label="Fermer">&times;</button>';
     html += '  <div class="menu-header-content">';
@@ -193,7 +301,6 @@ function renderMenuTactile() {
     html += '  </div>';
     html += '</div>';
 
-    // ==================== RECHERCHE ====================
     html += '<div class="menu-search-wrapper">';
     html += '  <div class="menu-search-bar">';
     html += '    <i class="fas fa-search menu-search-icon"></i>';
@@ -204,7 +311,6 @@ function renderMenuTactile() {
     html += '  </div>';
     html += '</div>';
 
-    // ==================== ZONE PRINCIPALE ====================
     html += '<div class="menu-main-zone">';
 
     if (menuSearchQuery.trim()) {
@@ -217,7 +323,6 @@ function renderMenuTactile() {
 
     html += '</div>';
 
-    // ==================== PANIER ====================
     html += '<div class="menu-cart-fixed">';
     html += '  <div class="menu-cart-header">';
     html += '    <h3><i class="fas fa-shopping-cart"></i> Panier <span class="menu-cart-badge">' + totalArticles + '</span></h3>';
@@ -250,9 +355,6 @@ function renderMenuTactile() {
     }
     html += '</div>';
 
-    // 🆕 v16 : BOUTON "VOIR LE PANIER" SUPPRIMÉ
-
-    // ==================== PLEIN ÉCRAN ====================
     html += '<button class="menu-fullscreen-btn" onclick="requestFullscreen()" title="Plein écran"><i class="fas fa-expand"></i></button>';
 
     content.innerHTML = html;
@@ -270,12 +372,9 @@ function renderMenuTactile() {
     }
 }
 
-// ========== GRILLE CATÉGORIES (avec cache) ==========
+// ========== GRILLE CATÉGORIES ==========
 function renderCategoriesGrid() {
-    // 🆕 v16 : cache rendu catégories
-    if (menuRenderCache.categories) {
-        return menuRenderCache.categories;
-    }
+    if (menuRenderCache.categories) return menuRenderCache.categories;
 
     var html = '<div style="grid-column:1/-1;padding:6px 8px;font-size:0.9rem;font-weight:700;color:#0F172A;">📂 Choisissez une catégorie</div>';
 
@@ -296,7 +395,6 @@ function renderCategoriesGrid() {
         return oA - oB || (a.nom || '').localeCompare(b.nom || '');
     });
 
-    // Pré-calcul des compteurs (1 seule passe)
     var countMap = {};
     menuProducts.forEach(function(p) {
         if (p.categories && p.categories.length > 0) {
@@ -344,17 +442,14 @@ function renderCategoriesGrid() {
 
     html += '</div>';
 
-    // 🆕 v16 : mettre en cache
     menuRenderCache.categories = html;
     return html;
 }
 
-// ========== GRILLE PRODUITS (avec cache par catégorie) ==========
+// ========== GRILLE PRODUITS ==========
 function renderProductsGrid() {
     var cacheKey = menuSelectedCategoryName || '__all__';
-    if (menuRenderCache.products[cacheKey]) {
-        return menuRenderCache.products[cacheKey];
-    }
+    if (menuRenderCache.products[cacheKey]) return menuRenderCache.products[cacheKey];
 
     var html = '';
 
@@ -384,7 +479,6 @@ function renderProductsGrid() {
 
     html += '<div class="menu-products-grid" style="grid-template-columns:' + gridCols + ';gap:' + gridGap + ';">';
 
-    // 🆕 v16 : utiliser DocumentFragment via un tableau (plus rapide)
     var cards = [];
     for (var j = 0; j < filtered.length; j++) {
         var p = filtered[j];
@@ -437,12 +531,10 @@ function renderProductsGrid() {
     return html;
 }
 
-// ========== RÉSULTATS RECHERCHE (avec cache par query) ==========
+// ========== RÉSULTATS RECHERCHE ==========
 function renderSearchResults() {
     var q = menuSearchQuery.toLowerCase().trim();
-    if (menuRenderCache.search[q]) {
-        return menuRenderCache.search[q];
-    }
+    if (menuRenderCache.search[q]) return menuRenderCache.search[q];
 
     var results = menuProducts.filter(function(p) {
         return (p.nom || '').toLowerCase().indexOf(q) !== -1 ||
@@ -532,7 +624,6 @@ function menuFilterCategory(cat) {
     else menuSelectCategory(cat);
 }
 
-// 🆕 v16 : debounce 80 ms + requestAnimationFrame
 var _searchTimeout = null;
 var _searchRAF = null;
 function menuHandleSearch(value) {
@@ -554,7 +645,6 @@ function menuHandleSearch(value) {
                 initMenu3DMotion();
             }
 
-            // Bouton clear
             var wrapper = document.querySelector('.menu-search-bar');
             if (wrapper) {
                 var existingClear = wrapper.querySelector('.menu-search-clear');
@@ -778,21 +868,86 @@ function initMenuTactile(tableNum) {
         if (menuPage) menuPage.appendChild(content);
     }
 
-    loadMenuData();
+    playMenuSplashSequence(function() {
+        console.log('🍽️ Splash terminé, chargement du menu...');
+        loadMenuData();
+    });
 }
 
-// ========== STYLES (v16 — performance optimisée) ==========
+// ========== STYLES (v17 — splash + v16) ==========
 function injectMenuStyles() {
-    if (document.getElementById('menuTactileStylesV16')) return;
+    if (document.getElementById('menuTactileStylesV17')) return;
 
-    ['menuTactileStylesV15', 'menuTactileStylesV14', 'menuTactileStylesV13', 'menuTactileStylesV12', 'menuTactileStylesV11', 'menuTactileStylesV10'].forEach(function(id) {
+    ['menuTactileStylesV16', 'menuTactileStylesV15', 'menuTactileStylesV14',
+     'menuTactileStylesV13', 'menuTactileStylesV12', 'menuTactileStylesV11',
+     'menuTactileStylesV10'].forEach(function(id) {
         var old = document.getElementById(id);
         if (old) old.remove();
     });
 
     var style = document.createElement('style');
-    style.id = 'menuTactileStylesV16';
+    style.id = 'menuTactileStylesV17';
     style.textContent = `
+    /* ============================================================
+       🎬 v17 : SPLASH VIDÉO + WELCOME
+       ============================================================ */
+    #menuSplashScreen {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        background: #000000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        overflow: hidden;
+        opacity: 1;
+    }
+    #menuSplashVideo {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1;
+    }
+    #menuSplashOverlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        background: #FFFFFF;
+        opacity: 0;
+        z-index: 2;
+        pointer-events: none;
+    }
+    #menuSplashWelcome {
+        position: relative;
+        z-index: 3;
+        text-align: center;
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(0.8);
+        transition: opacity 0.6s ease, transform 0.6s ease, visibility 0.6s;
+    }
+    #menuSplashWelcome h1 {
+        font-family: 'Inter', sans-serif;
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        font-weight: 800;
+        color: #14B8A6;
+        margin: 0;
+        letter-spacing: -1px;
+        text-shadow: 0 4px 20px rgba(20, 184, 166, 0.4);
+        animation: welcomeFloat 2s ease-in-out infinite;
+    }
+    @keyframes welcomeFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+
+    /* ===== STYLES v16 ===== */
     html, body {
         overflow-y: auto !important;
         overflow-x: hidden !important;
@@ -1028,6 +1183,7 @@ function injectMenuStyles() {
         .menu-title-wrapper h1 { font-size: 1rem; }
         .menu-title-wrapper p { font-size: 0.7rem; }
         .menu-logo-wrapper { width: 42px; height: 42px; }
+        #menuSplashWelcome h1 { font-size: 2rem; }
     }
     @media (max-height: 500px) and (orientation: landscape) {
         .menu-header { padding: 10px 16px; }
@@ -1041,6 +1197,7 @@ function injectMenuStyles() {
             transition: none !important;
         }
         .menu-cat-card:hover, .pos-product-card:hover { transform: none !important; }
+        #menuSplashWelcome h1 { animation: none !important; }
     }
     #menuTactilePage::-webkit-scrollbar,
     .menu-cart-items::-webkit-scrollbar { width: 6px; }
@@ -1054,4 +1211,4 @@ function injectMenuStyles() {
     document.head.appendChild(style);
 }
 
-console.log('🚀 Menu tactile E-SOLUTION v16 (performance max + bouton panier supprimé)');
+console.log('🚀 Menu tactile E-SOLUTION v17 (Splash vidéo + Welcome + v16 conservé)');
