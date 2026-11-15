@@ -1,7 +1,7 @@
 // ==================== CLIENT.JS - E-SOLUTION (VERSION FINALE POS IDENTIQUE) ====================
 // ✅ Le client voit EXACTEMENT le même POS que l'admin/caissier
 // ✅ Réutilise directement pos.js : buildFullPOS, filterProductGrid, updateCartOnly, etc.
-// ✅ 🆕 v2 : Bannière Welcome + boutons modernes + CSS intégré
+// ✅ 🆕 v4 : Historique ventes + crédits + total crédits restant / Fidélité convertible en DH
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
 // ✅ Étape de paiement identique (Étape 1 → Étape 2)
 // ✅ SANS multi-paniers
@@ -12,45 +12,53 @@ var clientCart = [];
 var clientStep = 1;
 var clientIsClientMode = true;
 
-// ==================== 🆕 v2 : STYLES INTÉGRÉS CLIENT ====================
+// 🆕 v4 : Constantes fidélité
+var FIDELITE_POINTS_PAR_DH = 100;  // 100 points = 10 DH
+var FIDELITE_DH_PAR_BLOC = 10;     // 10 DH par bloc de 100 points
+
+// ==================== 🆕 v4 : STYLES INTÉGRÉS CLIENT (Vert + Blanc) ====================
 function injectClientStyles() {
-    if (document.getElementById('clientModernStylesV2')) return;
+    if (document.getElementById('clientModernStylesV4')) return;
 
     var style = document.createElement('style');
-    style.id = 'clientModernStylesV2';
+    style.id = 'clientModernStylesV4';
     style.textContent = `
     /* ============================================================
-       🎨 CLIENT PAGE — Modernisation 2026
-       Couleurs Teal #14B8A6 + Slate #0F172A + Blanc
+       🎨 CLIENT PAGE — Vert + Blanc uniquement (v4)
+       Ajout : historique + fidélité
        ============================================================ */
 
-    /* ==================== LAYOUT GÉNÉRAL ==================== */
+    :root {
+        --client-green: #10B981;
+        --client-green-dark: #059669;
+        --client-green-light: #34D399;
+        --client-green-soft: #ECFDF5;
+        --client-white: #FFFFFF;
+        --client-gray-50: #F9FAFB;
+        --client-gray-100: #F3F4F6;
+        --client-gray-200: #E5E7EB;
+        --client-gray-500: #6B7280;
+        --client-gray-700: #374151;
+        --client-text: #111827;
+    }
+
     #clientPage {
-        background:
-            radial-gradient(circle at 15% 15%, rgba(20,184,166,0.08) 0%, transparent 45%),
-            radial-gradient(circle at 85% 85%, rgba(15,23,42,0.05) 0%, transparent 45%),
-            #F8FAFC !important;
+        background: var(--client-gray-50) !important;
         min-height: 100vh !important;
         font-family: 'Inter', -apple-system, sans-serif !important;
     }
     #clientPage .main-content {
-        background: transparent !important;
+        background: var(--client-gray-50) !important;
         padding: 24px !important;
     }
 
-    /* ==================== HEADER ==================== */
     #clientPage .page-header {
-        background: rgba(255, 255, 255, 0.75) !important;
-        backdrop-filter: blur(20px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.9) !important;
-        border-radius: 20px !important;
+        background: var(--client-white) !important;
+        border: none !important;
+        border-radius: 16px !important;
         padding: 20px 24px !important;
-        margin-bottom: 24px !important;
-        box-shadow:
-            0 20px 40px -15px rgba(0, 0, 0, 0.12),
-            0 4px 12px -4px rgba(0, 0, 0, 0.05),
-            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
     }
     #clientPage .page-header .header-title {
         display: flex !important;
@@ -58,43 +66,36 @@ function injectClientStyles() {
         gap: 14px !important;
     }
     #clientPage .page-header .header-title i {
-        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
-        color: #FFFFFF !important;
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
         padding: 12px !important;
-        border-radius: 14px !important;
-        font-size: 20px !important;
-        box-shadow:
-            0 8px 20px -4px rgba(20, 184, 166, 0.5),
-            inset 0 1px 0 rgba(255,255,255,0.3) !important;
+        border-radius: 12px !important;
+        font-size: 18px !important;
+        box-shadow: 0 4px 12px rgba(16,185,129,0.3) !important;
     }
     #clientPage .page-header .header-title h2 {
-        font-size: 24px !important;
+        font-size: 22px !important;
         font-weight: 800 !important;
-        color: #0F172A !important;
-        letter-spacing: -0.6px !important;
+        color: var(--client-text) !important;
+        letter-spacing: -0.5px !important;
         margin: 0 !important;
     }
 
-    /* ==================== SIDEBAR ==================== */
     #clientPage .client-sidebar {
-        background: rgba(255, 255, 255, 0.95) !important;
-        backdrop-filter: blur(20px) !important;
-        -webkit-backdrop-filter: blur(20px) !important;
-        border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
-        box-shadow: 4px 0 30px -10px rgba(0, 0, 0, 0.08) !important;
+        background: var(--client-white) !important;
+        border-right: none !important;
+        box-shadow: 2px 0 12px rgba(0,0,0,0.04) !important;
     }
     #clientPage .client-sidebar .sidebar-header {
         padding: 24px 20px !important;
-        border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
-        background: linear-gradient(180deg, rgba(20,184,166,0.05), transparent) !important;
+        border-bottom: 1px solid var(--client-gray-100) !important;
     }
     #clientPage .client-sidebar .sidebar-logo {
         width: 56px !important;
         height: 56px !important;
-        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
-        border-radius: 16px !important;
+        background: var(--client-green-soft) !important;
         border: none !important;
-        box-shadow: 0 8px 20px -4px rgba(20,184,166,0.4) !important;
+        border-radius: 16px !important;
         margin-bottom: 14px !important;
     }
     #clientPage .client-sidebar .nav-item {
@@ -102,77 +103,67 @@ function injectClientStyles() {
         border-radius: 12px !important;
         font-size: 14px !important;
         font-weight: 500 !important;
-        color: #475569 !important;
+        color: var(--client-gray-700) !important;
         margin-bottom: 4px !important;
-        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        border: none !important;
+        transition: all 0.2s ease !important;
     }
     #clientPage .client-sidebar .nav-item:hover {
-        color: #14B8A6 !important;
+        background: var(--client-green-soft) !important;
+        color: var(--client-green-dark) !important;
         transform: translateX(2px);
-        background: rgba(20, 184, 166, 0.08) !important;
     }
     #clientPage .client-sidebar .nav-item.active {
-        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
-        color: #FFFFFF !important;
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
         font-weight: 700 !important;
-        box-shadow:
-            0 8px 20px -4px rgba(20,184,166,0.4),
-            inset 0 1px 0 rgba(255,255,255,0.3) !important;
-        border: none !important;
+        box-shadow: 0 4px 12px rgba(16,185,129,0.3) !important;
     }
     #clientPage .client-sidebar .nav-item.active i {
-        color: #FFFFFF !important;
+        color: var(--client-white) !important;
     }
     #clientPage .client-sidebar .nav-item i {
         width: 22px !important;
         font-size: 16px !important;
-        color: #64748B !important;
+        color: var(--client-gray-500) !important;
     }
 
-    /* ==================== CONTENT CARDS ==================== */
     #clientDynamicContent .content-card {
-        background: rgba(255, 255, 255, 0.85) !important;
-        backdrop-filter: blur(20px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.95) !important;
-        border-radius: 20px !important;
-        padding: 28px !important;
+        background: var(--client-white) !important;
+        border: none !important;
+        border-radius: 16px !important;
+        padding: 24px !important;
         margin-bottom: 20px !important;
-        box-shadow:
-            0 20px 40px -15px rgba(0, 0, 0, 0.12),
-            0 4px 12px -4px rgba(0, 0, 0, 0.05),
-            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
     }
     #clientDynamicContent .card-header {
-        border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
-        padding-bottom: 20px !important;
-        margin-bottom: 24px !important;
+        border-bottom: 1px solid var(--client-gray-100) !important;
+        padding-bottom: 16px !important;
+        margin-bottom: 20px !important;
     }
     #clientDynamicContent .card-header h3 {
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: 800 !important;
-        color: #0F172A !important;
+        color: var(--client-text) !important;
         letter-spacing: -0.4px !important;
     }
 
-    /* ==================== BANNIÈRE WELCOME ==================== */
+    /* ==================== 🆕 v4 : BANNIÈRE WELCOME ==================== */
     .client-welcome-banner {
-        background: linear-gradient(135deg, #14B8A6, #0D9488, #0F766E);
-        border-radius: 20px;
-        padding: 28px 32px;
-        margin-bottom: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        position: relative;
-        overflow: hidden;
-        box-shadow:
-            0 20px 40px -15px rgba(20, 184, 166, 0.5),
-            0 4px 12px -4px rgba(13, 148, 136, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        color: #FFFFFF;
-        flex-wrap: wrap;
+        background: linear-gradient(135deg, var(--client-green), var(--client-green-dark)) !important;
+        border: none !important;
+        border-radius: 20px !important;
+        padding: 28px 32px !important;
+        margin-bottom: 24px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 20px !important;
+        position: relative !important;
+        overflow: hidden !important;
+        box-shadow: 0 12px 32px -8px rgba(16,185,129,0.4) !important;
+        color: var(--client-white) !important;
+        flex-wrap: wrap !important;
     }
     .client-welcome-banner::before {
         content: '';
@@ -181,236 +172,440 @@ function injectClientStyles() {
         right: -10%;
         width: 300px;
         height: 300px;
-        background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%);
+        background: radial-gradient(circle, rgba(255,255,255,0.2), transparent 70%);
         border-radius: 50%;
         pointer-events: none;
     }
     .client-welcome-content {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        position: relative;
-        z-index: 1;
-        flex: 1;
-        min-width: 0;
+        display: flex !important;
+        align-items: center !important;
+        gap: 20px !important;
+        position: relative !important;
+        z-index: 1 !important;
+        flex: 1 !important;
+        min-width: 0 !important;
     }
     .client-welcome-avatar {
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        color: #FFFFFF;
-        flex-shrink: 0;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        width: 64px !important;
+        height: 64px !important;
+        border-radius: 50% !important;
+        background: rgba(255, 255, 255, 0.25) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 30px !important;
+        color: var(--client-white) !important;
+        flex-shrink: 0 !important;
     }
     .client-welcome-text h2 {
-        margin: 0 0 4px;
-        font-size: 24px;
-        font-weight: 800;
-        color: #FFFFFF;
-        letter-spacing: -0.5px;
-        line-height: 1.2;
+        margin: 0 0 4px !important;
+        font-size: 24px !important;
+        font-weight: 800 !important;
+        color: var(--client-white) !important;
+        letter-spacing: -0.5px !important;
+        line-height: 1.2 !important;
     }
     .client-welcome-text h2 span {
-        color: #FEF3C7;
-        text-shadow: 0 2px 8px rgba(254, 243, 199, 0.3);
+        color: #FEF3C7 !important;
     }
     .client-welcome-text p {
-        margin: 0;
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.85);
-        font-weight: 500;
+        margin: 0 !important;
+        font-size: 14px !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-weight: 500 !important;
     }
     .client-welcome-decoration {
-        font-size: 64px;
-        color: rgba(255, 255, 255, 0.15);
-        position: relative;
-        z-index: 0;
-        flex-shrink: 0;
-        animation: welcomeBob 3s ease-in-out infinite;
-    }
-    @keyframes welcomeBob {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-10px) rotate(5deg); }
+        font-size: 60px !important;
+        color: rgba(255, 255, 255, 0.2) !important;
+        position: relative !important;
+        z-index: 0 !important;
+        flex-shrink: 0 !important;
     }
 
-    /* ==================== 🆕 BOUTONS MODERNES ==================== */
-    .btn-client-primary {
-        background: linear-gradient(135deg, #14B8A6, #0D9488);
-        color: #FFFFFF;
-        border: none;
-        border-radius: 12px;
-        padding: 14px 28px;
-        font-weight: 700;
-        font-size: 14px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-        box-shadow:
-            0 8px 20px -4px rgba(20, 184, 166, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        position: relative;
-        overflow: hidden;
-        letter-spacing: 0.2px;
-        font-family: inherit;
+    /* ==================== 🆕 v4 : CARTES STATS HISTORIQUE ==================== */
+    .client-stats-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+        gap: 16px !important;
+        margin-bottom: 24px !important;
     }
-    .btn-client-primary::before {
-        content: '';
-        position: absolute;
-        top: 0; left: -100%;
-        width: 100%; height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        transition: left 0.6s ease;
-    }
-    .btn-client-primary:hover::before {
-        left: 100%;
-    }
-    .btn-client-primary:hover {
-        transform: translateY(-2px);
-        box-shadow:
-            0 12px 28px -4px rgba(20, 184, 166, 0.55),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-    .btn-client-primary:active {
-        transform: translateY(0);
-    }
-
-    .btn-client-secondary {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        color: #0F172A;
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        border-radius: 12px;
-        padding: 14px 28px;
-        font-weight: 700;
-        font-size: 14px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-        box-shadow:
-            0 8px 20px -8px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 1);
-        font-family: inherit;
-    }
-    .btn-client-secondary:hover {
-        background: rgba(20, 184, 166, 0.1);
-        border-color: #14B8A6;
-        color: #0D9488;
-        transform: translateY(-2px);
-        box-shadow:
-            0 12px 28px -8px rgba(20, 184, 166, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 1);
-    }
-
-    /* ==================== PANIER / PRODUITS ==================== */
-    #clientDynamicContent .pos-cart-panel {
-        background: rgba(255, 255, 255, 0.95) !important;
-        backdrop-filter: blur(24px) !important;
-        border-radius: 20px !important;
-        box-shadow:
-            0 20px 50px -15px rgba(0, 0, 0, 0.15),
-            0 8px 16px -8px rgba(0, 0, 0, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.9) !important;
-    }
-    #clientDynamicContent .pos-product-card {
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(16px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    .client-stat-card {
+        background: var(--client-white) !important;
         border-radius: 16px !important;
-        box-shadow:
-            0 8px 20px -8px rgba(0, 0, 0, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        padding: 20px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 16px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
     }
-    #clientDynamicContent .pos-product-card:hover:not(.pos-out-of-stock) {
-        background: rgba(255, 255, 255, 0.95) !important;
-        border-color: rgba(20, 184, 166, 0.4) !important;
-        transform: translateY(-4px) !important;
-        box-shadow:
-            0 20px 40px -10px rgba(20, 184, 166, 0.3),
-            0 8px 16px -8px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    .client-stat-card.credits {
+        background: linear-gradient(135deg, #FEF2F2, #FEE2E2) !important;
     }
-    #clientDynamicContent .pos-category-card {
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(16px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.9) !important;
-        border-radius: 18px !important;
-        box-shadow:
-            0 8px 20px -8px rgba(0, 0, 0, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    .client-stat-card.ventes {
+        background: linear-gradient(135deg, var(--client-green-soft), #D1FAE5) !important;
     }
-    #clientDynamicContent .pos-category-card.active {
-        background: linear-gradient(135deg, rgba(20,184,166,0.15), rgba(13,148,136,0.1)) !important;
-        border-color: #14B8A6 !important;
-        box-shadow:
-            0 12px 30px -8px rgba(20, 184, 166, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+    .client-stat-card.fidelite {
+        background: linear-gradient(135deg, #FEF3C7, #FDE68A) !important;
+    }
+    .client-stat-icon {
+        width: 52px !important;
+        height: 52px !important;
+        border-radius: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 22px !important;
+        flex-shrink: 0 !important;
+    }
+    .client-stat-card.credits .client-stat-icon {
+        background: #FEE2E2 !important;
+        color: #DC2626 !important;
+    }
+    .client-stat-card.ventes .client-stat-icon {
+        background: #D1FAE5 !important;
+        color: var(--client-green-dark) !important;
+    }
+    .client-stat-card.fidelite .client-stat-icon {
+        background: #FDE68A !important;
+        color: #D97706 !important;
+    }
+    .client-stat-info {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+    .client-stat-label {
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        color: var(--client-gray-500) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin-bottom: 4px !important;
+    }
+    .client-stat-value {
+        font-size: 22px !important;
+        font-weight: 800 !important;
+        color: var(--client-text) !important;
+        letter-spacing: -0.5px !important;
+    }
+    .client-stat-card.credits .client-stat-value {
+        color: #DC2626 !important;
+    }
+    .client-stat-card.ventes .client-stat-value {
+        color: var(--client-green-dark) !important;
+    }
+    .client-stat-card.fidelite .client-stat-value {
+        color: #D97706 !important;
     }
 
-    /* ==================== BOUTON VALIDER/COMMANDER ==================== */
-    #clientDynamicContent .pos-validate-btn,
-    #clientDynamicContent .pos-finalize-btn {
-        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
-        color: #FFFFFF !important;
-        border-radius: 14px !important;
+    /* ==================== 🆕 v4 : BLOC CONVERSION FIDÉLITÉ ==================== */
+    .fidelite-conversion-box {
+        background: linear-gradient(135deg, var(--client-green-soft), #D1FAE5) !important;
+        border-radius: 16px !important;
+        padding: 24px !important;
+        margin-top: 20px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    .fidelite-conversion-box h4 {
+        margin: 0 !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        color: var(--client-green-dark) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    .fidelite-conversion-info {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        background: var(--client-white) !important;
+        padding: 14px 18px !important;
+        border-radius: 12px !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+    .fidelite-conversion-info span {
+        font-size: 14px !important;
+        color: var(--client-gray-700) !important;
+        font-weight: 600 !important;
+    }
+    .fidelite-conversion-info strong {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        color: var(--client-green-dark) !important;
+    }
+    .fidelite-convert-btn {
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
         font-weight: 700 !important;
         font-size: 15px !important;
-        padding: 16px !important;
-        box-shadow:
-            0 10px 25px -5px rgba(20, 184, 166, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
-        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        transition: all 0.25s ease !important;
+        box-shadow: 0 4px 12px rgba(16,185,129,0.3) !important;
+        font-family: inherit !important;
+    }
+    .fidelite-convert-btn:hover:not(:disabled) {
+        background: var(--client-green-dark) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 20px rgba(16,185,129,0.4) !important;
+    }
+    .fidelite-convert-btn:disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+        background: var(--client-gray-200) !important;
+        color: var(--client-gray-500) !important;
+        box-shadow: none !important;
+    }
+
+    /* ==================== 🆕 v4 : BOUTONS MODERNES ==================== */
+    .btn-client-primary {
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        transition: all 0.25s ease !important;
+        box-shadow: 0 4px 12px rgba(16,185,129,0.3) !important;
+        font-family: inherit !important;
+    }
+    .btn-client-primary:hover {
+        background: var(--client-green-dark) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 20px rgba(16,185,129,0.4) !important;
+    }
+    .btn-client-secondary {
+        background: var(--client-white) !important;
+        color: var(--client-green-dark) !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        transition: all 0.25s ease !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+        font-family: inherit !important;
+    }
+    .btn-client-secondary:hover {
+        background: var(--client-green-soft) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(16,185,129,0.2) !important;
+    }
+
+    /* ==================== 🆕 v4 : TABLES ==================== */
+    #clientDynamicContent .table-container {
+        background: var(--client-white) !important;
+        border: none !important;
+        border-radius: 14px !important;
+        overflow-x: auto !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+    }
+    #clientDynamicContent .data-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 14px !important;
+    }
+    #clientDynamicContent .data-table thead th {
+        background: var(--client-gray-50) !important;
+        color: var(--client-gray-500) !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        letter-spacing: 0.6px !important;
+        text-transform: uppercase !important;
+        padding: 14px 16px !important;
+        text-align: left !important;
+        border-bottom: 1px solid var(--client-gray-100) !important;
+        white-space: nowrap !important;
+    }
+    #clientDynamicContent .data-table tbody td {
+        padding: 14px 16px !important;
+        color: var(--client-gray-700) !important;
+        border-bottom: 1px solid var(--client-gray-100) !important;
+        vertical-align: middle !important;
+    }
+    #clientDynamicContent .data-table tbody tr:hover td {
+        background: var(--client-gray-50) !important;
+    }
+
+    /* ==================== 🆕 v4 : STATUS BADGES ==================== */
+    #clientDynamicContent .status-success {
+        background: var(--client-green-soft) !important;
+        color: var(--client-green-dark) !important;
+        padding: 4px 12px !important;
+        border-radius: 999px !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        border: none !important;
+        display: inline-block !important;
+    }
+    #clientDynamicContent .status-warning {
+        background: #FEF3C7 !important;
+        color: #D97706 !important;
+        padding: 4px 12px !important;
+        border-radius: 999px !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        border: none !important;
+        display: inline-block !important;
+    }
+    #clientDynamicContent .status-danger {
+        background: #FEE2E2 !important;
+        color: #DC2626 !important;
+        padding: 4px 12px !important;
+        border-radius: 999px !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        border: none !important;
+        display: inline-block !important;
+    }
+
+    /* ==================== POS CLIENT (sans bordures) ==================== */
+    #clientDynamicContent .pos-products-panel,
+    #clientDynamicContent .pos-cart-panel {
+        background: var(--client-white) !important;
+        border: none !important;
+        border-radius: 16px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+    }
+    #clientDynamicContent .pos-product-card {
+        background: var(--client-white) !important;
+        border: none !important;
+        border-radius: 14px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+        transition: all 0.25s ease !important;
+    }
+    #clientDynamicContent .pos-product-card:hover:not(.pos-out-of-stock) {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.2) !important;
+    }
+    #clientDynamicContent .pos-category-card {
+        background: var(--client-white) !important;
+        border: none !important;
+        border-radius: 14px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+        transition: all 0.25s ease !important;
+    }
+    #clientDynamicContent .pos-category-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.2) !important;
+    }
+    #clientDynamicContent .pos-category-card.active {
+        background: var(--client-green-soft) !important;
+        border: none !important;
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3) !important;
+    }
+    #clientDynamicContent .pos-product-name {
+        color: var(--client-text) !important;
+        font-weight: 700 !important;
+    }
+    #clientDynamicContent .pos-product-price {
+        color: var(--client-green-dark) !important;
+        font-weight: 800 !important;
+    }
+    #clientDynamicContent .pos-cart-header {
+        border-bottom: 1px solid var(--client-gray-100) !important;
+    }
+    #clientDynamicContent .pos-cart-badge {
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
+    }
+    #clientDynamicContent .pos-cart-item {
+        background: var(--client-gray-50) !important;
+        border: none !important;
+        border-radius: 10px !important;
+    }
+    #clientDynamicContent .pos-cart-total-row {
+        background: var(--client-green-soft) !important;
+        border: none !important;
+        border-radius: 12px !important;
+    }
+    #clientDynamicContent .pos-cart-total-row span:last-child {
+        color: var(--client-green-dark) !important;
+    }
+    #clientDynamicContent .pos-validate-btn,
+    #clientDynamicContent .pos-finalize-btn {
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
+        border: none !important;
+        border-radius: 14px !important;
+        font-weight: 800 !important;
     }
     #clientDynamicContent .pos-validate-btn:hover:not(:disabled),
     #clientDynamicContent .pos-finalize-btn:hover:not(:disabled) {
-        transform: translateY(-2px) !important;
-        box-shadow:
-            0 15px 35px -5px rgba(20, 184, 166, 0.6),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+        background: var(--client-green-dark) !important;
+    }
+    #clientDynamicContent .pos-qty-btn {
+        background: var(--client-gray-100) !important;
+        color: var(--client-gray-700) !important;
+        border: none !important;
+    }
+    #clientDynamicContent .pos-qty-btn:hover {
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
+    }
+    #clientDynamicContent .pos-step.active {
+        background: var(--client-green-soft) !important;
+        color: var(--client-green-dark) !important;
+    }
+    #clientDynamicContent .pos-step.active .step-number {
+        background: var(--client-green) !important;
+        color: var(--client-white) !important;
+    }
+    #clientDynamicContent input[type="text"],
+    #clientDynamicContent input[type="number"],
+    #clientDynamicContent #posSearchInput,
+    #clientDynamicContent #posAmountGiven {
+        background: var(--client-gray-50) !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        color: var(--client-text) !important;
+        outline: none !important;
+    }
+    #clientDynamicContent input:focus {
+        background: var(--client-white) !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
     }
 
-    /* ==================== RESPONSIVE ==================== */
     @media (max-width: 768px) {
         #clientPage .main-content { padding: 16px !important; }
-        #clientPage .page-header {
-            padding: 16px 18px !important;
-            border-radius: 16px !important;
-        }
+        #clientPage .page-header { padding: 16px 18px !important; border-radius: 14px !important; }
         #clientPage .page-header .header-title h2 { font-size: 18px !important; }
-        #clientDynamicContent .content-card {
-            padding: 18px !important;
-            border-radius: 16px !important;
-        }
-        .client-welcome-banner {
-            padding: 20px 22px;
-            border-radius: 16px;
-        }
-        .client-welcome-avatar {
-            width: 50px;
-            height: 50px;
-            font-size: 24px;
-        }
-        .client-welcome-text h2 { font-size: 18px; }
-        .client-welcome-text p { font-size: 12px; }
-        .client-welcome-decoration { display: none; }
+        #clientDynamicContent .content-card { padding: 18px !important; border-radius: 14px !important; }
+        .client-welcome-banner { padding: 20px 22px !important; border-radius: 14px !important; }
+        .client-welcome-avatar { width: 50px !important; height: 50px !important; font-size: 24px !important; }
+        .client-welcome-text h2 { font-size: 18px !important; }
+        .client-welcome-text p { font-size: 12px !important; }
+        .client-welcome-decoration { display: none !important; }
+        .client-stats-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+        .client-stat-card { padding: 16px !important; }
+        .client-stat-value { font-size: 18px !important; }
+        .fidelite-conversion-box { padding: 18px !important; }
+        .fidelite-convert-btn { padding: 12px 20px !important; font-size: 14px !important; }
     }
     `;
     document.head.appendChild(style);
-    console.log('✅ Styles client modernes injectés');
+    console.log('✅ Styles client modernes injectés (Vert + Blanc v4)');
 }
 
 // Injection immédiate des styles
@@ -434,7 +629,7 @@ function clientNavigate(page) {
     if (typeof closeClientSidebar === 'function') closeClientSidebar();
 }
 
-// ==================== 🆕 v2 : BANNIÈRE WELCOME ====================
+// ==================== BANNIÈRE WELCOME ====================
 function renderClientWelcomeBanner() {
     if (!window.currentUserData) return '';
     var ud = window.currentUserData.userData;
@@ -465,16 +660,13 @@ async function loadClientCommanderPage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
-    // ✅ Activer le mode client dans pos.js
     window.posIsClientMode = true;
     window.posHideMultiCarts = true;
     window.posHideTablesBtn = true;
     window.posHideEnLigneBtn = true;
 
-    // 🆕 v2 : Bannière Welcome AVANT le chargement
-    c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#14B8A6;"></i><p style="margin-top:15px;color:#64748b;">Chargement du menu...</p></div>';
+    c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#10B981;"></i><p style="margin-top:15px;color:#6B7280;">Chargement du menu...</p></div>';
 
-    // ✅ Réinitialiser les variables pos.js pour le client
     posCart = clientCart.length > 0 ? clientCart.slice() : [];
     posStep = clientStep;
     posSelectedCategory = 'all';
@@ -484,7 +676,6 @@ async function loadClientCommanderPage() {
     posToolsVisible = false;
     posProductOffset = 0;
 
-    // ✅ Pas de multi-paniers pour le client
     posMultiCarts = { 'client-panier': posCart };
     posCurrentCartId = 'client-panier';
     posMultiPaniersData = {
@@ -501,13 +692,11 @@ async function loadClientCommanderPage() {
         }
     };
 
-    // ✅ Définir le client actuel
     posCurrentClient = window.currentUserData ? {
         id: window.currentUserData.uid,
         name: window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom
     } : null;
 
-    // ✅ Charger les catégories et produits depuis le cache
     try {
         let cachedCategories = await CacheDB.getAll('categories');
         let cachedProducts = await CacheDB.getAll('products');
@@ -526,7 +715,6 @@ async function loadClientCommanderPage() {
         }
     } catch(e) { console.warn('Erreur cache client:', e); }
 
-    // ✅ Puis Firestore
     try {
         const [cs, ps] = await Promise.all([
             db.collection('categories').get(),
@@ -577,25 +765,22 @@ function renderClientPOS() {
     if (!c) return;
 
     if (posProductsList.length === 0 && posCategoriesList.length === 0) {
-        c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#14B8A6;"></i><p>Chargement...</p></div>';
+        c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#10B981;"></i><p style="margin-top:15px;color:#6B7280;">Chargement...</p></div>';
         return;
     }
 
-    // ✅ Synchroniser le panier client
     clientCart = posCart.slice();
     clientStep = posStep;
 
-    // 🆕 v2 : Préserver la bannière Welcome
     if (typeof buildFullPOS === 'function') {
         var bannerHtml = renderClientWelcomeBanner();
         buildFullPOS(c);
-        // Insérer la bannière en premier
         if (c.firstChild) {
             c.insertAdjacentHTML('afterbegin', bannerHtml);
         }
         setTimeout(masquerElementsAdminDansClient, 50);
     } else {
-        c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Erreur : POS non chargé</div>';
+        c.innerHTML = '<div style="text-align:center;padding:40px;color:#EF4444;">Erreur : POS non chargé</div>';
     }
 }
 
@@ -818,9 +1003,9 @@ window.posToggleTools = function() {
                 toolsContainer.style.gap = '8px';
                 toolsContainer.style.marginBottom = '8px';
                 toolsContainer.style.padding = '8px 12px';
-                toolsContainer.style.background = 'var(--bg-page)';
+                toolsContainer.style.background = '#F9FAFB';
                 toolsContainer.style.borderRadius = '8px';
-                toolsContainer.style.border = '1px solid var(--border)';
+                toolsContainer.style.border = 'none';
                 toolsContainer.classList.add('visible');
             } else {
                 toolsContainer.style.display = 'none';
@@ -830,7 +1015,7 @@ window.posToggleTools = function() {
 
         if (toggleBtn) {
             toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer' : '🔍 Afficher tout';
-            toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
+            toggleBtn.style.background = posToolsVisible ? '#EF4444' : '#10B981';
         }
 
         var searchInput = document.getElementById('posSearchInput');
@@ -874,61 +1059,170 @@ window.posToggleTools = function() {
     }
 };
 
-// ==================== PAGE HISTORIQUE ====================
+// ==================== 🆕 v4 : PAGE HISTORIQUE (ventes + crédits + total crédits restant) ====================
 async function loadClientHistoriquePage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
     window.posIsClientMode = false;
 
-    c.innerHTML = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-history"></i> Mon historique</h3></div><div id="clientOrdersList" style="text-align:center;padding:20px;">Chargement...</div></div>';
-
     if (!window.currentUserData) {
-        var cont0 = document.getElementById('clientOrdersList');
-        if (cont0) cont0.innerHTML = '<p>Non connecté</p>';
+        c.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#9CA3AF;">Non connecté</p></div>';
         return;
     }
 
     var uid = window.currentUserData.uid;
 
+    c.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#10B981;"></i><p style="margin-top:15px;color:#6B7280;">Chargement de votre historique...</p></div>';
+
     try {
-        var cmdSnap = await db.collection('commandes').where('clientId', '==', uid).get();
-        var all = [];
-        cmdSnap.forEach(function(d) {
-            var cmd = d.data();
-            all.push({ type: 'commande', data: cmd, date: cmd.createdAt });
+        // 1. Charger les ventes du client
+        var ventesSnap = await db.collection('ventes').where('clientId', '==', uid).get();
+        var ventes = [];
+        ventesSnap.forEach(function(d) {
+            var v = d.data();
+            v.id = d.id;
+            ventes.push(v);
         });
-        all.sort(function(a, b) { return (b.date?.seconds || 0) - (a.date?.seconds || 0); });
-        all = all.slice(0, 50);
+        ventes.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
 
-        var cont = document.getElementById('clientOrdersList');
-        if (!cont) return;
+        // 2. Charger les crédits du client
+        var creditsSnap = await db.collection('credits').where('clientId', '==', uid).get();
+        var credits = [];
+        creditsSnap.forEach(function(d) {
+            var cr = d.data();
+            cr.id = d.id;
+            credits.push(cr);
+        });
+        credits.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
 
-        if (all.length === 0) {
-            cont.innerHTML = '<p style="padding:40px;color:#94a3b8;text-align:center;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:10px;"></i>Aucune commande</p>';
-            return;
+        // 3. Calculer les totaux
+        var totalCreditsImpayes = 0;
+        var totalVentes = 0;
+        var nbVentes = ventes.length;
+        var nbCredits = 0;
+
+        credits.forEach(function(cr) {
+            if (!cr.paid && cr.remainingAmount > 0) {
+                totalCreditsImpayes += cr.remainingAmount;
+                nbCredits++;
+            }
+        });
+
+        ventes.forEach(function(v) {
+            totalVentes += v.total || 0;
+        });
+
+        // 4. Construire le HTML
+        var h = '';
+
+        // Bannière stats en haut
+        h += '<div class="client-stats-grid">';
+        h += '  <div class="client-stat-card credits">';
+        h += '    <div class="client-stat-icon"><i class="fas fa-credit-card"></i></div>';
+        h += '    <div class="client-stat-info">';
+        h += '      <div class="client-stat-label">Crédits restant à payer</div>';
+        h += '      <div class="client-stat-value">' + totalCreditsImpayes.toFixed(2) + ' MAD</div>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '  <div class="client-stat-card ventes">';
+        h += '    <div class="client-stat-icon"><i class="fas fa-shopping-cart"></i></div>';
+        h += '    <div class="client-stat-info">';
+        h += '      <div class="client-stat-label">Total des ventes</div>';
+        h += '      <div class="client-stat-value">' + totalVentes.toFixed(2) + ' MAD</div>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '  <div class="client-stat-card ventes">';
+        h += '    <div class="client-stat-icon"><i class="fas fa-receipt"></i></div>';
+        h += '    <div class="client-stat-info">';
+        h += '      <div class="client-stat-label">Nombre de ventes</div>';
+        h += '      <div class="client-stat-value">' + nbVentes + '</div>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '</div>';
+
+        // Section Crédits (si existe)
+        if (credits.length > 0) {
+            h += '<div class="content-card">';
+            h += '  <div class="card-header"><h3><i class="fas fa-credit-card" style="color:#10B981;"></i> Mes crédits</h3></div>';
+            h += '  <div class="table-container">';
+            h += '    <table class="data-table">';
+            h += '      <thead><tr><th>Date</th><th>Facture</th><th>Total</th><th>Restant</th><th>Statut</th></tr></thead>';
+            h += '      <tbody>';
+            credits.forEach(function(cr) {
+                var date = cr.createdAt ? new Date(cr.createdAt.seconds * 1000).toLocaleString('fr-FR') : '-';
+                var facture = cr.factureNum || cr.id.substring(0, 8);
+                var total = (cr.total || 0).toFixed(2);
+                var restant = (cr.remainingAmount || 0).toFixed(2);
+                var statut = cr.paid
+                    ? '<span class="status-success"><i class="fas fa-check-circle"></i> Payé</span>'
+                    : '<span class="status-warning"><i class="fas fa-clock"></i> À payer</span>';
+                h += '<tr>';
+                h += '  <td>' + date + '</td>';
+                h += '  <td><strong>#' + facture + '</strong></td>';
+                h += '  <td>' + total + ' MAD</td>';
+                h += '  <td><strong style="color:' + (cr.paid ? '#10B981' : '#DC2626') + ';">' + restant + ' MAD</strong></td>';
+                h += '  <td>' + statut + '</td>';
+                h += '</tr>';
+            });
+            h += '      </tbody>';
+            h += '    </table>';
+            h += '  </div>';
+            h += '</div>';
         }
 
-        var h = '<div class="table-container"><table class="data-table"><thead><tr><th>Date</th><th>Articles</th><th>Total</th><th>Statut</th></tr></thead><tbody>';
-        all.forEach(function(item) {
-            var d = item.data;
-            var date = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString('fr-FR') : '';
-            var arts = d.items ? d.items.map(function(it) { return it.quantite + 'x ' + escapeHtml(it.nom); }).join('<br>') : '-';
-            var statut = d.statut === 'valide' ? '<span class="status-success">✅ Validée</span>'
-                       : d.statut === 'payé' ? '<span class="status-success">💵 Payée</span>'
-                       : '<span class="status-warning">⏳ En attente</span>';
-            h += '<tr><td>' + date + '</td><td>' + arts + '</td><td><strong>' + (d.total || 0).toFixed(2) + ' MAD</strong></td><td>' + statut + '</td></tr>';
-        });
-        h += '</tbody></table></div>';
-        cont.innerHTML = h;
+        // Section Ventes
+        if (ventes.length > 0) {
+            h += '<div class="content-card">';
+            h += '  <div class="card-header"><h3><i class="fas fa-history" style="color:#10B981;"></i> Mes ventes</h3></div>';
+            h += '  <div class="table-container">';
+            h += '    <table class="data-table">';
+            h += '      <thead><tr><th>Date</th><th>Facture</th><th>Articles</th><th>Total</th><th>Paiement</th><th>Statut</th></tr></thead>';
+            h += '      <tbody>';
+            ventes.forEach(function(v) {
+                var date = v.createdAt ? new Date(v.createdAt.seconds * 1000).toLocaleString('fr-FR') : '-';
+                var facture = v.factureNum || v.id.substring(0, 8);
+                var arts = v.items ? v.items.map(function(it) { return it.quantite + 'x ' + escapeHtml(it.nom); }).join('<br>') : '-';
+                var total = (v.total || 0).toFixed(2);
+                var statutPaiement = v.statutPaiement || (v.paid ? 'payé' : 'crédit');
+                var paymentMethod = v.paymentMethod || '-';
+                var statut = v.paid
+                    ? '<span class="status-success"><i class="fas fa-check-circle"></i> Payé</span>'
+                    : statutPaiement === 'partiel'
+                        ? '<span class="status-warning"><i class="fas fa-clock"></i> Partiel</span>'
+                        : '<span class="status-warning"><i class="fas fa-clock"></i> Crédit</span>';
+                h += '<tr>';
+                h += '  <td>' + date + '</td>';
+                h += '  <td><strong>#' + facture + '</strong></td>';
+                h += '  <td>' + arts + '</td>';
+                h += '  <td><strong>' + total + ' MAD</strong></td>';
+                h += '  <td>' + escapeHtml(paymentMethod) + '</td>';
+                h += '  <td>' + statut + '</td>';
+                h += '</tr>';
+            });
+            h += '      </tbody>';
+            h += '    </table>';
+            h += '  </div>';
+            h += '</div>';
+        }
+
+        // Aucun historique
+        if (credits.length === 0 && ventes.length === 0) {
+            h += '<div class="content-card" style="text-align:center;padding:60px 20px;">';
+            h += '  <i class="fas fa-inbox" style="font-size:3rem;color:#E5E7EB;"></i>';
+            h += '  <p style="color:#9CA3AF;margin-top:16px;">Aucun historique pour le moment</p>';
+            h += '</div>';
+        }
+
+        c.innerHTML = h;
+
     } catch(e) {
         console.error('Erreur historique:', e);
-        var cont2 = document.getElementById('clientOrdersList');
-        if (cont2) cont2.innerHTML = '<p style="color:#ef4444;">Erreur de chargement</p>';
+        c.innerHTML = '<div class="content-card"><p style="text-align:center;padding:40px;color:#EF4444;">Erreur de chargement: ' + e.message + '</p></div>';
     }
 }
 
-// ==================== PAGE PARAMÈTRES ====================
+// ==================== 🆕 v4 : PAGE PARAMÈTRES (Profil + Fidélité convertible) ====================
 async function loadClientParametresPage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
@@ -945,27 +1239,179 @@ async function loadClientParametresPage() {
     } catch(e) { console.error(e); }
     if (!clientData) clientData = window.currentUserData.userData;
 
-    var dateCreated = clientData.createdAt ? new Date(clientData.createdAt.seconds * 1000).toLocaleString('fr-FR') : 'N/A';
+    // Charger les crédits impayés
+    var totalCredits = 0;
+    try {
+        var creditsSnap = await db.collection('credits')
+            .where('clientId', '==', window.currentUserData.uid)
+            .where('paid', '==', false)
+            .get();
+        creditsSnap.forEach(function(d) {
+            var cr = d.data();
+            totalCredits += cr.remainingAmount || 0;
+        });
+    } catch(e) { console.warn('Erreur chargement crédits:', e); }
 
-    var h = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-user-circle"></i> Mon Profil</h3></div>';
-    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:0.9rem;">';
-    h += '<div><strong>Nom:</strong> ' + escapeHtml(clientData.nom || '') + '</div>';
-    h += '<div><strong>Prénom:</strong> ' + escapeHtml(clientData.prenom || '') + '</div>';
-    h += '<div><strong>Email:</strong> ' + escapeHtml(clientData.email || '') + '</div>';
-    h += '<div><strong>Tél:</strong> ' + escapeHtml(clientData.telephone || '-') + '</div>';
-    h += '<div><strong>Adresse:</strong> ' + escapeHtml(clientData.adresse || '-') + '</div>';
-    h += '<div><strong>Points Fidélité:</strong> ' + (clientData.pointsFidelite || 0) + '</div>';
+    // Points fidélité
+    var points = clientData.pointsFidelite || 0;
+    var dhDisponibles = Math.floor(points / FIDELITE_POINTS_PAR_DH) * FIDELITE_DH_PAR_BLOC;
+    var blocsDisponibles = Math.floor(points / FIDELITE_POINTS_PAR_DH);
+
+    var h = '';
+
+    // 🆕 v4 : Bannière stats en haut (Crédits + Points + DH disponibles)
+    h += '<div class="client-stats-grid">';
+    h += '  <div class="client-stat-card credits">';
+    h += '    <div class="client-stat-icon"><i class="fas fa-credit-card"></i></div>';
+    h += '    <div class="client-stat-info">';
+    h += '      <div class="client-stat-label">Crédits à payer</div>';
+    h += '      <div class="client-stat-value">' + totalCredits.toFixed(2) + ' MAD</div>';
+    h += '    </div>';
+    h += '  </div>';
+    h += '  <div class="client-stat-card fidelite">';
+    h += '    <div class="client-stat-icon"><i class="fas fa-star"></i></div>';
+    h += '    <div class="client-stat-info">';
+    h += '      <div class="client-stat-label">Points fidélité</div>';
+    h += '      <div class="client-stat-value">' + points + ' pts</div>';
+    h += '    </div>';
+    h += '  </div>';
+    h += '  <div class="client-stat-card fidelite">';
+    h += '    <div class="client-stat-icon"><i class="fas fa-coins"></i></div>';
+    h += '    <div class="client-stat-info">';
+    h += '      <div class="client-stat-label">Équivalent en DH</div>';
+    h += '      <div class="client-stat-value">' + dhDisponibles.toFixed(2) + ' DH</div>';
+    h += '    </div>';
+    h += '  </div>';
     h += '</div>';
-    // 🆕 v2 : Boutons modernes
-    h += '<div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;">';
-    h += '<button class="btn-client-primary" onclick="clientOpenEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>';
-    h += '<button class="btn-client-secondary" onclick="clientOpenChangePassword()"><i class="fas fa-lock"></i> Changer mot de passe</button>';
-    h += '</div></div>';
+
+    // Bloc conversion fidélité
+    h += '<div class="content-card">';
+    h += '  <div class="card-header"><h3><i class="fas fa-coins" style="color:#10B981;"></i> Convertir mes points</h3></div>';
+    h += '  <div class="fidelite-conversion-box">';
+    h += '    <h4><i class="fas fa-gift"></i> Règle de conversion</h4>';
+    h += '    <div class="fidelite-conversion-info">';
+    h += '      <span>100 points = 10 DH</span>';
+    h += '      <strong>' + blocsDisponibles + ' bloc(s) disponible(s)</strong>';
+    h += '    </div>';
+    h += '    <div class="fidelite-conversion-info">';
+    h += '      <span>Montant à convertir</span>';
+    h += '      <strong>' + dhDisponibles.toFixed(2) + ' DH</strong>';
+    h += '    </div>';
+    if (blocsDisponibles > 0) {
+        h += '    <button class="fidelite-convert-btn" onclick="clientConvertirPoints()"><i class="fas fa-exchange-alt"></i> Convertir ' + dhDisponibles.toFixed(0) + ' DH</button>';
+    } else {
+        h += '    <button class="fidelite-convert-btn" disabled><i class="fas fa-info-circle"></i> Minimum 100 points requis</button>';
+    }
+    h += '  </div>';
+    h += '</div>';
+
+    // Profil
+    h += '<div class="content-card">';
+    h += '  <div class="card-header"><h3><i class="fas fa-user-circle" style="color:#10B981;"></i> Mon Profil</h3></div>';
+    h += '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:0.9rem;">';
+    h += '    <div><strong>Nom:</strong> ' + escapeHtml(clientData.nom || '') + '</div>';
+    h += '    <div><strong>Prénom:</strong> ' + escapeHtml(clientData.prenom || '') + '</div>';
+    h += '    <div><strong>Email:</strong> ' + escapeHtml(clientData.email || '') + '</div>';
+    h += '    <div><strong>Tél:</strong> ' + escapeHtml(clientData.telephone || '-') + '</div>';
+    h += '    <div><strong>Adresse:</strong> ' + escapeHtml(clientData.adresse || '-') + '</div>';
+    h += '    <div><strong>Points Fidélité:</strong> ' + points + ' pts</div>';
+    h += '  </div>';
+    h += '  <div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;">';
+    h += '    <button class="btn-client-primary" onclick="clientOpenEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>';
+    h += '    <button class="btn-client-secondary" onclick="clientOpenChangePassword()"><i class="fas fa-lock"></i> Changer mot de passe</button>';
+    h += '  </div>';
+    h += '</div>';
+
     c.innerHTML = h;
     window.clientProfileData = clientData;
     window.clientProfileDocId = clientDocId;
+    window.clientFideliteData = { points: points, dhDisponibles: dhDisponibles, blocsDisponibles: blocsDisponibles };
 }
 
+// ==================== 🆕 v4 : CONVERSION POINTS FIDÉLITÉ → DH ====================
+async function clientConvertirPoints() {
+    if (!window.clientFideliteData) {
+        alert('❌ Données fidélité non chargées.');
+        return;
+    }
+
+    var points = window.clientFideliteData.points;
+    var dhDisponibles = window.clientFideliteData.dhDisponibles;
+    var blocsDisponibles = window.clientFideliteData.blocsDisponibles;
+
+    if (blocsDisponibles <= 0 || dhDisponibles <= 0) {
+        alert('❌ Vous avez besoin d\'au moins 100 points pour convertir.');
+        return;
+    }
+
+    if (!confirm('Convertir ' + dhDisponibles.toFixed(0) + ' DH ?\n\n' + (blocsDisponibles * FIDELITE_POINTS_PAR_DH) + ' points seront déduits.\nIl restera ' + (points - (blocsDisponibles * FIDELITE_POINTS_PAR_DH)) + ' points.')) {
+        return;
+    }
+
+    var pointsUtilises = blocsDisponibles * FIDELITE_POINTS_PAR_DH;
+    var nouveauxPoints = points - pointsUtilises;
+
+    try {
+        // 1. Récupérer le document client
+        var clientId = window.clientProfileDocId;
+        if (!clientId) {
+            // Chercher par email
+            var userEmail = window.currentUserData.userData.email;
+            var clientSnap = await db.collection('clients').where('email', '==', userEmail).get();
+            if (!clientSnap.empty) clientId = clientSnap.docs[0].id;
+        }
+
+        if (!clientId) {
+            alert('❌ Impossible de trouver votre compte client.');
+            return;
+        }
+
+        // 2. Mettre à jour les points fidélité
+        var updatedData = {
+            pointsFidelite: nouveauxPoints,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection('clients').doc(clientId).update(updatedData);
+
+        // 3. Mettre à jour le cache
+        if (typeof CacheDB !== 'undefined' && CacheDB.set) {
+            var existing = await CacheDB.get('clients', clientId);
+            if (existing) {
+                existing.pointsFidelite = nouveauxPoints;
+                await CacheDB.set('clients', clientId, existing);
+            }
+        }
+
+        // 4. Enregistrer la conversion comme crédit payé (bonus)
+        try {
+            await db.collection('conversions_fidelite').add({
+                clientId: clientId,
+                clientName: (window.currentUserData.userData.prenom || '') + ' ' + (window.currentUserData.userData.nom || ''),
+                pointsUtilises: pointsUtilises,
+                dhObtenus: dhDisponibles,
+                pointsRestants: nouveauxPoints,
+                date: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch(e) { console.warn('Erreur enregistrement conversion:', e); }
+
+        alert('✅ Conversion réussie !\n\n' + dhDisponibles.toFixed(0) + ' DH ont été convertis.\nNouveau solde : ' + nouveauxPoints + ' points.');
+
+        // 5. Recharger la page
+        loadClientParametresPage();
+
+        // 6. Sync cache
+        if (typeof CacheDB !== 'undefined' && CacheDB.sync) {
+            CacheDB.sync().catch(function() {});
+        }
+
+    } catch(e) {
+        console.error('❌ Erreur conversion:', e);
+        alert('❌ Erreur lors de la conversion: ' + e.message);
+    }
+}
+
+// ==================== PROFIL : ÉDITER ====================
 function clientOpenEditProfile() {
     var data = window.clientProfileData || window.currentUserData.userData;
     var h = '';
@@ -1007,6 +1453,7 @@ async function clientSaveProfile() {
     } catch(e) { alert('Erreur: ' + e.message); }
 }
 
+// ==================== PROFIL : CHANGER MOT DE PASSE ====================
 function clientOpenChangePassword() {
     var h = '<div class="form-row"><div class="form-group"><label>Mot de passe actuel</label><input type="password" id="clientOldPassword"></div></div>';
     h += '<div class="form-row"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="clientNewPassword"></div></div>';
@@ -1046,13 +1493,13 @@ window.clientOpenEditProfile = clientOpenEditProfile;
 window.clientSaveProfile = clientSaveProfile;
 window.clientOpenChangePassword = clientOpenChangePassword;
 window.clientChangePassword = clientChangePassword;
+window.clientConvertirPoints = clientConvertirPoints;
 window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
 window.renderClientWelcomeBanner = renderClientWelcomeBanner;
 window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS v2 chargé');
-console.log('✅ Styles modernes injectés automatiquement');
-console.log('✅ Bannière Welcome personnalisée');
-console.log('✅ Boutons modernes (primary + secondary)');
-console.log('✅ POS identique à l\'admin conservé');
-console.log('✅ Couleurs Teal + Slate conservées');
+console.log('🚀 E-SOLUTION - Client JS v4 chargé');
+console.log('✅ Historique ventes + crédits + total crédits restant');
+console.log('✅ Profil : crédits + points fidélité + équivalent DH');
+console.log('✅ Conversion 100 points = 10 DH');
+console.log('✅ Design Vert + Blanc conservé');
