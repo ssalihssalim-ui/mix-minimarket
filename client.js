@@ -8,6 +8,7 @@
 // ✅ 🆕 v6 : Historique complet = commandes + ventes + crédits
 // ✅ 🆕 v7 : Crédits payés disparaissent (paid=true ou remainingAmount=0)
 // ✅ 🆕 v8 : Crédits payés basculent automatiquement dans "Mes ventes"
+// ✅ 🆕 v9 : Historique = commandes + ventes uniquement (plus de section "Mes crédits")
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
 // ✅ SANS boutons Tables / En ligne
 // ✅ Mêmes dimensions / même responsive
@@ -989,6 +990,7 @@ function masquerElementsAdminDansClient() {
 }
 
 
+
 // ==================== SURCHARGES POS ====================
 window.posFinalizeSaleOriginal = window.posFinalizeSale;
 window.posFinalizeSale = async function() {
@@ -1210,7 +1212,7 @@ window.posToggleTools = function() {
     }
 };
 
-// ==================== 🆕 v8 : PAGE HISTORIQUE (crédits payés → basculent en ventes) ====================
+// ==================== 🆕 v9 : PAGE HISTORIQUE (commandes + ventes uniquement) ====================
 async function loadClientHistoriquePage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
@@ -1251,7 +1253,7 @@ async function loadClientHistoriquePage() {
             ventes.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
         } catch(e) { console.warn('Erreur chargement ventes:', e); }
 
-        // ========== 3. CRÉDITS ==========
+        // ========== 3. CRÉDITS (uniquement pour compter les soldés comme ventes) ==========
         var credits = [];
         try {
             var creditsSnap = await db.collection('credits').where('clientId', '==', uid).get();
@@ -1260,35 +1262,21 @@ async function loadClientHistoriquePage() {
                 cr.id = d.id;
                 credits.push(cr);
             });
-            credits.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
         } catch(e) { console.warn('Erreur chargement crédits:', e); }
 
-        // ========== 4. SÉPARER CRÉDITS ACTIFS vs CRÉDITS SOLDÉS ==========
-        // 🆕 v8 : Un crédit est SOLDÉ si paid=true OU remainingAmount<=0 OU statut payé
-        var creditsActifs = [];
+        // Séparer les crédits soldés (à basculer en ventes)
         var creditsSoldes = [];
-
         credits.forEach(function(cr) {
             var restant = parseFloat(cr.remainingAmount || 0);
             var st = (cr.statut || '').toLowerCase();
             var estSolde = (cr.paid === true) || (restant <= 0) || (st === 'payé' || st === 'paye' || st === 'soldé' || st === 'solde');
-
             if (estSolde) {
                 cr.remainingAmount = 0;
-                cr._estSolde = true;
                 creditsSoldes.push(cr);
-            } else {
-                cr._estSolde = false;
-                creditsActifs.push(cr);
             }
         });
 
-        // ========== 5. CALCULS ==========
-        var totalCreditsImpayes = 0;
-        creditsActifs.forEach(function(cr) {
-            totalCreditsImpayes += parseFloat(cr.remainingAmount || 0);
-        });
-
+        // ========== 4. CALCULS ==========
         // Total ventes = ventes normales + crédits soldés (considérés comme ventes)
         var totalVentes = 0;
         ventes.forEach(function(v) { totalVentes += v.total || 0; });
@@ -1300,10 +1288,10 @@ async function loadClientHistoriquePage() {
             if (st === 'en_attente' || st === 'en attente' || st === 'pending' || st === '') nbCommandesEnAttente++;
         });
 
-        // ========== 6. HTML ==========
+        // ========== 5. HTML ==========
         var h = '';
 
-        // Bannière stats
+        // Bannière stats (2 cartes uniquement : commandes en attente + total ventes)
         h += '<div class="client-stats-grid">';
         h += '  <div class="client-stat-card ventes">';
         h += '    <div class="client-stat-icon"><i class="fas fa-clock"></i></div>';
@@ -1317,13 +1305,6 @@ async function loadClientHistoriquePage() {
         h += '    <div class="client-stat-info">';
         h += '      <div class="client-stat-label">Total des ventes</div>';
         h += '      <div class="client-stat-value">' + totalVentes.toFixed(2) + ' MAD</div>';
-        h += '    </div>';
-        h += '  </div>';
-        h += '  <div class="client-stat-card credits">';
-        h += '    <div class="client-stat-icon"><i class="fas fa-credit-card"></i></div>';
-        h += '    <div class="client-stat-info">';
-        h += '      <div class="client-stat-label">Crédits restant à payer</div>';
-        h += '      <div class="client-stat-value">' + totalCreditsImpayes.toFixed(2) + ' MAD</div>';
         h += '    </div>';
         h += '  </div>';
         h += '</div>';
@@ -1366,7 +1347,7 @@ async function loadClientHistoriquePage() {
             h += '</div>';
         }
 
-        // ========== SECTION VENTES (ventes + crédits soldés fusionnés) ==========
+        // ========== SECTION VENTES (ventes normales + crédits soldés) ==========
         var toutesVentes = [];
         ventes.forEach(function(v) {
             toutesVentes.push({ type: 'vente', data: v, date: v.createdAt?.seconds || 0 });
@@ -1421,35 +1402,8 @@ async function loadClientHistoriquePage() {
             h += '</div>';
         }
 
-        // ========== SECTION CRÉDITS (uniquement ACTIFS) ==========
-        if (creditsActifs.length > 0) {
-            h += '<div class="content-card">';
-            h += '  <div class="card-header"><h3><i class="fas fa-credit-card" style="color:#10B981;"></i> Mes crédits à payer</h3></div>';
-            h += '  <div class="table-container">';
-            h += '    <table class="data-table">';
-            h += '      <thead><tr><th>Date</th><th>Facture</th><th>Total</th><th>Restant</th><th>Statut</th></tr></thead>';
-            h += '      <tbody>';
-            creditsActifs.forEach(function(cr) {
-                var date = cr.createdAt ? new Date(cr.createdAt.seconds * 1000).toLocaleString('fr-FR') : '-';
-                var facture = cr.factureNum || cr.id.substring(0, 8);
-                var total = (cr.total || 0).toFixed(2);
-                var restant = (cr.remainingAmount || 0).toFixed(2);
-                h += '<tr>';
-                h += '  <td>' + date + '</td>';
-                h += '  <td><strong>#' + facture + '</strong></td>';
-                h += '  <td>' + total + ' MAD</td>';
-                h += '  <td><strong style="color:#DC2626;">' + restant + ' MAD</strong></td>';
-                h += '  <td><span class="status-warning"><i class="fas fa-clock"></i> À payer</span></td>';
-                h += '</tr>';
-            });
-            h += '      </tbody>';
-            h += '    </table>';
-            h += '  </div>';
-            h += '</div>';
-        }
-
         // Aucun historique
-        if (commandes.length === 0 && toutesVentes.length === 0 && creditsActifs.length === 0) {
+        if (commandes.length === 0 && toutesVentes.length === 0) {
             h += '<div class="content-card" style="text-align:center;padding:60px 20px;">';
             h += '  <i class="fas fa-inbox" style="font-size:3rem;color:#E5E7EB;"></i>';
             h += '  <p style="color:#9CA3AF;margin-top:16px;">Aucun historique pour le moment</p>';
@@ -1746,10 +1700,10 @@ window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
 window.renderClientWelcomeBanner = renderClientWelcomeBanner;
 window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS v8 chargé');
-console.log('✅ Historique complet : commandes + ventes + crédits');
-console.log('✅ Crédits payés → basculent automatiquement dans "Mes ventes"');
-console.log('✅ Crédits payés disparaissent de "Mes crédits"');
+console.log('🚀 E-SOLUTION - Client JS v9 chargé');
+console.log('✅ Historique = commandes + ventes uniquement');
+console.log('✅ Plus de section "Mes crédits"');
+console.log('✅ Crédits payés → apparaissent dans "Mes ventes"');
 console.log('✅ Profil : crédits + points fidélité + équivalent DH');
 console.log('✅ Conversion 100 points = 10 DH');
 console.log('✅ Validation directe sans étape paiement');
