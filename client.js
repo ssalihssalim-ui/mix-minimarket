@@ -5,6 +5,7 @@
 // ✅ 🆕 v5 : Validation directe du panier SANS étape paiement
 // ✅ 🆕 v5 : 1 seul panier (pas de multi-paniers, pas d'étapes 1/2)
 // ✅ 🆕 v5 : Vert + Blanc uniquement (pas de bleu) + balance en haut masquée
+// ✅ 🆕 v6 : Historique complet = commandes + ventes + crédits
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
 // ✅ SANS boutons Tables / En ligne
 // ✅ Mêmes dimensions / même responsive
@@ -1207,7 +1208,7 @@ window.posToggleTools = function() {
     }
 };
 
-// ==================== 🆕 v4 : PAGE HISTORIQUE (ventes + crédits + total crédits restant) ====================
+// ==================== 🆕 v6 : PAGE HISTORIQUE (commandes + ventes + crédits) ====================
 async function loadClientHistoriquePage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
@@ -1220,57 +1221,72 @@ async function loadClientHistoriquePage() {
     }
 
     var uid = window.currentUserData.uid;
+    var ud = window.currentUserData.userData;
 
     c.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#10B981;"></i><p style="margin-top:15px;color:#6B7280;">Chargement de votre historique...</p></div>';
 
     try {
-        // 1. Charger les ventes du client
-        var ventesSnap = await db.collection('ventes').where('clientId', '==', uid).get();
+        // ========== 1. COMMANDES (envoyées par le client, en attente de validation) ==========
+        var commandes = [];
+        try {
+            var cmdSnap = await db.collection('commandes').where('clientId', '==', uid).get();
+            cmdSnap.forEach(function(d) {
+                var cmd = d.data();
+                cmd.id = d.id;
+                commandes.push(cmd);
+            });
+            commandes.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
+        } catch(e) { console.warn('Erreur chargement commandes:', e); }
+
+        // ========== 2. VENTES (commandes validées par admin → devenues ventes) ==========
         var ventes = [];
-        ventesSnap.forEach(function(d) {
-            var v = d.data();
-            v.id = d.id;
-            ventes.push(v);
-        });
-        ventes.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
+        try {
+            var ventesSnap = await db.collection('ventes').where('clientId', '==', uid).get();
+            ventesSnap.forEach(function(d) {
+                var v = d.data();
+                v.id = d.id;
+                ventes.push(v);
+            });
+            ventes.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
+        } catch(e) { console.warn('Erreur chargement ventes:', e); }
 
-        // 2. Charger les crédits du client
-        var creditsSnap = await db.collection('credits').where('clientId', '==', uid).get();
+        // ========== 3. CRÉDITS ==========
         var credits = [];
-        creditsSnap.forEach(function(d) {
-            var cr = d.data();
-            cr.id = d.id;
-            credits.push(cr);
-        });
-        credits.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
+        try {
+            var creditsSnap = await db.collection('credits').where('clientId', '==', uid).get();
+            creditsSnap.forEach(function(d) {
+                var cr = d.data();
+                cr.id = d.id;
+                credits.push(cr);
+            });
+            credits.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
+        } catch(e) { console.warn('Erreur chargement crédits:', e); }
 
-        // 3. Calculer les totaux
+        // ========== 4. CALCULS ==========
         var totalCreditsImpayes = 0;
-        var totalVentes = 0;
-        var nbVentes = ventes.length;
-        var nbCredits = 0;
-
         credits.forEach(function(cr) {
-            if (!cr.paid && cr.remainingAmount > 0) {
-                totalCreditsImpayes += cr.remainingAmount;
-                nbCredits++;
-            }
+            if (!cr.paid && cr.remainingAmount > 0) totalCreditsImpayes += cr.remainingAmount;
         });
 
-        ventes.forEach(function(v) {
-            totalVentes += v.total || 0;
+        var totalVentes = 0;
+        ventes.forEach(function(v) { totalVentes += v.total || 0; });
+
+        var nbCommandesEnAttente = 0;
+        commandes.forEach(function(cmd) {
+            var st = (cmd.statut || '').toLowerCase();
+            if (st === 'en_attente' || st === 'en attente' || st === 'pending' || st === '') nbCommandesEnAttente++;
         });
 
-        // 4. Construire le HTML
+        // ========== 5. HTML ==========
         var h = '';
 
         // Bannière stats en haut
         h += '<div class="client-stats-grid">';
-        h += '  <div class="client-stat-card credits">';
-        h += '    <div class="client-stat-icon"><i class="fas fa-credit-card"></i></div>';
+        h += '  <div class="client-stat-card ventes">';
+        h += '    <div class="client-stat-icon"><i class="fas fa-clock"></i></div>';
         h += '    <div class="client-stat-info">';
-        h += '      <div class="client-stat-label">Crédits restant à payer</div>';
-        h += '      <div class="client-stat-value">' + totalCreditsImpayes.toFixed(2) + ' MAD</div>';
+        h += '      <div class="client-stat-label">Commandes en attente</div>';
+        h += '      <div class="client-stat-value">' + nbCommandesEnAttente + '</div>';
         h += '    </div>';
         h += '  </div>';
         h += '  <div class="client-stat-card ventes">';
@@ -1280,37 +1296,45 @@ async function loadClientHistoriquePage() {
         h += '      <div class="client-stat-value">' + totalVentes.toFixed(2) + ' MAD</div>';
         h += '    </div>';
         h += '  </div>';
-        h += '  <div class="client-stat-card ventes">';
-        h += '    <div class="client-stat-icon"><i class="fas fa-receipt"></i></div>';
+        h += '  <div class="client-stat-card credits">';
+        h += '    <div class="client-stat-icon"><i class="fas fa-credit-card"></i></div>';
         h += '    <div class="client-stat-info">';
-        h += '      <div class="client-stat-label">Nombre de ventes</div>';
-        h += '      <div class="client-stat-value">' + nbVentes + '</div>';
+        h += '      <div class="client-stat-label">Crédits restant à payer</div>';
+        h += '      <div class="client-stat-value">' + totalCreditsImpayes.toFixed(2) + ' MAD</div>';
         h += '    </div>';
         h += '  </div>';
         h += '</div>';
 
-        // Section Crédits (si existe)
-        if (credits.length > 0) {
+        // ========== SECTION COMMANDES (en attente / validées) ==========
+        if (commandes.length > 0) {
             h += '<div class="content-card">';
-            h += '  <div class="card-header"><h3><i class="fas fa-credit-card" style="color:#10B981;"></i> Mes crédits</h3></div>';
+            h += '  <div class="card-header"><h3><i class="fas fa-paper-plane" style="color:#10B981;"></i> Mes commandes</h3></div>';
             h += '  <div class="table-container">';
             h += '    <table class="data-table">';
-            h += '      <thead><tr><th>Date</th><th>Facture</th><th>Total</th><th>Restant</th><th>Statut</th></tr></thead>';
+            h += '      <thead><tr><th>Date</th><th>N°</th><th>Articles</th><th>Total</th><th>Statut</th></tr></thead>';
             h += '      <tbody>';
-            credits.forEach(function(cr) {
-                var date = cr.createdAt ? new Date(cr.createdAt.seconds * 1000).toLocaleString('fr-FR') : '-';
-                var facture = cr.factureNum || cr.id.substring(0, 8);
-                var total = (cr.total || 0).toFixed(2);
-                var restant = (cr.remainingAmount || 0).toFixed(2);
-                var statut = cr.paid
-                    ? '<span class="status-success"><i class="fas fa-check-circle"></i> Payé</span>'
-                    : '<span class="status-warning"><i class="fas fa-clock"></i> À payer</span>';
+            commandes.forEach(function(cmd) {
+                var date = cmd.createdAt ? new Date(cmd.createdAt.seconds * 1000).toLocaleString('fr-FR') : '-';
+                var num = cmd.factureNum || cmd.id.substring(0, 8);
+                var arts = cmd.items ? cmd.items.map(function(it) { return it.quantite + 'x ' + escapeHtml(it.nom); }).join('<br>') : '-';
+                var total = (cmd.total || 0).toFixed(2);
+                var st = (cmd.statut || 'en_attente').toLowerCase();
+                var badge;
+                if (st === 'en_attente' || st === 'en attente' || st === 'pending' || st === '') {
+                    badge = '<span class="status-warning"><i class="fas fa-clock"></i> En attente</span>';
+                } else if (st === 'validee' || st === 'validée' || st === 'valide' || st === 'confirmed') {
+                    badge = '<span class="status-success"><i class="fas fa-check-circle"></i> Validée</span>';
+                } else if (st === 'annulee' || st === 'annulée' || st === 'cancelled') {
+                    badge = '<span class="status-danger"><i class="fas fa-times-circle"></i> Annulée</span>';
+                } else {
+                    badge = '<span class="status-warning">' + escapeHtml(cmd.statut || '-') + '</span>';
+                }
                 h += '<tr>';
                 h += '  <td>' + date + '</td>';
-                h += '  <td><strong>#' + facture + '</strong></td>';
-                h += '  <td>' + total + ' MAD</td>';
-                h += '  <td><strong style="color:' + (cr.paid ? '#10B981' : '#DC2626') + ';">' + restant + ' MAD</strong></td>';
-                h += '  <td>' + statut + '</td>';
+                h += '  <td><strong>#' + num + '</strong></td>';
+                h += '  <td>' + arts + '</td>';
+                h += '  <td><strong>' + total + ' MAD</strong></td>';
+                h += '  <td>' + badge + '</td>';
                 h += '</tr>';
             });
             h += '      </tbody>';
@@ -1319,7 +1343,7 @@ async function loadClientHistoriquePage() {
             h += '</div>';
         }
 
-        // Section Ventes
+        // ========== SECTION VENTES (commandes validées → factures) ==========
         if (ventes.length > 0) {
             h += '<div class="content-card">';
             h += '  <div class="card-header"><h3><i class="fas fa-history" style="color:#10B981;"></i> Mes ventes</h3></div>';
@@ -1354,8 +1378,38 @@ async function loadClientHistoriquePage() {
             h += '</div>';
         }
 
+        // ========== SECTION CRÉDITS ==========
+        if (credits.length > 0) {
+            h += '<div class="content-card">';
+            h += '  <div class="card-header"><h3><i class="fas fa-credit-card" style="color:#10B981;"></i> Mes crédits</h3></div>';
+            h += '  <div class="table-container">';
+            h += '    <table class="data-table">';
+            h += '      <thead><tr><th>Date</th><th>Facture</th><th>Total</th><th>Restant</th><th>Statut</th></tr></thead>';
+            h += '      <tbody>';
+            credits.forEach(function(cr) {
+                var date = cr.createdAt ? new Date(cr.createdAt.seconds * 1000).toLocaleString('fr-FR') : '-';
+                var facture = cr.factureNum || cr.id.substring(0, 8);
+                var total = (cr.total || 0).toFixed(2);
+                var restant = (cr.remainingAmount || 0).toFixed(2);
+                var statut = cr.paid
+                    ? '<span class="status-success"><i class="fas fa-check-circle"></i> Payé</span>'
+                    : '<span class="status-warning"><i class="fas fa-clock"></i> À payer</span>';
+                h += '<tr>';
+                h += '  <td>' + date + '</td>';
+                h += '  <td><strong>#' + facture + '</strong></td>';
+                h += '  <td>' + total + ' MAD</td>';
+                h += '  <td><strong style="color:' + (cr.paid ? '#10B981' : '#DC2626') + ';">' + restant + ' MAD</strong></td>';
+                h += '  <td>' + statut + '</td>';
+                h += '</tr>';
+            });
+            h += '      </tbody>';
+            h += '    </table>';
+            h += '  </div>';
+            h += '</div>';
+        }
+
         // Aucun historique
-        if (credits.length === 0 && ventes.length === 0) {
+        if (commandes.length === 0 && ventes.length === 0 && credits.length === 0) {
             h += '<div class="content-card" style="text-align:center;padding:60px 20px;">';
             h += '  <i class="fas fa-inbox" style="font-size:3rem;color:#E5E7EB;"></i>';
             h += '  <p style="color:#9CA3AF;margin-top:16px;">Aucun historique pour le moment</p>';
@@ -1646,8 +1700,8 @@ window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
 window.renderClientWelcomeBanner = renderClientWelcomeBanner;
 window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS v5 chargé');
-console.log('✅ Historique ventes + crédits + total crédits restant');
+console.log('🚀 E-SOLUTION - Client JS v6 chargé');
+console.log('✅ Historique complet : commandes + ventes + crédits');
 console.log('✅ Profil : crédits + points fidélité + équivalent DH');
 console.log('✅ Conversion 100 points = 10 DH');
 console.log('✅ Validation directe sans étape paiement');
