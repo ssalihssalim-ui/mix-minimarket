@@ -2,8 +2,8 @@
 // ✅ Le client voit EXACTEMENT le même POS que l'admin/caissier
 // ✅ Réutilise directement pos.js : buildFullPOS, filterProductGrid, updateCartOnly, etc.
 // ✅ 🆕 v4 : Historique ventes + crédits + total crédits restant / Fidélité convertible en DH
+// ✅ 🆕 v5 : Validation directe du panier SANS étape paiement
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
-// ✅ Étape de paiement identique (Étape 1 → Étape 2)
 // ✅ SANS multi-paniers
 // ✅ SANS boutons Tables / En ligne
 // ✅ Mêmes dimensions / même responsive
@@ -841,7 +841,14 @@ function masquerElementsAdminDansClient() {
     if (paymentHeader && paymentHeader.textContent.indexOf('Paiement') !== -1) {
         paymentHeader.innerHTML = '<i class="fas fa-clipboard-check"></i> Confirmation';
     }
+
+    // 🆕 v5 : Bouton "Valider" devient "Envoyer la commande"
+    var validateBtn = document.querySelector('#clientDynamicContent .pos-validate-btn');
+    if (validateBtn) {
+        validateBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer la commande';
+    }
 }
+
 
 // ==================== SURCHARGES POS ====================
 window.posFinalizeSaleOriginal = window.posFinalizeSale;
@@ -931,12 +938,12 @@ window.posResetCart = function() {
 window.posGoToStep2Original = window.posGoToStep2;
 window.posGoToStep2 = function() {
     if (window.posIsClientMode) {
-        posMultiCarts['client-panier'] = posCart.slice();
-        posStep = 2;
-        clientStep = 2;
-        clientCart = posCart.slice();
-        renderClientPOS();
-        return;
+        // 🆕 v5 : Le client envoie DIRECTEMENT sa commande (pas d'étape paiement)
+        if (posCart.length === 0) {
+            alert('⚠️ Votre panier est vide. Ajoutez des articles avant de commander.');
+            return;
+        }
+        return clientValidateOrder();
     }
     if (typeof window.posGoToStep2Original === 'function') {
         return window.posGoToStep2Original();
@@ -1498,8 +1505,9 @@ window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
 window.renderClientWelcomeBanner = renderClientWelcomeBanner;
 window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS v4 chargé');
+console.log('🚀 E-SOLUTION - Client JS v5 chargé');
 console.log('✅ Historique ventes + crédits + total crédits restant');
 console.log('✅ Profil : crédits + points fidélité + équivalent DH');
 console.log('✅ Conversion 100 points = 10 DH');
+console.log('✅ Validation directe sans étape paiement');
 console.log('✅ Design Vert + Blanc conservé');
