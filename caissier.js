@@ -1,7 +1,6 @@
 // ==================== CLIENT.JS - E-SOLUTION (VERSION FINALE POS IDENTIQUE) ====================
 // ✅ Le client voit EXACTEMENT le même POS que l'admin/caissier
 // ✅ Réutilise directement pos.js : buildFullPOS, filterProductGrid, updateCartOnly, etc.
-// ✅ 🆕 v3 : Design moderne — Vert + Blanc uniquement + boutons modernes + sans bordures
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
 // ✅ Étape de paiement identique (Étape 1 → Étape 2)
 // ✅ SANS multi-paniers
@@ -11,502 +10,6 @@
 var clientCart = [];
 var clientStep = 1;
 var clientIsClientMode = true;
-
-// ==================== 🆕 v3 : STYLES INTÉGRÉS CLIENT (Vert + Blanc) ====================
-function injectClientStyles() {
-    if (document.getElementById('clientModernStylesV3')) return;
-
-    var style = document.createElement('style');
-    style.id = 'clientModernStylesV3';
-    style.textContent = `
-    /* ============================================================
-       🎨 CLIENT PAGE — Vert + Blanc uniquement (v3)
-       Couleurs : Vert #10B981 + Blanc #FFFFFF
-       Sans bordures sur les cartes
-       ============================================================ */
-
-    :root {
-        --client-green: #10B981;
-        --client-green-dark: #059669;
-        --client-green-light: #34D399;
-        --client-green-soft: #ECFDF5;
-        --client-white: #FFFFFF;
-        --client-gray-50: #F9FAFB;
-        --client-gray-100: #F3F4F6;
-        --client-gray-200: #E5E7EB;
-        --client-gray-500: #6B7280;
-        --client-gray-700: #374151;
-        --client-text: #111827;
-    }
-
-    /* ==================== LAYOUT GÉNÉRAL ==================== */
-    #clientPage {
-        background: var(--client-gray-50) !important;
-        min-height: 100vh !important;
-        font-family: 'Inter', -apple-system, sans-serif !important;
-    }
-    #clientPage .main-content {
-        background: var(--client-gray-50) !important;
-        padding: 24px !important;
-    }
-
-    /* ==================== HEADER ==================== */
-    #clientPage .page-header {
-        background: var(--client-white) !important;
-        border: none !important;
-        border-radius: 16px !important;
-        padding: 20px 24px !important;
-        margin-bottom: 20px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    }
-    #clientPage .page-header .header-title {
-        display: flex !important;
-        align-items: center !important;
-        gap: 14px !important;
-    }
-    #clientPage .page-header .header-title i {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-        padding: 12px !important;
-        border-radius: 12px !important;
-        font-size: 18px !important;
-        box-shadow: 0 4px 12px rgba(16,185,129,0.3) !important;
-    }
-    #clientPage .page-header .header-title h2 {
-        font-size: 22px !important;
-        font-weight: 800 !important;
-        color: var(--client-text) !important;
-        letter-spacing: -0.5px !important;
-        margin: 0 !important;
-    }
-
-    /* ==================== SIDEBAR ==================== */
-    #clientPage .client-sidebar {
-        background: var(--client-white) !important;
-        border-right: none !important;
-        box-shadow: 2px 0 12px rgba(0,0,0,0.04) !important;
-    }
-    #clientPage .client-sidebar .sidebar-header {
-        padding: 24px 20px !important;
-        border-bottom: 1px solid var(--client-gray-100) !important;
-    }
-    #clientPage .client-sidebar .sidebar-logo {
-        width: 56px !important;
-        height: 56px !important;
-        background: var(--client-green-soft) !important;
-        border: none !important;
-        border-radius: 16px !important;
-        box-shadow: none !important;
-        margin-bottom: 14px !important;
-    }
-    #clientPage .client-sidebar .nav-item {
-        padding: 14px 18px !important;
-        border-radius: 12px !important;
-        font-size: 14px !important;
-        font-weight: 500 !important;
-        color: var(--client-gray-700) !important;
-        margin-bottom: 4px !important;
-        border: none !important;
-        transition: all 0.2s ease !important;
-    }
-    #clientPage .client-sidebar .nav-item:hover {
-        background: var(--client-green-soft) !important;
-        color: var(--client-green-dark) !important;
-        transform: translateX(2px);
-    }
-    #clientPage .client-sidebar .nav-item.active {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-        font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(16,185,129,0.3) !important;
-    }
-    #clientPage .client-sidebar .nav-item.active i {
-        color: var(--client-white) !important;
-    }
-    #clientPage .client-sidebar .nav-item i {
-        width: 22px !important;
-        font-size: 16px !important;
-        color: var(--client-gray-500) !important;
-    }
-
-    /* ==================== CONTENT CARDS ==================== */
-    #clientDynamicContent .content-card {
-        background: var(--client-white) !important;
-        border: none !important;
-        border-radius: 16px !important;
-        padding: 24px !important;
-        margin-bottom: 20px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    }
-    #clientDynamicContent .card-header {
-        border-bottom: 1px solid var(--client-gray-100) !important;
-        padding-bottom: 16px !important;
-        margin-bottom: 20px !important;
-    }
-    #clientDynamicContent .card-header h3 {
-        font-size: 18px !important;
-        font-weight: 800 !important;
-        color: var(--client-text) !important;
-        letter-spacing: -0.4px !important;
-    }
-
-    /* ==================== BANNIÈRE WELCOME (VERT) ==================== */
-    .client-welcome-banner {
-        background: linear-gradient(135deg, var(--client-green), var(--client-green-dark)) !important;
-        border: none !important;
-        border-radius: 20px !important;
-        padding: 28px 32px !important;
-        margin-bottom: 24px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        gap: 20px !important;
-        position: relative !important;
-        overflow: hidden !important;
-        box-shadow: 0 12px 32px -8px rgba(16,185,129,0.4) !important;
-        color: var(--client-white) !important;
-        flex-wrap: wrap !important;
-    }
-    .client-welcome-banner::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(255,255,255,0.2), transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
-    }
-    .client-welcome-content {
-        display: flex !important;
-        align-items: center !important;
-        gap: 20px !important;
-        position: relative !important;
-        z-index: 1 !important;
-        flex: 1 !important;
-        min-width: 0 !important;
-    }
-    .client-welcome-avatar {
-        width: 64px !important;
-        height: 64px !important;
-        border-radius: 50% !important;
-        background: rgba(255, 255, 255, 0.25) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 30px !important;
-        color: var(--client-white) !important;
-        flex-shrink: 0 !important;
-        border: none !important;
-    }
-    .client-welcome-text h2 {
-        margin: 0 0 4px !important;
-        font-size: 24px !important;
-        font-weight: 800 !important;
-        color: var(--client-white) !important;
-        letter-spacing: -0.5px !important;
-        line-height: 1.2 !important;
-    }
-    .client-welcome-text h2 span {
-        color: #FEF3C7 !important;
-    }
-    .client-welcome-text p {
-        margin: 0 !important;
-        font-size: 14px !important;
-        color: rgba(255, 255, 255, 0.9) !important;
-        font-weight: 500 !important;
-    }
-    .client-welcome-decoration {
-        font-size: 60px !important;
-        color: rgba(255, 255, 255, 0.2) !important;
-        position: relative !important;
-        z-index: 0 !important;
-        flex-shrink: 0 !important;
-        animation: welcomeBob 3s ease-in-out infinite !important;
-    }
-    @keyframes welcomeBob {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-10px) rotate(5deg); }
-    }
-
-    /* ==================== 🆕 BOUTONS MODERNES (VERT UNIQUEMENT) ==================== */
-    .btn-client-primary {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
-        font-weight: 700 !important;
-        font-size: 14px !important;
-        cursor: pointer !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
-        font-family: inherit !important;
-        letter-spacing: 0.2px !important;
-    }
-    .btn-client-primary:hover {
-        background: var(--client-green-dark) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4) !important;
-    }
-    .btn-client-primary:active {
-        transform: translateY(0) !important;
-    }
-
-    .btn-client-secondary {
-        background: var(--client-white) !important;
-        color: var(--client-green-dark) !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
-        font-weight: 700 !important;
-        font-size: 14px !important;
-        cursor: pointer !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
-        font-family: inherit !important;
-    }
-    .btn-client-secondary:hover {
-        background: var(--client-green-soft) !important;
-        color: var(--client-green-dark) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
-    }
-
-    /* ==================== POS CLIENT — SANS BORDURES ==================== */
-    #clientDynamicContent .pos-products-panel,
-    #clientDynamicContent .pos-cart-panel {
-        background: var(--client-white) !important;
-        border: none !important;
-        border-radius: 16px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    }
-
-    #clientDynamicContent .pos-product-card {
-        background: var(--client-white) !important;
-        border: none !important;
-        border-radius: 14px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-        transition: all 0.25s ease !important;
-    }
-    #clientDynamicContent .pos-product-card:hover:not(.pos-out-of-stock) {
-        background: var(--client-white) !important;
-        transform: translateY(-4px) !important;
-        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.2) !important;
-    }
-
-    #clientDynamicContent .pos-category-card {
-        background: var(--client-white) !important;
-        border: none !important;
-        border-radius: 14px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-        transition: all 0.25s ease !important;
-    }
-    #clientDynamicContent .pos-category-card:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.2) !important;
-    }
-    #clientDynamicContent .pos-category-card.active {
-        background: var(--client-green-soft) !important;
-        border: none !important;
-        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3) !important;
-    }
-
-    #clientDynamicContent .pos-product-name {
-        color: var(--client-text) !important;
-        font-weight: 700 !important;
-    }
-    #clientDynamicContent .pos-product-price {
-        color: var(--client-green-dark) !important;
-        font-weight: 800 !important;
-    }
-
-    /* ==================== PANIER ==================== */
-    #clientDynamicContent .pos-cart-header {
-        border-bottom: 1px solid var(--client-gray-100) !important;
-    }
-    #clientDynamicContent .pos-cart-badge {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-        box-shadow: 0 2px 8px rgba(16,185,129,0.3) !important;
-    }
-    #clientDynamicContent .pos-cart-item {
-        background: var(--client-gray-50) !important;
-        border: none !important;
-        border-radius: 10px !important;
-    }
-    #clientDynamicContent .pos-cart-total-row {
-        background: var(--client-green-soft) !important;
-        border: none !important;
-        border-radius: 12px !important;
-    }
-    #clientDynamicContent .pos-cart-total-row span:last-child {
-        color: var(--client-green-dark) !important;
-        font-weight: 900 !important;
-    }
-
-    /* ==================== BOUTON VALIDER / FINALISER (VERT) ==================== */
-    #clientDynamicContent .pos-validate-btn,
-    #clientDynamicContent .pos-finalize-btn {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-        border: none !important;
-        border-radius: 14px !important;
-        font-weight: 800 !important;
-        font-size: 15px !important;
-        padding: 16px !important;
-        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4) !important;
-        transition: all 0.25s ease !important;
-    }
-    #clientDynamicContent .pos-validate-btn:hover:not(:disabled),
-    #clientDynamicContent .pos-finalize-btn:hover:not(:disabled) {
-        background: var(--client-green-dark) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.5) !important;
-    }
-
-    /* ==================== BOUTONS QUANTITÉ (VERT) ==================== */
-    #clientDynamicContent .pos-qty-btn {
-        background: var(--client-gray-100) !important;
-        color: var(--client-gray-700) !important;
-        border: none !important;
-        border-radius: 50% !important;
-    }
-    #clientDynamicContent .pos-qty-btn:hover {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-        transform: scale(1.1) !important;
-    }
-    #clientDynamicContent .pos-remove-btn {
-        background: #FEF2F2 !important;
-        color: #DC2626 !important;
-        border: none !important;
-        border-radius: 50% !important;
-    }
-    #clientDynamicContent .pos-remove-btn:hover {
-        background: #DC2626 !important;
-        color: var(--client-white) !important;
-    }
-
-    /* ==================== BOUTONS PAIEMENT ==================== */
-    #clientDynamicContent .pos-payment-btn {
-        background: var(--client-gray-100) !important;
-        color: var(--client-gray-700) !important;
-        border: none !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
-        transition: all 0.2s ease !important;
-    }
-    #clientDynamicContent .pos-payment-btn.active {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
-    }
-
-    /* ==================== ÉTAPES PANIER/PAIEMENT ==================== */
-    #clientDynamicContent .pos-step.active {
-        background: var(--client-green-soft) !important;
-        color: var(--client-green-dark) !important;
-    }
-    #clientDynamicContent .pos-step.active .step-number {
-        background: var(--client-green) !important;
-        color: var(--client-white) !important;
-    }
-
-    /* ==================== INPUTS ==================== */
-    #clientDynamicContent input[type="text"],
-    #clientDynamicContent input[type="number"],
-    #clientDynamicContent #posSearchInput,
-    #clientDynamicContent #posAmountGiven {
-        background: var(--client-gray-50) !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 12px 16px !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        color: var(--client-text) !important;
-        transition: all 0.2s ease !important;
-        font-family: 'Inter', sans-serif !important;
-        outline: none !important;
-        box-shadow: none !important;
-    }
-    #clientDynamicContent input:focus {
-        background: var(--client-white) !important;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
-    }
-
-    /* ==================== TABLE HISTORIQUE ==================== */
-    #clientDynamicContent .data-table {
-        background: var(--client-white) !important;
-        border: none !important;
-        border-radius: 12px !important;
-        overflow: hidden !important;
-    }
-    #clientDynamicContent .data-table thead th {
-        background: var(--client-gray-50) !important;
-        color: var(--client-gray-500) !important;
-        font-weight: 700 !important;
-        font-size: 11px !important;
-        letter-spacing: 0.6px !important;
-        text-transform: uppercase !important;
-        border-bottom: 1px solid var(--client-gray-100) !important;
-        padding: 14px 16px !important;
-    }
-    #clientDynamicContent .data-table tbody td {
-        padding: 14px 16px !important;
-        color: var(--client-gray-700) !important;
-        border-bottom: 1px solid var(--client-gray-100) !important;
-    }
-    #clientDynamicContent .data-table tbody tr:hover td {
-        background: var(--client-gray-50) !important;
-    }
-
-    /* ==================== STATUS BADGES ==================== */
-    #clientDynamicContent .status-success {
-        background: var(--client-green-soft) !important;
-        color: var(--client-green-dark) !important;
-        padding: 4px 12px !important;
-        border-radius: 999px !important;
-        font-weight: 700 !important;
-        font-size: 11px !important;
-        border: none !important;
-    }
-    #clientDynamicContent .status-warning {
-        background: #FEF3C7 !important;
-        color: #D97706 !important;
-        padding: 4px 12px !important;
-        border-radius: 999px !important;
-        font-weight: 700 !important;
-        font-size: 11px !important;
-        border: none !important;
-    }
-
-    /* ==================== RESPONSIVE ==================== */
-    @media (max-width: 768px) {
-        #clientPage .main-content { padding: 16px !important; }
-        #clientPage .page-header { padding: 16px 18px !important; border-radius: 14px !important; }
-        #clientPage .page-header .header-title h2 { font-size: 18px !important; }
-        #clientDynamicContent .content-card { padding: 18px !important; border-radius: 14px !important; }
-        .client-welcome-banner { padding: 20px 22px !important; border-radius: 14px !important; }
-        .client-welcome-avatar { width: 50px !important; height: 50px !important; font-size: 24px !important; }
-        .client-welcome-text h2 { font-size: 18px !important; }
-        .client-welcome-text p { font-size: 12px !important; }
-        .client-welcome-decoration { display: none !important; }
-    }
-    `;
-    document.head.appendChild(style);
-    console.log('✅ Styles client modernes injectés (Vert + Blanc)');
-}
-
-// Injection immédiate des styles
-injectClientStyles();
 
 // ==================== NAVIGATION CLIENT ====================
 function clientNavigate(page) {
@@ -526,44 +29,20 @@ function clientNavigate(page) {
     if (typeof closeClientSidebar === 'function') closeClientSidebar();
 }
 
-// ==================== BANNIÈRE WELCOME ====================
-function renderClientWelcomeBanner() {
-    if (!window.currentUserData) return '';
-    var ud = window.currentUserData.userData;
-    var prenom = ud.prenom || 'Client';
-    var heure = new Date().getHours();
-    var salutation = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
-
-    var html = '<div class="client-welcome-banner">';
-    html += '  <div class="client-welcome-content">';
-    html += '    <div class="client-welcome-avatar">';
-    html += '      <i class="fas fa-user-circle"></i>';
-    html += '    </div>';
-    html += '    <div class="client-welcome-text">';
-    html += '      <h2>' + salutation + ', <span>' + escapeHtml(prenom) + '</span> 👋</h2>';
-    html += '      <p>Que souhaitez-vous commander aujourd\'hui ?</p>';
-    html += '    </div>';
-    html += '  </div>';
-    html += '  <div class="client-welcome-decoration">';
-    html += '    <i class="fas fa-utensils"></i>';
-    html += '  </div>';
-    html += '</div>';
-
-    return html;
-}
-
-// ==================== PAGE COMMANDER ====================
+// ==================== PAGE COMMANDER (RÉUTILISE LE POS ADMIN) ====================
 async function loadClientCommanderPage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
+    // ✅ Activer le mode client dans pos.js
     window.posIsClientMode = true;
     window.posHideMultiCarts = true;
     window.posHideTablesBtn = true;
     window.posHideEnLigneBtn = true;
 
-    c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#10B981;"></i><p style="margin-top:15px;color:#6B7280;">Chargement du menu...</p></div>';
+    c.innerHTML = '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#14B8A6;"></i><p style="margin-top:15px;color:#64748b;">Chargement du menu...</p></div>';
 
+    // ✅ Réinitialiser les variables pos.js pour le client
     posCart = clientCart.length > 0 ? clientCart.slice() : [];
     posStep = clientStep;
     posSelectedCategory = 'all';
@@ -573,6 +52,7 @@ async function loadClientCommanderPage() {
     posToolsVisible = false;
     posProductOffset = 0;
 
+    // ✅ Pas de multi-paniers pour le client
     posMultiCarts = { 'client-panier': posCart };
     posCurrentCartId = 'client-panier';
     posMultiPaniersData = {
@@ -589,11 +69,13 @@ async function loadClientCommanderPage() {
         }
     };
 
+    // ✅ Définir le client actuel
     posCurrentClient = window.currentUserData ? {
         id: window.currentUserData.uid,
         name: window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom
     } : null;
 
+    // ✅ Charger les catégories et produits
     try {
         let cachedCategories = await CacheDB.getAll('categories');
         let cachedProducts = await CacheDB.getAll('products');
@@ -612,6 +94,7 @@ async function loadClientCommanderPage() {
         }
     } catch(e) { console.warn('Erreur cache client:', e); }
 
+    // ✅ Puis Firestore
     try {
         const [cs, ps] = await Promise.all([
             db.collection('categories').get(),
@@ -656,66 +139,74 @@ async function loadClientCommanderPage() {
     }
 }
 
-// ==================== RENDU POS CLIENT ====================
+// ==================== RENDU POS CLIENT (UTILISE buildFullPOS DE POS.JS) ====================
 function renderClientPOS() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
     if (posProductsList.length === 0 && posCategoriesList.length === 0) {
-        c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#10B981;"></i><p>Chargement...</p></div>';
+        c.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#14B8A6;"></i><p>Chargement...</p></div>';
         return;
     }
 
+    // ✅ Synchroniser le panier client avec posCart
     clientCart = posCart.slice();
     clientStep = posStep;
 
+    // ✅ Appeler buildFullPOS de pos.js (IDENTIQUE à l'admin)
     if (typeof buildFullPOS === 'function') {
-        var bannerHtml = renderClientWelcomeBanner();
         buildFullPOS(c);
-        if (c.firstChild) {
-            c.insertAdjacentHTML('afterbegin', bannerHtml);
-        }
+        // ✅ Après le rendu, masquer les boutons multi-paniers, tables, en ligne
         setTimeout(masquerElementsAdminDansClient, 50);
     } else {
-        c.innerHTML = '<div style="text-align:center;padding:40px;color:#EF4444;">Erreur : POS non chargé</div>';
+        c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Erreur : POS non chargé</div>';
     }
 }
 
-// ==================== MASQUER LES ÉLÉMENTS ADMIN ====================
+// ==================== MASQUER LES ÉLÉMENTS ADMIN DANS LE CLIENT ====================
 function masquerElementsAdminDansClient() {
+    // ✅ Masquer la barre multi-paniers
     var multiCartBar = document.querySelector('#clientDynamicContent .pos-multi-carts-bar');
     if (multiCartBar) multiCartBar.style.display = 'none';
 
+    // ✅ Masquer le bouton Tables
     var tablesBtn = document.getElementById('posTablesBtn');
     if (tablesBtn) tablesBtn.style.display = 'none';
 
+    // ✅ Masquer le bouton En ligne
     var enligneBtn = document.getElementById('posEnLigneBtn');
     if (enligneBtn) enligneBtn.style.display = 'none';
 
+    // ✅ Masquer le champ Vendeur (pas nécessaire pour le client)
     var vendeurGroup = document.getElementById('posVendeur');
     if (vendeurGroup) {
         var parent = vendeurGroup.closest('div[style*="margin-bottom"]');
         if (parent) parent.style.display = 'none';
     }
 
+    // ✅ Masquer le champ Table (le client n'a pas besoin de table)
     var tableInput = document.getElementById('posTableNum');
     if (tableInput) {
         var parent = tableInput.closest('div[style*="margin-bottom"]');
         if (parent) parent.style.display = 'none';
     }
 
+    // ✅ Masquer le séparateur "— OU —"
     var separator = document.querySelector('#clientDynamicContent div[style*="OU"]');
     if (separator) separator.style.display = 'none';
 
+    // ✅ Masquer le bouton "Nouveau client" (le client ne crée pas de clients)
     var nouveauBtn = document.querySelector('#clientDynamicContent button[onclick*="posAjouterNouveauClient"]');
     if (nouveauBtn) nouveauBtn.style.display = 'none';
 
+    // ✅ Masquer le champ de recherche client (le client est déjà identifié)
     var clientSearchInput = document.getElementById('posClientSearchInput');
     if (clientSearchInput) {
         var parent = clientSearchInput.closest('div[style*="position:relative"]');
         if (parent) parent.style.display = 'none';
     }
-
+    var clientLabel = document.querySelector('#clientDynamicContent label');
+    // Masquer le label "Client" associé
     var allLabels = document.querySelectorAll('#clientDynamicContent label');
     allLabels.forEach(function(lbl) {
         if (lbl.textContent.trim() === 'Client') {
@@ -724,40 +215,47 @@ function masquerElementsAdminDansClient() {
         }
     });
 
+    // ✅ Masquer le bouton Crédit et Partiel (le client paie en espèces uniquement)
     var creditBtn = document.getElementById('posCreditBtn');
     if (creditBtn) creditBtn.style.display = 'none';
     var partielBtn = document.getElementById('posPartielBtn');
     if (partielBtn) partielBtn.style.display = 'none';
 
+    // ✅ Changer le texte du bouton "Finaliser" en "Commander"
     var finalizeBtn = document.querySelector('#clientDynamicContent .pos-finalize-btn');
     if (finalizeBtn) {
         finalizeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer la commande';
     }
 
+    // ✅ Changer le titre "Panier" (déjà bon)
+    // ✅ Changer le titre "Paiement" en "Confirmation"
     var paymentHeader = document.querySelector('#clientDynamicContent .pos-cart-header h3');
     if (paymentHeader && paymentHeader.textContent.indexOf('Paiement') !== -1) {
         paymentHeader.innerHTML = '<i class="fas fa-clipboard-check"></i> Confirmation';
     }
 }
 
-// ==================== SURCHARGES POS ====================
+// ==================== SURCHARGER posFinalizeSale POUR LE CLIENT ====================
 window.posFinalizeSaleOriginal = window.posFinalizeSale;
 window.posFinalizeSale = async function() {
+    // ✅ Si on est en mode client, envoyer une commande au lieu de finaliser une vente
     if (window.posIsClientMode) {
         return await clientValidateOrder();
     }
+    // Sinon comportement admin normal
     if (typeof window.posFinalizeSaleOriginal === 'function') {
         return await window.posFinalizeSaleOriginal();
     }
 };
 
-// ==================== VALIDATION COMMANDE ====================
+// ==================== VALIDATION COMMANDE CLIENT ====================
 async function clientValidateOrder() {
     if (posCart.length === 0) {
         alert('❌ Votre panier est vide. Ajoutez des articles avant de commander.');
         return;
     }
 
+    // ✅ Confirmation
     if (!confirm('Voulez-vous envoyer votre commande ?\n\nTotal: ' + posCalculateTotal().toFixed(2) + ' MAD')) {
         return;
     }
@@ -782,6 +280,7 @@ async function clientValidateOrder() {
         await CacheDB.write('commandes', null, orderData, 'add');
         alert('✅ Commande envoyée !\n\nTotal: ' + total.toFixed(2) + ' MAD\n\nNous vous contacterons bientôt.');
 
+        // ✅ Réinitialiser
         posCart = [];
         clientCart = [];
         posStep = 1;
@@ -802,7 +301,7 @@ async function clientValidateOrder() {
     }
 }
 
-// ==================== AUTRES SURCHARGES ====================
+// ==================== SURCHARGER posResetCart POUR LE CLIENT ====================
 window.posResetCartOriginal = window.posResetCart;
 window.posResetCart = function() {
     if (window.posIsClientMode) {
@@ -825,6 +324,7 @@ window.posResetCart = function() {
     }
 };
 
+// ==================== SURCHARGER posGoToStep2 POUR LE CLIENT ====================
 window.posGoToStep2Original = window.posGoToStep2;
 window.posGoToStep2 = function() {
     if (window.posIsClientMode) {
@@ -840,6 +340,7 @@ window.posGoToStep2 = function() {
     }
 };
 
+// ==================== SURCHARGER posGoToStep1 POUR LE CLIENT ====================
 window.posGoToStep1Original = window.posGoToStep1;
 window.posGoToStep1 = function() {
     if (window.posIsClientMode) {
@@ -855,6 +356,7 @@ window.posGoToStep1 = function() {
     }
 };
 
+// ==================== SURCHARGER renderPOS POUR LE CLIENT ====================
 window.renderPOSOriginal = window.renderPOS;
 window.renderPOS = function() {
     if (window.posIsClientMode) {
@@ -865,17 +367,24 @@ window.renderPOS = function() {
     }
 };
 
+// ==================== SURCHARGER filterProductGrid POUR LE CLIENT ====================
+// (pour s'assurer que le rendu se fait dans #clientDynamicContent)
 window.filterProductGridOriginal = window.filterProductGrid;
 window.filterProductGrid = function() {
     if (window.posIsClientMode) {
+        // Utiliser la grille dans #clientDynamicContent
         var grid = document.getElementById('posProductGrid');
-        if (grid) { /* OK */ }
+        if (grid) {
+            // Le code de filterProductGrid utilise document.getElementById('posProductGrid')
+            // qui est unique, donc ça fonctionne tel quel
+        }
     }
     if (typeof window.filterProductGridOriginal === 'function') {
         return window.filterProductGridOriginal();
     }
 };
 
+// ==================== SURCHARGER updateCartOnly POUR LE CLIENT ====================
 window.updateCartOnlyOriginal = window.updateCartOnly;
 window.updateCartOnly = function() {
     if (window.posIsClientMode) {
@@ -886,6 +395,9 @@ window.updateCartOnly = function() {
     }
 };
 
+// ==================== SURCHARGER posToggleTools POUR LE CLIENT ====================
+// ✅ Le client veut : bouton "Afficher tout" → affiche UNIQUEMENT la barre de recherche + le micro
+// ✅ Masque : barre des catégories slide, btn Tables, btn En ligne
 window.posToggleToolsOriginal = window.posToggleTools;
 window.posToggleTools = function() {
     if (window.posIsClientMode) {
@@ -900,9 +412,9 @@ window.posToggleTools = function() {
                 toolsContainer.style.gap = '8px';
                 toolsContainer.style.marginBottom = '8px';
                 toolsContainer.style.padding = '8px 12px';
-                toolsContainer.style.background = '#F9FAFB';
+                toolsContainer.style.background = 'var(--bg-page)';
                 toolsContainer.style.borderRadius = '8px';
-                toolsContainer.style.border = 'none';
+                toolsContainer.style.border = '1px solid var(--border)';
                 toolsContainer.classList.add('visible');
             } else {
                 toolsContainer.style.display = 'none';
@@ -912,9 +424,10 @@ window.posToggleTools = function() {
 
         if (toggleBtn) {
             toggleBtn.innerHTML = posToolsVisible ? '✕ Masquer' : '🔍 Afficher tout';
-            toggleBtn.style.background = posToolsVisible ? '#EF4444' : '#10B981';
+            toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
         }
 
+        // ✅ Afficher UNIQUEMENT la barre de recherche
         var searchInput = document.getElementById('posSearchInput');
         if (searchInput) {
             searchInput.style.display = posToolsVisible ? 'flex' : 'none';
@@ -923,17 +436,23 @@ window.posToggleTools = function() {
             }
         }
 
+        // ✅ Afficher le micro
         var micBtn = document.getElementById('posMicBtn');
-        if (micBtn) micBtn.style.display = posToolsVisible ? 'flex' : 'none';
+        if (micBtn) {
+            micBtn.style.display = posToolsVisible ? 'flex' : 'none';
+        }
 
+        // ✅ MASQUER les boutons Tables et En ligne
         var tablesBtn = document.getElementById('posTablesBtn');
         if (tablesBtn) tablesBtn.style.display = 'none';
         var enligneBtn = document.getElementById('posEnLigneBtn');
         if (enligneBtn) enligneBtn.style.display = 'none';
 
+        // ✅ MASQUER la barre des catégories (slide)
         var categoriesBar = document.querySelector('#clientDynamicContent .pos-categories-bar');
         if (categoriesBar) categoriesBar.style.display = 'none';
 
+        // ✅ Si on masque, revenir aux catégories (cartes)
         if (!posToolsVisible) {
             posViewMode = 'categories';
             posSelectedCategoryForView = null;
@@ -961,6 +480,7 @@ async function loadClientHistoriquePage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
+    // ✅ Désactiver le mode client POS
     window.posIsClientMode = false;
 
     c.innerHTML = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-history"></i> Mon historique</h3></div><div id="clientOrdersList" style="text-align:center;padding:20px;">Chargement...</div></div>';
@@ -987,7 +507,7 @@ async function loadClientHistoriquePage() {
         if (!cont) return;
 
         if (all.length === 0) {
-            cont.innerHTML = '<p style="padding:40px;color:#9CA3AF;text-align:center;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:10px;"></i>Aucune commande</p>';
+            cont.innerHTML = '<p style="padding:40px;color:#94a3b8;text-align:center;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:10px;"></i>Aucune commande</p>';
             return;
         }
 
@@ -1006,7 +526,7 @@ async function loadClientHistoriquePage() {
     } catch(e) {
         console.error('Erreur historique:', e);
         var cont2 = document.getElementById('clientOrdersList');
-        if (cont2) cont2.innerHTML = '<p style="color:#EF4444;">Erreur de chargement</p>';
+        if (cont2) cont2.innerHTML = '<p style="color:#ef4444;">Erreur de chargement</p>';
     }
 }
 
@@ -1015,6 +535,7 @@ async function loadClientParametresPage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
+    // ✅ Désactiver le mode client POS
     window.posIsClientMode = false;
 
     if (!window.currentUserData) { c.innerHTML = '<div class="content-card"><p>Non connecté</p></div>'; return; }
@@ -1038,9 +559,9 @@ async function loadClientParametresPage() {
     h += '<div><strong>Adresse:</strong> ' + escapeHtml(clientData.adresse || '-') + '</div>';
     h += '<div><strong>Points Fidélité:</strong> ' + (clientData.pointsFidelite || 0) + '</div>';
     h += '</div>';
-    h += '<div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;">';
-    h += '<button class="btn-client-primary" onclick="clientOpenEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>';
-    h += '<button class="btn-client-secondary" onclick="clientOpenChangePassword()"><i class="fas fa-lock"></i> Changer mot de passe</button>';
+    h += '<div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">';
+    h += '<button class="btn-add" onclick="clientOpenEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>';
+    h += '<button class="btn-save" onclick="clientOpenChangePassword()"><i class="fas fa-lock"></i> Changer mot de passe</button>';
     h += '</div></div>';
     c.innerHTML = h;
     window.clientProfileData = clientData;
@@ -1128,12 +649,11 @@ window.clientSaveProfile = clientSaveProfile;
 window.clientOpenChangePassword = clientOpenChangePassword;
 window.clientChangePassword = clientChangePassword;
 window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
-window.renderClientWelcomeBanner = renderClientWelcomeBanner;
-window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS v3 chargé (Vert + Blanc uniquement)');
-console.log('✅ Styles modernes injectés automatiquement');
-console.log('✅ Bannière Welcome verte');
-console.log('✅ Boutons modernes verts');
-console.log('✅ POS sans bordures');
-console.log('✅ POS identique à l\'admin conservé');
+console.log('🚀 E-SOLUTION - Client JS chargé (POS identique à l\'admin)');
+console.log('✅ Réutilise buildFullPOS de pos.js');
+console.log('✅ Barre de recherche via bouton "Afficher tout" + micro uniquement');
+console.log('✅ Sans catégories slide, sans Tables, sans En ligne');
+console.log('✅ Étape de paiement identique');
+console.log('✅ Sans multi-paniers');
+console.log('✅ Mêmes dimensions / même responsive');
