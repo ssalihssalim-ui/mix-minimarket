@@ -1,6 +1,7 @@
 // ==================== CLIENT.JS - E-SOLUTION (VERSION FINALE POS IDENTIQUE) ====================
 // ✅ Le client voit EXACTEMENT le même POS que l'admin/caissier
 // ✅ Réutilise directement pos.js : buildFullPOS, filterProductGrid, updateCartOnly, etc.
+// ✅ 🆕 v2 : Bannière Welcome + boutons modernes + CSS intégré
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
 // ✅ Étape de paiement identique (Étape 1 → Étape 2)
 // ✅ SANS multi-paniers
@@ -10,6 +11,410 @@
 var clientCart = [];
 var clientStep = 1;
 var clientIsClientMode = true;
+
+// ==================== 🆕 v2 : STYLES INTÉGRÉS CLIENT ====================
+function injectClientStyles() {
+    if (document.getElementById('clientModernStylesV2')) return;
+
+    var style = document.createElement('style');
+    style.id = 'clientModernStylesV2';
+    style.textContent = `
+    /* ============================================================
+       🎨 CLIENT PAGE — Modernisation 2026
+       Couleurs Teal #14B8A6 + Slate #0F172A + Blanc
+       ============================================================ */
+
+    /* ==================== LAYOUT GÉNÉRAL ==================== */
+    #clientPage {
+        background:
+            radial-gradient(circle at 15% 15%, rgba(20,184,166,0.08) 0%, transparent 45%),
+            radial-gradient(circle at 85% 85%, rgba(15,23,42,0.05) 0%, transparent 45%),
+            #F8FAFC !important;
+        min-height: 100vh !important;
+        font-family: 'Inter', -apple-system, sans-serif !important;
+    }
+    #clientPage .main-content {
+        background: transparent !important;
+        padding: 24px !important;
+    }
+
+    /* ==================== HEADER ==================== */
+    #clientPage .page-header {
+        background: rgba(255, 255, 255, 0.75) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.9) !important;
+        border-radius: 20px !important;
+        padding: 20px 24px !important;
+        margin-bottom: 24px !important;
+        box-shadow:
+            0 20px 40px -15px rgba(0, 0, 0, 0.12),
+            0 4px 12px -4px rgba(0, 0, 0, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    }
+    #clientPage .page-header .header-title {
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
+    }
+    #clientPage .page-header .header-title i {
+        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+        color: #FFFFFF !important;
+        padding: 12px !important;
+        border-radius: 14px !important;
+        font-size: 20px !important;
+        box-shadow:
+            0 8px 20px -4px rgba(20, 184, 166, 0.5),
+            inset 0 1px 0 rgba(255,255,255,0.3) !important;
+    }
+    #clientPage .page-header .header-title h2 {
+        font-size: 24px !important;
+        font-weight: 800 !important;
+        color: #0F172A !important;
+        letter-spacing: -0.6px !important;
+        margin: 0 !important;
+    }
+
+    /* ==================== SIDEBAR ==================== */
+    #clientPage .client-sidebar {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+        box-shadow: 4px 0 30px -10px rgba(0, 0, 0, 0.08) !important;
+    }
+    #clientPage .client-sidebar .sidebar-header {
+        padding: 24px 20px !important;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+        background: linear-gradient(180deg, rgba(20,184,166,0.05), transparent) !important;
+    }
+    #clientPage .client-sidebar .sidebar-logo {
+        width: 56px !important;
+        height: 56px !important;
+        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+        border-radius: 16px !important;
+        border: none !important;
+        box-shadow: 0 8px 20px -4px rgba(20,184,166,0.4) !important;
+        margin-bottom: 14px !important;
+    }
+    #clientPage .client-sidebar .nav-item {
+        padding: 14px 18px !important;
+        border-radius: 12px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #475569 !important;
+        margin-bottom: 4px !important;
+        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }
+    #clientPage .client-sidebar .nav-item:hover {
+        color: #14B8A6 !important;
+        transform: translateX(2px);
+        background: rgba(20, 184, 166, 0.08) !important;
+    }
+    #clientPage .client-sidebar .nav-item.active {
+        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        box-shadow:
+            0 8px 20px -4px rgba(20,184,166,0.4),
+            inset 0 1px 0 rgba(255,255,255,0.3) !important;
+        border: none !important;
+    }
+    #clientPage .client-sidebar .nav-item.active i {
+        color: #FFFFFF !important;
+    }
+    #clientPage .client-sidebar .nav-item i {
+        width: 22px !important;
+        font-size: 16px !important;
+        color: #64748B !important;
+    }
+
+    /* ==================== CONTENT CARDS ==================== */
+    #clientDynamicContent .content-card {
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.95) !important;
+        border-radius: 20px !important;
+        padding: 28px !important;
+        margin-bottom: 20px !important;
+        box-shadow:
+            0 20px 40px -15px rgba(0, 0, 0, 0.12),
+            0 4px 12px -4px rgba(0, 0, 0, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    }
+    #clientDynamicContent .card-header {
+        border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+        padding-bottom: 20px !important;
+        margin-bottom: 24px !important;
+    }
+    #clientDynamicContent .card-header h3 {
+        font-size: 20px !important;
+        font-weight: 800 !important;
+        color: #0F172A !important;
+        letter-spacing: -0.4px !important;
+    }
+
+    /* ==================== BANNIÈRE WELCOME ==================== */
+    .client-welcome-banner {
+        background: linear-gradient(135deg, #14B8A6, #0D9488, #0F766E);
+        border-radius: 20px;
+        padding: 28px 32px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+            0 20px 40px -15px rgba(20, 184, 166, 0.5),
+            0 4px 12px -4px rgba(13, 148, 136, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        color: #FFFFFF;
+        flex-wrap: wrap;
+    }
+    .client-welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .client-welcome-content {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        min-width: 0;
+    }
+    .client-welcome-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: #FFFFFF;
+        flex-shrink: 0;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .client-welcome-text h2 {
+        margin: 0 0 4px;
+        font-size: 24px;
+        font-weight: 800;
+        color: #FFFFFF;
+        letter-spacing: -0.5px;
+        line-height: 1.2;
+    }
+    .client-welcome-text h2 span {
+        color: #FEF3C7;
+        text-shadow: 0 2px 8px rgba(254, 243, 199, 0.3);
+    }
+    .client-welcome-text p {
+        margin: 0;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 500;
+    }
+    .client-welcome-decoration {
+        font-size: 64px;
+        color: rgba(255, 255, 255, 0.15);
+        position: relative;
+        z-index: 0;
+        flex-shrink: 0;
+        animation: welcomeBob 3s ease-in-out infinite;
+    }
+    @keyframes welcomeBob {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(5deg); }
+    }
+
+    /* ==================== 🆕 BOUTONS MODERNES ==================== */
+    .btn-client-primary {
+        background: linear-gradient(135deg, #14B8A6, #0D9488);
+        color: #FFFFFF;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 28px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        box-shadow:
+            0 8px 20px -4px rgba(20, 184, 166, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        position: relative;
+        overflow: hidden;
+        letter-spacing: 0.2px;
+        font-family: inherit;
+    }
+    .btn-client-primary::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.6s ease;
+    }
+    .btn-client-primary:hover::before {
+        left: 100%;
+    }
+    .btn-client-primary:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 12px 28px -4px rgba(20, 184, 166, 0.55),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    .btn-client-primary:active {
+        transform: translateY(0);
+    }
+
+    .btn-client-secondary {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        color: #0F172A;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 12px;
+        padding: 14px 28px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        box-shadow:
+            0 8px 20px -8px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 1);
+        font-family: inherit;
+    }
+    .btn-client-secondary:hover {
+        background: rgba(20, 184, 166, 0.1);
+        border-color: #14B8A6;
+        color: #0D9488;
+        transform: translateY(-2px);
+        box-shadow:
+            0 12px 28px -8px rgba(20, 184, 166, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 1);
+    }
+
+    /* ==================== PANIER / PRODUITS ==================== */
+    #clientDynamicContent .pos-cart-panel {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(24px) !important;
+        border-radius: 20px !important;
+        box-shadow:
+            0 20px 50px -15px rgba(0, 0, 0, 0.15),
+            0 8px 16px -8px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    }
+    #clientDynamicContent .pos-product-card {
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.9) !important;
+        border-radius: 16px !important;
+        box-shadow:
+            0 8px 20px -8px rgba(0, 0, 0, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }
+    #clientDynamicContent .pos-product-card:hover:not(.pos-out-of-stock) {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-color: rgba(20, 184, 166, 0.4) !important;
+        transform: translateY(-4px) !important;
+        box-shadow:
+            0 20px 40px -10px rgba(20, 184, 166, 0.3),
+            0 8px 16px -8px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    }
+    #clientDynamicContent .pos-category-card {
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.9) !important;
+        border-radius: 18px !important;
+        box-shadow:
+            0 8px 20px -8px rgba(0, 0, 0, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }
+    #clientDynamicContent .pos-category-card.active {
+        background: linear-gradient(135deg, rgba(20,184,166,0.15), rgba(13,148,136,0.1)) !important;
+        border-color: #14B8A6 !important;
+        box-shadow:
+            0 12px 30px -8px rgba(20, 184, 166, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+    }
+
+    /* ==================== BOUTON VALIDER/COMMANDER ==================== */
+    #clientDynamicContent .pos-validate-btn,
+    #clientDynamicContent .pos-finalize-btn {
+        background: linear-gradient(135deg, #14B8A6, #0D9488) !important;
+        color: #FFFFFF !important;
+        border-radius: 14px !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        padding: 16px !important;
+        box-shadow:
+            0 10px 25px -5px rgba(20, 184, 166, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }
+    #clientDynamicContent .pos-validate-btn:hover:not(:disabled),
+    #clientDynamicContent .pos-finalize-btn:hover:not(:disabled) {
+        transform: translateY(-2px) !important;
+        box-shadow:
+            0 15px 35px -5px rgba(20, 184, 166, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    }
+
+    /* ==================== RESPONSIVE ==================== */
+    @media (max-width: 768px) {
+        #clientPage .main-content { padding: 16px !important; }
+        #clientPage .page-header {
+            padding: 16px 18px !important;
+            border-radius: 16px !important;
+        }
+        #clientPage .page-header .header-title h2 { font-size: 18px !important; }
+        #clientDynamicContent .content-card {
+            padding: 18px !important;
+            border-radius: 16px !important;
+        }
+        .client-welcome-banner {
+            padding: 20px 22px;
+            border-radius: 16px;
+        }
+        .client-welcome-avatar {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+        }
+        .client-welcome-text h2 { font-size: 18px; }
+        .client-welcome-text p { font-size: 12px; }
+        .client-welcome-decoration { display: none; }
+    }
+    `;
+    document.head.appendChild(style);
+    console.log('✅ Styles client modernes injectés');
+}
+
+// Injection immédiate des styles
+injectClientStyles();
 
 // ==================== NAVIGATION CLIENT ====================
 function clientNavigate(page) {
@@ -29,7 +434,33 @@ function clientNavigate(page) {
     if (typeof closeClientSidebar === 'function') closeClientSidebar();
 }
 
-// ==================== PAGE COMMANDER (RÉUTILISE LE POS ADMIN) ====================
+// ==================== 🆕 v2 : BANNIÈRE WELCOME ====================
+function renderClientWelcomeBanner() {
+    if (!window.currentUserData) return '';
+    var ud = window.currentUserData.userData;
+    var prenom = ud.prenom || 'Client';
+    var heure = new Date().getHours();
+    var salutation = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
+
+    var html = '<div class="client-welcome-banner">';
+    html += '  <div class="client-welcome-content">';
+    html += '    <div class="client-welcome-avatar">';
+    html += '      <i class="fas fa-user-circle"></i>';
+    html += '    </div>';
+    html += '    <div class="client-welcome-text">';
+    html += '      <h2>' + salutation + ', <span>' + escapeHtml(prenom) + '</span> 👋</h2>';
+    html += '      <p>Que souhaitez-vous commander aujourd\'hui ?</p>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '  <div class="client-welcome-decoration">';
+    html += '    <i class="fas fa-utensils"></i>';
+    html += '  </div>';
+    html += '</div>';
+
+    return html;
+}
+
+// ==================== PAGE COMMANDER ====================
 async function loadClientCommanderPage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
@@ -40,7 +471,8 @@ async function loadClientCommanderPage() {
     window.posHideTablesBtn = true;
     window.posHideEnLigneBtn = true;
 
-    c.innerHTML = '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#14B8A6;"></i><p style="margin-top:15px;color:#64748b;">Chargement du menu...</p></div>';
+    // 🆕 v2 : Bannière Welcome AVANT le chargement
+    c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin" style="font-size:2.5rem;color:#14B8A6;"></i><p style="margin-top:15px;color:#64748b;">Chargement du menu...</p></div>';
 
     // ✅ Réinitialiser les variables pos.js pour le client
     posCart = clientCart.length > 0 ? clientCart.slice() : [];
@@ -75,7 +507,7 @@ async function loadClientCommanderPage() {
         name: window.currentUserData.userData.prenom + ' ' + window.currentUserData.userData.nom
     } : null;
 
-    // ✅ Charger les catégories et produits
+    // ✅ Charger les catégories et produits depuis le cache
     try {
         let cachedCategories = await CacheDB.getAll('categories');
         let cachedProducts = await CacheDB.getAll('products');
@@ -139,74 +571,69 @@ async function loadClientCommanderPage() {
     }
 }
 
-// ==================== RENDU POS CLIENT (UTILISE buildFullPOS DE POS.JS) ====================
+// ==================== RENDU POS CLIENT ====================
 function renderClientPOS() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
     if (posProductsList.length === 0 && posCategoriesList.length === 0) {
-        c.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#14B8A6;"></i><p>Chargement...</p></div>';
+        c.innerHTML = renderClientWelcomeBanner() + '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#14B8A6;"></i><p>Chargement...</p></div>';
         return;
     }
 
-    // ✅ Synchroniser le panier client avec posCart
+    // ✅ Synchroniser le panier client
     clientCart = posCart.slice();
     clientStep = posStep;
 
-    // ✅ Appeler buildFullPOS de pos.js (IDENTIQUE à l'admin)
+    // 🆕 v2 : Préserver la bannière Welcome
     if (typeof buildFullPOS === 'function') {
+        var bannerHtml = renderClientWelcomeBanner();
         buildFullPOS(c);
-        // ✅ Après le rendu, masquer les boutons multi-paniers, tables, en ligne
+        // Insérer la bannière en premier
+        if (c.firstChild) {
+            c.insertAdjacentHTML('afterbegin', bannerHtml);
+        }
         setTimeout(masquerElementsAdminDansClient, 50);
     } else {
         c.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Erreur : POS non chargé</div>';
     }
 }
 
-// ==================== MASQUER LES ÉLÉMENTS ADMIN DANS LE CLIENT ====================
+// ==================== MASQUER LES ÉLÉMENTS ADMIN ====================
 function masquerElementsAdminDansClient() {
-    // ✅ Masquer la barre multi-paniers
     var multiCartBar = document.querySelector('#clientDynamicContent .pos-multi-carts-bar');
     if (multiCartBar) multiCartBar.style.display = 'none';
 
-    // ✅ Masquer le bouton Tables
     var tablesBtn = document.getElementById('posTablesBtn');
     if (tablesBtn) tablesBtn.style.display = 'none';
 
-    // ✅ Masquer le bouton En ligne
     var enligneBtn = document.getElementById('posEnLigneBtn');
     if (enligneBtn) enligneBtn.style.display = 'none';
 
-    // ✅ Masquer le champ Vendeur (pas nécessaire pour le client)
     var vendeurGroup = document.getElementById('posVendeur');
     if (vendeurGroup) {
         var parent = vendeurGroup.closest('div[style*="margin-bottom"]');
         if (parent) parent.style.display = 'none';
     }
 
-    // ✅ Masquer le champ Table (le client n'a pas besoin de table)
     var tableInput = document.getElementById('posTableNum');
     if (tableInput) {
         var parent = tableInput.closest('div[style*="margin-bottom"]');
         if (parent) parent.style.display = 'none';
     }
 
-    // ✅ Masquer le séparateur "— OU —"
     var separator = document.querySelector('#clientDynamicContent div[style*="OU"]');
     if (separator) separator.style.display = 'none';
 
-    // ✅ Masquer le bouton "Nouveau client" (le client ne crée pas de clients)
     var nouveauBtn = document.querySelector('#clientDynamicContent button[onclick*="posAjouterNouveauClient"]');
     if (nouveauBtn) nouveauBtn.style.display = 'none';
 
-    // ✅ Masquer le champ de recherche client (le client est déjà identifié)
     var clientSearchInput = document.getElementById('posClientSearchInput');
     if (clientSearchInput) {
         var parent = clientSearchInput.closest('div[style*="position:relative"]');
         if (parent) parent.style.display = 'none';
     }
-    var clientLabel = document.querySelector('#clientDynamicContent label');
-    // Masquer le label "Client" associé
+
     var allLabels = document.querySelectorAll('#clientDynamicContent label');
     allLabels.forEach(function(lbl) {
         if (lbl.textContent.trim() === 'Client') {
@@ -215,47 +642,40 @@ function masquerElementsAdminDansClient() {
         }
     });
 
-    // ✅ Masquer le bouton Crédit et Partiel (le client paie en espèces uniquement)
     var creditBtn = document.getElementById('posCreditBtn');
     if (creditBtn) creditBtn.style.display = 'none';
     var partielBtn = document.getElementById('posPartielBtn');
     if (partielBtn) partielBtn.style.display = 'none';
 
-    // ✅ Changer le texte du bouton "Finaliser" en "Commander"
     var finalizeBtn = document.querySelector('#clientDynamicContent .pos-finalize-btn');
     if (finalizeBtn) {
         finalizeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer la commande';
     }
 
-    // ✅ Changer le titre "Panier" (déjà bon)
-    // ✅ Changer le titre "Paiement" en "Confirmation"
     var paymentHeader = document.querySelector('#clientDynamicContent .pos-cart-header h3');
     if (paymentHeader && paymentHeader.textContent.indexOf('Paiement') !== -1) {
         paymentHeader.innerHTML = '<i class="fas fa-clipboard-check"></i> Confirmation';
     }
 }
 
-// ==================== SURCHARGER posFinalizeSale POUR LE CLIENT ====================
+// ==================== SURCHARGES POS ====================
 window.posFinalizeSaleOriginal = window.posFinalizeSale;
 window.posFinalizeSale = async function() {
-    // ✅ Si on est en mode client, envoyer une commande au lieu de finaliser une vente
     if (window.posIsClientMode) {
         return await clientValidateOrder();
     }
-    // Sinon comportement admin normal
     if (typeof window.posFinalizeSaleOriginal === 'function') {
         return await window.posFinalizeSaleOriginal();
     }
 };
 
-// ==================== VALIDATION COMMANDE CLIENT ====================
+// ==================== VALIDATION COMMANDE ====================
 async function clientValidateOrder() {
     if (posCart.length === 0) {
         alert('❌ Votre panier est vide. Ajoutez des articles avant de commander.');
         return;
     }
 
-    // ✅ Confirmation
     if (!confirm('Voulez-vous envoyer votre commande ?\n\nTotal: ' + posCalculateTotal().toFixed(2) + ' MAD')) {
         return;
     }
@@ -280,7 +700,6 @@ async function clientValidateOrder() {
         await CacheDB.write('commandes', null, orderData, 'add');
         alert('✅ Commande envoyée !\n\nTotal: ' + total.toFixed(2) + ' MAD\n\nNous vous contacterons bientôt.');
 
-        // ✅ Réinitialiser
         posCart = [];
         clientCart = [];
         posStep = 1;
@@ -301,7 +720,7 @@ async function clientValidateOrder() {
     }
 }
 
-// ==================== SURCHARGER posResetCart POUR LE CLIENT ====================
+// ==================== AUTRES SURCHARGES ====================
 window.posResetCartOriginal = window.posResetCart;
 window.posResetCart = function() {
     if (window.posIsClientMode) {
@@ -324,7 +743,6 @@ window.posResetCart = function() {
     }
 };
 
-// ==================== SURCHARGER posGoToStep2 POUR LE CLIENT ====================
 window.posGoToStep2Original = window.posGoToStep2;
 window.posGoToStep2 = function() {
     if (window.posIsClientMode) {
@@ -340,7 +758,6 @@ window.posGoToStep2 = function() {
     }
 };
 
-// ==================== SURCHARGER posGoToStep1 POUR LE CLIENT ====================
 window.posGoToStep1Original = window.posGoToStep1;
 window.posGoToStep1 = function() {
     if (window.posIsClientMode) {
@@ -356,7 +773,6 @@ window.posGoToStep1 = function() {
     }
 };
 
-// ==================== SURCHARGER renderPOS POUR LE CLIENT ====================
 window.renderPOSOriginal = window.renderPOS;
 window.renderPOS = function() {
     if (window.posIsClientMode) {
@@ -367,24 +783,17 @@ window.renderPOS = function() {
     }
 };
 
-// ==================== SURCHARGER filterProductGrid POUR LE CLIENT ====================
-// (pour s'assurer que le rendu se fait dans #clientDynamicContent)
 window.filterProductGridOriginal = window.filterProductGrid;
 window.filterProductGrid = function() {
     if (window.posIsClientMode) {
-        // Utiliser la grille dans #clientDynamicContent
         var grid = document.getElementById('posProductGrid');
-        if (grid) {
-            // Le code de filterProductGrid utilise document.getElementById('posProductGrid')
-            // qui est unique, donc ça fonctionne tel quel
-        }
+        if (grid) { /* OK */ }
     }
     if (typeof window.filterProductGridOriginal === 'function') {
         return window.filterProductGridOriginal();
     }
 };
 
-// ==================== SURCHARGER updateCartOnly POUR LE CLIENT ====================
 window.updateCartOnlyOriginal = window.updateCartOnly;
 window.updateCartOnly = function() {
     if (window.posIsClientMode) {
@@ -395,9 +804,6 @@ window.updateCartOnly = function() {
     }
 };
 
-// ==================== SURCHARGER posToggleTools POUR LE CLIENT ====================
-// ✅ Le client veut : bouton "Afficher tout" → affiche UNIQUEMENT la barre de recherche + le micro
-// ✅ Masque : barre des catégories slide, btn Tables, btn En ligne
 window.posToggleToolsOriginal = window.posToggleTools;
 window.posToggleTools = function() {
     if (window.posIsClientMode) {
@@ -427,7 +833,6 @@ window.posToggleTools = function() {
             toggleBtn.style.background = posToolsVisible ? '#ef4444' : '#14B8A6';
         }
 
-        // ✅ Afficher UNIQUEMENT la barre de recherche
         var searchInput = document.getElementById('posSearchInput');
         if (searchInput) {
             searchInput.style.display = posToolsVisible ? 'flex' : 'none';
@@ -436,23 +841,17 @@ window.posToggleTools = function() {
             }
         }
 
-        // ✅ Afficher le micro
         var micBtn = document.getElementById('posMicBtn');
-        if (micBtn) {
-            micBtn.style.display = posToolsVisible ? 'flex' : 'none';
-        }
+        if (micBtn) micBtn.style.display = posToolsVisible ? 'flex' : 'none';
 
-        // ✅ MASQUER les boutons Tables et En ligne
         var tablesBtn = document.getElementById('posTablesBtn');
         if (tablesBtn) tablesBtn.style.display = 'none';
         var enligneBtn = document.getElementById('posEnLigneBtn');
         if (enligneBtn) enligneBtn.style.display = 'none';
 
-        // ✅ MASQUER la barre des catégories (slide)
         var categoriesBar = document.querySelector('#clientDynamicContent .pos-categories-bar');
         if (categoriesBar) categoriesBar.style.display = 'none';
 
-        // ✅ Si on masque, revenir aux catégories (cartes)
         if (!posToolsVisible) {
             posViewMode = 'categories';
             posSelectedCategoryForView = null;
@@ -480,7 +879,6 @@ async function loadClientHistoriquePage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
-    // ✅ Désactiver le mode client POS
     window.posIsClientMode = false;
 
     c.innerHTML = '<div class="content-card"><div class="card-header"><h3><i class="fas fa-history"></i> Mon historique</h3></div><div id="clientOrdersList" style="text-align:center;padding:20px;">Chargement...</div></div>';
@@ -535,7 +933,6 @@ async function loadClientParametresPage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
 
-    // ✅ Désactiver le mode client POS
     window.posIsClientMode = false;
 
     if (!window.currentUserData) { c.innerHTML = '<div class="content-card"><p>Non connecté</p></div>'; return; }
@@ -559,9 +956,10 @@ async function loadClientParametresPage() {
     h += '<div><strong>Adresse:</strong> ' + escapeHtml(clientData.adresse || '-') + '</div>';
     h += '<div><strong>Points Fidélité:</strong> ' + (clientData.pointsFidelite || 0) + '</div>';
     h += '</div>';
-    h += '<div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">';
-    h += '<button class="btn-add" onclick="clientOpenEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>';
-    h += '<button class="btn-save" onclick="clientOpenChangePassword()"><i class="fas fa-lock"></i> Changer mot de passe</button>';
+    // 🆕 v2 : Boutons modernes
+    h += '<div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;">';
+    h += '<button class="btn-client-primary" onclick="clientOpenEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>';
+    h += '<button class="btn-client-secondary" onclick="clientOpenChangePassword()"><i class="fas fa-lock"></i> Changer mot de passe</button>';
     h += '</div></div>';
     c.innerHTML = h;
     window.clientProfileData = clientData;
@@ -649,11 +1047,12 @@ window.clientSaveProfile = clientSaveProfile;
 window.clientOpenChangePassword = clientOpenChangePassword;
 window.clientChangePassword = clientChangePassword;
 window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
+window.renderClientWelcomeBanner = renderClientWelcomeBanner;
+window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS chargé (POS identique à l\'admin)');
-console.log('✅ Réutilise buildFullPOS de pos.js');
-console.log('✅ Barre de recherche via bouton "Afficher tout" + micro uniquement');
-console.log('✅ Sans catégories slide, sans Tables, sans En ligne');
-console.log('✅ Étape de paiement identique');
-console.log('✅ Sans multi-paniers');
-console.log('✅ Mêmes dimensions / même responsive');
+console.log('🚀 E-SOLUTION - Client JS v2 chargé');
+console.log('✅ Styles modernes injectés automatiquement');
+console.log('✅ Bannière Welcome personnalisée');
+console.log('✅ Boutons modernes (primary + secondary)');
+console.log('✅ POS identique à l\'admin conservé');
+console.log('✅ Couleurs Teal + Slate conservées');
