@@ -9,6 +9,7 @@
 // ✅ 🆕 v7 : Crédits payés disparaissent (paid=true ou remainingAmount=0)
 // ✅ 🆕 v8 : Crédits payés basculent automatiquement dans "Mes ventes"
 // ✅ 🆕 v9 : Historique = commandes + ventes uniquement (plus de section "Mes crédits")
+// ✅ 🆕 v10 : Carte "Total à payer" = ventes - crédits non payés
 // ✅ Barre de recherche : bouton "Afficher tout" → affiche la barre de recherche uniquement
 // ✅ SANS boutons Tables / En ligne
 // ✅ Mêmes dimensions / même responsive
@@ -867,6 +868,8 @@ function renderClientPOS() {
     }
 }
 
+
+
 // ==================== MASQUER LES ÉLÉMENTS ADMIN ====================
 function masquerElementsAdminDansClient() {
     // 🆕 v5 : Barre multi-paniers
@@ -988,8 +991,6 @@ function masquerElementsAdminDansClient() {
         }
     });
 }
-
-
 
 // ==================== SURCHARGES POS ====================
 window.posFinalizeSaleOriginal = window.posFinalizeSale;
@@ -1212,7 +1213,8 @@ window.posToggleTools = function() {
     }
 };
 
-// ==================== 🆕 v9 : PAGE HISTORIQUE (commandes + ventes uniquement) ====================
+
+// ==================== 🆕 v10 : PAGE HISTORIQUE (commandes + ventes + total à payer) ====================
 async function loadClientHistoriquePage() {
     var c = document.getElementById('clientDynamicContent');
     if (!c) return;
@@ -1253,7 +1255,7 @@ async function loadClientHistoriquePage() {
             ventes.sort(function(a, b) { return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); });
         } catch(e) { console.warn('Erreur chargement ventes:', e); }
 
-        // ========== 3. CRÉDITS (uniquement pour compter les soldés comme ventes) ==========
+        // ========== 3. CRÉDITS ==========
         var credits = [];
         try {
             var creditsSnap = await db.collection('credits').where('clientId', '==', uid).get();
@@ -1264,8 +1266,9 @@ async function loadClientHistoriquePage() {
             });
         } catch(e) { console.warn('Erreur chargement crédits:', e); }
 
-        // Séparer les crédits soldés (à basculer en ventes)
+        // ========== 4. SÉPARER CRÉDITS SOLDÉS vs NON PAYÉS ==========
         var creditsSoldes = [];
+        var creditsNonPayes = [];
         credits.forEach(function(cr) {
             var restant = parseFloat(cr.remainingAmount || 0);
             var st = (cr.statut || '').toLowerCase();
@@ -1273,14 +1276,25 @@ async function loadClientHistoriquePage() {
             if (estSolde) {
                 cr.remainingAmount = 0;
                 creditsSoldes.push(cr);
+            } else {
+                creditsNonPayes.push(cr);
             }
         });
 
-        // ========== 4. CALCULS ==========
+        // ========== 5. CALCULS ==========
         // Total ventes = ventes normales + crédits soldés (considérés comme ventes)
         var totalVentes = 0;
         ventes.forEach(function(v) { totalVentes += v.total || 0; });
         creditsSoldes.forEach(function(cr) { totalVentes += cr.total || 0; });
+
+        // 🆕 v10 : Total crédits non payés
+        var totalCreditsImpayes = 0;
+        creditsNonPayes.forEach(function(cr) {
+            totalCreditsImpayes += parseFloat(cr.remainingAmount || 0);
+        });
+
+        // 🆕 v10 : Total à payer = ventes - crédits non payés
+        var totalAPayer = totalVentes - totalCreditsImpayes;
 
         var nbCommandesEnAttente = 0;
         commandes.forEach(function(cmd) {
@@ -1288,10 +1302,10 @@ async function loadClientHistoriquePage() {
             if (st === 'en_attente' || st === 'en attente' || st === 'pending' || st === '') nbCommandesEnAttente++;
         });
 
-        // ========== 5. HTML ==========
+        // ========== 6. HTML ==========
         var h = '';
 
-        // Bannière stats (2 cartes uniquement : commandes en attente + total ventes)
+        // Bannière stats (3 cartes : commandes en attente + total ventes + total à payer)
         h += '<div class="client-stats-grid">';
         h += '  <div class="client-stat-card ventes">';
         h += '    <div class="client-stat-icon"><i class="fas fa-clock"></i></div>';
@@ -1305,6 +1319,13 @@ async function loadClientHistoriquePage() {
         h += '    <div class="client-stat-info">';
         h += '      <div class="client-stat-label">Total des ventes</div>';
         h += '      <div class="client-stat-value">' + totalVentes.toFixed(2) + ' MAD</div>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '  <div class="client-stat-card fidelite">';
+        h += '    <div class="client-stat-icon"><i class="fas fa-wallet"></i></div>';
+        h += '    <div class="client-stat-info">';
+        h += '      <div class="client-stat-label">Total à payer</div>';
+        h += '      <div class="client-stat-value">' + totalAPayer.toFixed(2) + ' MAD</div>';
         h += '    </div>';
         h += '  </div>';
         h += '</div>';
@@ -1447,7 +1468,6 @@ async function loadClientParametresPage() {
             var restant = parseFloat(cr.remainingAmount || 0);
             var st = (cr.statut || '').toLowerCase();
             var estSolde = (cr.paid === true) || (restant <= 0) || (st === 'payé' || st === 'paye' || st === 'soldé' || st === 'solde');
-            // 🆕 v8 : Ne compter que les crédits réellement actifs
             if (!estSolde) {
                 totalCredits += restant;
             }
@@ -1557,7 +1577,6 @@ async function clientConvertirPoints() {
         // 1. Récupérer le document client
         var clientId = window.clientProfileDocId;
         if (!clientId) {
-            // Chercher par email
             var userEmail = window.currentUserData.userData.email;
             var clientSnap = await db.collection('clients').where('email', '==', userEmail).get();
             if (!clientSnap.empty) clientId = clientSnap.docs[0].id;
@@ -1585,7 +1604,7 @@ async function clientConvertirPoints() {
             }
         }
 
-        // 4. Enregistrer la conversion comme crédit payé (bonus)
+        // 4. Enregistrer la conversion
         try {
             await db.collection('conversions_fidelite').add({
                 clientId: clientId,
@@ -1599,10 +1618,8 @@ async function clientConvertirPoints() {
 
         alert('✅ Conversion réussie !\n\n' + dhDisponibles.toFixed(0) + ' DH ont été convertis.\nNouveau solde : ' + nouveauxPoints + ' points.');
 
-        // 5. Recharger la page
         loadClientParametresPage();
 
-        // 6. Sync cache
         if (typeof CacheDB !== 'undefined' && CacheDB.sync) {
             CacheDB.sync().catch(function() {});
         }
@@ -1700,9 +1717,10 @@ window.masquerElementsAdminDansClient = masquerElementsAdminDansClient;
 window.renderClientWelcomeBanner = renderClientWelcomeBanner;
 window.injectClientStyles = injectClientStyles;
 
-console.log('🚀 E-SOLUTION - Client JS v9 chargé');
+console.log('🚀 E-SOLUTION - Client JS v10 chargé');
 console.log('✅ Historique = commandes + ventes uniquement');
-console.log('✅ Plus de section "Mes crédits"');
+console.log('✅ 3 cartes : Commandes en attente + Total ventes + Total à payer');
+console.log('✅ Total à payer = ventes - crédits non payés');
 console.log('✅ Crédits payés → apparaissent dans "Mes ventes"');
 console.log('✅ Profil : crédits + points fidélité + équivalent DH');
 console.log('✅ Conversion 100 points = 10 DH');
